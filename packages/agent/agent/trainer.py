@@ -177,13 +177,16 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                        gamma: float = 0.99, temperature: float = 1.0,
                        seed: Optional[int] = None, device: str = "cpu",
                        log_every: int = 25,
+                       ent_coef: float = 0.02, lr_decay: float = 1.0,
+                       eval_fn=None, eval_every: int = 0,
                        save_path: Optional[str] = None) -> dict:
     """课程式训练：policy(agent0) vs 固定对手（如 BaselineAI）。
 
     只更新 agent0 的策略步；回报为该视角单侧折扣（无交替），训练更稳定，
     胜率 vs 固定对手可单调观测（适合"先打败基线，再自对弈"的课程）。
+    ent_coef：熵正则（防局部）；lr_decay：线性衰减终点系数（lr → lr*lr_decay）；
+    eval_fn(steps)：每 eval_every 局回调（供 vs baseline 周期观测）。
     """
-    from .policy_agent import PolicyAgent
     from .policy_agent import build_spread_plan
     from .state_encoder import STATE_DIM, ACTION_DIM as _AD
     rng = random.Random(seed)
@@ -191,6 +194,10 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     stats = {"episodes": 0, "wins": 0, "losses": 0, "draws": 0,
              "actor_loss": [], "win_tail": []}
     for ep in range(episodes):
+        # 线性 lr 衰减：lr → lr*lr_decay
+        frac = (ep + 1) / max(1, episodes)
+        opt.param_groups[0]["lr"] = lr * (lr_decay + (1 - lr_decay)
+                                          * (1 - frac))
         battle = _fresh_battle(deck_a, deck_b, seed=rng.randrange(1 << 30))
         net.eval()
         frames = []          # 仅 agent0 决策点
@@ -253,7 +260,7 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
         for _ in range(ppo_epochs):
             S, FA, MASK, C, O, R = _to_batch(frames, device)
             loss, a_loss, v_loss, ent = _ppo_loss(net, S, FA, MASK, C, O,
-                                                  R, clip)
+                                                  R, clip, ent_coef)
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
@@ -266,6 +273,8 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
             print(f"[vs-fixed] ep {ep + 1}/{episodes} "
                   f"wins={stats['wins']}/{stats['episodes']} "
                   f"win={cur:.2f} actor={a_loss:.4f}")
+        if eval_every and eval_fn and (ep + 1) % eval_every == 0:
+            eval_fn(ep + 1)
     if save_path:
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         torch.save(net.state_dict(), save_path)

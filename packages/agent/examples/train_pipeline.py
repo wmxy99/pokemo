@@ -41,6 +41,9 @@ def main():
     ap.add_argument("--gamma", type=float, default=0.99)
     ap.add_argument("--clip", type=float, default=0.2)
     ap.add_argument("--ent-coef", type=float, default=0.02)
+    ap.add_argument("--lr-decay", type=float, default=1.0,
+                    help="线性 lr 衰减终点系数（默认 1.0=不衰减；0.1 手册推荐）")
+    ap.add_argument("--hidden", type=int, default=64)
     ap.add_argument("--eval-every", type=int, default=25)
     ap.add_argument("--games", type=int, default=8)
     ap.add_argument("--stage2-episodes", type=int, default=0,
@@ -86,7 +89,7 @@ def main():
                                           episodes=args.bc_episodes,
                                           seed=args.seed)
         bc.save_frames(frames, str(bc_path))
-    net = make_net(STATE_DIM, ACTION_DIM)
+    net = make_net(STATE_DIM, ACTION_DIM, hidden=args.hidden).to(args.device)
     st = bc.train_bc(net, frames, epochs=args.bc_epochs, lr=args.lr,
                      device=args.device, seed=args.seed)
     print(f"[bc] frames={st['frames']} loss_tail={st['loss'][-1]:.4f} "
@@ -110,6 +113,9 @@ def main():
             da, db, net, opponent=_BFixed("baseline"),
             episodes=args.ppo_episodes, ppo_epochs=args.ppo_epochs,
             clip=args.clip, lr=args.lr, gamma=args.gamma,
+            ent_coef=args.ent_coef, lr_decay=args.lr_decay,
+            eval_fn=lambda ep: _eval(f"stage1-{ep}"),
+            eval_every=args.eval_every,
             seed=args.seed, device=args.device, save_path=args.save,
             log_every=max(1, args.ppo_episodes // 5))
     else:
@@ -134,7 +140,11 @@ def main():
             trainer.train_ppo_vs_fixed(
                 da, db, net, opponent=opp, episodes=n,
                 ppo_epochs=args.ppo_epochs, clip=args.clip, lr=args.lr,
-                gamma=args.gamma, seed=args.seed, device=args.device,
+                gamma=args.gamma, ent_coef=args.ent_coef,
+                lr_decay=args.lr_decay,
+                eval_fn=lambda ep: _eval(f"stage2-{ran}+{ep}"),
+                eval_every=args.eval_every,
+                seed=args.seed, device=args.device,
                 save_path=args.save, log_every=max(1, n // 3))
             ran += n
             _eval(f"stage2-{ran}")

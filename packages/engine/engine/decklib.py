@@ -8,7 +8,7 @@ Y 版近似攻击型先行。
 """
 from __future__ import annotations
 from .cards import (PokemonDef, AttackDef, PokeRef, EnergyRef, EnergyDef,
-                    TrainerRef, TrainerDef, CardRef)
+                    TrainerRef, TrainerDef, AbilityDef, CardRef)
 
 _E = EnergyDef()                # v1 通用无色能量
 _EF = EnergyDef("fire")
@@ -82,14 +82,23 @@ D1 = AttackDef("Tackle", cost=1, damage=20, desc="20")
 D2 = AttackDef("Slam", cost=2, damage=60, desc="60")
 D3 = AttackDef("Phantom Rush", cost=(("fire", 1), ("psychic", 1)), damage=200,
                effects=("spread:2:60",), desc="200 + 对手2只后备各60")
+RECON_AB = AbilityDef("Recon Scout", tag="recon:2", location="field",
+                      desc="每回合一次：检视牌库顶2取1入手（≈Recon Directive）")
+CURSED_AB = AbilityDef("Cursed Blast", tag="cursed:130", location="hand",
+                       desc="手牌弃此卡 → 对手1只宝可梦放13个指示物（≈Cursed Blast）")
 DRAKLING = PokemonDef("Drakling", hp=60, ptype="dragon", weakness="darkness",
                       attacks=(D1,), stage=0, desc="Y版 基础（≈Dreepy）")
 DRACO = PokemonDef("Draco", hp=120, ptype="dragon", weakness="darkness",
                    attacks=(D2,), stage=1, evolves_from="Drakling",
-                   desc="Y版 一阶（≈Drakloak，特性待E3）")
+                   abilities=(RECON_AB,), desc="Y版 一阶（≈Drakloak，特性已实现 E3）")
 DRACO_EX = PokemonDef("Draco ex", hp=200, ptype="dragon", weakness="darkness",
                       retreat=1, attacks=(D3,), is_ex=True, stage=2,
                       evolves_from="Draco", desc="Y版 二阶ex（≈Dragapult ex）")
+SPECTOR = PokemonDef("Spector", hp=110, ptype="psychic", weakness="darkness",
+                     attacks=(AttackDef("Shadow Punch", cost=1, damage=30),
+                              ),
+                     abilities=(CURSED_AB,),
+                     desc="Y版 手牌特性组件（≈Dusknoir，E3）")
 # E4 训练家（Y 版首批）
 T_POFFIN = TrainerDef("poffin", kind="item", name="Buddy Ball")
 T_UBALL = TrainerDef("ultra_ball", kind="item", name="Hyper Ball")
@@ -129,6 +138,11 @@ def deck_draco_demo() -> list:
                  (_EF, 12), (_EP, 10))
 
 
+def deck_ability_demo() -> list:
+    """E3 特性演示：Draco(场上 Recon) + Spector(手牌 Cursed) 组件"""
+    return _deck((DRAKLING, 8), (DRACO, 6), (SPECTOR, 6), (_E, 40))
+
+
 ALL_DECKS = {
     "lightning": deck_lightning_demo,
     "grass": deck_grass_demo,
@@ -136,6 +150,7 @@ ALL_DECKS = {
     "psychic": deck_psychic_demo,
     "status": deck_status_demo,
     "draco": deck_draco_demo,
+    "ability": deck_ability_demo,
 }
 
 

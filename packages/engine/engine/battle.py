@@ -124,8 +124,9 @@ class Battle:
         self.phase = "main"
         p.attached_energy_this_turn = 0
         p.supporter_used = 0
-        for fp in p.all_field():          # E2: 新回合解除"刚放置"标记
+        for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
             fp.just_played = False
+            fp.ability_used.clear()
         if not p.has_pokemon:
             self._finish(1 - self.current, "no_pokemon", {"loser": self.current})
             return
@@ -190,8 +191,32 @@ class Battle:
                                      "target": tpos})
         # E4 训练家
         acts += self._trainer_legals(p, opp)
+        # E3 特性（field 每回合一次 / hand 弃卡发动）
+        acts += self._ability_legals(p, opp)
         acts.append({"verb": "pass"})
         return acts
+
+    def _ability_legals(self, p: PlayerState, opp: PlayerState) -> list:
+        out = []
+        for tpos, fp in _field_iter(p):
+            for ab in fp.pdef.abilities:
+                if ab.location != "field" or ab.name in fp.ability_used:
+                    continue
+                if ab.tag.startswith("recon:") and not p.deck:
+                    continue
+                out.append({"verb": "ability", "name": ab.name,
+                            "pos": tpos, "tag": ab.tag})
+        for hi, c in enumerate(p.hand):
+            if isinstance(c, PokeRef):
+                for ab in c.pdef.abilities:
+                    if ab.location != "hand":
+                        continue
+                    if ab.tag.startswith("cursed:"):
+                        for tpos in range(1 + len(opp.bench)):
+                            out.append({"verb": "ability", "name": ab.name,
+                                        "hand": hi, "tag": ab.tag,
+                                        "target": tpos})
+        return out
 
     def _trainer_legals(self, p: PlayerState, opp: PlayerState) -> list:
         out = []
@@ -236,6 +261,8 @@ class Battle:
                 return self._do_retreat(p, action)
             if verb == "evolve":
                 return self._do_evolve(p, action)
+            if verb == "ability":
+                return self._do_ability(p, action)
             if verb == "trainer":
                 return self._do_trainer(p, action)
             if verb == "pass":
@@ -319,6 +346,64 @@ class Battle:
         self._log("evolve", {"player": self.current, "from": old_name,
                              "to": tgt.name, "pos": tpos})
         return {"ok": True, "event": self.events[-1]}
+
+    def _do_ability(self, p: PlayerState, action: dict) -> dict:
+        """特性发动（E3）：field=场上每回合一次；hand=手牌弃卡发动"""
+        name, tag = action["name"], action.get("tag", "")
+        if "pos" in action:
+            # ---- field 特性 ----
+            fp = _field_at(p, int(action["pos"]))
+            if fp is None:
+                raise ValueError("特性宝可梦不在场上")
+            ab = next((x for x in fp.pdef.abilities
+                       if x.name == name and x.location == "field"), None)
+            if ab is None:
+                raise ValueError(f"无 field 特性 {name}")
+            if name in fp.ability_used:
+                raise ValueError("该特性本回合已发动")
+            fp.ability_used.add(name)
+            if tag.startswith("recon:"):
+                n = int(tag.split(":")[1])
+                if not p.deck:
+                    raise ValueError("牌库为空")
+                top = [p.deck.pop() for _ in range(min(n, len(p.deck)))]
+                pick = self.rng.randrange(len(top))
+                chosen = top.pop(pick)
+                p.hand.append(chosen)
+                for c in reversed(top):       # 其余放回牌库底
+                    p.deck.insert(0, c)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": f"top{n} pick1",
+                                      "got": _card_label(chosen)})
+                return {"ok": True, "event": self.events[-1]}
+            raise ValueError(f"未知 field tag {tag}")
+        if "hand" in action:
+            # ---- hand 特性（弃自身） ----
+            hi = int(action["hand"])
+            c = p.hand[hi]
+            if not isinstance(c, PokeRef):
+                raise ValueError("手牌目标非宝可梦")
+            ab = next((x for x in c.pdef.abilities
+                       if x.name == name and x.location == "hand"), None)
+            if ab is None:
+                raise ValueError(f"无 hand 特性 {name}")
+            p.hand.pop(hi)
+            p.discard.append(c.pdef.name)
+            if tag.startswith("cursed:"):
+                hp = int(tag.split(":")[1])
+                opp = self.players[1 - self.current]
+                tgt = _field_at(opp, int(action.get("target", 0)))
+                if tgt is None:
+                    raise ValueError("对手无该目标宝可梦")
+                tgt.damage += hp            # 指示物伤害：不走弱抗
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": c.pdef.name, "target": tgt.name,
+                                      "dmg": hp})
+                if tgt.is_ko:
+                    self._resolve_ko(1 - self.current, tgt)
+                return {"ok": True, "event": self.events[-1]}
+            raise ValueError(f"未知 hand tag {tag}")
+        raise ValueError("ability 动作缺少 pos/hand")
 
     def _do_trainer(self, p: PlayerState, action: dict) -> dict:
         hi = int(action["hand"])
@@ -554,6 +639,10 @@ class Battle:
             d["retreat"] = fp.pdef.retreat
             d["ex"] = fp.pdef.is_ex
             d["evolves_from"] = fp.pdef.evolves_from
+            d["ability_used"] = sorted(fp.ability_used)
+            d["abilities"] = [{"name": a.name, "tag": a.tag,
+                               "location": a.location}
+                              for a in fp.pdef.abilities]
             d["attacks"] = [{"name": a.name, "cost": a.cost_total,
                              "cost_map": list(a.cost), "damage": a.damage,
                              "desc": a.desc} for a in fp.pdef.attacks]
@@ -564,7 +653,10 @@ class Battle:
             if isinstance(c, PokeRef):
                 hand.append({"type": "pokemon", "name": c.pdef.name,
                              "hp": c.pdef.hp, "stage": c.pdef.stage,
-                             "evolves_from": c.pdef.evolves_from})
+                             "evolves_from": c.pdef.evolves_from,
+                             "abilities": [{"name": a.name, "tag": a.tag,
+                                            "location": a.location}
+                                           for a in c.pdef.abilities]})
             elif isinstance(c, EnergyRef):
                 hand.append({"type": "energy", "name": c.edef.name,
                              "etype": c.edef.type})

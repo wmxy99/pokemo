@@ -45,6 +45,23 @@ class AttackDef:
 
 
 @dataclass(frozen=True)
+class AbilityDef:
+    """特性定义（E3 最小机制）
+
+    location:
+      field —— 场上发动、每只每回合一次（ability_used 标记，回合开始重置）
+      hand  —— 手牌发动（如 Dusknoir 弃自身），用后弃掉该牌，天然每张一次
+    tag（引擎原生派发，v0.3 首批）：
+      "recon:<n>"       检视牌库顶 n 取 1 入手，其余放回牌库底
+      "cursed:<hp>"     弃自身 → 对指定 1 只对手宝可梦放 <hp>/10 个伤害指示物
+    """
+    name: str
+    tag: str = "recon:2"
+    location: str = "field"       # field | hand
+    desc: str = ""
+
+
+@dataclass(frozen=True)
 class PokemonDef:
     """宝可梦物种定义"""
     name: str
@@ -57,6 +74,7 @@ class PokemonDef:
     is_ex: bool = False
     stage: int = 0                    # E2: 0=基础 1=一阶 2=二阶 ...
     evolves_from: Optional[str] = None  # E2: 由谁进化而来
+    abilities: tuple = ()             # E3: tuple[AbilityDef]
     desc: str = ""
 
 
@@ -111,6 +129,7 @@ class FieldPokemon:
     energy: dict = field(default_factory=dict)   # E1: {type: count}
     status: set = field(default_factory=set)
     just_played: bool = False                    # E2: 本回合刚放置/进化（禁再进化）
+    ability_used: set = field(default_factory=set)  # E3: 本回合已发动的 field 特性名
 
     # ---- 基本属性 ----
     @property

@@ -41,10 +41,11 @@ python run_demo.py dump 20260908
 | 机制 | 实现 |
 |------|------|
 | 回合状态机 | 开始（状态检查→抽卡）→ 主阶段 → 结束换边；攻击即结束回合（简化） |
-| 动作 | 上基础/附能量(每回合1)/撤退/攻击/**进化(E2)**/**训练家(E4)**/结束；统一 `legal_actions` 合法性校验 |
+| 动作 | 上基础/附能量(每回合1)/撤退/攻击/**进化(E2)**/**特性(E3)**/**训练家(E4)**/结束；统一 `legal_actions` 合法性校验 |
 | 伤害结算 | 基础伤害 → 弱点 ×2 → 抗性 −30（下限 0） |
 | **彩色能量(E1)** | 场上能量按 `{type:count}` 存储；招式 cost 支持 `[(fire,1),(psychic,1)]`；无色 cost 可被任意彩色能支付；攻击不弃能、撤退扣能无色优先 |
 | **进化(E2)** | stage 0/1/2 + evolves_from 链；本回合刚放置/进化不可再进化；进化保留能量与伤害、清除特殊状态 |
+| **特性(E3)** | `AbilityDef(location=field/hand)`：field 每回合一次（ability_used，回合重置）；hand 弃卡发动。首批 tag：`recon:n`(检视顶n取1放底) · `cursed:hp`(弃自身→指定对手宝可梦 hp 指示物伤) |
 | **训练家(E4)** | `poffin`(检索2基础铺后备) · `ultra_ball`(弃2检索) · `hammer`(抛币弃对手能) · `boss`(拉后备，supporter)；**supporter 每回合一次，item 不限次** |
 | 特殊状态 | 中毒(−10/回合) · 烧伤(−20/回合) · 睡眠(抛币醒) · 麻痹(检查阶段恢复) · 混乱(攻击抛币，反面自伤 30 攻击失败；正面攻击后解除)；睡/麻禁攻禁撤 |
 | 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负） |
@@ -61,8 +62,8 @@ python run_demo.py dump 20260908
 4. **起手自动铺后备**（官方为玩家选择）；
 5. **攻击后立即结束回合**（不做攻击后继续行动）；
 6. 训练家**最小子集已实现（4 张）**；其余（物品池/场地/宝可梦道具）为灰名单；
-7. **进化已实现（E2）**；**特性机制待 E3 批次**（Recon Directive / Cursed Blast 等 once-per-turn
-   特性暂以近似攻击型替代，见 decklib Draco 线注记）；
+7. ~~特性=灰名单~~ → **v0.3 已支持最小集**（`recon` / `cursed`，field/hand 两位置）；
+   **多目标/移伤类特性（如 Adrena-Brain 需"我方→对手"双目标选择）仍灰名单**，依赖 E5 目标选择接口；
 8. **伤害指示物任意分配（E5）待实现**（Phantom Dive 的 6 指示物当前按随机 spread tag 近似，
    任意分配需 Agent/UI 目标选择接口，P2 与决策流水线同期）；
 9. 引擎卡用程序化 `PokemonDef` 定义，F8 effects_json 仅作溯源旁证，不直接进结算路径
@@ -71,9 +72,10 @@ python run_demo.py dump 20260908
 ## 验收证据（2026-09-08 本机执行）
 
 ```
-python -m unittest discover -s tests        → Ran 50 tests OK（34 回归 + 16 v0.2 新增）
+python -m unittest discover -s tests        → Ran 58 tests OK（34 回归 + 16 v0.2 + 8 v0.3）
   覆盖：彩色能量支付/撤退扣能 · 进化链/刚放置禁进化/保留能量伤害 · poffin/ultra_ball/hammer/boss
         supporter 每回合一次 / item 不限次 · Draco Y 版卡组端到端 8 seeds 全终局
+        E3：recon 每回合一次/重置、hand cursed 弃自身+指定目标伤害+后备KO奖赏、ability 卡组 smoke
 run_demo.py single  (seed=20260908)         → baseline 对局 10 回合终局（含 ex 双奖赏/反伤/替补）
 run_demo.py batch 100  lightning(baseline) vs psychic(random)
     win_rate 0.72 / avg_turns 25.6 / p95 45 / reason{no_pokemon:49, prizes:32, deckout:19}

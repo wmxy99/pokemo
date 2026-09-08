@@ -1,0 +1,6 @@
+# PokéLab Data 运行依赖（pokemo 环境已装，此文件留档）
+# 安装：pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --no-cache-dir
+pydantic>=2.7
+requests>=2.31
+# 可选：规则知识库向量化（bge-m3 embedding，后续步骤）
+# sentence-transformers>=3.0

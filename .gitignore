@@ -1,0 +1,30 @@
+# data: 运行时产物，绝不入库（Kaggle 卡数据 / 规则原文 / 本地 db）
+data/
+*.db
+*.sqlite
+*.faiss
+*.index
+*.jsonl
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.pytest_cache/
+
+# 本地模型权重
+*.safetensors
+*.bin
+*.onnx
+
+# 编辑器 / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 本地对局导出
+match_*.jsonl

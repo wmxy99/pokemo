@@ -1,0 +1,16 @@
+PokéLab AI
+Copyright (c) 2026 PokéLab AI contributors
+
+This product includes software developed by the PokéLab AI open-source
+community. Distributed under the Apache License, Version 2.0 (see LICENSE.txt).
+
+---
+Third-party notices:
+
+Pokémon and Pokémon TCG are © Nintendo / Creatures Inc. / GAME FREAK inc. /
+The Pokémon Company. PokéLab AI is an unofficial, non-commercial fan project
+and is not affiliated with, endorsed by, or sponsored by The Pokémon Company
+or Nintendo.
+
+This repository contains no official Pokémon card images or rulebook text;
+all card samples are original rewrites created for research purposes.

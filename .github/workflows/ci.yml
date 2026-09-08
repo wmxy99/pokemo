@@ -1,0 +1,42 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Run engine settlement tests
+        run: |
+          cd packages/engine
+          python -m unittest discover -s tests -v
+
+  carddb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install deps
+        run: pip install -r packages/card-db/requirements.txt
+      - name: Static compile
+        run: python -m py_compile packages/card-db/pokelab/*.py
+      - name: Offline demo (self-authored data only)
+        run: |
+          cd packages/card-db
+          python scripts/seed_demo.py
+
+  redline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Data-redline guard
+        run: |
+          if git ls-files | grep -E '(^data/|\.db$|EN_Card_Data|rulebook|compendium|\.safetensors$|\.faiss$|\.index$)' ; then
+            echo "::error::数据红线违规：仓库包含禁止分发文件" && exit 1
+          fi
+          if git ls-files | grep -E 'D:\\pokemo|C:\\Users' ; then
+            echo "::error::仓库包含本地个人路径" && exit 1
+          fi

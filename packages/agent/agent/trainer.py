@@ -171,10 +171,111 @@ def train_ppo(deck_a: list, deck_b: list, net: SmallPolicyValueNet,
     return stats
 
 
+def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
+                       opponent, episodes: int = 150, ppo_epochs: int = 3,
+                       clip: float = 0.2, lr: float = 1e-3,
+                       gamma: float = 0.99, temperature: float = 1.0,
+                       seed: Optional[int] = None, device: str = "cpu",
+                       log_every: int = 25,
+                       save_path: Optional[str] = None) -> dict:
+    """课程式训练：policy(agent0) vs 固定对手（如 BaselineAI）。
+
+    只更新 agent0 的策略步；回报为该视角单侧折扣（无交替），训练更稳定，
+    胜率 vs 固定对手可单调观测（适合"先打败基线，再自对弈"的课程）。
+    """
+    from .policy_agent import PolicyAgent
+    from .policy_agent import build_spread_plan
+    from .state_encoder import STATE_DIM, ACTION_DIM as _AD
+    rng = random.Random(seed)
+    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    stats = {"episodes": 0, "wins": 0, "losses": 0, "draws": 0,
+             "actor_loss": [], "win_tail": []}
+    for ep in range(episodes):
+        battle = _fresh_battle(deck_a, deck_b, seed=rng.randrange(1 << 30))
+        net.eval()
+        frames = []          # 仅 agent0 决策点
+        guard = 0
+        while not battle.finished and guard < 500:
+            guard += 1
+            if battle.current == 0:
+                view = battle.view()
+                legal = view.get("legal") or [{"verb": "pass"}]
+                if len(legal) == 1:
+                    chosen, logp, act = 0, 0.0, dict(legal[0])
+                else:
+                    S = torch.tensor([encode_state(view)],
+                                     dtype=torch.float32, device=device)
+                    FA = torch.tensor(
+                        [[encode_action(view, a) for a in legal]],
+                        dtype=torch.float32, device=device)
+                    with torch.no_grad():
+                        probs = net.action_priors(S, FA,
+                                                  temperature=temperature)[0]
+                    probs = probs.clamp(min=1e-9)
+                    probs = probs / probs.sum()
+                    chosen = int(torch.multinomial(probs, 1).item())
+                    logp = float(torch.log(probs[chosen]).item())
+                    act = build_spread_plan(view, dict(legal[chosen]))
+                frames.append({"state_vec": encode_state(view),
+                               "feats_all": [encode_action(view, a)
+                                             for a in legal],
+                               "chosen": chosen, "logp": logp})
+                res = battle.step(copy.deepcopy(act))
+            else:
+                opp_view = battle.view()
+                res = battle.step(copy.deepcopy(opponent.decide(opp_view)))
+            if not res["ok"]:
+                battle.step({"verb": "pass"})
+        # 单侧折扣回报
+        r = 1.0 if battle.winner == 0 else (-1.0 if battle.winner is not None
+                                            else 0.0)
+        g = 0.0
+        targets = [0.0] * len(frames)
+        for t in range(len(frames) - 1, -1, -1):
+            if t == len(frames) - 1:
+                g = r
+            else:
+                g *= gamma
+            targets[t] = g
+        if not frames:
+            continue
+        stats["episodes"] += 1
+        if battle.winner == 0:
+            stats["wins"] += 1
+        elif battle.winner is None:
+            stats["draws"] += 1
+        else:
+            stats["losses"] += 1
+        # PPO 更新
+        for s, tg in zip(frames, targets):
+            s["_ret"] = tg
+        net.train()
+        for _ in range(ppo_epochs):
+            S, FA, MASK, C, O, R = _to_batch(frames, device)
+            loss, a_loss, v_loss, ent = _ppo_loss(net, S, FA, MASK, C, O,
+                                                  R, clip)
+            opt.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
+            opt.step()
+        net.eval()
+        stats["actor_loss"].append(a_loss)
+        if log_every and (ep + 1) % log_every == 0:
+            cur = stats["wins"] / max(1, stats["episodes"])
+            stats["win_tail"].append(cur)
+            print(f"[vs-fixed] ep {ep + 1}/{episodes} "
+                  f"wins={stats['wins']}/{stats['episodes']} "
+                  f"win={cur:.2f} actor={a_loss:.4f}")
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(net.state_dict(), save_path)
+        stats["save_path"] = save_path
+    return stats
+
+
 def eval_winrate(deck_a: list, deck_b: list, net,
                  n: int = 20, seeds: Optional[range] = None,
                  opponent="baseline", device: str = "cpu") -> dict:
-    """评估 policy(agent0) vs 对手（baseline/random）胜率"""
     from engine import decklib as _  # noqa  (deck 由调用方提供)
     from engine.simulator import run_match
     from engine.agents import BaselineAI, RandomAgent

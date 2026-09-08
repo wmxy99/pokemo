@@ -12,6 +12,7 @@
 | `agent/mcts.py` | 引擎内 MCTS：PUCT 选子 + 真实 rollout（随机/策略）；`mcts_with_stats` 审计 |
 | `agent/pipeline.py` | 决策流水线：纯编排 `decide()` 与 LangGraph `build_langgraph_pipeline()` 双形态，节点一致 |
 | `agent/policy_agent.py` | **PolicyAgent**：网络驱动的 Agent 协议实现（采样/argmax + E5 spread 分配）；`load_policy` |
+| `agent/bc.py` | **BC 预热**：BaselineAI 演示数据采集 + masked-CE 预训练（先验从"合理动作"开始） |
 | `agent/trainer.py` | **PPO 自对弈训练管线**：collect_episode（双玩家零和回报）→ clip 更新 → 权重保存 + `eval_winrate` |
 | `agent/prompts.py` | 提示词加载/渲染（`@@var@@` 占位） |
 | `prompts/*.md` | 模板库：parse_effects（system/user，JSON Schema+RAG 插槽）/ commentator |
@@ -31,6 +32,11 @@ cd packages/agent && python examples/demo_decision.py 30
 cd packages/agent
 python examples/train_ppo.py --episodes 60 --decks lightning --save artifacts/policy.pt
 python examples/train_ppo.py --eval --weights artifacts/policy.pt --games 20
+
+# 两阶段训练：BC 预热 → PPO 续训 → 周期 vs baseline 评估（推荐路径）
+cd packages/agent
+python examples/train_pipeline.py --bc-episodes 40 --ppo-episodes 200 --save artifacts/final.pt
+#   产物：artifacts/final.pt（权重）+ artifacts/curve.json（winrate 曲线）
 ```
 
 ## 与引擎的接入契约

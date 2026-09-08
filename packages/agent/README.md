@@ -37,6 +37,13 @@ python examples/train_ppo.py --eval --weights artifacts/policy.pt --games 20
 cd packages/agent
 python examples/train_pipeline.py --bc-episodes 40 --ppo-episodes 200 --save artifacts/final.pt
 #   产物：artifacts/final.pt（权重）+ artifacts/curve.json（winrate 曲线）
+
+# 长训实测（2026-09-08，镜像同卡组 lightning，CPU）：
+#   BC acc 0.92 → eval vs baseline 0.46
+#   vs-fixed 3000 局（58s）in-run 0.48→0.57 → eval vs baseline 0.62 > 基线基准 0.54
+#   ⇒ 对手已"成长"到稳定超越基线 AI；发布级 ≥70% 需更长训练/更强课程（数千至上万局）。
+# 诊断提示：跨卡组对位（如 lightning vs fire）先看 baseline vs baseline 基准——
+#   fire 天然优开时 policy 0.17 ≈ 卡组天花板（基线仅 0.33），勿误判为策略退化。
 ```
 
 ## 与引擎的接入契约

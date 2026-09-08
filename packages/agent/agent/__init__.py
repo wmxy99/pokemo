@@ -15,5 +15,8 @@ from . import policy_net
 from . import mcts
 from . import pipeline
 from . import prompts
+from . import policy_agent
+from . import trainer
 
-__all__ = ["state_encoder", "policy_net", "mcts", "pipeline", "prompts"]
+__all__ = ["state_encoder", "policy_net", "mcts", "pipeline", "prompts",
+           "policy_agent", "trainer"]

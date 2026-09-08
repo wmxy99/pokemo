@@ -19,6 +19,8 @@ build/
 *.safetensors
 *.bin
 *.onnx
+*.pt
+artifacts/
 
 # 编辑器 / OS
 .idea/

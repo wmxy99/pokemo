@@ -26,6 +26,23 @@ def confusion_self_damage(attacker: FieldPokemon) -> int:
     return 30
 
 
+def distribute_damage(bench_count: int, total: int, step: int = 10) -> list:
+    """E5：把 total 点"任意分配"伤害确定性拆到后备（每份 step 的整数倍）。
+
+    默认轮询分配（按后备索引序）；供引擎兜底与 Agent 启发式共用。
+    返回与后备一一对应的伤害列表（长度 = bench_count）。
+    """
+    dmg = [0] * max(0, bench_count)
+    if bench_count <= 0 or total <= 0:
+        return dmg
+    counters = total // step          # 每 counter = step 点
+    i = 0
+    for _ in range(counters):
+        dmg[i % bench_count] += step
+        i += 1
+    return dmg
+
+
 def status_checkup(field: FieldPokemon, rng) -> dict:
     """宝可梦检查阶段：结算中毒/烧伤伤害并处理睡眠/麻痹苏醒。
 

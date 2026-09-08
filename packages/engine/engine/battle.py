@@ -15,7 +15,8 @@ from typing import Optional
 from .cards import (CardRef, PokeRef, EnergyRef, TrainerRef, FieldPokemon,
                     make_pokemon, COLORLESS)
 from .state import GameConfig, PlayerState
-from .rules import compute_damage, status_checkup, confusion_self_damage
+from .rules import (compute_damage, status_checkup, confusion_self_damage,
+                    distribute_damage)
 
 WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
 
@@ -540,14 +541,17 @@ class Battle:
             self._log("damage", {"target": defender.name,
                                  "player": 1 - self.current,
                                  "dmg": dmg, "base": atk.damage})
-        self._apply_attack_effects(attacker, atk.effects)
+        self._apply_attack_effects(attacker, atk.effects,
+                                   plan=action.get("targets"))
         if defender.is_ko:
             self._resolve_ko(1 - self.current, defender)
         if not self.finished:
             self._end_turn()
         return {"ok": True, "event": None}
 
-    def _apply_attack_effects(self, attacker: FieldPokemon, effects: tuple) -> None:
+    def _apply_attack_effects(self, attacker: FieldPokemon, effects: tuple,
+                              plan: Optional[list] = None) -> None:
+        """plan：E5 任意分配的目标计划 [{"pos": bench索引, "dmg": ...}, ...]"""
         p = self.players[self.current]
         opp = self.players[1 - self.current]
         for tag in effects:
@@ -557,6 +561,26 @@ class Battle:
                     self._log("status", {"player": 1 - self.current,
                                          "target": opp.active.name,
                                          "status": tag})
+            elif tag.startswith("spread_free:"):
+                total = int(tag.split(":")[1])
+                plan = plan or [{"pos": i, "dmg": d} for i, d in enumerate(
+                    distribute_damage(len(opp.bench), total))]
+                if sum(x["dmg"] for x in plan) != total:
+                    raise ValueError("spread_free 分配总和与效果不符")
+                for item in plan:
+                    pos, dmg = int(item["pos"]), int(item["dmg"])
+                    if not (0 <= pos < len(opp.bench)):
+                        raise ValueError("spread_free 目标越界")
+                    fp = opp.bench[pos]
+                    fp.damage += dmg
+                    self._log("damage", {"target": fp.name,
+                                         "player": 1 - self.current,
+                                         "dmg": dmg, "base": dmg,
+                                         "spread_free": True})
+                    if fp.is_ko:
+                        self._resolve_ko(1 - self.current, fp)
+                        if self.finished:
+                            return
             elif tag.startswith("spread:"):
                 _, n, per = tag.split(":")
                 n, per = int(n), int(per)
@@ -645,7 +669,8 @@ class Battle:
                               for a in fp.pdef.abilities]
             d["attacks"] = [{"name": a.name, "cost": a.cost_total,
                              "cost_map": list(a.cost), "damage": a.damage,
-                             "desc": a.desc} for a in fp.pdef.attacks]
+                             "tags": list(a.effects), "desc": a.desc}
+                            for a in fp.pdef.attacks]
             return d
 
         hand = []

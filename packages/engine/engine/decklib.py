@@ -81,7 +81,8 @@ def _ref(item):
 D1 = AttackDef("Tackle", cost=1, damage=20, desc="20")
 D2 = AttackDef("Slam", cost=2, damage=60, desc="60")
 D3 = AttackDef("Phantom Rush", cost=(("fire", 1), ("psychic", 1)), damage=200,
-               effects=("spread:2:60",), desc="200 + 对手2只后备各60")
+               effects=("spread_free:60",),
+               desc="200 + 对手后备共 60 点(6指示物) 任意分配")
 RECON_AB = AbilityDef("Recon Scout", tag="recon:2", location="field",
                       desc="每回合一次：检视牌库顶2取1入手（≈Recon Directive）")
 CURSED_AB = AbilityDef("Cursed Blast", tag="cursed:130", location="hand",

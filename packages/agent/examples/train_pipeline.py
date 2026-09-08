@@ -43,6 +43,9 @@ def main():
     ap.add_argument("--ent-coef", type=float, default=0.02)
     ap.add_argument("--eval-every", type=int, default=25)
     ap.add_argument("--games", type=int, default=8)
+    ap.add_argument("--stage2-episodes", type=int, default=0,
+                    help="阶段2：对冻结快照自对弈局数（beat baseline 后课程）")
+    ap.add_argument("--stage2-snapshot-every", type=int, default=500)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--save", default="artifacts/final.pt")
     ap.add_argument("--bc-data-cache", default=None,
@@ -118,7 +121,26 @@ def main():
             log_every=max(1, args.ppo_episodes // 6))
     print(f"[ppo:{args.train_mode}] {ppo_st['episodes']} episodes in "
           f"{time.time()-t1:.0f}s")
-    _eval("ppo-done")
+    # ---- 阶段2：对冻结快照自对弈（beat baseline 后提升课程） ----
+    if args.stage2_episodes > 0:
+        from agent.policy_agent import PolicyAgent
+        seg = args.stage2_snapshot_every
+        ran = 0
+        while ran < args.stage2_episodes:
+            n = min(seg, args.stage2_episodes - ran)
+            frozen = trainer.clone_net(net, args.device)
+            opp = PolicyAgent(frozen, device=args.device, name="frozen")
+            t2 = time.time()
+            trainer.train_ppo_vs_fixed(
+                da, db, net, opponent=opp, episodes=n,
+                ppo_epochs=args.ppo_epochs, clip=args.clip, lr=args.lr,
+                gamma=args.gamma, seed=args.seed, device=args.device,
+                save_path=args.save, log_every=max(1, n // 3))
+            ran += n
+            _eval(f"stage2-{ran}")
+            print(f"[stage2] +{n} vs frozen in {time.time()-t2:.0f}s")
+    else:
+        _eval("ppo-done")
     curve["time_s"] = round(time.time() - t0, 1)
     Path(args.save).parent.mkdir(parents=True, exist_ok=True)
     Path("artifacts/curve.json").write_text(

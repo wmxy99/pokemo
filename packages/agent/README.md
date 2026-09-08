@@ -44,6 +44,13 @@ python examples/train_pipeline.py --bc-episodes 40 --ppo-episodes 200 --save art
 #   ⇒ 对手已"成长"到稳定超越基线 AI；发布级 ≥70% 需更长训练/更强课程（数千至上万局）。
 # 诊断提示：跨卡组对位（如 lightning vs fire）先看 baseline vs baseline 基准——
 #   fire 天然优开时 policy 0.17 ≈ 卡组天花板（基线仅 0.33），勿误判为策略退化。
+# 阶段2 课程实测（3500 vs baseline + 2000 vs 冻结快照，seed 21）：
+#   vs frozen 首段 win 0.70（新策略快速压过冻结旧策略 → 学习机制有效）；
+#   eval vs baseline 逐段 0.50→0.55→0.60→0.60；n=40 高置信：policy 0.625 vs 基线基准 0.600。
+#   ⇒ policy ≈ 略强于基线；K1 ≥70% 尚未达成（诚实结论），继续方向见 README「冲 70% 手册」。
+# 用法：
+#   python examples/train_pipeline.py --ppo-episodes 3500 --stage2-episodes 2000 \
+#       --stage2-snapshot-every 500 --save artifacts/final_k1.pt
 ```
 
 ## 与引擎的接入契约
@@ -59,6 +66,15 @@ python examples/train_pipeline.py --bc-episodes 40 --ppo-episodes 200 --save art
 
 - **RL 收敛需长训**：`train_ppo` 提供可运行闭环（smoke 10 局 3.4s），实际强度需数百局
   量级自对弈 + 奖励/熵调参（脚本参数开放）；BC 预热（模仿 BaselineAI）为后续可选加速；
+- **冲 K1 ≥70% 手册（按投入排序）**：
+  1. 大样本评估降噪：eval n≥100（基线基准 ±0.05 噪声内勿下结论）；
+  2. 更久训练：`--ppo-episodes 10000+ --stage2-episodes 5000+`（CPU ~20ms/局，可后台数小时）；
+  3. 超参：lr 余弦衰减 / entropy 更高(0.05)防局部 / clip 0.3；
+  4. 容量：网络 hidden 64→128、状态编码补入更多特征（hand 构成统计等）；
+  5. 课程扩展：冻结快照刷新更频繁（AlphaZero 迭代式），阶段3 引入 MCTS 教练（stochastic
+     rollouts 指导）；
+  6. 验收口径对齐：K1 定义"vs 规则基线 ≥70%"需固定基线实现版本与 200 局双盲协议
+     （技术方案 §1），跨卡组须用公平对位（镜像/轮换先手）。
 - LangGraph 为可选依赖：纯编排 `decide()` 零依赖可本地跑；`pip install langgraph` 后可用
   StateGraph 形态（行为一致，有单测对齐）；
 - LLM（本地 Qwen3-4B 8bit / 云端 OpenAI 兼容）接入见 `prompts/` 与 card-db 解析流水线

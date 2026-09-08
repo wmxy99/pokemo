@@ -273,6 +273,16 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     return stats
 
 
+def clone_net(net: SmallPolicyValueNet, device: str = "cpu") -> SmallPolicyValueNet:
+    """复制网络（作冻结对手快照；与源网络独立可单独 eval）"""
+    import copy as _copy
+    new = SmallPolicyValueNet(net.state_dim, net.action_dim,
+                              hidden=net.ctx[0].out_features).to(device)
+    new.load_state_dict(_copy.deepcopy(net.state_dict()))
+    new.eval()
+    return new
+
+
 def eval_winrate(deck_a: list, deck_b: list, net,
                  n: int = 20, seeds: Optional[range] = None,
                  opponent="baseline", device: str = "cpu") -> dict:

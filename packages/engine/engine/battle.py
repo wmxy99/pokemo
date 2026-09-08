@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
-"""PokéLab Engine · 对战裁判（回合状态机 + 结算闭环）
+"""PokéLab Engine · 对战裁判（回合状态机 + 结算闭环）· v0.2
 
-v1 简化子集要点（与官方规则差异见 README「规则边界」）：
-  - 回合：开始(检查状态→抽1) → 主阶段(上宝可梦/附能量/撤退/攻击/结束) → 换边
-  - 攻击成功即结束回合（简化，不做攻击后继续行动）
-  - 击倒 → 对手拿奖赏(ex=2)；无后备替补且 active 被击倒 → 判负
-  - 抽卡遇空牌库 → 判负；超 max_turns → 判平
-  - 事件日志：结构化 dict 追加 events，供复盘/JSONL 落库
+v0.2 新增（E1 彩色能量 / E2 进化 / E4 训练家最小集）：
+  - 能量分色支付：攻击校验 can_pay(cost)；撤退/干扰 remove_any（无色优先）；攻击不弃能
+  - evolve 动作：手牌 stage+1 且 evolves_from==场上目标；本回合刚放置/进化不可再进化；
+    进化保留能量与伤害、清除特殊状态
+  - trainer 动作：item（不限次）与 supporter（每回合一次）；tag 派发
+    poffin / ultra_ball / hammer / boss
+v1 沿用：回合开始检查→抽卡→主阶段→攻击即结束回合；确定性 seed；事件日志。
 """
 from __future__ import annotations
 import random
 from typing import Optional
-from .cards import CardRef, PokeRef, EnergyRef, FieldPokemon, make_pokemon
+from .cards import (CardRef, PokeRef, EnergyRef, TrainerRef, FieldPokemon,
+                    make_pokemon, COLORLESS)
 from .state import GameConfig, PlayerState
 from .rules import compute_damage, status_checkup, confusion_self_damage
 
 WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
+
+TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 
 
 class Battle:
@@ -55,48 +59,41 @@ class Battle:
                 raise ValueError(f"牌库过小（{len(p.deck)}）无法完成起手")
             for _ in range(self.cfg.opening_hand):
                 p.hand.append(p.deck.pop())
-            if any(isinstance(c, PokeRef) for c in p.hand):
+            if any(isinstance(c, PokeRef) and c.pdef.stage == 0 for c in p.hand):
                 break
-            # mulligan：整手洗回重抽
             p.deck.extend(p.hand)
             p.hand.clear()
             p.mulligan_count += 1
             self.rng.shuffle(p.deck)
 
     def _setup_openings(self) -> None:
-        # 先 p0 后 p1（mulligan 补偿随后统一结算）
         for pi in (0, 1):
             self._draw_with_mulligan(pi)
             p = self.players[pi]
-            basics = p.basic_in_hand()
+            basics = [c for c in p.basic_in_hand() if c.pdef.stage == 0]
             first = basics[0]
             p.hand.remove(first)
             p.active = make_pokemon(first.pdef)
-            # 自动铺满后备（v1 简化：官方为玩家选择）
             for extra in basics[1:]:
                 if len(p.bench) >= self.cfg.max_bench:
                     break
                 p.hand.remove(extra)
                 p.bench.append(make_pokemon(extra.pdef))
-        # mulligan 补偿：对手补抽（简化：补 = 对方 mulligan 次数）
         if self.cfg.mulligan_compensation:
             self._safe_draw(1, self.players[0].mulligan_count, source="mulligan_comp")
             self._safe_draw(0, self.players[1].mulligan_count, source="mulligan_comp")
 
     # ---------- 抽卡与通用 ----------
     def _safe_draw(self, pi: int, n: int, source: str = "draw") -> int:
-        """抽 n 张；遇空牌库立即判该玩家负（deckout）。返回实抽数。"""
         p = self.players[pi]
         if not p.deck and n > 0:
-            self._finish(1 - pi, "deckout",
-                         {"victim": pi, "need": n, "source": source})
+            self._finish(1 - pi, "deckout", {"victim": pi, "need": n, "source": source})
             return 0
         got = p.draw(n)
         self._log("draw", {"player": pi, "n": got, "source": source})
-        if len(p.hand) > self.cfg.max_hand:      # 手牌上限防御
+        if len(p.hand) > self.cfg.max_hand:
             over = p.hand[self.cfg.max_hand:]
-            p.discard.extend(c.pdef.name if isinstance(c, PokeRef) else c.edef.name
-                             for c in over)
+            p.discard.extend(_card_label(c) for c in over)
             del p.hand[self.cfg.max_hand:]
             self._log("hand_overflow", {"player": pi, "dropped": len(over)})
         return got
@@ -105,7 +102,8 @@ class Battle:
         self.events.append({"turn": self.turn_number, "player": self.current,
                             "type": etype, **data})
 
-    def _finish(self, winner: Optional[int], reason: str, data: Optional[dict] = None) -> None:
+    def _finish(self, winner: Optional[int], reason: str,
+                data: Optional[dict] = None) -> None:
         if self.finished:
             return
         self.finished = True
@@ -125,10 +123,12 @@ class Battle:
         p = self.players[self.current]
         self.phase = "main"
         p.attached_energy_this_turn = 0
+        p.supporter_used = 0
+        for fp in p.all_field():          # E2: 新回合解除"刚放置"标记
+            fp.just_played = False
         if not p.has_pokemon:
             self._finish(1 - self.current, "no_pokemon", {"loser": self.current})
             return
-        # ① 宝可梦检查（当前方场上的状态结算；v1 仅 active）
         if p.active and not p.active.is_ko:
             for ev in status_checkup(p.active, self.rng):
                 self._log("checkup", {**ev, "player": self.current})
@@ -136,7 +136,6 @@ class Battle:
                 self._resolve_ko(self.current, p.active)
                 if self.finished:
                     return
-        # ② 回合开始抽卡
         first_round = self.turn_counts[self.current] == 1
         if not (first_round and self.cfg.first_turn_no_draw):
             self._safe_draw(self.current, 1)
@@ -153,34 +152,73 @@ class Battle:
 
     # ---------- 合法动作 ----------
     def legal_actions(self, pi: Optional[int] = None) -> list:
-        """当前玩家（或指定玩家）主阶段合法动作列表"""
         pi = self.current if pi is None else pi
         if self.finished or pi != self.current or self.phase != "main":
             return []
         p = self.players[pi]
+        opp = self.players[1 - pi]
         acts = []
+        # 上基础
         for i, c in enumerate(p.hand):
-            if isinstance(c, PokeRef):
+            if isinstance(c, PokeRef) and c.pdef.stage == 0:
                 if len(p.bench) < self.cfg.max_bench:
                     acts.append({"verb": "play", "index": i})
-        if p.energy_in_hand() > 0 and p.attached_energy_this_turn == 0 and p.has_pokemon:
+        # 附能量
+        if p.energy_in_hand() > 0 and p.attached_energy_this_turn == 0 \
+                and p.has_pokemon:
             acts.append({"verb": "attach", "target": 0})
             for bi in range(len(p.bench)):
                 acts.append({"verb": "attach", "target": bi + 1})
+        # 招式 / 撤退（总能量计无色门槛）
         if p.active is not None:
             blocked = {"sleep", "paralyzed"} & p.active.status
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
-                    if p.active.energy >= atk.cost:
+                    if p.active.can_pay(atk.cost):
                         acts.append({"verb": "attack", "attack": ai})
-                if p.active.energy >= p.active.pdef.retreat and len(p.bench) > 0:
+                if p.active.total_energy() >= p.active.pdef.retreat \
+                        and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
+        # E2 进化：手牌 x → 场上同名 evolves_from 目标
+        for hi, c in enumerate(p.hand):
+            if isinstance(c, PokeRef) and c.pdef.stage > 0:
+                for tpos, tgt in _field_iter(p):
+                    if tgt is not None and not tgt.just_played \
+                            and tgt.pdef.name == c.pdef.evolves_from \
+                            and tgt.stage + 1 == c.pdef.stage:
+                        acts.append({"verb": "evolve", "hand": hi,
+                                     "target": tpos})
+        # E4 训练家
+        acts += self._trainer_legals(p, opp)
         acts.append({"verb": "pass"})
         return acts
 
+    def _trainer_legals(self, p: PlayerState, opp: PlayerState) -> list:
+        out = []
+        for i, c in enumerate(p.hand):
+            if not isinstance(c, TrainerRef):
+                continue
+            tag, kind = c.tdef.tag, c.tdef.kind
+            if kind == "supporter" and p.supporter_used:
+                continue
+            if tag == "poffin":
+                if len(p.bench) < self.cfg.max_bench:
+                    out.append({"verb": "trainer", "hand": i})
+            elif tag == "ultra_ball":
+                if len(p.hand) >= 3:   # 自身 + 弃 2
+                    out.append({"verb": "trainer", "hand": i})
+            elif tag == "hammer":
+                if opp.active is not None and opp.active.total_energy() > 0:
+                    out.append({"verb": "trainer", "hand": i})
+            elif tag == "boss":
+                if opp.bench:
+                    for bi in range(len(opp.bench)):
+                        out.append({"verb": "trainer", "hand": i,
+                                    "target": bi})
+        return out
+
     # ---------- 动作执行 ----------
     def step(self, action: dict) -> dict:
-        """执行一个动作。返回 {"ok":bool, "error":str|None, "event":dict|None}"""
         if self.finished:
             return {"ok": False, "error": "game_over"}
         if self.phase != "main":
@@ -196,6 +234,10 @@ class Battle:
                 return self._do_attack(p, action)
             if verb == "retreat":
                 return self._do_retreat(p, action)
+            if verb == "evolve":
+                return self._do_evolve(p, action)
+            if verb == "trainer":
+                return self._do_trainer(p, action)
             if verb == "pass":
                 self._end_turn()
                 return {"ok": True, "event": None}
@@ -206,12 +248,13 @@ class Battle:
     def _do_play(self, p: PlayerState, action: dict) -> dict:
         idx = int(action["index"])
         c = p.hand[idx]
-        if not isinstance(c, PokeRef):
-            raise ValueError("该牌不是宝可梦")
+        if not isinstance(c, PokeRef) or c.pdef.stage != 0:
+            raise ValueError("该牌不是基础宝可梦")
         if not p.bench_has_room(self.cfg):
             raise ValueError("后备区已满")
         p.hand.pop(idx)
         fp = make_pokemon(c.pdef)
+        fp.just_played = True
         p.bench.append(fp)
         self._log("play", {"player": self.current, "card": fp.name})
         return {"ok": True, "event": self.events[-1]}
@@ -233,7 +276,8 @@ class Battle:
             raise ValueError("手牌无能量")
         p.attached_energy_this_turn = 1
         self._log("attach", {"player": self.current, "target": target.name,
-                             "energy_now": target.energy})
+                             "etype": list(target.energy)[-1],
+                             "energy_now": target.total_energy()})
         return {"ok": True, "event": self.events[-1]}
 
     def _do_retreat(self, p: PlayerState, action: dict) -> dict:
@@ -242,12 +286,11 @@ class Battle:
         if {"sleep", "paralyzed"} & p.active.status:
             raise ValueError("睡眠/麻痹中无法撤退")
         cost = p.active.pdef.retreat
-        if p.active.energy < cost:
+        if not p.active.remove_any(cost):
             raise ValueError("能量不足")
         bi = int(action.get("bench", 0))
         if bi >= len(p.bench):
             raise ValueError("替补目标越界")
-        p.active.energy -= cost
         old = p.active
         old.clear_status()
         p.active = p.bench.pop(bi)
@@ -256,34 +299,147 @@ class Battle:
                               "in": p.active.name})
         return {"ok": True, "event": self.events[-1]}
 
+    def _do_evolve(self, p: PlayerState, action: dict) -> dict:
+        hi = int(action["hand"])
+        c = p.hand[hi]
+        if not isinstance(c, PokeRef) or c.pdef.stage <= 0:
+            raise ValueError("该牌不可进化")
+        tpos = int(action.get("target", 0))
+        tgt = _field_at(p, tpos)
+        if tgt is None:
+            raise ValueError("进化目标为空")
+        if tgt.just_played:
+            raise ValueError("本回合刚放置/进化，不可再进化")
+        if tgt.pdef.name != c.pdef.evolves_from \
+                or tgt.stage + 1 != c.pdef.stage:
+            raise ValueError("进化链不匹配")
+        old_name = tgt.name
+        p.hand.pop(hi)
+        tgt.evolve_to(c.pdef)
+        self._log("evolve", {"player": self.current, "from": old_name,
+                             "to": tgt.name, "pos": tpos})
+        return {"ok": True, "event": self.events[-1]}
+
+    def _do_trainer(self, p: PlayerState, action: dict) -> dict:
+        hi = int(action["hand"])
+        c = p.hand[hi]
+        if not isinstance(c, TrainerRef):
+            raise ValueError("该牌不是训练家")
+        tag, kind = c.tdef.tag, c.tdef.kind
+        if kind == "supporter":
+            if p.supporter_used:
+                raise ValueError("本回合已使用支援者")
+        opp = self.players[1 - self.current]
+        # 执行（tag 派发）
+        if tag == "poffin":
+            placed = self._trainer_poffin(p)
+        elif tag == "ultra_ball":
+            placed = self._trainer_ultra_ball(p, hi)
+        elif tag == "hammer":
+            placed = self._trainer_hammer(opp)
+        elif tag == "boss":
+            placed = self._trainer_boss(opp, int(action.get("target", 0)))
+        else:
+            raise ValueError(f"未知训练家 tag={tag}")
+        p.hand.pop(hi)
+        p.discard.append(c.tdef.name)
+        if kind == "supporter":
+            p.supporter_used = 1
+        self._log("trainer", {"player": self.current, "tag": tag,
+                              "kind": kind, "detail": placed})
+        return {"ok": True, "event": self.events[-1]}
+
+    # --- E4 训练家行为 ---
+    def _trainer_poffin(self, p: PlayerState) -> str:
+        """检索牌库 2 张基础宝可梦放入后备并洗牌"""
+        found = 0
+        for i in reversed(range(len(p.deck))):
+            if found >= 2 or not p.bench_has_room(self.cfg):
+                break
+            if isinstance(p.deck[i], PokeRef) and p.deck[i].pdef.stage == 0:
+                fp = make_pokemon(p.deck.pop(i).pdef)
+                fp.just_played = True
+                p.bench.append(fp)
+                found += 1
+        self.rng.shuffle(p.deck)   # 检索后洗牌
+        return f"put {found} basic to bench"
+
+    def _trainer_ultra_ball(self, p: PlayerState, self_hi: int) -> str:
+        """弃手牌 2 张（不含自身）→ 检索任意宝可梦入手牌"""
+        if len(p.hand) < 3:
+            raise ValueError("手牌不足（需弃 2）")
+        # 从末尾丢弃 2 张（跳过自身所在位置）
+        removed = 0
+        for j in range(len(p.hand) - 1, -1, -1):
+            if removed >= 2:
+                break
+            if j == self_hi:
+                continue
+            p.discard.append(_card_label(p.hand[j]))
+            p.hand.pop(j)
+            removed += 1
+            if j < self_hi:
+                self_hi -= 1
+        if removed < 2:
+            raise ValueError("手牌不足（需弃 2）")
+        # 检索：从牌库底向顶取第一张宝可梦 → 入手
+        found = None
+        for i in range(len(p.deck) - 1, -1, -1):
+            if isinstance(p.deck[i], PokeRef):
+                found = p.deck.pop(i)
+                break
+        self.rng.shuffle(p.deck)
+        if found is None:
+            return "search failed (no pokemon in deck)"
+        p.hand.append(found)
+        return f"search {found.pdef.name} to hand"
+
+    def _trainer_hammer(self, opp: PlayerState) -> str:
+        """抛币正面 → 弃对手 active 1 能量"""
+        if opp.active is None or opp.active.total_energy() <= 0:
+            raise ValueError("对手 active 无能量")
+        if self.rng.random() < 0.5:
+            opp.active.remove_any(1)
+            return "heads: discard 1 energy"
+        return "tails: no effect"
+
+    def _trainer_boss(self, opp: PlayerState, bi: int) -> str:
+        """将对手 1 只后备拉为 active（换位）"""
+        if not opp.bench or bi >= len(opp.bench):
+            raise ValueError("对手无可拉后备")
+        new_active = opp.bench.pop(bi)
+        if opp.active is not None:
+            opp.bench.append(opp.active)
+        opp.active = new_active
+        return f"drag {new_active.name} to active"
+
+    # ---------- 攻击 ----------
     def _do_attack(self, p: PlayerState, action: dict) -> dict:
         if p.active is None:
             raise ValueError("无 active")
         if self.cfg.first_turn_no_attack and self.turn_counts[self.current] == 1:
             raise ValueError("先手第一回合不可攻击")
-        blocked = {"sleep", "paralyzed"} & p.active.status
-        if blocked:
-            raise ValueError(f"状态 {sorted(blocked)} 禁止攻击")
+        if {"sleep", "paralyzed"} & p.active.status:
+            raise ValueError("睡眠/麻痹中禁止攻击")
         ai = int(action["attack"])
         if ai >= len(p.active.pdef.attacks):
             raise ValueError("招式越界")
         atk = p.active.pdef.attacks[ai]
-        if p.active.energy < atk.cost:
-            raise ValueError("能量不足")
+        if not p.active.can_pay(atk.cost):
+            raise ValueError("能量不足（无法支付招式费用）")
         attacker = p.active
         self._log("attack", {"player": self.current, "attack": atk.name,
-                             "from": attacker.name})
-        # 混乱判定
+                             "from": attacker.name,
+                             "cost": dict(atk.cost)})
         confused = "confuse" in attacker.status
         if confused and self.rng.random() < 0.5:
-            # tails：自伤 30，攻击失败
-            self._log("confuse_tails", {"player": self.current, "target": attacker.name})
+            self._log("confuse_tails", {"player": self.current,
+                                        "target": attacker.name})
             attacker.damage += confusion_self_damage(attacker)
             if attacker.is_ko:
                 self._resolve_ko(self.current, attacker)
             if self.finished:
                 return {"ok": True, "event": None}
-            # 攻击未执行但占用行动 → 结束回合
             self._end_turn()
             return {"ok": True, "event": None}
         if confused:
@@ -291,22 +447,19 @@ class Battle:
             self._log("confuse_heads", {"player": self.current})
         defender = self.players[1 - self.current].active
         if defender is None:
-            self._finish(self.current, "no_pokemon",
-                         {"loser": 1 - self.current})
+            self._finish(self.current, "no_pokemon", {"loser": 1 - self.current})
             return {"ok": True, "event": None}
-        # 主伤害
         if atk.damage > 0:
             dmg = compute_damage(attacker, defender, atk.damage)
             defender.damage += dmg
-            self._log("damage", {"target": defender.name, "player": 1 - self.current,
+            self._log("damage", {"target": defender.name,
+                                 "player": 1 - self.current,
                                  "dmg": dmg, "base": atk.damage})
-        # 效果 tag
         self._apply_attack_effects(attacker, atk.effects)
-        # 结算击倒
         if defender.is_ko:
             self._resolve_ko(1 - self.current, defender)
         if not self.finished:
-            self._end_turn()   # 攻击即结束回合（v1 简化）
+            self._end_turn()
         return {"ok": True, "event": None}
 
     def _apply_attack_effects(self, attacker: FieldPokemon, effects: tuple) -> None:
@@ -317,7 +470,8 @@ class Battle:
                 if opp.active is not None and not opp.active.is_ko:
                     opp.active.status.add(tag)
                     self._log("status", {"player": 1 - self.current,
-                                         "target": opp.active.name, "status": tag})
+                                         "target": opp.active.name,
+                                         "status": tag})
             elif tag.startswith("spread:"):
                 _, n, per = tag.split(":")
                 n, per = int(n), int(per)
@@ -325,8 +479,10 @@ class Battle:
                 self.rng.shuffle(targets)
                 for fp in targets[:n]:
                     fp.damage += per
-                    self._log("damage", {"target": fp.name, "player": 1 - self.current,
-                                         "dmg": per, "base": per, "spread": True})
+                    self._log("damage", {"target": fp.name,
+                                         "player": 1 - self.current,
+                                         "dmg": per, "base": per,
+                                         "spread": True})
                     if fp.is_ko:
                         self._resolve_ko(1 - self.current, fp)
                         if self.finished:
@@ -335,12 +491,13 @@ class Battle:
                 _, amt = tag.split(":")
                 amt = int(amt)
                 attacker.damage = max(0, attacker.damage - amt)
-                self._log("heal", {"player": self.current, "target": attacker.name,
-                                   "amt": amt})
+                self._log("heal", {"player": self.current,
+                                   "target": attacker.name, "amt": amt})
             elif tag.startswith("self:"):
                 _, amt = tag.split(":")
                 attacker.damage += int(amt)
-                self._log("damage", {"target": attacker.name, "player": self.current,
+                self._log("damage", {"target": attacker.name,
+                                     "player": self.current,
                                      "dmg": int(amt), "self": True})
                 if attacker.is_ko:
                     self._resolve_ko(self.current, attacker)
@@ -352,7 +509,6 @@ class Battle:
 
     # ---------- 击倒/奖赏 ----------
     def _resolve_ko(self, owner: int, fp: FieldPokemon) -> None:
-        """宝可梦被击倒：移出战场 → 对手拿奖赏 → 需替补则替补，无则判负"""
         p = self.players[owner]
         opp = self.players[1 - owner]
         pos = None
@@ -361,8 +517,7 @@ class Battle:
         elif fp in p.bench:
             pos = "bench"
         if pos is None:
-            return  # 已被处理
-        # 从战场移除
+            return
         if pos == "active":
             p.active = None
         else:
@@ -370,7 +525,6 @@ class Battle:
         p.discard.append(fp.name)
         self._log("knockout", {"player": 1 - owner, "victim_owner": owner,
                                "card": fp.name, "pos": pos})
-        # 奖赏
         give = self.cfg.ex_prizes if fp.pdef.is_ex else 1
         opp.prizes_left = max(0, opp.prizes_left - give)
         self._log("prize", {"player": 1 - owner, "take": give,
@@ -378,7 +532,6 @@ class Battle:
         if opp.prizes_left == 0:
             self._finish(1 - owner, "prizes", {"taker": 1 - owner})
             return
-        # active 被击倒 → 强制替补
         if pos == "active":
             if p.bench:
                 p.active = p.bench.pop(0)
@@ -389,7 +542,6 @@ class Battle:
 
     # ---------- 观测 ----------
     def view(self, pi: Optional[int] = None) -> dict:
-        """构建对局视图快照（供 Agent/前端；只含己方手牌，双方场面公开）"""
         pi = self.current if pi is None else pi
         me, opp = self.players[pi], self.players[1 - pi]
 
@@ -401,7 +553,9 @@ class Battle:
             d["resistance"] = fp.pdef.resistance
             d["retreat"] = fp.pdef.retreat
             d["ex"] = fp.pdef.is_ex
-            d["attacks"] = [{"name": a.name, "cost": a.cost, "damage": a.damage,
+            d["evolves_from"] = fp.pdef.evolves_from
+            d["attacks"] = [{"name": a.name, "cost": a.cost_total,
+                             "cost_map": list(a.cost), "damage": a.damage,
                              "desc": a.desc} for a in fp.pdef.attacks]
             return d
 
@@ -409,9 +563,14 @@ class Battle:
         for c in me.hand:
             if isinstance(c, PokeRef):
                 hand.append({"type": "pokemon", "name": c.pdef.name,
-                             "hp": c.pdef.hp})
+                             "hp": c.pdef.hp, "stage": c.pdef.stage,
+                             "evolves_from": c.pdef.evolves_from})
             elif isinstance(c, EnergyRef):
-                hand.append({"type": "energy", "name": c.edef.name})
+                hand.append({"type": "energy", "name": c.edef.name,
+                             "etype": c.edef.type})
+            elif isinstance(c, TrainerRef):
+                hand.append({"type": c.tdef.kind, "name": c.tdef.name,
+                             "tag": c.tdef.tag})
         return {
             "me": pi,
             "turn": self.turn_number,
@@ -424,6 +583,7 @@ class Battle:
                 "deck_count": len(me.deck),
                 "discard_count": len(me.discard),
                 "attached_energy_this_turn": me.attached_energy_this_turn,
+                "supporter_used": me.supporter_used,
             },
             "opp_state": {
                 "hand_count": len(opp.hand),
@@ -436,3 +596,29 @@ class Battle:
             "legal": self.legal_actions(pi),
             "finished": self.finished,
         }
+
+
+# ---------- 工具 ----------
+def _card_label(c) -> str:
+    if isinstance(c, PokeRef):
+        return c.pdef.name
+    if isinstance(c, EnergyRef):
+        return c.edef.name
+    if isinstance(c, TrainerRef):
+        return c.tdef.name
+    return str(c)
+
+
+def _field_iter(p: PlayerState):
+    """返回 [(0, active), (1..n, bench_i-1)] 位置迭代（bench 用 1-based 目标编码）"""
+    if p.active is not None:
+        yield 0, p.active
+    for bi, fp in enumerate(p.bench):
+        yield bi + 1, fp
+
+
+def _field_at(p: PlayerState, tpos: int) -> Optional[FieldPokemon]:
+    if tpos == 0:
+        return p.active
+    bi = tpos - 1
+    return p.bench[bi] if 0 <= bi < len(p.bench) else None

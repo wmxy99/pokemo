@@ -102,10 +102,20 @@ class Arena:
         return self.b.step({"verb": "attack", "attack": ai})
 
 
+def addE(fp, n, t="colorless"):
+    """测试助手：直接给场上宝可梦加 n 点（默认无色）能量"""
+    fp.add_energy(t, n)
+    return fp
+
+
+def totE(fp):
+    return fp.total_energy()
+
+
 # ================= 用例组 =================
 class TestDamage(unittest.TestCase):
     def test_plain_damage(self):
-        a = Arena(); a.b.players[0].active.energy = 1
+        a = Arena(); addE(a.b.players[0].active, 1)
         res = a.attack()
         self.assertTrue(res["ok"])
         d = a.b.players[1].active
@@ -157,7 +167,7 @@ class TestSpecialConditions(unittest.TestCase):
         self.assertTrue(woken)
 
     def test_sleep_blocks_attack_and_retreat(self):
-        a = Arena(); a.b.players[0].active.energy = 1
+        a = Arena(); addE(a.b.players[0].active, 1)
         a.b.players[0].active.status.add("sleep")
         legal = a.b.legal_actions(0)
         self.assertTrue(all(x["verb"] != "attack" for x in legal))
@@ -165,7 +175,7 @@ class TestSpecialConditions(unittest.TestCase):
         self.assertFalse(res["ok"])
 
     def test_paralyze_blocks_attack(self):
-        a = Arena(); a.b.players[0].active.energy = 1
+        a = Arena(); addE(a.b.players[0].active, 1)
         a.b.players[0].active.status.add("paralyzed")
         res = a.attack()
         self.assertFalse(res["ok"])
@@ -174,7 +184,7 @@ class TestSpecialConditions(unittest.TestCase):
     def test_confuse_tails_self_damage(self):
         a = Arena()
         atk = a.b.players[0].active
-        atk.energy = 1
+        addE(atk, 1)
         atk.status.add("confuse")
         a.b.rng.random = lambda: 0.1          # tails
         res = a.attack()
@@ -186,7 +196,7 @@ class TestSpecialConditions(unittest.TestCase):
     def test_confuse_heads_attack_and_remove(self):
         a = Arena()
         atk = a.b.players[0].active
-        atk.energy = 1
+        addE(atk, 1)
         atk.status.add("confuse")
         a.b.rng.random = lambda: 0.9          # heads
         a.attack()
@@ -197,7 +207,7 @@ class TestSpecialConditions(unittest.TestCase):
         a = Arena()
         a.b.players[0].active = make_pokemon(P("Poker", 80, ptype="grass",
                                                 atks=(TOXIC,)))
-        a.b.players[0].active.energy = 1
+        addE(a.b.players[0].active, 1)
         a.attack()
         self.assertIn("poison", a.b.players[1].active.status)
 
@@ -208,7 +218,7 @@ class TestKnockoutPrizes(unittest.TestCase):
         a.place(1, KO_T)          # hp30 换血；先移 default 后放新的会覆盖 active
         a.place(0, P("Beater", 100, ptype="lightning", atks=(BIG,)))
         a.b.players[1].bench.append(make_pokemon(BENCH1))
-        a.b.players[0].active.energy = 2
+        addE(a.b.players[0].active, 2)
         res = a.attack()
         self.assertTrue(res["ok"])
         self.assertEqual(a.b.players[0].prizes_left, 5)     # 拿 1 奖
@@ -220,7 +230,7 @@ class TestKnockoutPrizes(unittest.TestCase):
         a = Arena()
         a.place(1, EX_T)          # ex 60hp
         a.place(0, P("Beater2", 100, ptype="lightning", atks=(BIG,)))
-        a.b.players[0].active.energy = 2
+        addE(a.b.players[0].active, 2)
         a.attack()
         self.assertEqual(a.b.players[0].prizes_left, 4)     # 拿 2 奖
 
@@ -228,7 +238,7 @@ class TestKnockoutPrizes(unittest.TestCase):
         a = Arena()
         a.place(1, KO_T)          # 无后备
         a.place(0, P("Beater3", 100, ptype="lightning", atks=(BIG,)))
-        a.b.players[0].active.energy = 2
+        addE(a.b.players[0].active, 2)
         a.attack()
         self.assertTrue(a.b.finished)
         self.assertEqual(a.b.winner, 0)
@@ -239,7 +249,7 @@ class TestKnockoutPrizes(unittest.TestCase):
         a.b.players[0].prizes_left = 1      # 只差 1 奖
         a.place(1, EX_T)
         a.place(0, P("Beater4", 100, ptype="lightning", atks=(BIG,)))
-        a.b.players[0].active.energy = 2
+        addE(a.b.players[0].active, 2)
         a.attack()
         self.assertTrue(a.b.finished)
         self.assertEqual(a.b.winner, 0)
@@ -270,10 +280,10 @@ class TestActions(unittest.TestCase):
         a = Arena()
         a.b.players[0].bench.append(make_pokemon(BENCH1))
         atk = a.b.players[0].active
-        atk.energy = 2
+        addE(atk, 2)
         res = a.b.step({"verb": "retreat", "bench": 0})
         self.assertTrue(res["ok"])
-        self.assertEqual(atk.energy, 1)     # retreat1 → 弃1能
+        self.assertEqual(totE(atk), 1)     # retreat1 → 弃1能
         self.assertEqual(a.b.players[0].active.name, "B1")
         self.assertIn(atk, a.b.players[0].bench)  # 旧 active 退到后备
 
@@ -290,7 +300,7 @@ class TestActions(unittest.TestCase):
         ok2 = a.b.step({"verb": "attach", "target": 0})
         self.assertTrue(ok1["ok"])
         self.assertFalse(ok2["ok"])
-        self.assertEqual(a.b.players[0].active.energy, 1)
+        self.assertEqual(totE(a.b.players[0].active), 1)
 
     def test_play_to_bench(self):
         a = Arena()
@@ -301,7 +311,7 @@ class TestActions(unittest.TestCase):
 
     def test_first_turn_no_attack_flag(self):
         a = Arena(GameConfig(first_turn_no_attack=True))
-        a.b.players[0].active.energy = 1
+        addE(a.b.players[0].active, 1)
         res = a.attack()
         self.assertFalse(res["ok"])
         self.assertIn("先手第一回合", res["error"])
@@ -311,7 +321,7 @@ class TestAttackEffects(unittest.TestCase):
     def test_spread_bench(self):
         a = Arena()
         a.b.players[0].active = make_pokemon(SPREAD_ATK)
-        a.b.players[0].active.energy = 2
+        addE(a.b.players[0].active, 2)
         a.b.players[1].bench = [make_pokemon(BENCH1), make_pokemon(BENCH2)]
         a.attack()
         self.assertEqual(a.b.players[1].active.damage, 40)   # 主目标
@@ -321,7 +331,7 @@ class TestAttackEffects(unittest.TestCase):
     def test_recoil_self(self):
         a = Arena()
         a.place(0, RECOILER)
-        a.b.players[0].active.energy = 3
+        addE(a.b.players[0].active, 3)
         a.attack()
         self.assertEqual(a.b.players[0].active.damage, 20)   # 反伤
         self.assertEqual(a.b.players[1].active.damage, 100)
@@ -329,7 +339,7 @@ class TestAttackEffects(unittest.TestCase):
     def test_heal_self(self):
         a = Arena()
         a.place(0, HEALER)
-        a.b.players[0].active.energy = 1
+        addE(a.b.players[0].active, 1)
         a.b.players[0].active.damage = 30
         a.attack()
         self.assertEqual(a.b.players[0].active.damage, 20)   # 30-10
@@ -337,7 +347,7 @@ class TestAttackEffects(unittest.TestCase):
     def test_draw_effect(self):
         a = Arena()
         a.place(0, DRAWER)
-        a.b.players[0].active.energy = 1
+        addE(a.b.players[0].active, 1)
         h0 = len(a.b.players[0].hand)
         a.attack()
         self.assertEqual(len(a.b.players[0].hand), h0 + 2)

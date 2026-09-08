@@ -79,7 +79,7 @@ class TestBaselineBehaviour(unittest.TestCase):
         b = Battle(dl.deck_lightning_demo(), dl.deck_lightning_demo(), seed=5)
         # 跳过复杂准备：直接给当前方 active 挂够能量
         cur = b.players[b.current]
-        cur.active.energy = 3
+        cur.active.add_energy("colorless", 3)
         cur.hand.clear()
         v = b.view()
         agent = BaselineAI()

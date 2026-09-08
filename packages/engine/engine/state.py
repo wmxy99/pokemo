@@ -33,6 +33,7 @@ class PlayerState:
     mulligan_count: int = 0
     # 回合内一次性资源
     attached_energy_this_turn: int = 0
+    supporter_used: int = 0                           # E4: 每回合支援者使用标志
 
     # ---- 便捷查询 ----
     @property
@@ -64,14 +65,13 @@ class PlayerState:
         return len(self.bench) < cfg.max_bench
 
     def attach_energy_to(self, target: FieldPokemon, cfg: GameConfig) -> bool:
-        """将手牌一张能量附着到目标；成功返回 True"""
+        """将手牌一张能量附着到目标（按能量类型计入 energy dict）；成功返回 True"""
         if self.energy_in_hand() <= 0:
             return False
         from .cards import EnergyRef
-        # 取一张能量（默认最后一张，等价）
         for i in reversed(range(len(self.hand))):
             if isinstance(self.hand[i], EnergyRef):
-                self.hand.pop(i)
+                ref = self.hand.pop(i)
                 break
-        target.energy += 1
+        target.add_energy(ref.edef.type)
         return True

@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 """PokéLab Engine · 示例卡组库（engine-native 定义；原创代名，规避第三方 IP）
 
-v1 简化：卡组仅含宝可梦 + 通用能量（训练家/支援者/特性 = 灰名单）。
+v0.2：新增 Y 版 Draco 进化线（对应 Dragapult 原型，E2 进化 + E1 彩色能量演示）
+      与训练家最小集（E4：poffin/ultra_ball/hammer/boss）。
+v1 简化注记：特性机制（Recon Directive / Cursed Blast 等）待引擎 E3 批次实现，
+Y 版近似攻击型先行。
 """
 from __future__ import annotations
 from .cards import (PokemonDef, AttackDef, PokeRef, EnergyRef, EnergyDef,
-                    CardRef)
+                    TrainerRef, TrainerDef, CardRef)
 
-_E = EnergyDef()  # v1 通用能量牌模板
+_E = EnergyDef()                # v1 通用无色能量
+_EF = EnergyDef("fire")
+_EP = EnergyDef("psychic")
 
 # ---------- 招式 ----------
 T1 = AttackDef("Spark Punch", cost=1, damage=30, desc="30")
@@ -63,9 +68,35 @@ def _deck(*items: tuple[object, int]) -> list:
 
 
 def _ref(item):
-    return PokeRef(item) if isinstance(item, PokemonDef) else EnergyRef()
+    if isinstance(item, PokemonDef):
+        return PokeRef(item)
+    if isinstance(item, EnergyDef):
+        return EnergyRef(item)
+    if isinstance(item, TrainerDef):
+        return TrainerRef(item)
+    raise TypeError(f"未知卡类型 {type(item)}")
 
 
+# ---------- v0.2 · Y 版 Draco 进化线（≈ Dragapult 原型，P0-A） ----------
+D1 = AttackDef("Tackle", cost=1, damage=20, desc="20")
+D2 = AttackDef("Slam", cost=2, damage=60, desc="60")
+D3 = AttackDef("Phantom Rush", cost=(("fire", 1), ("psychic", 1)), damage=200,
+               effects=("spread:2:60",), desc="200 + 对手2只后备各60")
+DRAKLING = PokemonDef("Drakling", hp=60, ptype="dragon", weakness="darkness",
+                      attacks=(D1,), stage=0, desc="Y版 基础（≈Dreepy）")
+DRACO = PokemonDef("Draco", hp=120, ptype="dragon", weakness="darkness",
+                   attacks=(D2,), stage=1, evolves_from="Drakling",
+                   desc="Y版 一阶（≈Drakloak，特性待E3）")
+DRACO_EX = PokemonDef("Draco ex", hp=200, ptype="dragon", weakness="darkness",
+                      retreat=1, attacks=(D3,), is_ex=True, stage=2,
+                      evolves_from="Draco", desc="Y版 二阶ex（≈Dragapult ex）")
+# E4 训练家（Y 版首批）
+T_POFFIN = TrainerDef("poffin", kind="item", name="Buddy Ball")
+T_UBALL = TrainerDef("ultra_ball", kind="item", name="Hyper Ball")
+T_HAMMER = TrainerDef("hammer", kind="item", name="Energy Crush")
+T_BOSS = TrainerDef("boss", kind="supporter", name="Orders")
+
+# ---------- 原 demo 卡组 ----------
 def deck_lightning_demo() -> list:
     """雷电 demo：低费快速，验证基础闭环"""
     return _deck((BOLT, 12), (THUNDREX, 6), (SPARKIT, 10), (_E, 32))
@@ -88,12 +119,23 @@ def deck_status_demo() -> list:
     return _deck((TOXIBUG, 8), (DREAMOTH, 8), (FANGPUPPY, 6), (_E, 38))
 
 
+def deck_draco_demo() -> list:
+    """Y 版 Draco ex 卡组（≈ A1 Dragapult 映射版）：进化线 + 训练家 + 彩色能量
+
+    60 张 = 宝可梦 30（14 基础/10 一阶/6 二阶ex）+ 训练家 8 + 能量 22（火12/超10）
+    """
+    return _deck((DRAKLING, 14), (DRACO, 10), (DRACO_EX, 6),
+                 (T_POFFIN, 3), (T_UBALL, 2), (T_HAMMER, 2), (T_BOSS, 1),
+                 (_EF, 12), (_EP, 10))
+
+
 ALL_DECKS = {
     "lightning": deck_lightning_demo,
     "grass": deck_grass_demo,
     "fire": deck_fire_demo,
     "psychic": deck_psychic_demo,
     "status": deck_status_demo,
+    "draco": deck_draco_demo,
 }
 
 

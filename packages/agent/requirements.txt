@@ -1,0 +1,5 @@
+# 核心：深度学习框架（pokemo 环境已预装 GPU torch 2.13.0+cu130，跳过即用）
+torch>=2.1
+
+# 可选：LangGraph 决策编排（P2 部署形态；纯编排 decide() 无需本依赖）
+langgraph>=0.2

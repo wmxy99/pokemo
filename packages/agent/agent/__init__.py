@@ -18,6 +18,8 @@ from . import prompts
 from . import policy_agent
 from . import trainer
 from . import bc
+from . import reward
+from . import dqn
 
 __all__ = ["state_encoder", "policy_net", "mcts", "pipeline", "prompts",
-           "policy_agent", "trainer", "bc"]
+           "policy_agent", "trainer", "bc", "reward", "dqn"]

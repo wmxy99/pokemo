@@ -41,6 +41,8 @@ def main():
     ap.add_argument("--gamma", type=float, default=0.99)
     ap.add_argument("--clip", type=float, default=0.2)
     ap.add_argument("--ent-coef", type=float, default=0.02)
+    ap.add_argument("--reward-shaping", type=float, default=0.0,
+                    help="局面得分 shaping 权重（agent.reward.state_reward）")
     ap.add_argument("--lr-decay", type=float, default=1.0,
                     help="线性 lr 衰减终点系数（默认 1.0=不衰减；0.1 手册推荐）")
     ap.add_argument("--hidden", type=int, default=64)
@@ -114,6 +116,7 @@ def main():
             episodes=args.ppo_episodes, ppo_epochs=args.ppo_epochs,
             clip=args.clip, lr=args.lr, gamma=args.gamma,
             ent_coef=args.ent_coef, lr_decay=args.lr_decay,
+            shaping=args.reward_shaping,
             eval_fn=lambda ep: _eval(f"stage1-{ep}"),
             eval_every=args.eval_every,
             seed=args.seed, device=args.device, save_path=args.save,
@@ -124,6 +127,7 @@ def main():
             ppo_epochs=args.ppo_epochs, clip=args.clip, lr=args.lr,
             gamma=args.gamma, temperature=1.0, seed=args.seed,
             device=args.device, save_path=args.save,
+            shaping=args.reward_shaping,
             log_every=max(1, args.ppo_episodes // 6))
     print(f"[ppo:{args.train_mode}] {ppo_st['episodes']} episodes in "
           f"{time.time()-t1:.0f}s")
@@ -141,7 +145,7 @@ def main():
                 da, db, net, opponent=opp, episodes=n,
                 ppo_epochs=args.ppo_epochs, clip=args.clip, lr=args.lr,
                 gamma=args.gamma, ent_coef=args.ent_coef,
-                lr_decay=args.lr_decay,
+                lr_decay=args.lr_decay, shaping=args.reward_shaping,
                 eval_fn=lambda ep: _eval(f"stage2-{ran}+{ep}"),
                 eval_every=args.eval_every,
                 seed=args.seed, device=args.device,

@@ -23,6 +23,7 @@ import torch.nn.functional as F
 
 from .state_encoder import encode_state, encode_action
 from .policy_net import SmallPolicyValueNet
+from . import reward as rw
 
 
 def _fresh_battle(deck_a: list, deck_b: list, seed: int):
@@ -31,8 +32,8 @@ def _fresh_battle(deck_a: list, deck_b: list, seed: int):
 
 
 def collect_episode(battle, net, device="cpu", temperature=1.0,
-                    max_steps=500) -> list:
-    """自对弈一局（双方共用 net，采样）；返回步记录列表"""
+                    max_steps=500, shaping: float = 0.0) -> list:
+    """自对弈一局（双方共用 net，采样）；返回步记录列表（可选 shaping 中间奖励）"""
     steps = []
     guard = 0
     while not battle.finished and guard < max_steps:
@@ -62,6 +63,7 @@ def collect_episode(battle, net, device="cpu", temperature=1.0,
             "logp": logp,
             "actor": battle.current,
             "action": copy.deepcopy(legal[idx]),
+            "r": shaping * rw.state_reward(view),
         })
         res = battle.step(copy.deepcopy(legal[idx]))
         if not res["ok"]:
@@ -70,16 +72,18 @@ def collect_episode(battle, net, device="cpu", temperature=1.0,
 
 
 def _returns(steps: list, winner: Optional[int], gamma: float) -> list:
+    """交替视角回报：R_t = (shaping_r_t + 终端±1) - gamma·R_{t+1}"""
     n = len(steps)
     targets = [0.0] * n
     g = 0.0
     for t in range(n - 1, -1, -1):
         actor = steps[t]["actor"]
+        term = 0.0
         if t == n - 1:
-            r = 1.0 if (winner == actor) else (-1.0 if winner is not None else 0.0)
-        else:
-            r = 0.0
-        g = r - gamma * g            # 下一状态视角为对手 → 取负
+            term = 1.0 if (winner == actor) else \
+                (-1.0 if winner is not None else 0.0)
+        r_t = steps[t].get("r", 0.0) + term
+        g = r_t - gamma * g            # 下一状态视角为对手 → 取负
         targets[t] = g
     return targets
 
@@ -127,7 +131,7 @@ def train_ppo(deck_a: list, deck_b: list, net: SmallPolicyValueNet,
               episodes: int = 40, ppo_epochs: int = 3, clip: float = 0.2,
               lr: float = 1e-3, gamma: float = 0.99, temperature: float = 1.0,
               seed: Optional[int] = None, device: str = "cpu",
-              log_every: int = 10,
+              log_every: int = 10, shaping: float = 0.0,
               save_path: Optional[str] = None) -> dict:
     rng = random.Random(seed)
     opt = torch.optim.Adam(net.parameters(), lr=lr)
@@ -138,7 +142,7 @@ def train_ppo(deck_a: list, deck_b: list, net: SmallPolicyValueNet,
         battle = _fresh_battle(deck_a, deck_b, seed=rng.randrange(1 << 30))
         net.eval()
         steps = collect_episode(battle, net, device=device,
-                                temperature=temperature)
+                                temperature=temperature, shaping=shaping)
         if not steps:
             continue
         ret = _returns(steps, battle.winner, gamma)
@@ -179,6 +183,7 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                        log_every: int = 25,
                        ent_coef: float = 0.02, lr_decay: float = 1.0,
                        eval_fn=None, eval_every: int = 0,
+                       shaping: float = 0.0,
                        save_path: Optional[str] = None) -> dict:
     """课程式训练：policy(agent0) vs 固定对手（如 BaselineAI）。
 
@@ -186,6 +191,7 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     胜率 vs 固定对手可单调观测（适合"先打败基线，再自对弈"的课程）。
     ent_coef：熵正则（防局部）；lr_decay：线性衰减终点系数（lr → lr*lr_decay）；
     eval_fn(steps)：每 eval_every 局回调（供 vs baseline 周期观测）。
+    shaping：局面得分中间奖励权重（配合 agent.reward.state_reward）。
     """
     from .policy_agent import build_spread_plan
     from .state_encoder import STATE_DIM, ACTION_DIM as _AD
@@ -226,23 +232,22 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                 frames.append({"state_vec": encode_state(view),
                                "feats_all": [encode_action(view, a)
                                              for a in legal],
-                               "chosen": chosen, "logp": logp})
+                               "chosen": chosen, "logp": logp,
+                               "r": shaping * rw.state_reward(view)})
                 res = battle.step(copy.deepcopy(act))
             else:
                 opp_view = battle.view()
                 res = battle.step(copy.deepcopy(opponent.decide(opp_view)))
             if not res["ok"]:
                 battle.step({"verb": "pass"})
-        # 单侧折扣回报
+        # 单侧折扣回报（含 shaping 中间奖励）
         r = 1.0 if battle.winner == 0 else (-1.0 if battle.winner is not None
                                             else 0.0)
         g = 0.0
         targets = [0.0] * len(frames)
         for t in range(len(frames) - 1, -1, -1):
-            if t == len(frames) - 1:
-                g = r
-            else:
-                g *= gamma
+            term = r if t == len(frames) - 1 else 0.0
+            g = frames[t].get("r", 0.0) + term + gamma * g
             targets[t] = g
         if not frames:
             continue

@@ -12,6 +12,7 @@ v1 编码设计（实测 STATE_DIM=51 / ACTION_DIM=14，以模块常量推断值
 """
 from __future__ import annotations
 import math
+from dataclasses import dataclass, field
 from typing import Optional
 
 ENGINE_TYPES = ("grass", "fire", "water", "lightning", "psychic", "fighting",
@@ -34,8 +35,12 @@ def _energy_vec(d: dict) -> list:
     return [min(6.0, float(em.get(t, 0))) for t in ENGINE_TYPES]
 
 
-def encode_state(view: dict) -> list:
-    """view → 定长状态特征 list[float]（长度 = STATE_DIM）"""
+def encode_state(view: dict, cfg: Optional["EncoderConfig"] = None) -> list:
+    """view → 定长状态特征 list[float]
+
+    cfg=None → 基础 51 维（legacy 兼容）；cfg.features 追加特征域
+    （bad-case 迭代入口：'hand' 手牌构成 · 'meta' 回合/资源比例）。
+    """
     me, opp = view["me_state"], view["opp_state"]
     s: list[float] = []
     ma, oa = me["active"], opp["active"]
@@ -72,7 +77,32 @@ def encode_state(view: dict) -> list:
     s += [float(me.get("supporter_used", 0)),
           float(me.get("attached_energy_this_turn", 0))]
     s += [float(view.get("turn", 0))]
+    # 可选特征域（bad-case 迭代：cfg.features）
+    if cfg is not None:
+        for name in cfg.features:
+            s += _extra_features(view, name)
     return s
+
+
+def _extra_features(view: dict, name: str) -> list:
+    me, opp = view["me_state"], view["opp_state"]
+    if name == "hand":
+        # 我方手牌构成（公开：我方手牌全可见）
+        hand = me.get("hand") or []
+        pk = sum(1 for c in hand if c.get("type") == "pokemon")
+        en = sum(1 for c in hand if c.get("type") == "energy")
+        tr = sum(1 for c in hand if c.get("type") in ("item", "supporter"))
+        return [min(1.0, pk / 10.0), min(1.0, en / 10.0),
+                min(1.0, tr / 10.0), min(1.0, len(hand) / 10.0)]
+    if name == "meta":
+        mp = me.get("prizes_left", 6)
+        op = opp.get("prizes_left", 6)
+        turn = float(view.get("turn", 0))
+        return [min(1.0, turn / 100.0),
+                mp / max(1.0, mp + op),
+                min(1.0, me.get("deck_count", 0) / 60.0),
+                min(1.0, me.get("discard_count", 0) / 60.0)]
+    raise ValueError(f"未知特征域 {name}（可选 hand/meta）")
 
 
 def encode_action(view: dict, action: dict) -> list:
@@ -96,6 +126,26 @@ def legal_actions_from_view(view: dict) -> list:
 
 
 STATE_DIM = None  # 惰性求值（由首次 encode_state 推断，见模块底部探针）
+
+
+@dataclass(frozen=True)
+class EncoderConfig:
+    """状态编码配置（bad-case 迭代入口）。
+
+    features 可选域：'hand'（我方手牌构成 +4）· 'meta'（回合/资源比例 +4）。
+    组合维度 = 51 + 4·n，由 encoder_dim() 给出。
+    """
+    features: tuple = ()
+    device: str = "cpu"
+
+
+def encoder_dim(cfg: Optional[EncoderConfig] = None) -> int:
+    """给定编码配置的状态维度（None → 51 legacy）"""
+    if cfg is None:
+        return STATE_DIM
+    return STATE_DIM + sum(
+        4 for f in cfg.features
+        if f in ("hand", "meta"))  # 未知域抛错交给 encode 路径
 
 
 def _probe_dim() -> int:

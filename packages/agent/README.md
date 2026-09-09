@@ -7,16 +7,18 @@
 
 | 模块 | 职责 |
 |------|------|
-| `agent/state_encoder.py` | `view()` → 定长状态向量（**实测 51 维**）+ 动作特征（**14 维**）；**只编码公开信息** |
+| `agent/state_encoder.py` | `view()` → 定长状态向量（**基础 51 维**）+ 动作特征（**14 维**）；`EncoderConfig` 特征域扩展（hand/meta，bad-case 迭代）|
 | `agent/policy_net.py` | PyTorch 小策略-价值网络（MLP：共享躯干 + 每候选打分头 + 价值头） |
 | `agent/mcts.py` | 引擎内 MCTS：PUCT 选子 + 真实 rollout（随机/策略）；`mcts_with_stats` 审计 |
 | `agent/pipeline.py` | 决策流水线：纯编排 `decide()` 与 LangGraph `build_langgraph_pipeline()` 双形态，节点一致 |
 | `agent/policy_agent.py` | **PolicyAgent**：网络驱动的 Agent 协议实现（采样/argmax + E5 spread 分配）；`load_policy` |
 | `agent/bc.py` | **BC 预热**：BaselineAI 演示数据采集 + masked-CE 预训练（先验从"合理动作"开始） |
-| `agent/trainer.py` | **PPO 自对弈训练管线**：collect_episode（双玩家零和回报）→ clip 更新 → 权重保存 + `eval_winrate` |
+| `agent/reward.py` | **局面得分**（公开信息静态估值）——reward shaping / 价值监督 |
+| `agent/trainer.py` | **PPO 训练管线**：自对弈（交替回报）与 vs 固定对手（单侧回报）+ **shaping** 开关 + 权重保存/评估 |
+| `agent/dqn.py` | **DQN 对照**：值网（复用打分头）+ ε-greedy + MC 目标 + 目标网刷新（技术方案：PPO 主选/DQN 对照）|
 | `agent/prompts.py` | 提示词加载/渲染（`@@var@@` 占位） |
-| `prompts/*.md` | 模板库：parse_effects（system/user，JSON Schema+RAG 插槽）/ commentator |
-| `tests/` · `examples/` | 用例 · demo_decision.py / **train_ppo.py** |
+| `prompts/*.md` | 模板库：parse_effects（system/user v1.1：防 thinking 污染 + few-shot）/ commentator |
+| `tests/` · `examples/` | 用例 · demo_decision / train_ppo / **train_dqn** / **train_pipeline** / **eval_matrix** / **check_parse_templates** |
 
 ## 运行
 
@@ -37,6 +39,22 @@ python examples/train_ppo.py --eval --weights artifacts/policy.pt --games 20
 cd packages/agent
 python examples/train_pipeline.py --bc-episodes 40 --ppo-episodes 200 --save artifacts/final.pt
 #   产物：artifacts/final.pt（权重）+ artifacts/curve.json（winrate 曲线）
+
+# 局面得分 shaping（稀疏 ±1 + 每步公开信息估值；reward.state_reward）
+python examples/train_pipeline.py --ppo-episodes 500 --reward-shaping 0.1 \
+    --save artifacts/ppo_shape.pt
+
+# DQN 对照训练（技术方案：PPO 主选 / DQN 对照；MC 目标 + 目标网）
+python examples/train_dqn.py --episodes 300 --opponent baseline --save artifacts/dqn.pt
+python examples/train_dqn.py --eval --weights artifacts/dqn.pt --games 20
+
+# 交叉评测矩阵：胜率(vs 基线/随机) + 决策延迟 K3（mean/P95/max）
+python examples/eval_matrix.py --games 24 --mcts 5 --mcts 20 \
+    --weights artifacts/final_k1.pt --out artifacts/eval_matrix.md
+
+# 解析提示词模板结构回归（dry-run，K2 工程侧基线）
+python examples/check_parse_templates.py
+```
 
 # 长训实测（2026-09-08，镜像同卡组 lightning，CPU）：
 #   BC acc 0.92 → eval vs baseline 0.46

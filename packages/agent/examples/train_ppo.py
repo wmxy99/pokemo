@@ -36,20 +36,26 @@ def main():
     ap.add_argument("--opponent", default="baseline")
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--device", default="auto",
+                    help="auto（默认：有 CUDA 用 GPU）/ cuda / cpu")
     args = ap.parse_args()
+    from agent.utils import resolve_device
+    args.device = resolve_device(args.device)
 
     da = decklib.make_deck(args.decks)
     db = decklib.make_deck(args.opp_deck)
     if args.eval:
-        net = trainer.load_net(args.weights)
+        net = trainer.load_net(args.weights, args.device)
         st = trainer.eval_winrate(da, db, net, n=args.games,
-                                  opponent=args.opponent)
+                                  opponent=args.opponent,
+                                  device=args.device)
         print(f"eval: policy vs {args.opponent} {st}")
         return
-    net = make_net(STATE_DIM, ACTION_DIM)
+    net = make_net(STATE_DIM, ACTION_DIM, device=args.device)
     t0 = time.time()
     st = trainer.train_ppo(da, db, net, episodes=args.episodes,
                            ppo_epochs=args.epochs, seed=args.seed,
+                           device=args.device,
                            save_path=args.save, log_every=max(1, args.episodes // 5))
     print(f"train done in {time.time() - t0:.1f}s | {st['episodes']} episodes | "
           f"agent0_wins={st['agent0_wins']} | loss tail={st['loss'][-3:]}"

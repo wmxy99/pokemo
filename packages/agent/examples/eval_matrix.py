@@ -90,10 +90,13 @@ def main():
     ap.add_argument("--weights", default="artifacts/final_k1.pt")
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy",
                     help="状态编码特征域（须与训练时一致；full=59 维需 full 权重）")
-    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--device", default="auto",
+                    help="auto（默认：有 CUDA 用 GPU）/ cuda / cpu")
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--out", default="artifacts/eval_matrix.md")
     args = ap.parse_args()
+    from agent.utils import resolve_device
+    args.device = resolve_device(args.device)
 
     da = decklib.make_deck(args.decks)
     db = list(da)

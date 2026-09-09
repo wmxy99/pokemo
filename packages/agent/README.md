@@ -32,6 +32,8 @@
 cd packages/engine && python -m unittest discover -s tests -v   # 66 项（含 E5）
 cd packages/agent && python -m unittest discover -s tests -v   # 19 项（含 RL smoke）
 
+-- 所有训练/评估 CLI：--device 默认 auto → 有 CUDA 自动用 GPU（RTX 4050），无卡/显存<1.2GB 自动回退 CPU（agent.utils.resolve_device）
+
 # 决策演示（MCTS 30 迭代，输出 top3 审计与选中动作）
 cd packages/agent && python examples/demo_decision.py 30
 

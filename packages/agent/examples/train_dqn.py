@@ -34,22 +34,26 @@ def main():
     ap.add_argument("--shaping", type=float, default=0.0)
     ap.add_argument("--target-update", type=int, default=10)
     ap.add_argument("--opponent", default="baseline")
-    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--device", default="auto",
+                    help="auto（默认：有 CUDA 用 GPU）/ cuda / cpu")
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--save", default="artifacts/dqn_policy.pt")
     ap.add_argument("--eval", action="store_true")
     ap.add_argument("--games", type=int, default=20)
     args = ap.parse_args()
+    from agent.utils import resolve_device
+    args.device = resolve_device(args.device)
 
     da = decklib.make_deck(args.decks)
     db = list(da)
     if args.eval:
-        net = trainer.load_net(args.save)
+        net = trainer.load_net(args.save, args.device)
         ev = trainer.eval_winrate(da, db, net, n=args.games,
-                                  opponent=args.opponent)
+                                  opponent=args.opponent,
+                                  device=args.device)
         print(f"eval: DQN vs {args.opponent} {ev}")
         return
-    net = make_net(STATE_DIM, ACTION_DIM)
+    net = make_net(STATE_DIM, ACTION_DIM, device=args.device)
     opp = (BaselineAI("baseline") if args.opponent == "baseline"
            else RandomAgent("random", seed=0))
     t0 = time.time()

@@ -59,7 +59,8 @@ def main():
     ap.add_argument("--stage3-bc-epochs", type=int, default=6)
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy",
                     help="状态编码特征域：legacy=51维 / full=+hand+meta(59维)")
-    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--device", default="auto",
+                    help="auto（默认：有 CUDA 用 GPU）/ cuda / cpu")
     ap.add_argument("--save", default="artifacts/final.pt")
     ap.add_argument("--bc-data-cache", default=None,
                     help="缺省自动按 deck/镜像派生文件名")
@@ -70,6 +71,8 @@ def main():
                     help="vs-fixed（推荐：先打败基线）/ selfplay（纯自对弈）")
     ap.add_argument("--seed", type=int, default=2026)
     args = ap.parse_args()
+    from agent.utils import resolve_device
+    args.device = resolve_device(args.device)
 
     da = decklib.make_deck(args.decks)
     db = list(da) if args.mirror else decklib.make_deck(args.opp_deck)

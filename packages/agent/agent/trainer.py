@@ -182,6 +182,7 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                        seed: Optional[int] = None, device: str = "cpu",
                        log_every: int = 25,
                        ent_coef: float = 0.02, lr_decay: float = 1.0,
+                       lr_schedule: str = "linear",
                        eval_fn=None, eval_every: int = 0,
                        shaping: float = 0.0,
                        save_path: Optional[str] = None) -> dict:
@@ -200,10 +201,14 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     stats = {"episodes": 0, "wins": 0, "losses": 0, "draws": 0,
              "actor_loss": [], "win_tail": []}
     for ep in range(episodes):
-        # 线性 lr 衰减：lr → lr*lr_decay
+        # lr 调度：linear（lr → lr*lr_decay）/ cosine（手册推荐，平滑早衰减）
         frac = (ep + 1) / max(1, episodes)
-        opt.param_groups[0]["lr"] = lr * (lr_decay + (1 - lr_decay)
-                                          * (1 - frac))
+        lr_min = lr * lr_decay
+        if lr_schedule == "cosine":
+            cur = lr_min + 0.5 * (lr - lr_min) * (1 + math.cos(math.pi * frac))
+        else:
+            cur = lr * (lr_decay + (1 - lr_decay) * (1 - frac))
+        opt.param_groups[0]["lr"] = cur
         battle = _fresh_battle(deck_a, deck_b, seed=rng.randrange(1 << 30))
         net.eval()
         frames = []          # 仅 agent0 决策点

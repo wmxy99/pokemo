@@ -20,7 +20,7 @@ python -u examples/run_k1_longtrain.py --from-weights artifacts/k1_policy.pt \
 参数：--bc-episodes/--bc-epochs · --stage1-episodes · --stage2-episodes
 · --stage3-episodes/--stage3-mcts-iters · --features legacy|full · --final-games
 · --eval-every/--games · --seed · --device(auto/cuda/cpu) · --save/--report。
-预计：默认课程（30000/18000/300）约 1–2h（RTX 4050）。
+预计：默认课程（40000/24000/400 · lr cosine · MCTS10 · 终评 n=100）约 1.5–3h（RTX 4050）。
 
 
 ## 一、推荐命令（镜像同卡组 · 课程式 BC→vs基线→冻结自对弈）

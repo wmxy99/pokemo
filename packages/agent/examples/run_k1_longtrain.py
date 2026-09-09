@@ -11,14 +11,21 @@
 
 用法（Windows Git Bash / PowerShell 均可在 packages/agent 下）：
   conda activate pokemo
-  python -u examples/run_k1_longtrain.py                    # 默认课程（约 1–2h）
+  python -u examples/run_k1_longtrain.py                    # 默认课程（约 1.5–3h）
   python -u examples/run_k1_longtrain.py --stage1-episodes 5000 \
       --stage2-episodes 3000 --stage3-episodes 100 --final-games 40   # 短试跑
 产物：artifacts/k1_policy.pt（最终权重）· artifacts/K1_report.md（判定报告）
 
+参数已按 README「冲 70% 手册」对齐（2026-09-09 调参）：
+  ① 终评样本 ≥100（--final-games 默认 100；协议正式验收用 --final-games 200）
+  ② 更长预算：stage1 40000 / stage2 24000 / stage3 400
+  ③ lr 余弦衰减（--lr-schedule cosine，默认）+ entropy 0.05 + clip 0.3 + hidden 128
+  ⑤ AlphaZero 式快照刷新（stage2-snapshot-every 2000）+ MCTS 教练 iters=10
+  （特征扩展可选 --features full = 59 维，训练与评估须同配置）
+
 预期总时长（RTX 4050 笔记本，引擎收集 CPU-bound，GPU 加速网络段）：
-  stage1 30000 局 ≈ 20–40min · stage2 18000 局 ≈ 12–25min
-  stage3 300 局（MCTS8 蒸馏，含大量引擎 rollout）≈ 30–60min
+  stage1 40000 局 ≈ 25–55min · stage2 24000 局 ≈ 15–35min
+  stage3 400 局（MCTS10 蒸馏，含大量引擎 rollout）≈ 40–90min
 """
 from __future__ import annotations
 import argparse
@@ -45,11 +52,11 @@ def main():
     ap.add_argument("--decks", default="lightning")
     ap.add_argument("--bc-episodes", type=int, default=150)
     ap.add_argument("--bc-epochs", type=int, default=25)
-    ap.add_argument("--stage1-episodes", type=int, default=30000)
-    ap.add_argument("--stage2-episodes", type=int, default=18000)
-    ap.add_argument("--stage2-snapshot-every", type=int, default=3000)
-    ap.add_argument("--stage3-episodes", type=int, default=300)
-    ap.add_argument("--stage3-mcts-iters", type=int, default=8)
+    ap.add_argument("--stage1-episodes", type=int, default=40000)
+    ap.add_argument("--stage2-episodes", type=int, default=24000)
+    ap.add_argument("--stage2-snapshot-every", type=int, default=2000)
+    ap.add_argument("--stage3-episodes", type=int, default=400)
+    ap.add_argument("--stage3-mcts-iters", type=int, default=10)
     ap.add_argument("--stage3-bc-epochs", type=int, default=6)
     ap.add_argument("--ppo-epochs", type=int, default=3)
     ap.add_argument("--lr", type=float, default=3e-3)
@@ -57,12 +64,16 @@ def main():
     ap.add_argument("--clip", type=float, default=0.3)
     ap.add_argument("--ent-coef", type=float, default=0.05)
     ap.add_argument("--lr-decay", type=float, default=0.1)
+    ap.add_argument("--lr-schedule", choices=["linear", "cosine"],
+                    default="cosine",
+                    help="lr 调度：cosine（手册推荐）/ linear")
     ap.add_argument("--hidden", type=int, default=128)
     ap.add_argument("--reward-shaping", type=float, default=0.05)
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy")
     ap.add_argument("--eval-every", type=int, default=5000)
     ap.add_argument("--games", type=int, default=30)
-    ap.add_argument("--final-games", type=int, default=80)
+    ap.add_argument("--final-games", type=int, default=100,
+                    help="终评样本量（手册≥100；正式验收协议请 --final-games 200）")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--device", default="auto")
     ap.add_argument("--save", default="artifacts/k1_policy.pt")
@@ -132,6 +143,7 @@ def main():
             episodes=args.stage1_episodes, ppo_epochs=args.ppo_epochs,
             clip=args.clip, lr=args.lr, gamma=args.gamma,
             ent_coef=args.ent_coef, lr_decay=args.lr_decay,
+            lr_schedule=args.lr_schedule,
             shaping=args.reward_shaping,
             eval_fn=lambda ep: _eval(f"stage1-{ep}"),
             eval_every=args.eval_every, seed=args.seed,
@@ -155,7 +167,8 @@ def main():
                 da, db, net, opponent=opp, episodes=n,
                 ppo_epochs=args.ppo_epochs, clip=args.clip, lr=args.lr,
                 gamma=args.gamma, ent_coef=args.ent_coef,
-                lr_decay=args.lr_decay, shaping=args.reward_shaping,
+                lr_decay=args.lr_decay, lr_schedule=args.lr_schedule,
+                shaping=args.reward_shaping,
                 seed=args.seed, device=args.device, save_path=args.save,
                 log_every=max(1, n // 4))
             ran += n

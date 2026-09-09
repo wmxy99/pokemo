@@ -128,6 +128,18 @@ class TestEncoderConfig(unittest.TestCase):
         self.assertEqual(len(encode_state(v)), STATE_DIM)
         self.assertEqual(encoder_dim(None), STATE_DIM)
 
+    def test_cosine_lr_schedule(self):
+        from engine.agents import BaselineAI
+        from agent.state_encoder import ACTION_DIM
+        from agent.policy_net import make_net
+        da, db = decklib.deck_lightning_demo(), decklib.deck_lightning_demo()
+        net = make_net(STATE_DIM, ACTION_DIM)
+        st = trainer.train_ppo_vs_fixed(da, db, net,
+                                        opponent=BaselineAI("b"),
+                                        episodes=2, lr=1e-3, lr_decay=0.1,
+                                        lr_schedule="cosine", seed=3)
+        self.assertEqual(st["episodes"], 2)
+
     def test_full_features_dim(self):
         b = Battle(decklib.deck_lightning_demo(),
                    decklib.deck_fire_demo(), seed=2)

@@ -54,20 +54,20 @@ def _rollout(battle, master_rng: random.Random,
     return b.winner
 
 
-def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
-                       policy=None, device: str = "cpu",
-                       rollout_policy: Optional[Callable] = None,
-                       time_budget_s: Optional[float] = None,
-                       seed: Optional[int] = None) -> dict:
-    """在 battle（主阶段、轮到 current）上执行 MCTS，返回最优动作 dict。
+def _search(battle, iters: int = 40, c_puct: float = 1.4,
+            policy=None, device: str = "cpu",
+            rollout_policy: Optional[Callable] = None,
+            time_budget_s: Optional[float] = None,
+            seed: Optional[int] = None):
+    """执行搜索；返回 (children, legal)。
 
-    policy: SmallPolicyValueNet 或 None（均匀先验）。battle 必须可被 copy.deepcopy。
+    children=None 表示无分支（<2 合法动作）；否则 children[i] 对应 legal[i]。
     """
     legal = battle.legal_actions()
     if not legal:
-        return {"verb": "pass"}
+        return None, []
     if len(legal) == 1:
-        return dict(legal[0])
+        return None, legal
     master = random.Random(seed if seed is not None else battle.seed)
     root_player = battle.current
 
@@ -75,7 +75,6 @@ def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
     priors = [1.0 / len(legal)] * len(legal)
     if policy is not None:
         import torch
-        from .state_encoder import STATE_DIM, ACTION_DIM
         try:
             state = torch.tensor([encode_state(battle.view())],
                                  dtype=torch.float32, device=device)
@@ -94,7 +93,6 @@ def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
             return True
         return False
 
-    n_sim = 0
     for _ in range(iters):
         if _done():
             break
@@ -113,18 +111,59 @@ def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
         if not res["ok"]:
             b.step({"verb": "pass"})
         winner = _rollout(b, master, rollout_policy)
-        n_sim += 1
         # 3) 回传（root 视角）
         if winner == root_player:
             child.wins += 1.0
         elif winner is None:
             child.wins += 0.5
         child.visits += 1
-    # 4) 选最优：最多访问（平手按先验）
+    return children, legal
+
+
+def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
+                       policy=None, device: str = "cpu",
+                       rollout_policy: Optional[Callable] = None,
+                       time_budget_s: Optional[float] = None,
+                       seed: Optional[int] = None) -> dict:
+    """在 battle（主阶段、轮到 current）上执行 MCTS，返回最优动作 dict。
+
+    policy: SmallPolicyValueNet 或 None（均匀先验）。battle 必须可被 copy.deepcopy。
+    """
+    children, legal = _search(battle, iters=iters, c_puct=c_puct,
+                              policy=policy, device=device,
+                              rollout_policy=rollout_policy,
+                              time_budget_s=time_budget_s, seed=seed)
+    if not legal:
+        return {"verb": "pass"}
+    if children is None:
+        return dict(legal[0])
     best = max(range(len(children)),
-               key=lambda i: (children[i].visits,
-                              children[i].prior))
+               key=lambda i: (children[i].visits, children[i].prior))
     return dict(legal[best])
+
+
+def mcts_policy_probs(battle, iters: int = 40, c_puct: float = 1.4,
+                      policy=None, device: str = "cpu",
+                      rollout_policy: Optional[Callable] = None,
+                      seed: Optional[int] = None):
+    """返回 soft 教师信号：(probs, visits, legal)
+
+    probs = 根节点子访问数归一化（软标签，供 MCTS 决策蒸馏/降噪）；
+    visits 为原始计数（无访问时各置 1 → 均匀）。probs 与 legal 索引对齐。
+    """
+    children, legal = _search(battle, iters=iters, c_puct=c_puct,
+                              policy=policy, device=device,
+                              rollout_policy=rollout_policy, seed=seed)
+    if not legal:
+        return [], [], []
+    if children is None:
+        n = len(legal)
+        return [1.0 / n] * n, [0] * n, legal
+    vis = [c.visits for c in children]
+    if sum(vis) == 0:
+        vis = [1] * len(vis)
+    tot = sum(vis)
+    return [v / tot for v in vis], [c.visits for c in children], legal
 
 
 def mcts_with_stats(battle, iters: int = 40, **kw) -> tuple:

@@ -113,6 +113,55 @@ def train_bc(net: SmallPolicyValueNet, frames: list, epochs: int = 10,
             "final_acc": acc_track[-1] if acc_track else None}
 
 
+def train_bc_soft(net: SmallPolicyValueNet, frames: list, epochs: int = 10,
+                  lr: float = 1e-3, batch: int = 256, device: str = "cpu",
+                  seed: Optional[int] = None) -> dict:
+    """soft 目标蒸馏（MCTS visits 归一化作教师信号）。
+
+    frames 每项含 probs（与 feats_all 索引对齐，和为 1）；
+    loss = -Σ p_teacher · log p_model（掩码只作用于合法候选，padding 位不计）。
+    """
+    max_a = max(len(f["feats_all"]) for f in frames)
+    d = len(frames[0]["feats_all"][0])
+    S = torch.tensor([f["state_vec"] for f in frames], dtype=torch.float32,
+                     device=device)
+    FA = torch.zeros(len(frames), max_a, d, dtype=torch.float32, device=device)
+    MASK = torch.ones(len(frames), max_a, dtype=torch.bool, device=device)
+    TG = torch.zeros(len(frames), max_a, dtype=torch.float32, device=device)
+    for i, f in enumerate(frames):
+        n = len(f["feats_all"])
+        FA[i, :n] = torch.tensor(f["feats_all"], dtype=torch.float32,
+                                 device=device)
+        MASK[i, :n] = False
+        TG[i, :n] = torch.tensor(f["probs"], dtype=torch.float32,
+                                 device=device)
+    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    rng = random.Random(seed)
+    n = len(frames)
+    order_all = list(range(n))
+    rng.shuffle(order_all)
+    loss_track = []
+    for ep in range(epochs):
+        net.train()
+        order = list(order_all)
+        rng.shuffle(order)
+        ep_loss = 0.0
+        for start in range(0, n, batch):
+            idx = order[start:start + batch]
+            logits, _ = net.forward(S[idx], FA[idx])
+            logits = logits.masked_fill(MASK[idx], -1e9)  # 排除 padding 归一化
+            logp = F.log_softmax(logits, dim=-1).masked_fill(
+                MASK[idx], 0.0)              # padding 位贡献为 0
+            loss = -(TG[idx] * logp).sum(-1).mean()
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            ep_loss += loss.item() * len(idx)
+        loss_track.append(ep_loss / max(1, n))
+    return {"loss": loss_track, "frames": n,
+            "final_loss": loss_track[-1] if loss_track else None}
+
+
 def save_frames(frames: list, path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     torch.save(frames, path)

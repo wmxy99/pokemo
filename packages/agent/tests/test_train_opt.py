@@ -46,18 +46,50 @@ class TestActiveEncoder(unittest.TestCase):
 
 
 class TestMctsDistill(unittest.TestCase):
-    def test_collect_and_train(self):
+    def test_collect_hard_and_train(self):
         from engine.agents import BaselineAI
         from agent.state_encoder import ACTION_DIM
         from agent.policy_net import make_net
         da, db = decklib.deck_lightning_demo(), decklib.deck_lightning_demo()
         frames = distill.collect_mcts_expert(da, db,
                                              opponent=BaselineAI("b"),
-                                             episodes=2, iters=3, seed=1)
+                                             episodes=2, iters=3, seed=1,
+                                             soft=False)
         self.assertGreater(len(frames), 10)
+        self.assertNotIn("probs", frames[0])
         net = make_net(STATE_DIM, ACTION_DIM)
         st = bc.train_bc(net, frames, epochs=2, lr=1e-3, seed=1)
         self.assertLess(st["loss"][-1], st["loss"][0])
+
+    def test_collect_soft_and_train_soft(self):
+        from engine.agents import BaselineAI
+        from agent.state_encoder import ACTION_DIM
+        from agent.policy_net import make_net
+        da, db = decklib.deck_lightning_demo(), decklib.deck_lightning_demo()
+        frames = distill.collect_mcts_expert(da, db,
+                                             opponent=BaselineAI("b"),
+                                             episodes=2, iters=3, seed=2,
+                                             soft=True)
+        self.assertGreater(len(frames), 10)
+        self.assertIn("probs", frames[0])
+        self.assertAlmostEqual(sum(frames[0]["probs"]), 1.0, places=5)
+        net = make_net(STATE_DIM, ACTION_DIM)
+        st = bc.train_bc_soft(net, frames, epochs=2, lr=1e-3, seed=1)
+        self.assertLess(st["loss"][-1], st["loss"][0] + 1e-9)
+
+
+class TestMctsVisits(unittest.TestCase):
+    def test_policy_probs_aligned(self):
+        from agent.mcts import mcts_policy_probs
+        b = Battle(decklib.deck_lightning_demo(),
+                   decklib.deck_lightning_demo(), seed=6)
+        b.players[b.current].hand = b.players[b.current].hand or []
+        legal = b.legal_actions()
+        if len(legal) > 1:
+            probs, visits, _ = mcts_policy_probs(b, iters=5, seed=1)
+            self.assertEqual(len(probs), len(legal))
+            self.assertEqual(len(visits), len(legal))
+            self.assertAlmostEqual(sum(probs), 1.0, places=6)
 
 
 class TestRewardShaping(unittest.TestCase):

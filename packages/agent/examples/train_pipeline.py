@@ -57,6 +57,10 @@ def main():
     ap.add_argument("--stage3-mcts-iters", type=int, default=0,
                     help="阶段3 MCTS 模拟次数（0=关闭阶段3）")
     ap.add_argument("--stage3-bc-epochs", type=int, default=6)
+    ap.add_argument("--stage3-soft", dest="stage3_soft", action="store_true",
+                    default=True,
+                    help="阶段3 用 soft-visits 教师信号（默认）")
+    ap.add_argument("--no-stage3-soft", dest="stage3_soft", action="store_false")
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy",
                     help="状态编码特征域：legacy=51维 / full=+hand+meta(59维)")
     ap.add_argument("--device", default="auto",
@@ -188,13 +192,23 @@ def main():
             t3 = time.time()
             frames = distill.collect_mcts_expert(
                 da, db, opponent=_BF3("baseline"), episodes=n,
-                iters=args.stage3_mcts_iters, seed=args.seed)
-            st3 = bc.train_bc(net, frames, epochs=args.stage3_bc_epochs,
-                              lr=args.lr, device=args.device, seed=args.seed)
+                iters=args.stage3_mcts_iters, seed=args.seed,
+                soft=args.stage3_soft)
+            if args.stage3_soft:
+                st3 = bc.train_bc_soft(net, frames,
+                                       epochs=args.stage3_bc_epochs,
+                                       lr=args.lr, device=args.device,
+                                       seed=args.seed)
+                tag3 = f"soft-loss={st3['final_loss']:.4f}"
+            else:
+                st3 = bc.train_bc(net, frames, epochs=args.stage3_bc_epochs,
+                                  lr=args.lr, device=args.device,
+                                  seed=args.seed)
+                tag3 = f"acc={st3['final_acc']:.3f}"
             ran3 += n
             _eval(f"stage3-{ran3}")
-            print(f"[stage3] +{n} mcts-demos in {time.time()-t3:.0f}s "
-                  f"frames={st3['frames']} acc={st3['final_acc']:.3f}")
+            print(f"[stage3] +{n} mcts-demos(soft={args.stage3_soft}) in "
+                  f"{time.time()-t3:.0f}s frames={st3['frames']} {tag3}")
             import torch as _t
             Path(args.save).parent.mkdir(parents=True, exist_ok=True)
             _t.save(net.state_dict(), args.save)

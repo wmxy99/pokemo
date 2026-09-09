@@ -62,6 +62,9 @@ python examples/eval_matrix.py --games 24 --mcts 5 --mcts 20 \
 # 解析提示词模板结构回归（dry-run，K2 工程侧基线）
 python examples/check_parse_templates.py
 
+# 特征对比实验（legacy 51d vs full 59d，同预算；产物 eval_matrix_full.md）
+python examples/compare_features.py --ppo-episodes 1500
+
 # 阶段3：MCTS 教练蒸馏（阶段2 后进阶；MCTS 决策蒸馏进策略）
 python examples/train_pipeline.py --ppo-episodes 2000 --stage2-episodes 1000 \
     --stage3-episodes 300 --stage3-mcts-iters 8 --stage3-bc-epochs 6 \

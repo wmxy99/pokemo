@@ -16,10 +16,48 @@ from engine import decklib  # noqa: E402
 from engine.battle import Battle  # noqa: E402
 
 from agent.state_encoder import (encode_state, STATE_DIM,  # noqa: E402
-                                 EncoderConfig, encoder_dim)
+                                 EncoderConfig, encoder_dim,
+                                 set_active_encoder, active_encoder)
 from agent.policy_net import SmallPolicyValueNet  # noqa: E402
 from agent import reward as rw  # noqa: E402
-from agent import dqn, trainer  # noqa: E402
+from agent import dqn, trainer, distill, bc  # noqa: E402
+
+
+class TestActiveEncoder(unittest.TestCase):
+    def tearDown(self):
+        set_active_encoder(None)
+
+    def test_full_active_pipeline(self):
+        from agent.state_encoder import ACTION_DIM
+        from agent.policy_net import make_net
+        set_active_encoder(EncoderConfig(features=("hand", "meta")))
+        b = Battle(decklib.deck_lightning_demo(),
+                   decklib.deck_fire_demo(), seed=4)
+        v = b.view()
+        self.assertEqual(encoder_dim(), STATE_DIM + 8)
+        self.assertEqual(len(encode_state(v)), encoder_dim())
+        net = make_net(encoder_dim(), ACTION_DIM)
+        st = torch.randn(1, encoder_dim())
+        fa = torch.randn(1, 3, ACTION_DIM)
+        self.assertEqual(net(st, fa)[0].shape, (1, 3))
+        set_active_encoder(None)
+        self.assertIsNone(active_encoder())
+        self.assertEqual(len(encode_state(v)), STATE_DIM)
+
+
+class TestMctsDistill(unittest.TestCase):
+    def test_collect_and_train(self):
+        from engine.agents import BaselineAI
+        from agent.state_encoder import ACTION_DIM
+        from agent.policy_net import make_net
+        da, db = decklib.deck_lightning_demo(), decklib.deck_lightning_demo()
+        frames = distill.collect_mcts_expert(da, db,
+                                             opponent=BaselineAI("b"),
+                                             episodes=2, iters=3, seed=1)
+        self.assertGreater(len(frames), 10)
+        net = make_net(STATE_DIM, ACTION_DIM)
+        st = bc.train_bc(net, frames, epochs=2, lr=1e-3, seed=1)
+        self.assertLess(st["loss"][-1], st["loss"][0])
 
 
 class TestRewardShaping(unittest.TestCase):

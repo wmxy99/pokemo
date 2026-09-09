@@ -13,8 +13,8 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
-from .state_encoder import (encode_state, encode_action, STATE_DIM,
-                            ACTION_DIM, legal_actions_from_view)
+from .state_encoder import (encode_state, encode_action, ACTION_DIM,
+                            legal_actions_from_view, encoder_dim)
 
 
 def build_spread_plan(view: dict, action: dict) -> dict:
@@ -76,7 +76,7 @@ class PolicyAgent:
 def load_policy(path: str, device: str = "cpu"):
     """加载训练产物 → 网络实例"""
     from .policy_net import SmallPolicyValueNet
-    net = SmallPolicyValueNet(STATE_DIM, ACTION_DIM).to(device)
+    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM).to(device)
     net.load_state_dict(torch.load(path, map_location=device))
     net.eval()
     return net

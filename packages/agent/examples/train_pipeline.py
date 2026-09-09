@@ -24,9 +24,10 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.agents import BaselineAI, RandomAgent
-from agent.state_encoder import STATE_DIM, ACTION_DIM
+from agent.state_encoder import (STATE_DIM, ACTION_DIM, EncoderConfig,
+                                 encoder_dim, set_active_encoder)
 from agent.policy_net import make_net
-from agent import bc, trainer
+from agent import bc, trainer, distill
 
 
 def main():
@@ -51,6 +52,13 @@ def main():
     ap.add_argument("--stage2-episodes", type=int, default=0,
                     help="阶段2：对冻结快照自对弈局数（beat baseline 后课程）")
     ap.add_argument("--stage2-snapshot-every", type=int, default=500)
+    ap.add_argument("--stage3-episodes", type=int, default=0,
+                    help="阶段3：MCTS 教练蒸馏局数（专家决策蒸馏进策略）")
+    ap.add_argument("--stage3-mcts-iters", type=int, default=0,
+                    help="阶段3 MCTS 模拟次数（0=关闭阶段3）")
+    ap.add_argument("--stage3-bc-epochs", type=int, default=6)
+    ap.add_argument("--features", choices=["legacy", "full"], default="legacy",
+                    help="状态编码特征域：legacy=51维 / full=+hand+meta(59维)")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--save", default="artifacts/final.pt")
     ap.add_argument("--bc-data-cache", default=None,
@@ -65,11 +73,23 @@ def main():
 
     da = decklib.make_deck(args.decks)
     db = list(da) if args.mirror else decklib.make_deck(args.opp_deck)
+    # 特征域：设置会话级编码配置（默认 None=51 legacy）
+    enc_cfg = EncoderConfig(features=("hand", "meta")) if args.features == "full" \
+        else None
+    set_active_encoder(enc_cfg)
     cache = args.bc_data_cache or (
         f"artifacts/bc_data_{args.decks}_"
-        f"{'mirror' if args.mirror else args.opp_deck}.pt")
+        f"{'mirror' if args.mirror else args.opp_deck}"
+        f"_{'full' if enc_cfg else 'base'}.pt")
+    if enc_cfg is None and not Path(cache).exists():
+        legacy_old = (f"artifacts/bc_data_{args.decks}_"
+                      f"{'mirror' if args.mirror else args.opp_deck}.pt")
+        if Path(legacy_old).exists():
+            cache = legacy_old          # 旧命名缓存兼容（legacy 特征）
     args.bc_data_cache = cache
     t0 = time.time()
+    print(f"[cfg] features={args.features} state_dim={encoder_dim()} "
+          f"cache={cache}")
 
     # ---- 基准对照：基线 AI vs 基线 AI（判断策略 vs 卡组对位） ----
     from engine.agents import BaselineAI as _BA
@@ -91,7 +111,7 @@ def main():
                                           episodes=args.bc_episodes,
                                           seed=args.seed)
         bc.save_frames(frames, str(bc_path))
-    net = make_net(STATE_DIM, ACTION_DIM, hidden=args.hidden).to(args.device)
+    net = make_net(encoder_dim(), ACTION_DIM, hidden=args.hidden).to(args.device)
     st = bc.train_bc(net, frames, epochs=args.bc_epochs, lr=args.lr,
                      device=args.device, seed=args.seed)
     print(f"[bc] frames={st['frames']} loss_tail={st['loss'][-1]:.4f} "
@@ -155,6 +175,26 @@ def main():
             print(f"[stage2] +{n} vs frozen in {time.time()-t2:.0f}s")
     else:
         _eval("ppo-done")
+    # ---- 阶段3：MCTS 教练蒸馏（专家决策蒸馏进策略） ----
+    if args.stage3_mcts_iters > 0 and args.stage3_episodes > 0:
+        from engine.agents import BaselineAI as _BF3
+        seg = max(1, args.stage3_episodes // 5)
+        ran3 = 0
+        while ran3 < args.stage3_episodes:
+            n = min(seg, args.stage3_episodes - ran3)
+            t3 = time.time()
+            frames = distill.collect_mcts_expert(
+                da, db, opponent=_BF3("baseline"), episodes=n,
+                iters=args.stage3_mcts_iters, seed=args.seed)
+            st3 = bc.train_bc(net, frames, epochs=args.stage3_bc_epochs,
+                              lr=args.lr, device=args.device, seed=args.seed)
+            ran3 += n
+            _eval(f"stage3-{ran3}")
+            print(f"[stage3] +{n} mcts-demos in {time.time()-t3:.0f}s "
+                  f"frames={st3['frames']} acc={st3['final_acc']:.3f}")
+            import torch as _t
+            Path(args.save).parent.mkdir(parents=True, exist_ok=True)
+            _t.save(net.state_dict(), args.save)
     curve["time_s"] = round(time.time() - t0, 1)
     Path(args.save).parent.mkdir(parents=True, exist_ok=True)
     Path("artifacts/curve.json").write_text(

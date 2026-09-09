@@ -20,6 +20,7 @@ from . import trainer
 from . import bc
 from . import reward
 from . import dqn
+from . import distill
 
 __all__ = ["state_encoder", "policy_net", "mcts", "pipeline", "prompts",
-           "policy_agent", "trainer", "bc", "reward", "dqn"]
+           "policy_agent", "trainer", "bc", "reward", "dqn", "distill"]

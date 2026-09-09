@@ -322,8 +322,8 @@ def eval_winrate(deck_a: list, deck_b: list, net,
 
 
 def load_net(path: str, device: str = "cpu") -> SmallPolicyValueNet:
-    from .state_encoder import STATE_DIM, ACTION_DIM
-    net = SmallPolicyValueNet(STATE_DIM, ACTION_DIM).to(device)
+    from .state_encoder import ACTION_DIM, encoder_dim
+    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM).to(device)
     net.load_state_dict(torch.load(path, map_location=device))
     net.eval()
     return net

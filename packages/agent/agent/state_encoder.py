@@ -38,9 +38,10 @@ def _energy_vec(d: dict) -> list:
 def encode_state(view: dict, cfg: Optional["EncoderConfig"] = None) -> list:
     """view → 定长状态特征 list[float]
 
-    cfg=None → 基础 51 维（legacy 兼容）；cfg.features 追加特征域
-    （bad-case 迭代入口：'hand' 手牌构成 · 'meta' 回合/资源比例）。
+    无 cfg 时回退到会话激活配置（set_active_encoder）→ 默认 None = 基础 51 维。
+    cfg.features 追加特征域（bad-case 迭代入口：'hand' / 'meta'）。
     """
+    cfg = cfg if cfg is not None else _ACTIVE_CFG
     me, opp = view["me_state"], view["opp_state"]
     s: list[float] = []
     ma, oa = me["active"], opp["active"]
@@ -139,8 +140,24 @@ class EncoderConfig:
     device: str = "cpu"
 
 
+# 会话级激活配置：set_active_encoder(cfg) 后，无参 encode_state/encoder_dim
+# 自动采用扩展特征域（训练/eval 用 --features full 开启；默认 None=51 维 legacy）。
+_ACTIVE_CFG: Optional["EncoderConfig"] = None
+
+
+def set_active_encoder(cfg: Optional["EncoderConfig"]) -> None:
+    """设置会话级编码配置（传 None 恢复 legacy 51 维）"""
+    global _ACTIVE_CFG
+    _ACTIVE_CFG = cfg
+
+
+def active_encoder() -> Optional["EncoderConfig"]:
+    return _ACTIVE_CFG
+
+
 def encoder_dim(cfg: Optional[EncoderConfig] = None) -> int:
-    """给定编码配置的状态维度（None → 51 legacy）"""
+    """状态维度：传入 cfg 优先，否则用会话激活配置；均无 → 51 legacy"""
+    cfg = cfg if cfg is not None else _ACTIVE_CFG
     if cfg is None:
         return STATE_DIM
     return STATE_DIM + sum(

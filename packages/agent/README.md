@@ -7,7 +7,7 @@
 
 | 模块 | 职责 |
 |------|------|
-| `agent/state_encoder.py` | `view()` → 定长状态向量（**基础 51 维**）+ 动作特征（**14 维**）；`EncoderConfig` 特征域扩展（hand/meta，bad-case 迭代）|
+| `agent/state_encoder.py` | `view()` → 定长状态向量（**基础 51 维**）+ 动作特征（**14 维**）；`EncoderConfig`/`set_active_encoder` 特征域（hand/meta→59 维）|
 | `agent/policy_net.py` | PyTorch 小策略-价值网络（MLP：共享躯干 + 每候选打分头 + 价值头） |
 | `agent/mcts.py` | 引擎内 MCTS：PUCT 选子 + 真实 rollout（随机/策略）；`mcts_with_stats` 审计 |
 | `agent/pipeline.py` | 决策流水线：纯编排 `decide()` 与 LangGraph `build_langgraph_pipeline()` 双形态，节点一致 |
@@ -15,10 +15,15 @@
 | `agent/bc.py` | **BC 预热**：BaselineAI 演示数据采集 + masked-CE 预训练（先验从"合理动作"开始） |
 | `agent/reward.py` | **局面得分**（公开信息静态估值）——reward shaping / 价值监督 |
 | `agent/trainer.py` | **PPO 训练管线**：自对弈（交替回报）与 vs 固定对手（单侧回报）+ **shaping** 开关 + 权重保存/评估 |
-| `agent/dqn.py` | **DQN 对照**：值网（复用打分头）+ ε-greedy + MC 目标 + 目标网刷新（技术方案：PPO 主选/DQN 对照）|
+| `agent/dqn.py` | **DQN 对照**：值网（复用打分头）+ ε-greedy + MC 目标 + 目标网刷新（TS：PPO 主选/DQN 对照）|
+| `agent/distill.py` | **MCTS 教练蒸馏**（阶段 3）：MCTS 专家决策 → 监督帧 → bc.train_bc 蒸馏进策略 |
 | `agent/prompts.py` | 提示词加载/渲染（`@@var@@` 占位） |
 | `prompts/*.md` | 模板库：parse_effects（system/user v1.1：防 thinking 污染 + few-shot）/ commentator |
-| `tests/` · `examples/` | 用例 · demo_decision / train_ppo / **train_dqn** / **train_pipeline** / **eval_matrix** / **check_parse_templates** |
+| `tests/` · `examples/` | 用例 · demo_decision / train_ppo / train_dqn / train_pipeline / eval_matrix / check_parse_templates |
+
+**训练课程（TS：BC → PPO → MCTS/冻结快照）**：阶段1 vs 基线（PPO）→ 阶段2 冻结快照自对弈
+→ 阶段3 **MCTS 教练蒸馏**（`--stage3-mcts-iters`，expert-iteration 式；可用 BC 同款 masked-CE 学习）。
+特征域对比（bad-case 迭代）：`--features full`（59 维，含 hand/meta），训练与评估须同配置。
 
 ## 运行
 
@@ -54,6 +59,17 @@ python examples/eval_matrix.py --games 24 --mcts 5 --mcts 20 \
 
 # 解析提示词模板结构回归（dry-run，K2 工程侧基线）
 python examples/check_parse_templates.py
+
+# 阶段3：MCTS 教练蒸馏（阶段2 后进阶；MCTS 决策蒸馏进策略）
+python examples/train_pipeline.py --ppo-episodes 2000 --stage2-episodes 1000 \
+    --stage3-episodes 300 --stage3-mcts-iters 8 --stage3-bc-epochs 6 \
+    --save artifacts/stage3.pt
+
+# 特征域对比实验（bad-case 迭代）：full = 51→59 维（hand+meta），训练/评估须同配置
+python examples/train_pipeline.py --features full --bc-episodes 150 \
+    --ppo-episodes 8000 --save artifacts/policy_full.pt
+python examples/eval_matrix.py --features full --weights artifacts/policy_full.pt \
+    --games 30 --out artifacts/eval_matrix_full.md
 ```
 
 # 长训实测（2026-09-08，镜像同卡组 lightning，CPU）：

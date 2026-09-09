@@ -88,6 +88,8 @@ def main():
                     help="包含 argmax 模式（需 --weights）")
     ap.add_argument("--no-argmax", dest="argmax", action="store_false")
     ap.add_argument("--weights", default="artifacts/final_k1.pt")
+    ap.add_argument("--features", choices=["legacy", "full"], default="legacy",
+                    help="状态编码特征域（须与训练时一致；full=59 维需 full 权重）")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--out", default="artifacts/eval_matrix.md")
@@ -95,10 +97,18 @@ def main():
 
     da = decklib.make_deck(args.decks)
     db = list(da)
+    if args.features == "full":
+        from agent.state_encoder import EncoderConfig, set_active_encoder
+        set_active_encoder(EncoderConfig(features=("hand", "meta")))
     policy = None
     if args.argmax:
         from agent.trainer import load_net
-        policy = load_net(args.weights, args.device)
+        try:
+            policy = load_net(args.weights, args.device)
+        except Exception as e:
+            print(f"[error] 权重维度与 --features {args.features} 不符：{e}\n"
+                  f"  full 权重需用 train_pipeline --features full 训练")
+            return
     opponents = {"baseline": BaselineAI("baseline"),
                  "random": RandomAgent("random", seed=0)}
     rows = []

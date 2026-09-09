@@ -3,6 +3,26 @@
 > 背景：沙箱会话无法跨轮维持数小时后台进程（两次尝试均被环境清理）。
 > 本文件为**在本机终端**运行长训的命令与说明。产物权重与曲线在用户本机留存。
 
+## 〇、一键脚本（推荐）
+
+```bash
+cd <repo>/packages/agent
+conda activate pokemo
+# 完整课程 + 结束自动高置信评估 + K1 判定报告（产物 k1_policy.pt / K1_report.md）
+python -u examples/run_k1_longtrain.py
+# 短试跑（10 分钟内验证闭环）
+python -u examples/run_k1_longtrain.py --stage1-episodes 3000 \
+    --stage2-episodes 1000 --stage3-episodes 50 --final-games 40
+# 续跑（--from-weights 跳过 BC 从阶段1继续，按给定局数）
+python -u examples/run_k1_longtrain.py --from-weights artifacts/k1_policy.pt \
+    --stage1-episodes 15000 --stage2-episodes 8000
+```
+参数：--bc-episodes/--bc-epochs · --stage1-episodes · --stage2-episodes
+· --stage3-episodes/--stage3-mcts-iters · --features legacy|full · --final-games
+· --eval-every/--games · --seed · --device(auto/cuda/cpu) · --save/--report。
+预计：默认课程（30000/18000/300）约 1–2h（RTX 4050）。
+
+
 ## 一、推荐命令（镜像同卡组 · 课程式 BC→vs基线→冻结自对弈）
 
 ```bash

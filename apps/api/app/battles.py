@@ -35,8 +35,8 @@ def _resolve_deck(spec: str) -> list:
         return list(d.make_deck(spec))
     except Exception as e:                       # noqa: BLE001
         raise HTTPException(
-            400, f"未知卡组名 {spec}（演示卡组：lightning/fire/psychic/"
-                 f"darkness/ability_demo 等；文本卡表解析属 P3 Web MVP）"
+            400, f"未知卡组名 {spec}（预设对手池：A1/A2/A3/A4（真实卡表，"
+                 f"M1）；演示卡组：lightning/fire/psychic/draco 等）"
         ) from e
 
 

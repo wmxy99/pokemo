@@ -4,14 +4,17 @@ import { t } from '../i18n.js'
 import { Pill, ErrBar, EmptyState, LogBlock, Spinner } from '../components/ui.jsx'
 
 const SAMPLE = `4 Dreepy TWM 128
-3 Drakloak TWM 129
+4 Drakloak TWM 129
 3 Dragapult ex TWM 130
-2 Dusknoir TWM 141
+2 Duskull SIT 68
+1 Dusclops SIT 69
+1 Dusknoir SIT 70
 4 Buddy-Buddy Poffin TEF 144
 4 Ultra Ball SVI 196
 2 Professor's Research SVI 189
 2 Boss's Orders PAL 172
-10 Lightning Energy SVE 4`
+8 Basic Psychic Energy SVE 5
+5 Basic Fire Energy SVE 2`
 
 export default function DecksPage({ onMsg, onGoBattle }) {
   const [text, setText] = useState('')
@@ -19,6 +22,7 @@ export default function DecksPage({ onMsg, onGoBattle }) {
   const [res, setRes] = useState(null)
   const [decks, setDecks] = useState([])
   const [presets, setPresets] = useState([])
+  const [pd, setPd] = useState(null)              // 预设逐卡详情（M1）
   const [openingRes, setOpeningRes] = useState(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
@@ -30,6 +34,15 @@ export default function DecksPage({ onMsg, onGoBattle }) {
     } catch { /* 忽略 */ }
   }
   useEffect(() => { load() }, [])
+
+  async function loadPreset(id) {
+    onMsg(`加载预设 ${id} 逐卡映射…`)
+    try {
+      setPd(await api.deckPresetDetail(id))
+    } catch (e) {
+      setErr({ code: e.status || 'ERR', message: e.message })
+    }
+  }
 
   async function doImport() {
     setBusy(true); setErr(null); setOpeningRes(null)
@@ -133,17 +146,73 @@ export default function DecksPage({ onMsg, onGoBattle }) {
           </tbody>
         </table>
 
-        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10 · Worlds 2026-08</span></h3>
+        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10 · M1 真实卡表</span></h3>
         <div className="preset-row">
           {presets.map((p) => (
-            <button key={p.id} className="preset" title={`${p.note}（映射：${p.demo_deck}）`}
-              onClick={onGoBattle}>
+            <button key={p.id} className={`preset ${pd && pd.id === p.id ? 'on' : ''}`}
+              title={`${p.note}｜点击查看逐卡映射（60 卡真实卡表）`}
+              onClick={() => loadPreset(p.id)}>
               <b>{p.id} · {p.label}</b>
               <small className="muted">{p.note}</small>
+              <small className="muted mono">
+                60 卡 · 映射 {(p.executable_rate * 100).toFixed(1)}%
+                {p.replaced.length > 0 && ` · 引擎占位 ${p.replaced.reduce((s, r) => s + r.count, 0)} 张`}
+              </small>
             </button>
           ))}
         </div>
-        <p className="sm muted">{presets.length ? '卡池以 demo 卡组代表（M1 卡池补齐后替换）；差异见 C5 声明。' : '加载中…'}</p>
+        <p className="sm muted">
+          {presets.length
+            ? '真实卡名 + 引擎映射数值（M1 卡池补齐）：点开可看逐卡「可映射 / 近似 / 占位」状态，差异透明（C5）。'
+            : '加载中…'}
+        </p>
+
+        {pd && (
+          <div className="card" style={{ marginTop: 12 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <b>{pd.id} · {pd.label} <span className="pill sm">{pd.cards.length} 种 / {pd.coverage.total} 张</span></b>
+              <div className="row">
+                <Pill tone={pd.coverage.executable_rate >= 0.9 ? 'ok' : 'warn'}>
+                  可执行 {(pd.coverage.executable_rate * 100).toFixed(1)}%
+                </Pill>
+                <button className="ghost sm" onClick={onGoBattle}>用此卡组对战</button>
+                <button className="ghost sm" onClick={() => setPd(null)}>收起</button>
+              </div>
+            </div>
+            <div className="row sm muted" style={{ marginTop: 6 }}>
+              <span>定位：{pd.role || '—'}</span><span>·</span><span>{pd.style}</span>
+            </div>
+            {pd.coverage.replaced.length > 0 && (
+              <p className="sm" style={{ color: 'var(--brand-deep)' }}>
+                引擎未实现（对战时以基础能量占位，共 {pd.coverage.replaced.reduce((s, r) => s + r.count, 0)} 张）：
+                {pd.coverage.replaced.map((r) => `${r.name}×${r.count}`).join('、')}
+              </p>)}
+            {pd.coverage.approximated.length > 0 && (
+              <p className="sm muted">
+                近似实现（特性未落地，招式保留）：{pd.coverage.approximated.map((r) => `${r.name}×${r.count}`).join('、')}
+              </p>)}
+            <table className="tbl" style={{ marginTop: 8 }}>
+              <thead><tr>
+                <th scope="col">张数</th><th scope="col">卡名</th>
+                <th scope="col">类型</th><th scope="col">引擎状态</th>
+              </tr></thead>
+              <tbody>
+                {pd.cards.map((c, i) => (
+                  <tr key={i}>
+                    <td className="mono">{c.count}</td>
+                    <td>{c.name}</td>
+                    <td className="sm muted">{c.engine || '—'}</td>
+                    <td>
+                      <Pill tone={c.status === 'mapped' ? 'ok' : c.status === 'approximated' ? 'warn' : 'brand'}>
+                        {c.status === 'mapped' ? '可映射' : c.status === 'approximated' ? '近似' : '占位'}
+                      </Pill>
+                      {c.note && <span className="sm muted"> {c.note.slice(0, 42)}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>)}
       </div>
     </div>
   )

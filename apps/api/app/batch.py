@@ -13,12 +13,12 @@ from __future__ import annotations
 import threading
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
 from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
-from .sse import sse_response, FINAL
+from .sse import sse_response, FINAL, parse_last_event_id as sse_parse_last
 
 router = APIRouter(prefix="/batch", tags=["batch"])
 
@@ -91,6 +91,8 @@ def _run_pairs(job_id: str, pairs: list, games_each: int, seed0: int,
                                  "pair": f"{la} vs {lb}"}
             if done % 10 == 0:
                 store.update_job(job_id, result={"partial": _progress[job_id]})
+                # 事件流（SSE 断线续传的锚点：重建连接可回放这段进度）
+                store.append_event(job_id, "progress", dict(_progress[job_id]))
         k = w + l + dr
         wr = round(w / k, 4) if k else 0.0
         cells.append({"deck_a": la, "deck_b": lb, "n": k, "wins_a": w,
@@ -119,11 +121,16 @@ def _worker(job_id: str, la: str, da: list, lb: str, db: list,
     global _running
     try:
         store.update_job(job_id, status="running")
+        store.append_event(job_id, "status", {"status": "running"})
         res = _run_pairs(job_id, [(la, da, lb, db)], games, seed0)
-        store.update_job(job_id, status="cancelled" if res["cancelled"]
-                         else "done", result=res)
+        status = "cancelled" if res["cancelled"] else "done"
+        store.update_job(job_id, status=status, result=res)
+        store.append_event(job_id, "status", {"status": status,
+                                              "n": res.get("n"),
+                                              "win_rate_a": res.get("win_rate_a")})
     except Exception as e:                       # noqa: BLE001
         store.update_job(job_id, status="failed", error=str(e))
+        store.append_event(job_id, "status", {"status": "failed", "error": str(e)})
     finally:
         _progress.pop(job_id, None)
         _active.pop(job_id, None)
@@ -135,11 +142,17 @@ def _pool_worker(job_id: str, pairs: list, games_each: int, seed0: int):
     global _running
     try:
         store.update_job(job_id, status="running")
+        store.append_event(job_id, "status", {"status": "running",
+                                              "pairs": len(pairs)})
         res = _run_pairs(job_id, pairs, games_each, seed0)
-        store.update_job(job_id, status="cancelled" if res["cancelled"]
-                         else "done", result=res)
+        status = "cancelled" if res["cancelled"] else "done"
+        store.update_job(job_id, status=status, result=res)
+        store.append_event(job_id, "status", {"status": status,
+                                              "n": res.get("n"),
+                                              "cells": len(res.get("cells") or [])})
     except Exception as e:                       # noqa: BLE001
         store.update_job(job_id, status="failed", error=str(e))
+        store.append_event(job_id, "status", {"status": "failed", "error": str(e)})
     finally:
         _progress.pop(job_id, None)
         _active.pop(job_id, None)
@@ -236,16 +249,25 @@ def job_status(job_id: str, p: Principal = Depends(current_user)):
 
 
 @router.get("/jobs/{job_id}/stream")
-def job_stream(job_id: str, token: str = Query(default=""),
+def job_stream(job_id: str, request: Request, token: str = Query(default=""),
+               last_event_id: str = Query(default=""),
                p: Principal = Depends(current_user)):
-    """SSE 实时进度（EventSource 无自定义 header → 支持 ?token=<JWT>）"""
+    """SSE 实时进度（EventSource 无自定义 header → 支持 ?token=<JWT>）
+
+    断线续传：事件带 `id: <seq>`，浏览器重连自动回传 `Last-Event-ID`
+    → 服务端重放该 seq 之后的进度事件（也可用 `?last_event_id=` 手工续传）。
+    """
     if token:
         p = auth.user_from_token(token)
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "任务不存在")
     ensure_owner(j["owner"], p)
-    return sse_response(lambda: _snapshot(job_id), interval=1.0)
+    last = sse_parse_last(request, last_event_id)
+    return sse_response(
+        lambda: _snapshot(job_id), interval=1.0, heartbeat_s=15.0,
+        history=lambda seq: store.events_after(job_id, seq),
+        last_event_id=last, request=request)
 
 
 @router.post("/jobs/{job_id}/cancel")

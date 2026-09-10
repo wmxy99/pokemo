@@ -101,10 +101,18 @@ def root():
 
 
 # ---------------- 前端静态托管（apps/web 构建产物，同源部署） ----------------
-# 优先最新构建（Windows 上既有目录可能被进程占用 → 用 VITE_OUTDIR=dist3 等重建）
-_WEB_DIST = next((p for p in (_REPO / "apps" / "web" / "dist3",
-                              _REPO / "apps" / "web" / "dist2",
-                              _REPO / "apps" / "web" / "dist") if p.exists()), None)
+# 自动挑选**最新构建**的 dist*（受限环境对已存在文件写保护 → 用
+# VITE_OUTDIR=dist2/dist3/dist4… 重建后无需改代码即可生效）
+def _pick_web_dist():
+    root = _REPO / "apps" / "web"
+    cands = [d for d in root.glob("dist*")
+             if (d / "index.html").is_file()]
+    if not cands:
+        return None
+    return max(cands, key=lambda d: d.stat().st_mtime)
+
+
+_WEB_DIST = _pick_web_dist()
 if _WEB_DIST is not None:
     from fastapi.staticfiles import StaticFiles  # noqa: E402
     app.mount("/app", StaticFiles(directory=str(_WEB_DIST), html=True),

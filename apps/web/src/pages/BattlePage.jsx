@@ -101,14 +101,18 @@ export default function BattlePage({ onMsg, onGoDecks }) {
           {state && <SeedBar seed={state.seed} onCopied={(s) => onMsg(`已复制 seed ${s}`)} />}
         </div>
 
-        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10</span></h3>
+        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10 · M1 真实卡表</span></h3>
         <div className="preset-row">
           {presets.map((p) => (
-            <button key={p.id} className={`preset ${deckB === p.demo_deck ? 'on' : ''}`}
-              title={`${p.note} · 卡池映射：${p.demo_deck}`}
-              onClick={() => { setDeckB(p.demo_deck); onMsg(`对手已设为 ${p.label}`) }}>
+            <button key={p.id} className={`preset ${deckB === p.id ? 'on' : ''}`}
+              title={`${p.note}｜60 卡真实卡表（可执行 ${(p.executable_rate * 100).toFixed(1)}%，占位 ${p.replaced.length} 类）`}
+              onClick={() => { setDeckB(p.id); onMsg(`对手已设为 ${p.label}`) }}>
               <b>{p.id} · {p.label}</b>
               <small className="muted">{p.note}</small>
+              <small className="muted mono">
+                60 卡 · 可执行 {(p.executable_rate * 100).toFixed(1)}%
+                {p.replaced.length > 0 && ` · 占位 ${p.replaced.reduce((s, r) => s + r.count, 0)} 张`}
+              </small>
             </button>
           ))}
           {presets.length === 0 && <span className="sm muted">预设加载中…</span>}

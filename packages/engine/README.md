@@ -23,7 +23,7 @@ D:\pokemo\pokelab-engine\
 ## 运行
 
 ```bash
-# 全量用例（34 项）
+# 全量用例（77 项，含 M1 真实卡池）
 python -m unittest discover -s tests -v
 
 # 单局复盘（中文事件流）
@@ -35,6 +35,42 @@ python run_demo.py batch 200
 # 事件导出 JSONL（对齐 matches.events_log 形态）
 python run_demo.py dump 20260908
 ```
+
+## M1 · 真实卡池（X 版）与预设对手池 A1–A4
+
+真实卡名 + 60 卡真实卡表以 **数据文件**形式随引擎分发（数据与代码分离）：
+
+| 文件 | 内容 |
+|---|---|
+| `engine/data/cards_real.json` | 真实卡池（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注）|
+| `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta）|
+| `engine/reallib.py` | 加载器与组装：`catalog()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
+
+```python
+from engine import decklib, reallib
+
+reallib.archetype_ids()            # ['A1','A2','A3','A4']
+reallib.coverage('A1')             # {executable_rate: 0.9167, replaced: [...], battle_ready: True}
+decklib.make_deck('A1')            # → 可直接进 Battle 的 60 张（真实卡名）
+
+from engine.battle import Battle
+b = Battle(decklib.make_deck('A1'), decklib.make_deck('A3'), seed=7)
+```
+
+**诚实标注（C5 差异透明）**：引擎尚未实现的卡（如 Rare Candy / Earthen Vessel /
+Night Stretcher / Switch / Crispin）在 `build_deck` 时**以基础能量占位**，并在
+`coverage()` 的 `replaced` 里逐卡给出原因；特性未落地但招式可用的卡（Munkidori /
+Blaziken ex / Ogerpon ex / Clefairy ex / Fezandipiti ex）记入 `approximated`。
+四套预设可执行率 **91.7%–96.7%**（验收口径 ≥90%）。
+
+落库（可选，供 card-db 数据平台/报表使用）：
+
+```bash
+cd packages/card-db && python scripts/seed_archetypes.py --check   # 校验数据
+cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards/decks/deck_cards
+```
+
+> 受限环境（既有文件写保护）会自动回退到用户目录并打印实际库路径。
 
 ## 规则引擎能力（v0.2 · E1/E2/E4 已并入）
 

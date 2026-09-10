@@ -34,13 +34,26 @@ MAX_SAME = 4
 LINE_RE = re.compile(r"^\s*(\d+)\s+(.+?)\s+([A-Z]{2,5})\s+(\d+[a-zA-Z]?)\s*(\*|PH)?\s*$")
 
 
-# ---------------- 卡池（demo decks 全量去重 + card-db 补充） ----------------
+# ---------------- 卡池（真实卡池 M1 + demo decks 全量去重 + card-db 补充） ----------------
 _POOL: dict | None = None
-_POOL_OBJ: dict = {}          # name(lower) -> 引擎 CardRef 原型（F3 打通对战：重建卡组）
+_POOL_OBJ: dict = {}          # name(lower) -> 引擎卡**定义**（PokemonDef/TrainerDef/EnergyDef）
+
+
+def _ref_of(cdef):
+    """卡定义 → 全新的引用实例（每张牌独立，避免多份共享同一 ref 对象）"""
+    from engine.cards import (EnergyDef, EnergyRef, PokeRef, PokemonDef,
+                              TrainerDef, TrainerRef)
+    if isinstance(cdef, PokemonDef):
+        return PokeRef(cdef)
+    if isinstance(cdef, EnergyDef):
+        return EnergyRef(cdef)
+    if isinstance(cdef, TrainerDef):
+        return TrainerRef(cdef)
+    raise TypeError(f"未知卡定义 {type(cdef)}")
 
 
 def _pool() -> dict:
-    """name(lower) -> meta{kind,is_basic,name,stage,is_ex}"""
+    """name(lower) -> meta{kind,is_basic,name,stage,is_ex,engine_ready,source}"""
     global _POOL
     if _POOL is not None:
         return _POOL
@@ -51,10 +64,46 @@ def _pool() -> dict:
         if p.exists():
             sys.path.insert(0, str(p))
     out: dict = {}
+
+    def _put_pokemon(name, pdef, source, engine_ready=True, note=""):
+        out[name.lower()] = {
+            "kind": "pokemon", "name": name,
+            "stage": getattr(pdef, "stage", 0),
+            "is_ex": bool(getattr(pdef, "is_ex", False)),
+            "hp": getattr(pdef, "hp", None),
+            "is_basic": getattr(pdef, "stage", 0) == 0,
+            "engine_ready": engine_ready, "note": note, "source": source}
+        _POOL_OBJ[name.lower()] = pdef
+
+    # 1) 真实卡池（M1 · engine/data/cards_real.json，卡名优先）
+    try:
+        from engine import reallib
+        for name, item in reallib.catalog().items():
+            cdef, meta = item["def"], item["meta"]
+            if meta.get("supertype") == "Pokemon":
+                _put_pokemon(name, cdef, "real-pool",
+                             engine_ready=not item["unsupported"],
+                             note=item["reason"])
+            elif meta.get("supertype") == "Energy":
+                out[name.lower()] = {"kind": "energy", "name": name,
+                                     "is_basic": False, "is_basic_energy": True,
+                                     "engine_ready": True, "source": "real-pool"}
+                _POOL_OBJ[name.lower()] = cdef
+            else:                                    # Trainer
+                tag = getattr(cdef, "tag", "")
+                out[name.lower()] = {"kind": "trainer", "name": name,
+                                     "is_basic": False, "tag": tag,
+                                     "engine_ready": tag != "unsupported",
+                                     "note": item["reason"],
+                                     "source": "real-pool"}
+                _POOL_OBJ[name.lower()] = cdef
+    except Exception:
+        pass
+
+    # 2) demo 卡组（原创代名卡，Y 版；不覆盖已存在的真实卡名）
     try:
         from engine import decklib
-        names = [n for n in dir(decklib) if n.startswith("deck_")]
-        for fn in names:
+        for fn in [n for n in dir(decklib) if n.startswith("deck_")]:
             try:
                 deck = getattr(decklib, fn)()
             except Exception:
@@ -63,30 +112,26 @@ def _pool() -> dict:
                 pdef = getattr(c, "pdef", None)
                 tdef = getattr(c, "tdef", None)
                 edef = getattr(c, "edef", None)
-                if pdef is not None:
-                    out[pdef.name.lower()] = {
-                        "kind": "pokemon", "name": pdef.name,
-                        "stage": getattr(pdef, "stage", 0),
-                        "is_ex": bool(getattr(pdef, "is_ex", False)),
-                        "hp": getattr(pdef, "hp", None),
-                        "is_basic": getattr(pdef, "stage", 0) == 0,
-                        "source": "decklib",
-                    }
-                    _POOL_OBJ[pdef.name.lower()] = c
-                elif tdef is not None:
+                if pdef is not None and pdef.name.lower() not in out:
+                    _put_pokemon(pdef.name, pdef, "decklib")
+                elif tdef is not None and tdef.name.lower() not in out:
                     out[tdef.name.lower()] = {
                         "kind": "trainer", "name": tdef.name,
-                        "is_basic": False, "source": "decklib"}
-                    _POOL_OBJ[tdef.name.lower()] = c
+                        "is_basic": False, "engine_ready": True,
+                        "source": "decklib"}
+                    _POOL_OBJ[tdef.name.lower()] = tdef
                 elif edef is not None:
                     nm = getattr(edef, "name", "Energy")
-                    out[nm.lower()] = {
-                        "kind": "energy", "name": nm, "is_basic": False,
-                        "is_basic_energy": True, "source": "decklib"}
-                    _POOL_OBJ[nm.lower()] = c
+                    if nm.lower() not in out:
+                        out[nm.lower()] = {
+                            "kind": "energy", "name": nm, "is_basic": False,
+                            "is_basic_energy": True, "engine_ready": True,
+                            "source": "decklib"}
+                        _POOL_OBJ[nm.lower()] = edef
     except Exception:
         pass
-    # card-db 补充（P0 仅 3 张样本，命中即用其 supertype）
+
+    # 3) card-db 补充（本地库；仅补名称存在性）
     try:
         import sqlite3
         dbp = repo.parent / "pokelab-data" / "data" / "db" / "pokelab.db"
@@ -98,7 +143,9 @@ def _pool() -> dict:
                     kind = {"Pokemon": "pokemon", "Trainer": "trainer",
                             "Energy": "energy"}.get(st, "unknown")
                     out[key] = {"kind": kind, "name": name, "source": "card-db",
-                                "is_basic": kind == "pokemon"}
+                                "is_basic": kind == "pokemon",
+                                "engine_ready": False,
+                                "note": "仅在卡库登记，未进入引擎卡池"}
             con.close()
     except Exception:
         pass
@@ -186,6 +233,14 @@ def validate(text: str) -> dict:
                         ("…" if len(unmatched) > 8 else "") +
                         " → 含此类卡的卡组暂不可对战")
 
+    # M1：卡名已收录但引擎未实现（tag=unsupported）→ 对战时可占位替换，显式告知
+    not_impl = sorted({k for k, m in meta_of.items()
+                       if m and not m.get("engine_ready", True)})
+    if not_impl:
+        warnings.append("引擎未实现卡（M1 灰名单，对战时以基础能量占位）：" +
+                        "、".join(not_impl[:8]) +
+                        ("…" if len(not_impl) > 8 else ""))
+
     kinds = Counter((meta_of[k] or {}).get("kind", "unknown") for k in by_name)
     summary = {
         "total": total, "unique": len(by_name),
@@ -194,6 +249,9 @@ def validate(text: str) -> dict:
         "energy": kinds.get("energy", 0),
         "unknown": kinds.get("unknown", 0),
         "basics": len(basics),
+        "engine_ready": total - sum(
+            by_name[k] for k in not_impl),
+        "not_implemented": sum(by_name[k] for k in not_impl),
         "battle_ready": bool(basics) and not unmatched,
     }
     return {"ok": not errors, "errors": errors, "warnings": warnings,
@@ -201,23 +259,78 @@ def validate(text: str) -> dict:
 
 
 # ---------------- F3 → F5 打通：按已入库卡组重建引擎卡组 ----------------
-def build_engine_deck(did: str) -> list:
-    """读库内卡组 → 引擎卡对象列表（供对战）；未收录卡/张数不足 → ValueError
+def _fallback_energy_type(cards: list) -> str:
+    """占位能量属性：取卡组内出现最多的一种能量属性（缺省无色）"""
+    kinds = Counter()
+    for e in cards or []:
+        m = (_pool().get((e.get("name") or "").lower()) or {})
+        if m.get("kind") == "energy" and m.get("name"):
+            nm = m["name"].lower()
+            for t in ("psychic", "fire", "grass", "darkness", "water",
+                      "lightning", "fighting", "metal"):
+                if t in nm:
+                    kinds[t] += int(e.get("count") or 0)
+                    break
+    return kinds.most_common(1)[0][0] if kinds else "colorless"
 
-    使用卡池原型对象的重复引用（与 engine.decklib 内部一致：同一 pdef 复用）。
+
+def deck_build_report(did: str) -> dict:
+    """卡组 → 引擎可执行性报告（占位替换清单，诚实标注 C5）"""
+    d = store.get_deck(did)
+    if not d:
+        raise ValueError(f"卡组 {did} 不存在")
+    pool = _pool()
+    replaced, missing = [], []
+    total = playable = 0
+    for e in d.get("cards") or []:
+        n = int(e.get("count") or 0)
+        total += n
+        m = pool.get((e.get("name") or "").lower())
+        if m is None:
+            missing.append({"name": e.get("name"), "count": n,
+                            "reason": "卡池未收录"})
+        elif not m.get("engine_ready", True):
+            replaced.append({"name": e.get("name"), "count": n,
+                             "reason": m.get("note") or "引擎未实现"})
+        else:
+            playable += n
+    replaced_n = sum(r["count"] for r in replaced)
+    return {"total": total, "playable": playable - 0,
+            "replaced": replaced, "missing": missing,
+            "executable_rate": round((total - replaced_n -
+                                      sum(x["count"] for x in missing)) / total, 4)
+            if total else 0.0}
+
+
+def build_engine_deck(did: str) -> list:
+    """读库内卡组 → 引擎卡对象列表（供对战）
+
+    - 每张牌构造独立 ref 实例（避免多份共享同一对象导致 hand/deck 混同）；
+    - 卡池未收录 → ValueError（灰名单，需先补齐卡池）；
+    - 已收录但引擎未实现（如 Rare Candy）→ 以基础能量占位（报告见
+      `deck_build_report`，差异透明 C5）。
     """
     d = store.get_deck(did)
     if not d:
         raise ValueError(f"卡组 {did} 不存在")
-    _pool()
+    pool = _pool()
+    cards = d.get("cards") or []
+    fb_type = _fallback_energy_type(cards)
+    from engine.cards import EnergyDef
     deck: list = []
     missing: list = []
-    for e in d.get("cards") or []:
-        obj = _POOL_OBJ.get((e.get("name") or "").lower())
-        if obj is None:
+    for e in cards:
+        key = (e.get("name") or "").lower()
+        meta = pool.get(key)
+        obj = _POOL_OBJ.get(key)
+        n = int(e.get("count") or 0)
+        if meta is None or obj is None:
             missing.append(e.get("name") or "?")
             continue
-        deck.extend([obj] * int(e.get("count") or 0))
+        if not meta.get("engine_ready", True):
+            deck.extend(_ref_of(EnergyDef(fb_type)) for _ in range(n))
+            continue
+        deck.extend(_ref_of(obj) for _ in range(n))
     if missing:
         raise ValueError("含未收录卡，暂不可对战（灰名单/C5）：" +
                          "、".join(sorted(set(missing))[:6]))
@@ -250,19 +363,52 @@ def my_decks(p: Principal = Depends(current_user)):
 
 @router.get("/presets")
 def presets(p: Principal = Depends(current_user)):
-    """预设 Meta 对手池 A1–A4（PRD §10；卡池待 M1 补齐，当前以 demo 卡组代表）"""
-    return {"presets": [
-        {"id": "A1", "label": "Dragapult ex / Dusknoir", "demo_deck": "draco",
-         "note": "Worlds 使用率 43.0% · 赛期 Meta 49.2%（Limitless）",
-         "battle_ready": True},
-        {"id": "A2", "label": "Dragapult ex / Blaziken ex", "demo_deck": "draco",
-         "note": "2026.7–8 Tier1 最强变体（tcgcontender）", "battle_ready": True},
-        {"id": "A3", "label": "N's Zoroark ex", "demo_deck": "ability_demo",
-         "note": "赛期 Meta 8.0%；主流中少数优开 Dragapult", "battle_ready": True},
-        {"id": "A4", "label": "Basic Box（Ogerpon/Clefairy）",
-         "demo_deck": "psychic", "note": "Worlds 使用率 9.4% · 胜率 49.9%",
-         "battle_ready": True},
-    ], "disclaimer": "卡池以 demo 卡组代表（M1 卡池补齐后替换）；差异见 C5 声明"}
+    """预设 Meta 对手池 A1–A4 —— M1 起为**真实卡表**（引擎映射版，逐卡可追溯）"""
+    import sys
+    repo = Path(__file__).resolve().parents[3]
+    pkg = repo / "packages" / "engine"
+    if pkg.exists() and str(pkg) not in sys.path:
+        sys.path.insert(0, str(pkg))
+    try:
+        from engine import reallib
+        rows = reallib.archetypes()
+    except Exception as e:                       # noqa: BLE001
+        raise HTTPException(500, f"真实卡池不可用：{e}") from e
+    return {
+        "presets": [{"id": a["id"], "label": a["label"], "role": a["role"],
+                     "style": a["style"], "note": a["note"],
+                     "cards_total": a["cards_total"],
+                     "unique_cards": a["unique_cards"],
+                     "executable_rate": a["executable_rate"],
+                     "replaced": a["replaced"], "approximated": a["approximated"],
+                     "battle_ready": a["battle_ready"],
+                     "list_endpoint": f"/decks/presets/{a['id']}"}
+                    for a in rows],
+        "source": "engine/data/{cards_real,decklists}.json（M1 卡池补齐）",
+        "disclaimer": "真实卡名 + 引擎映射数值；引擎未实现卡以基础能量占位，"
+                      "逐卡清单见 /decks/presets/{id}（C5 差异透明）",
+    }
+
+
+@router.get("/presets/{aid}")
+def preset_detail(aid: str, p: Principal = Depends(current_user)):
+    """预设卡组逐卡清单 + 覆盖率报告（F3 透明度：映射/近似/占位三态）"""
+    import sys
+    repo = Path(__file__).resolve().parents[3]
+    pkg = repo / "packages" / "engine"
+    if pkg.exists() and str(pkg) not in sys.path:
+        sys.path.insert(0, str(pkg))
+    try:
+        from engine import reallib
+        d = reallib.describe(aid)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except Exception as e:                       # noqa: BLE001
+        raise HTTPException(500, f"真实卡池不可用：{e}") from e
+    d["provenance"] = reallib.catalog_meta().get("provenance")
+    d["decks_file_note"] = (reallib._decklists_raw()["meta"]  # noqa: SLF001
+                            .get("fidelity_note"))
+    return d
 
 
 @router.get("/{did}")

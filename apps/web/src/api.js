@@ -53,6 +53,7 @@ export const api = {
   importDeck: (text, name) => req('/decks/import', { method: 'POST', body: { text, name } }),
   myDecks: () => req('/decks'),
   deckPresets: () => req('/decks/presets'),
+  deckPresetDetail: (id) => req(`/decks/presets/${id}`),
   opening: (id, trials = 1000) => req(`/decks/${id}/opening?trials=${trials}`, { method: 'POST' }),
   exportDeck: (id) => req(`/decks/${id}/export`),
   // F7 统计
@@ -79,13 +80,23 @@ export const api = {
   adminSetRole: (name, role) => req(`/admin/users/${name}?role=${role}`, { method: 'PATCH' }),
 }
 
-// demo 卡组字典（引擎内演示卡池；预设 A1–A4 映射见 /decks/presets）
+// 卡组字典：M1 起预设 A1–A4 为**真实卡表**（引擎可直接 make_deck('A1')）
 export const DECKS = [
+  { id: 'A1', label: 'A1 · Dragapult ex / Dusknoir（真实卡表）' },
+  { id: 'A2', label: 'A2 · Dragapult ex / Blaziken ex（真实卡表）' },
+  { id: 'A3', label: "A3 · N's Zoroark ex（真实卡表）" },
+  { id: 'A4', label: 'A4 · Basic Box（真实卡表）' },
+  { id: 'draco', label: 'Draco line（Y 版映射）' },
   { id: 'lightning', label: 'Lightning demo' },
   { id: 'fire', label: 'Fire demo' },
   { id: 'psychic', label: 'Psychic demo' },
-  { id: 'draco', label: 'Draco line（≈Dragapult 系）' },
   { id: 'ability_demo', label: 'Ability demo' },
   { id: 'grass', label: 'Grass demo' },
   { id: 'status_demo', label: 'Status demo' },
 ]
+
+/** 预设卡组短标签（矩阵/表格用，避免长名撑破列宽） */
+export function shortDeck(id) {
+  const m = { A1: 'A1 Dragapult/Dusknoir', A2: 'A2 Dragapult/Blaziken', A3: "A3 N's Zoroark", A4: 'A4 Basic Box' }
+  return m[id] || id
+}

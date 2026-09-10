@@ -13,11 +13,12 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
 from .sse import sse_response, FINAL as _FINAL
+from .sse import parse_last_event_id as sse_parse_last
 
 router = APIRouter(prefix="/train", tags=["train"])
 
@@ -28,6 +29,7 @@ _RUN_K1 = _AGENT_DIR / "examples" / "run_k1_longtrain.py"
 _procs: dict = {}                # job_id -> Popen
 _log_paths: dict = {}            # job_id -> Path
 _tails: dict = {}                # job_id -> 最近 80 行
+_last_sig: dict = {}             # job_id -> 上一次进度事件签名（去重写事件）
 _lock = threading.Lock()
 _RUNNING_MAX = 2
 
@@ -63,6 +65,10 @@ def _monitor(job_id: str, proc: subprocess.Popen, logf: Path):
            "weights": f"artifacts/k1_policy_{job_id}.pt"}
     status = "done" if code == 0 else "failed"
     store.update_job(job_id, status=status, result=res)
+    store.append_event(job_id, "status", {"status": status,
+                                          "exit_code": code,
+                                          "curve_len": len(curve)})
+    _last_sig.pop(job_id, None)
     with _lock:
         _procs.pop(job_id, None)      # 日志路径保留以便完成后仍可查询 /log
 
@@ -102,6 +108,9 @@ def submit_train(req: schemas.TrainJobReq,
     with _lock:
         _procs[job_id] = proc
         _log_paths[job_id] = logf
+    # 状态置 running（此前只改内存/响应，DB 恒为 queued → 前端状态灯与进度轮询失效）
+    store.update_job(job_id, status="running")
+    store.append_event(job_id, "status", {"status": "running", "pid": proc.pid})
     threading.Thread(target=_monitor, args=(job_id, proc, logf),
                      daemon=True).start()
     return {"id": job_id, "status": "running", "log": str(logf)}
@@ -127,10 +136,14 @@ def train_status(job_id: str, p: Principal = Depends(current_user)):
 
 
 @router.get("/jobs/{job_id}/stream")
-def train_stream(job_id: str, token: str = Query(default=""),
+def train_stream(job_id: str, request: Request, token: str = Query(default=""),
                  lines: int = Query(60, ge=5, le=400),
+                 last_event_id: str = Query(default=""),
                  p: Principal = Depends(current_user)):
-    """SSE 实时训练进度：状态 + 日志 tail + 评估曲线（替代前端轮询）"""
+    """SSE 实时训练进度：状态 + 日志 tail + 评估曲线（替代前端轮询）
+
+    心跳（15s 注释行）+ 断线续传（`id: <seq>`，重连按 Last-Event-ID 回放）。
+    """
     if token:
         p = auth.user_from_token(token)
     j = store.get_job(job_id)
@@ -142,13 +155,23 @@ def train_stream(job_id: str, token: str = Query(default=""),
         jj = store.get_job(job_id)
         logf = _log_paths.get(job_id)
         tail = _tail(logf, lines) if logf else []
+        curve = _parse_curve(tail)
+        # 事件流锚点：每出现新的评估点/终态即写一条（供断线续传回放）
+        sig = (curve[-1]["at"] if curve else None, jj["status"])
+        if _last_sig.get(job_id) != sig:
+            _last_sig[job_id] = sig
+            store.append_event(job_id, "progress", {
+                "status": jj["status"], "curve_len": len(curve),
+                "last_at": curve[-1]["at"] if curve else None})
         return {"id": job_id, "status": jj["status"],
-                "log_tail": tail,
-                "curve": _parse_curve(tail),
+                "log_tail": tail, "curve": curve,
                 "result": jj["result"] if jj["status"] in _FINAL else None,
                 "error": jj.get("error")}
 
-    return sse_response(snap, interval=1.0)
+    last = sse_parse_last(request, last_event_id)
+    return sse_response(snap, interval=1.0, heartbeat_s=15.0,
+                        history=lambda seq: store.events_after(job_id, seq),
+                        last_event_id=last, request=request)
 
 
 @router.get("/jobs/{job_id}/log")

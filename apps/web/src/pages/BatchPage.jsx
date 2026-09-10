@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { api, DECKS } from '../api.js'
 import { t } from '../i18n.js'
 import { TaskCard, TaskTable, QuotaHint } from '../components/tasks.jsx'
-import { EmptyState, LogBlock, ErrBar, Pill } from '../components/ui.jsx'
+import { EmptyState, LogBlock, ErrBar, Pill, SsePill } from '../components/ui.jsx'
+import { openJobStream } from '../sse.js'
 
 /**
  * 批量对战（PRD F6/F7）
@@ -25,6 +26,7 @@ export default function BatchPage({ onMsg }) {
   const [report, setReport] = useState('')
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [sseState, setSseState] = useState('connecting')
   const esRef = useRef(null)
 
   async function refresh() {
@@ -37,33 +39,28 @@ export default function BatchPage({ onMsg }) {
     return () => clearInterval(t2)
   }, [])
 
-  // 运行中任务：优先 SSE 实时进度，异常回退轮询
+  // 运行中任务：优先 SSE 实时进度（心跳 + 断线续传），异常回退轮询
   useEffect(() => {
     if (!detail || detail.status !== 'running') return undefined
     let fallbackTimer = null
-    let es = null
-    try {
-      es = new EventSource(api.streamUrl(`/batch/jobs/${detail.id}/stream`))
-      esRef.current = es
-      es.addEventListener('update', (ev) => {
-        try {
-          const snap = JSON.parse(ev.data)
-          setDetail((d) => d && d.id === snap.id ? { ...d, ...snap } : d)
-        } catch { /* 忽略 */ }
-      })
-      es.addEventListener('end', () => { es.close(); refresh() })
-      es.onerror = () => { es.close(); startFallback() }
-    } catch { startFallback() }
-    function startFallback() {
-      fallbackTimer = setInterval(() => {
-        api.batchStatus(detail.id).then((s) => {
-          setDetail(s)
-          if (['done', 'failed', 'cancelled'].includes(s.status)) {
-            clearInterval(fallbackTimer); refresh()
-          }
-        }).catch(() => {})
-      }, 2000)
-    }
+    const stream = openJobStream({
+      jobId: detail.id,
+      url: api.streamUrl(`/batch/jobs/${detail.id}/stream`),
+      onUpdate: (snap) => setDetail((d) => (d && d.id === snap.id ? { ...d, ...snap } : d)),
+      onEnd: () => { setSseState('done'); setDetail((d) => (d ? { ...d } : d)); refresh() },
+      onState: setSseState,
+      onFallback: () => {
+        fallbackTimer = setInterval(() => {
+          api.batchStatus(detail.id).then((s) => {
+            setDetail(s)
+            if (['done', 'failed', 'cancelled'].includes(s.status)) {
+              clearInterval(fallbackTimer); refresh()
+            }
+          }).catch(() => {})
+        }, 2000)
+      },
+    })
+    esRef.current = stream
     return () => {
       if (esRef.current) { esRef.current.close(); esRef.current = null }
       if (fallbackTimer) clearInterval(fallbackTimer)
@@ -207,7 +204,10 @@ export default function BatchPage({ onMsg }) {
         {!detail && <EmptyState text={t('empty.tasks')} cta={t('btn.submit')} onCta={submit} />}
         {detail && (<>
           <div className="zt"><b className="mono sm">{detail.id}</b>
-            <span className="pill">{detail.status}</span></div>
+            <span className="pill">{detail.status}</span>
+            {detail.status === 'running' && (
+              <SsePill state={sseState} />)}
+          </div>
           {p.n ? (<>
             <div className="bar" role="progressbar" aria-valuenow={p.done} aria-valuemax={p.n}>
               <i style={{ width: pct + '%' }} /></div>

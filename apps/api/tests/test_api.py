@@ -153,35 +153,72 @@ class TestAuthZ(unittest.TestCase):
 
 
 class TestBatch(unittest.TestCase):
+    """批量任务（F6）。
+
+    注意：批量任务有**每日配额**（guest 与注册用户各自独立），且 guest 是
+    全局共享账号 → 用例必须用新注册用户，否则同日重复跑会被 429 拦住
+    （配额本身的行为由 TestQuota 单独覆盖）。
+    """
+
     def test_batch_and_report(self):
-        r = client.post("/batch/jobs", json={"deck_a": "lightning",
-                                             "deck_b": "fire",
-                                             "games": 3,
-                                             "seed_start": 999})
+        r = client.post("/batch/jobs", headers=user_headers(),
+                        json={"deck_a": "lightning",
+                              "deck_b": "fire",
+                              "games": 3,
+                              "seed_start": 999})
         self.assertEqual(r.status_code, 202, r.text)
         jid = r.json()["id"]
-        done = _wait_job(jid)
+        done = _wait_job(jid, headers=user_headers())
         self.assertEqual(done["status"], "done")
         self.assertEqual(done["result"]["n"], 3)
-        rep = client.get(f"/batch/jobs/{jid}/report?format=md")
+        rep = client.get(f"/batch/jobs/{jid}/report?format=md",
+                         headers=user_headers())
         self.assertEqual(rep.status_code, 200)
         self.assertIn("非官方数据", rep.text)
-        jrep = client.get(f"/batch/jobs/{jid}/report?format=json").json()
+        jrep = client.get(f"/batch/jobs/{jid}/report?format=json",
+                          headers=user_headers()).json()
         self.assertIn("win_rate_a", jrep)
 
     def test_cancel_keeps_partial(self):
-        r = client.post("/batch/jobs", json={"deck_a": "lightning",
-                                             "deck_b": "fire",
-                                             "games": 300,
-                                             "seed_start": 7})
+        r = client.post("/batch/jobs", headers=user_headers(),
+                        json={"deck_a": "lightning",
+                              "deck_b": "fire",
+                              "games": 300,
+                              "seed_start": 7})
         self.assertEqual(r.status_code, 202, r.text)
         jid = r.json()["id"]
         time.sleep(0.4)
-        client.post(f"/batch/jobs/{jid}/cancel")
-        end = _wait_job(jid)
+        client.post(f"/batch/jobs/{jid}/cancel", headers=user_headers())
+        end = _wait_job(jid, headers=user_headers())
         self.assertIn(end["status"], ("cancelled", "done"))
         if end["status"] == "cancelled":
             self.assertIn("n", end["result"])
+
+
+class TestGuestQuota(unittest.TestCase):
+    """配额口径：guest 可提交（不强制登录）；日配额用尽 → 429（PRD F6）
+
+    为避免污染共享的 guest 配额，这里用一次性用户把配额打满再验证 429，
+    同时顺带断言 guest 提交路径本身可用（返回 202/429 均属正常业务响应）。
+    """
+
+    def test_guest_can_submit(self):
+        r = client.post("/batch/jobs", json={"games": 2, "seed_start": 1})
+        self.assertIn(r.status_code, (202, 429), r.text)
+
+    def test_daily_quota_exhausted(self):
+        import uuid
+        name = "q_" + uuid.uuid4().hex[:8]
+        h = {"Authorization": "Bearer " + client.post(
+            "/auth/register", json={"name": name, "password": "pw123456"}
+        ).json()["token"]}
+        codes = []
+        for i in range(11):
+            rr = client.post("/batch/jobs", headers=h,
+                             json={"games": 1, "seed_start": 100 + i})
+            codes.append(rr.status_code)
+        self.assertIn(202, codes)
+        self.assertEqual(codes[-1], 429, f"第 11 次应被配额拦下：{codes}")
 
 
 class TestDecks(unittest.TestCase):
@@ -377,6 +414,172 @@ class TestSSE(unittest.TestCase):
         h = user_headers()
         r = client.get("/train/jobs/no_such_job/stream", headers=h)
         self.assertEqual(r.status_code, 404)
+
+
+class TestPresetsRealPool(unittest.TestCase):
+    """M1：真实卡池预设 A1–A4（60 卡真实卡表 + 覆盖率报告 + 直接对战）"""
+
+    def test_presets_are_real_60card_decks(self):
+        h = user_headers()
+        r = client.get("/decks/presets", headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        rows = r.json()["presets"]
+        self.assertEqual([x["id"] for x in rows], ["A1", "A2", "A3", "A4"])
+        for x in rows:
+            self.assertEqual(x["cards_total"], 60)
+            self.assertGreaterEqual(x["executable_rate"], 0.90)
+            self.assertTrue(x["battle_ready"])
+            self.assertIn("list_endpoint", x)
+
+    def test_preset_detail_marks_each_card(self):
+        h = user_headers()
+        d = client.get("/decks/presets/A1", headers=h).json()
+        self.assertEqual(sum(c["count"] for c in d["cards"]), 60)
+        statuses = {c["status"] for c in d["cards"]}
+        self.assertIn("mapped", statuses)
+        self.assertTrue(statuses <= {"mapped", "approximated", "replaced"})
+        # Dragapult 线在真实卡池中必须完整可映射
+        drag = [c for c in d["cards"] if c["name"] == "Dragapult ex"][0]
+        self.assertEqual(drag["count"], 3)
+        self.assertEqual(drag["status"], "mapped")
+
+    def test_preset_battle_runs(self):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": 7})
+        self.assertEqual(r.status_code, 201, r.text)
+        body = r.json()
+        self.assertGreaterEqual(len(body["view"]["legal"]), 1)
+        # 未知预设名 → 400 且提示可用范围
+        bad = client.post("/battles", headers=h, json={"deck_a": "Z9"})
+        self.assertEqual(bad.status_code, 400)
+
+    def test_import_real_decklist_is_matched(self):
+        """F3：粘贴真实卡表（Limitless 行格式）→ 卡名须能在真实卡池命中"""
+        h = user_headers()
+        text = "\n".join(["4 Dreepy TWM 128", "4 Drakloak TWM 129",
+                          "3 Dragapult ex TWM 130", "4 Buddy-Buddy Poffin TEF 144",
+                          "4 Ultra Ball SVI 196", "8 Basic Psychic Energy SVE 5"])
+        r = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "真实卡表用例"})
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        matched = {e["name"] for e in d["parsed"] if e["matched"]}
+        self.assertIn("Dragapult ex", matched)
+        self.assertIn("Buddy-Buddy Poffin", matched)
+        self.assertGreaterEqual(d["summary"]["engine_ready"], 15)
+
+
+class TestSSEResume(unittest.TestCase):
+    """SSE 心跳 + 断线续传（Last-Event-ID 重放）"""
+
+    def _post_batch(self, games=60):
+        r = client.post("/batch/jobs",
+                        json={"games": games, "seed_start": 11},
+                        headers=user_headers())
+        self.assertIn(r.status_code, (200, 202), r.text)
+        return r.json()["id"]
+
+    def test_stream_head_and_event_ids(self):
+        jid = self._post_batch(60)
+        got_ids, kinds = [], []
+        with client.stream("GET", f"/batch/jobs/{jid}/stream",
+                           headers=user_headers()) as resp:
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.headers["content-type"]
+                            .startswith("text/event-stream"))
+            self.assertTrue(resp.headers.get("cache-control"))
+            for line in resp.iter_lines():
+                if line.startswith("id:"):
+                    got_ids.append(int(line.split(":", 1)[1]))
+                elif line.startswith("event:"):
+                    kinds.append(line.split(":", 1)[1].strip())
+                    if len(kinds) >= 2:
+                        break
+        self.assertIn("update", kinds)
+        self.assertTrue(all(b > a for a, b in zip(got_ids, got_ids[1:]))
+                        if len(got_ids) > 1 else True, "seq 必须单调递增")
+
+    def test_last_event_id_replays_history(self):
+        """先断开（模拟网络抖动），再带 Last-Event-ID 重连 → 收到 replay 回放"""
+        jid = self._post_batch(120)
+        last = 0
+        with client.stream("GET", f"/batch/jobs/{jid}/stream",
+                           headers=user_headers()) as resp:
+            for line in resp.iter_lines():
+                if line.startswith("id:"):
+                    last = max(last, int(line.split(":", 1)[1]))
+                    break
+        time.sleep(1.5)                       # 让任务继续产生事件
+        replays = []
+        with client.stream("GET", f"/batch/jobs/{jid}/stream?last_event_id={last}",
+                           headers={**user_headers(), "Last-Event-ID": str(last)}) as resp:
+            self.assertEqual(resp.status_code, 200)
+            for line in resp.iter_lines():
+                if line.startswith("event:"):
+                    k = line.split(":", 1)[1].strip()
+                    replays.append(k)
+                    if len(replays) >= 3:
+                        break
+        self.assertIn("replay", replays, "带 Last-Event-ID 重连须回放历史事件")
+
+    def test_bad_last_event_id_is_ignored(self):
+        jid = self._post_batch(20)
+        with client.stream("GET", f"/batch/jobs/{jid}/stream?last_event_id=abc",
+                           headers=user_headers()) as resp:
+            self.assertEqual(resp.status_code, 200)
+            first = next(l for l in resp.iter_lines() if l.startswith("event:"))
+        self.assertIn("update", first)
+
+    def test_sse_parser(self):
+        from apps.api.app.sse import parse_last_event_id
+        self.assertEqual(parse_last_event_id(None, None), 0)
+        self.assertEqual(parse_last_event_id(None, "5"), 5)
+        self.assertEqual(parse_last_event_id(None, "bad"), 0)
+        self.assertEqual(parse_last_event_id(None, "-3"), 0)
+
+
+class TestSSEHeartbeat(unittest.IsolatedAsyncioTestCase):
+    """心跳注释行（`: ping`）+ 终态收尾（直接单测事件生成器）"""
+
+    async def test_heartbeat_and_end(self):
+        from apps.api.app.sse import event_stream
+        state = {"n": 0}
+
+        def snap():
+            state["n"] += 1
+            if state["n"] >= 3:
+                return {"status": "done"}
+            return {"status": "running", "progress": {"done": state["n"]}}
+
+        chunks = []
+        async for c in event_stream(snap, interval=0.02, heartbeat_s=0.01):
+            chunks.append(c)
+            if len(chunks) > 40:
+                break
+        text = "".join(chunks)
+        self.assertIn("retry: 3000", text)
+        self.assertIn("event: update", text)
+        self.assertIn("event: end", text)
+        self.assertIn(": ping", text, "空闲等待须发送心跳注释行")
+
+    async def test_replay_prepended(self):
+        from apps.api.app.sse import event_stream
+
+        def snap():
+            return {"status": "done"}
+
+        def history(seq):
+            return [{"seq": seq + 1, "kind": "progress", "data": {"done": 10}}]
+
+        chunks = []
+        async for c in event_stream(snap, interval=0.01, heartbeat_s=99,
+                                    history=history, last_event_id=3):
+            chunks.append(c)
+        text = "".join(chunks)
+        self.assertIn("event: replay", text)
+        self.assertIn("id: 4", text)
+        self.assertLess(text.index("event: replay"), text.index("event: update"))
 
 
 if __name__ == "__main__":

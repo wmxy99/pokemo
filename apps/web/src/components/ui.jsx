@@ -39,6 +39,27 @@ export function StatusBadge({ status }) {
   )
 }
 
+/** SSE 连接状态指示（心跳/断线续传）：live / 重连中 / 轮询兜底 */
+export function SsePill({ state }) {
+  const map = {
+    connecting: { label: '连接中…', tone: 'muted' },
+    live: { label: '实时', tone: 'ok' },
+    reconnecting: { label: '重连中 · 自动续传', tone: 'warn' },
+    polling: { label: '轮询兜底', tone: 'warn' },
+    done: { label: '已结束', tone: 'muted' },
+  }
+  const m = map[state] || map.connecting
+  return (
+    <span className={`pill pill-${m.tone} sse-pill`}
+      data-sse-state={state}
+      title="任务进度通过 SSE 推送；断线自动按 Last-Event-ID 续传">
+      <i className={`dot ${state === 'live' ? 'pulse' : ''}`}
+        style={{ background: 'currentColor' }} aria-hidden="true" />
+      <span>{m.label}</span>
+    </span>
+  )
+}
+
 export function ErrBar({ code, message, onRetry, retryLabel }) {
   return (
     <div className="alert err" role="alert">

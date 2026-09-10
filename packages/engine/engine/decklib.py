@@ -155,5 +155,28 @@ ALL_DECKS = {
 }
 
 
+# ---------- M1 · X 版真实卡池预设对手池 A1–A4 ----------
+# 真实卡名 + 60 卡卡表定义在 engine/data/{cards_real,decklists}.json，
+# 由 reallib 组装（引擎不支持的卡以基础能量占位，逐卡记录于 reallib.coverage）。
+def _real_deck(arch_id: str):
+    def _build() -> list:
+        from . import reallib
+        return reallib.build_deck(arch_id)
+    return _build
+
+
+for _aid in ("A1", "A2", "A3", "A4"):
+    ALL_DECKS[_aid] = _real_deck(_aid)
+    ALL_DECKS[_aid.lower()] = ALL_DECKS[_aid]
+
+
+def archetype_ids() -> list:
+    """可在 make_deck 中直接使用的真实预设 id（A1–A4）"""
+    from . import reallib
+    return reallib.archetype_ids()
+
+
 def make_deck(name: str) -> list:
+    if name not in ALL_DECKS:
+        raise KeyError(f"未知卡组 {name}（可用：{'/'.join(sorted(ALL_DECKS))}）")
     return ALL_DECKS[name]()

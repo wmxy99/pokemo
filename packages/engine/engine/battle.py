@@ -241,6 +241,10 @@ class Battle:
                     for bi in range(len(opp.bench)):
                         out.append({"verb": "trainer", "hand": i,
                                     "target": bi})
+            elif tag.startswith("research:") or tag.startswith("shuffle_draw:"):
+                # 抽牌型支援者（Professor's Research / Iono）：需牌库非空
+                if p.deck:
+                    out.append({"verb": "trainer", "hand": i})
         return out
 
     # ---------- 动作执行 ----------
@@ -425,9 +429,28 @@ class Battle:
             placed = self._trainer_hammer(opp)
         elif tag == "boss":
             placed = self._trainer_boss(opp, int(action.get("target", 0)))
+        elif tag.startswith("research:"):
+            # 弃全部手牌（不含自身）→ 抽 n
+            n = int(tag.split(":")[1])
+            others = [c for i, c in enumerate(p.hand) if i != hi]
+            p.discard.extend(_card_label(c) for c in others)
+            p.hand = [c for i, c in enumerate(p.hand) if i == hi]
+            self._safe_draw(self.current, n, source="trainer")
+            placed = f"discard {len(others)} draw {n}"
+        elif tag.startswith("shuffle_draw:"):
+            # 手牌洗回牌库（不含自身）→ 抽 n
+            n = int(tag.split(":")[1])
+            others = [c for i, c in enumerate(p.hand) if i != hi]
+            p.deck.extend(others)
+            self.rng.shuffle(p.deck)
+            p.hand = [c for i, c in enumerate(p.hand) if i == hi]
+            self._safe_draw(self.current, n, source="trainer")
+            placed = f"shuffle {len(others)} draw {n}"
         else:
             raise ValueError(f"未知训练家 tag={tag}")
-        p.hand.pop(hi)
+        # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
+        # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
+        p.hand = [x for x in p.hand if x is not c]
         p.discard.append(c.tdef.name)
         if kind == "supporter":
             p.supporter_used = 1

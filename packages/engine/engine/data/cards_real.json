@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "version": "1.0",
+    "date": "2026-09-10",
+    "milestone": "M1 卡池补齐（X 版真实卡表）",
+    "source": "curated-offline",
+    "provenance": "PRD §10 预设对手池 + P0 首批卡组复核清单 §2 核心构成（已核实卡名/构成要素）；卡面数值为引擎映射值（fidelity=approx），精确数值与完整 60 卡由 Limitless 收录 loader 覆盖（P1）",
+    "fidelity": "engine-mapped",
+    "engine_tags": {
+      "attack_effects": ["poison", "burn", "sleep", "paralyze", "confuse", "spread_free:N", "spread:N:per", "heal:N", "self:N", "draw:N"],
+      "abilities": ["recon:N (field, 每回合一次)", "cursed:N (hand, 弃此卡发动)"],
+      "trainers": ["poffin", "ultra_ball", "hammer", "boss", "research:N", "shuffle_draw:N"]
+    },
+    "ip_note": "仅收录卡名与规则数值，不含官方图像/插画（C2）；数据与代码分离，再分发红线见 PRD C1/C5"
+  },
+  "cards": [
+    {
+      "name": "Dreepy", "supertype": "Pokemon", "stage": 0, "hp": 70, "types": ["dragon"],
+      "real": { "set": "TWM", "number": "128" }, "fidelity": "approx",
+      "note": "Dragapult line 基础（≈Dragapult 线起点）",
+      "attacks": [
+        { "name": "Bite", "cost": { "colorless": 1 }, "damage": 10 },
+        { "name": "Dragon Headbutt", "cost": { "psychic": 1, "colorless": 1 }, "damage": 30 }
+      ]
+    },
+    {
+      "name": "Drakloak", "supertype": "Pokemon", "stage": 1, "evolves_from": "Dreepy",
+      "hp": 100, "types": ["dragon"], "real": { "set": "TWM", "number": "129" },
+      "note": "特性 Recon Directive（引擎 recon:2，每回合一次）",
+      "abilities": [{ "name": "Recon Directive", "tag": "recon:2", "location": "field", "desc": "每回合一次：检视牌库顶 2 张取 1 入手" }],
+      "attacks": [{ "name": "Dragon Tail", "cost": { "psychic": 1, "colorless": 1 }, "damage": 50 }]
+    },
+    {
+      "name": "Dragapult ex", "supertype": "Pokemon", "stage": 2, "evolves_from": "Drakloak",
+      "hp": 330, "types": ["dragon"], "is_ex": true, "real": { "set": "TWM", "number": "130" },
+      "note": "Phantom Dive：200 + 6 伤害指示物任意分配至对手后备（E1 彩色能量 F+P / E5 目标分配）",
+      "attacks": [
+        { "name": "Jet Headbutt", "cost": { "colorless": 2 }, "damage": 70 },
+        { "name": "Phantom Dive", "cost": { "fire": 1, "psychic": 1 }, "damage": 200, "effects": ["spread_free:60"] }
+      ]
+    },
+    {
+      "name": "Duskull", "supertype": "Pokemon", "stage": 0, "hp": 60, "types": ["psychic"],
+      "real": { "set": "SIT", "number": "68" },
+      "attacks": [{ "name": "Astonish", "cost": { "psychic": 1 }, "damage": 10 }]
+    },
+    {
+      "name": "Dusclops", "supertype": "Pokemon", "stage": 1, "evolves_from": "Duskull",
+      "hp": 90, "types": ["psychic"], "real": { "set": "SIT", "number": "69" },
+      "attacks": [
+        { "name": "Will-O-Wisp", "cost": { "psychic": 1, "colorless": 1 }, "damage": 30 },
+        { "name": "Nightmare", "cost": { "psychic": 2, "colorless": 1 }, "damage": 60, "effects": ["sleep"] }
+      ]
+    },
+    {
+      "name": "Dusknoir", "supertype": "Pokemon", "stage": 2, "evolves_from": "Dusclops",
+      "hp": 150, "types": ["psychic"], "real": { "set": "SIT", "number": "70" },
+      "note": "Cursed Blast（引擎 cursed:130，手牌弃此卡发动）",
+      "abilities": [{ "name": "Cursed Blast", "tag": "cursed:130", "location": "hand", "desc": "手牌弃此卡 → 对手 1 只宝可梦放 13 个指示物" }],
+      "attacks": [{ "name": "Shadow Punch", "cost": { "psychic": 1, "colorless": 1 }, "damage": 60 }]
+    },
+    {
+      "name": "Munkidori", "supertype": "Pokemon", "stage": 0, "hp": 110, "types": ["darkness"],
+      "real": { "set": "TWM", "number": "95" },
+      "note": "特性 Adrena-Brain（移动伤害指示物）引擎 v1 未实现 → 灰名单，保留招式",
+      "abilities": [{ "name": "Adrena-Brain", "tag": "unsupported", "location": "field", "desc": "每回合一次：移动至多 3 个伤害指示物（引擎待实现）" }],
+      "attacks": [{ "name": "Mind Bend", "cost": { "darkness": 1, "colorless": 1 }, "damage": 60 }]
+    },
+    {
+      "name": "Budew", "supertype": "Pokemon", "stage": 0, "hp": 30, "types": ["grass"],
+      "real": { "set": "SVI", "number": "9" },
+      "note": "Itchy Pollen（真实为物品封锁）→ 引擎近似为中毒",
+      "attacks": [{ "name": "Itchy Pollen", "cost": { "grass": 1 }, "damage": 10, "effects": ["poison"] }]
+    },
+    {
+      "name": "Dunsparce", "supertype": "Pokemon", "stage": 0, "hp": 60, "types": ["colorless"],
+      "real": { "set": "TEF", "number": "128" },
+      "attacks": [{ "name": "Tantrum", "cost": { "colorless": 2 }, "damage": 30 }]
+    },
+    {
+      "name": "Dudunsparce", "supertype": "Pokemon", "stage": 1, "evolves_from": "Dunsparce",
+      "hp": 140, "types": ["colorless"], "real": { "set": "TEF", "number": "129" },
+      "note": "Run Away Draw → 引擎近似 recon:3",
+      "abilities": [{ "name": "Run Away Draw", "tag": "recon:3", "location": "field", "desc": "每回合一次：抽至手牌 5 张（引擎近似检索）" }],
+      "attacks": [{ "name": "Land Crush", "cost": { "colorless": 3 }, "damage": 90 }]
+    },
+    {
+      "name": "Meowth ex", "supertype": "Pokemon", "stage": 0, "hp": 170, "types": ["colorless"],
+      "is_ex": true, "real": { "set": "TWM", "number": "150" },
+      "attacks": [{ "name": "Fury Swipes", "cost": { "colorless": 2 }, "damage": 50 }]
+    },
+    {
+      "name": "Fezandipiti ex", "supertype": "Pokemon", "stage": 0, "hp": 210, "types": ["darkness"],
+      "is_ex": true, "real": { "set": "SFA", "number": "38" },
+      "note": "Flip the Script（被击倒时抽 3）引擎未实现 → 灰名单，保留招式",
+      "abilities": [{ "name": "Flip the Script", "tag": "unsupported", "location": "field", "desc": "己方宝可梦被击倒时抽 3（引擎待实现）" }],
+      "attacks": [{ "name": "Cruel Arrow", "cost": { "darkness": 1, "colorless": 2 }, "damage": 100 }]
+    },
+    {
+      "name": "Torchic", "supertype": "Pokemon", "stage": 0, "hp": 70, "types": ["fire"],
+      "real": { "set": "SSP", "number": "33" },
+      "attacks": [{ "name": "Ember", "cost": { "fire": 1 }, "damage": 30 }]
+    },
+    {
+      "name": "Combusken", "supertype": "Pokemon", "stage": 1, "evolves_from": "Torchic",
+      "hp": 100, "types": ["fire"], "real": { "set": "SSP", "number": "34" },
+      "attacks": [{ "name": "Flare", "cost": { "fire": 1, "colorless": 1 }, "damage": 50 }]
+    },
+    {
+      "name": "Blaziken ex", "supertype": "Pokemon", "stage": 2, "evolves_from": "Combusken",
+      "hp": 320, "types": ["fire"], "is_ex": true, "real": { "set": "SSP", "number": "35" },
+      "note": "Blaze Dance（弃牌堆附能加速）引擎未实现 → 灰名单，保留招式",
+      "abilities": [{ "name": "Blaze Dance", "tag": "unsupported", "location": "field", "desc": "进化时从弃牌堆加速能量（引擎待实现）" }],
+      "attacks": [{ "name": "Blaze Kick", "cost": { "fire": 2, "colorless": 1 }, "damage": 180 }]
+    },
+    {
+      "name": "N's Zorua", "supertype": "Pokemon", "stage": 0, "hp": 70, "types": ["darkness"],
+      "real": { "set": "JTG", "number": "97" },
+      "attacks": [{ "name": "Scratch", "cost": { "darkness": 1 }, "damage": 20 }]
+    },
+    {
+      "name": "N's Zoroark ex", "supertype": "Pokemon", "stage": 1, "evolves_from": "N's Zorua",
+      "hp": 280, "types": ["darkness"], "is_ex": true, "real": { "set": "JTG", "number": "98" },
+      "attacks": [
+        { "name": "Shadow Bite", "cost": { "darkness": 1 }, "damage": 40 },
+        { "name": "Night Daze", "cost": { "darkness": 2, "colorless": 1 }, "damage": 200 }
+      ]
+    },
+    {
+      "name": "Ogerpon ex", "supertype": "Pokemon", "stage": 0, "hp": 210, "types": ["grass"],
+      "is_ex": true, "real": { "set": "TWM", "number": "25" },
+      "note": "Teal Dance（附草能量）引擎未实现 → 灰名单，保留招式",
+      "abilities": [{ "name": "Teal Dance", "tag": "unsupported", "location": "field", "desc": "每回合一次：从手牌/牌库附 1 草能量（引擎待实现）" }],
+      "attacks": [
+        { "name": "Corner", "cost": { "grass": 1 }, "damage": 30 },
+        { "name": "Teal Blast", "cost": { "grass": 2, "colorless": 1 }, "damage": 180 }
+      ]
+    },
+    {
+      "name": "Clefairy ex", "supertype": "Pokemon", "stage": 0, "hp": 210, "types": ["psychic"],
+      "is_ex": true, "real": { "set": "PRE", "number": "56" },
+      "note": "Fairy Zone（改对手弱点）引擎未实现 → 灰名单，保留招式",
+      "abilities": [{ "name": "Fairy Zone", "tag": "unsupported", "location": "field", "desc": "对手龙系宝可梦弱点变为超（引擎待实现）" }],
+      "attacks": [{ "name": "Wondrous Moon", "cost": { "psychic": 1, "colorless": 1 }, "damage": 120 }]
+    },
+    {
+      "name": "Bloodmoon Ursaluna ex", "supertype": "Pokemon", "stage": 0, "hp": 260,
+      "types": ["colorless"], "is_ex": true, "real": { "set": "TWM", "number": "141" },
+      "attacks": [
+        { "name": "Mud Shot", "cost": { "colorless": 2 }, "damage": 70 },
+        { "name": "Blood Moon", "cost": { "colorless": 4 }, "damage": 240 }
+      ]
+    },
+
+    {
+      "name": "Buddy-Buddy Poffin", "supertype": "Trainer", "kind": "item", "tag": "poffin",
+      "real": { "set": "TEF", "number": "144" }, "note": "检索最多 2 张基础宝可梦（HP≤70）至后备"
+    },
+    {
+      "name": "Nest Ball", "supertype": "Trainer", "kind": "item", "tag": "poffin",
+      "real": { "set": "SVI", "number": "181" }, "note": "近似：引擎以 poffin 语义（检索基础宝可梦）实现"
+    },
+    {
+      "name": "Ultra Ball", "supertype": "Trainer", "kind": "item", "tag": "ultra_ball",
+      "real": { "set": "SVI", "number": "196" }, "note": "弃 2 张手牌 → 检索宝可梦"
+    },
+    {
+      "name": "Crushing Hammer", "supertype": "Trainer", "kind": "item", "tag": "hammer",
+      "real": { "set": "SVI", "number": "168" }, "note": "抛币正面 → 弃对手 1 能量"
+    },
+    {
+      "name": "Counter Catcher", "supertype": "Trainer", "kind": "item", "tag": "boss",
+      "real": { "set": "PAR", "number": "160" }, "note": "近似：引擎以 boss（拉对手后备）实现，省略奖赏落后条件"
+    },
+    {
+      "name": "Boss's Orders", "supertype": "Trainer", "kind": "supporter", "tag": "boss",
+      "real": { "set": "PAL", "number": "172" }, "note": "拉对手 1 只后备为 active"
+    },
+    {
+      "name": "Professor's Research", "supertype": "Trainer", "kind": "supporter", "tag": "research:7",
+      "real": { "set": "SVI", "number": "189" }, "note": "弃全部手牌 → 抽 7"
+    },
+    {
+      "name": "Iono", "supertype": "Trainer", "kind": "supporter", "tag": "shuffle_draw:5",
+      "real": { "set": "PAL", "number": "185" }, "note": "近似：引擎以洗牌重抽 5 实现，省略奖赏数镜像"
+    },
+
+    {
+      "name": "Rare Candy", "supertype": "Trainer", "kind": "item", "tag": "unsupported",
+      "real": { "set": "SVI", "number": "191" }, "note": "跳阶进化：引擎 v1 无「基础直进化二阶」动作 → 替换占位"
+    },
+    {
+      "name": "Night Stretcher", "supertype": "Trainer", "kind": "item", "tag": "unsupported",
+      "real": { "set": "SFA", "number": "61" }, "note": "弃牌堆回收（需目标选择）→ 替换占位"
+    },
+    {
+      "name": "Earthen Vessel", "supertype": "Trainer", "kind": "item", "tag": "unsupported",
+      "real": { "set": "PAR", "number": "163" }, "note": "弃 1 张 → 检索 2 能量（需目标选择）→ 替换占位"
+    },
+    {
+      "name": "Crispin", "supertype": "Trainer", "kind": "supporter", "tag": "unsupported",
+      "real": { "set": "SSP", "number": "164" }, "note": "检索 2 张不同类型能量（需目标选择）→ 替换占位"
+    },
+    {
+      "name": "Switch", "supertype": "Trainer", "kind": "item", "tag": "unsupported",
+      "real": { "set": "SVI", "number": "194" }, "note": "自换位（引擎 retreat 已覆盖，卡面动作未实现）→ 替换占位"
+    },
+
+    { "name": "Basic Psychic Energy", "supertype": "Energy", "type": "psychic" },
+    { "name": "Basic Fire Energy", "supertype": "Energy", "type": "fire" },
+    { "name": "Basic Grass Energy", "supertype": "Energy", "type": "grass" },
+    { "name": "Basic Darkness Energy", "supertype": "Energy", "type": "darkness" },
+    { "name": "Basic Water Energy", "supertype": "Energy", "type": "water" },
+    { "name": "Basic Lightning Energy", "supertype": "Energy", "type": "lightning" },
+    { "name": "Basic Fighting Energy", "supertype": "Energy", "type": "fighting" }
+  ]
+}

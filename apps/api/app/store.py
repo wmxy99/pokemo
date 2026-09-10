@@ -204,10 +204,51 @@ def get_job(jid: str) -> Optional[dict]:
 def list_jobs(kind: str, owner: str, limit: int = 50) -> list:
     with _lock:
         rows = _conn.execute(
-            "SELECT id,kind,owner,status,created,updated FROM jobs "
+            "SELECT id,kind,owner,status,params,created,updated FROM jobs "
             "WHERE kind=? AND owner=? ORDER BY created DESC LIMIT ?",
             (kind, owner, limit)).fetchall()
-    return [dict(r) for r in rows]
+    out = []
+    for r in rows:
+        d = dict(r)
+        # params 用于前端区分「单对位 / 卡组池矩阵」（此前未返回 → 类型列恒为单对位）
+        if d.get("params"):
+            try:
+                d["params"] = json.loads(d["params"])
+            except (TypeError, ValueError):
+                d["params"] = {}
+        out.append(d)
+    return out
+
+
+# ---------- 任务事件流（SSE 断线续传：Last-Event-ID 重放） ----------
+# 事件表在内存中（与任务执行体同生命周期），seq 单调递增，形如
+#   {seq: 1, kind: "progress", data: {...}, t: 1699...}
+JOB_EVENTS: dict = {}
+_EVENTS_LOCK = threading.RLock()
+MAX_EVENTS = 500           # 每任务保留的最近事件数（防内存无限增长）
+
+
+def append_event(jid: str, kind: str, data: dict) -> int:
+    """追加一条任务事件，返回其 seq（作为 SSE 的 id 字段）"""
+    with _EVENTS_LOCK:
+        buf = JOB_EVENTS.setdefault(jid, [])
+        seq = (buf[-1]["seq"] + 1) if buf else 1
+        buf.append({"seq": seq, "kind": kind, "data": data, "t": now()})
+        if len(buf) > MAX_EVENTS:
+            del buf[:len(buf) - MAX_EVENTS]
+        return seq
+
+
+def events_after(jid: str, last_seq: int = 0) -> list:
+    """返回 seq > last_seq 的事件（断线续传重放）"""
+    with _EVENTS_LOCK:
+        return [dict(e) for e in JOB_EVENTS.get(jid, [])
+                if e["seq"] > int(last_seq or 0)]
+
+
+def drop_events(jid: str) -> None:
+    with _EVENTS_LOCK:
+        JOB_EVENTS.pop(jid, None)
 
 
 # ---------- decks ----------

@@ -112,13 +112,31 @@ POST /batch/pool-jobs
   —— **统计页胜率矩阵直接消费**（`GET /stats/summary` 的 `matrix` 会展开并聚合多任务 cells）；
 - 报告：`/batch/jobs/{id}/report?format=md|csv|json`（md 含对位明细表格；csv 每行一个对位）。
 
-### 实时进度（SSE，替代轮询）
+### 实时进度（SSE，替代轮询 · 心跳 + 断线续传）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/batch/jobs/{id}/stream` | `text/event-stream`：`event: update`（状态+进度+result）/`event: end` / `event: timeout`（默认 1s 间隔、1h 上限） |
+| GET | `/batch/jobs/{id}/stream` | `text/event-stream`：`event: update`（状态+进度+result）/`event: progress`（业务事件，带 `id`）/`event: replay`（续传回放）/`event: end` / `event: timeout` |
 | GET | `/train/jobs/{id}/stream?lines=60` | 同上，附带 `log_tail` 与 `curve`（实时训练曲线） |
 
-> EventSource 不能自定义请求头 → 支持 `?token=<JWT>` 完成鉴权（无 token 时按 guest/普通 header 逻辑）。
+- **鉴权**：EventSource 不能自定义请求头 → 支持 `?token=<JWT>`（无 token 时按 guest/header 逻辑）。
+- **心跳**：空闲每 15s 发送 SSE 注释行 `: ping <ts>`，穿过反代/网关的空闲超时，避免连接被静默掐断；
+  首行 `retry: 3000` 指定浏览器重连间隔。
+- **断线续传（Last-Event-ID）**：业务事件带 `id: <seq>`（服务端每任务保留最近 500 条），
+  浏览器重连自动回传 `Last-Event-ID`，服务端先回放 `seq > last` 的事件（`event: replay`）再续推；
+  也可用 `?last_event_id=<seq>` 手工续传（前端把游标另存 sessionStorage，**刷新页面也不丢进度**）。
+- 前端 `src/sse.js` 封装：连接状态机 `connecting → live → reconnecting → polling`（连续失败 >4 次自动
+  降级为 2s 轮询兜底），界面以「实时 / 重连中 · 自动续传 / 轮询兜底」状态灯呈现。
+
+### 卡组与预设（F3 · M1 真实卡池）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/decks/import` | 粘贴 Limitless 文本 → 解析 + 校验（≤60 / 同名≤4（基本能量豁免）/ 含基础宝可梦）→ 落库 |
+| GET | `/decks/presets` | 预设对手池 A1–A4：**60 卡真实卡表** + 可执行率 + 占位清单 |
+| GET | `/decks/presets/{id}` | 预设逐卡清单：每卡 `mapped / approximated / replaced` 三态 + 覆盖率（C5 差异透明）|
+| GET | `/decks` · `GET /decks/{id}` · `POST /decks/{id}/opening` · `GET /decks/{id}/export` | 我的卡组 / 起手模拟 / 导出往返 |
+
+> 预设卡表来自 `packages/engine/engine/data/{cards_real,decklists}.json`（M1 卡池补齐）；
+> 引擎未实现的卡在对战时以基础能量占位并在响应/报告中逐卡标注。
 
 ## 4. 训练任务管理（M2/M6）
 

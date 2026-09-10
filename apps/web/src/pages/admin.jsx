@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { StatCard, Pill, ErrBar, LogBlock, Spinner } from '../components/ui.jsx'
+import { StatCard, Pill, ErrBar, LogBlock, Spinner, SsePill } from '../components/ui.jsx'
 import { TaskTable } from '../components/tasks.jsx'
+import { openJobStream } from '../sse.js'
 
 /**
  * 后台页面（UI 规范 §4.2）
@@ -87,31 +88,31 @@ export function TrainingPage({ onMsg, authed }) {
   const [form, setForm] = useState({ stage1_episodes: 200, stage2_episodes: 0, stage3_episodes: 0, bc_episodes: 40, features: 'legacy' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const [sseState, setSseState] = useState('connecting')
 
   async function load() { try { setJobs((await api.listTrain()).jobs || []) } catch { /* 忽略 */ } }
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t) }, [])
-  // 实时进度：SSE（EventSource）优先，异常自动回退轮询（2s）
+  // 实时进度：SSE（心跳 + 断线续传）优先，异常自动回退轮询（2s）
   useEffect(() => {
     if (!detail || detail.status !== 'running') return undefined
-    let es = null, timer = null
-    const startPolling = () => {
-      timer = setInterval(() => {
-        api.trainStatus(detail.id).then((s) => {
-          setDetail(s)
-          if (s.status !== 'running') { clearInterval(timer); load() }
-        }).catch(() => {})
-      }, 2000)
-    }
-    try {
-      es = new EventSource(api.streamUrl(`/train/jobs/${detail.id}/stream`, { lines: 60 }))
-      es.addEventListener('update', (ev) => {
-        try { setDetail((d) => (d ? { ...d, ...JSON.parse(ev.data) } : d)) } catch { /* 忽略 */ }
-      })
-      es.addEventListener('end', () => { es.close(); load() })
-      es.onerror = () => { try { es.close() } catch { /* 忽略 */ } startPolling() }
-    } catch { startPolling() }
+    let timer = null
+    const stream = openJobStream({
+      jobId: detail.id,
+      url: api.streamUrl(`/train/jobs/${detail.id}/stream`, { lines: 60 }),
+      onUpdate: (snap) => setDetail((d) => (d ? { ...d, ...snap } : d)),
+      onEnd: () => { setSseState('done'); load() },
+      onState: setSseState,
+      onFallback: () => {
+        timer = setInterval(() => {
+          api.trainStatus(detail.id).then((s) => {
+            setDetail(s)
+            if (s.status !== 'running') { clearInterval(timer); load() }
+          }).catch(() => {})
+        }, 2000)
+      },
+    })
     return () => {
-      if (es) { try { es.close() } catch { /* 忽略 */ } }
+      stream.close()
       if (timer) clearInterval(timer)
     }
   }, [detail && detail.id, detail && detail.status])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -178,9 +179,10 @@ export function TrainingPage({ onMsg, authed }) {
         {!detail && <p className="sm muted">从左侧启动，或点下方任务查看日志/曲线。</p>}
         {detail && (<>
           <div className="row">
-            {detail.status === 'running' && (
+            {detail.status === 'running' && (<>
+              <SsePill state={sseState} />
               <button className="ghost sm" onClick={async () => { await api.cancelTrain(detail.id); onMsg('已终止训练子进程') }}>取消训练</button>
-            )}
+            </>)}
             <button className="ghost sm" onClick={() => api.trainLog(detail.id, 80).then((r) => setDetail({ ...detail, log_tail: r.lines }))}>刷新日志</button>
           </div>
           {curve && <LogBlock label="训练曲线" lines={curve} max={140} />}

@@ -1,0 +1,156 @@
+# -*- coding: utf-8 -*-
+"""PokéLab Engine · M1 真实卡池（X 版）与预设对手池 A1–A4 用例
+
+覆盖：
+  - 卡池/卡表数据完整性（60 张、卡名可在卡池中解析）
+  - 映射覆盖率报告（executable_rate ≥ 0.90 ⇒ battle_ready）
+  - 进化线（Dreepy→Drakloak→Dragapult ex）与彩色能量费用（Phantom Dive F+P）
+  - 新增训练家 tag：research:N（弃手抽 n）· shuffle_draw:N（洗手抽 n）
+  - 训练家弃牌按身份移除（Ultra Ball 高频场景不再索引漂移，回归用例）
+  - A1–A4 端到端对局可完成（无异常、正常终局）
+运行：python -m unittest discover -s tests -v
+"""
+from __future__ import annotations
+
+import random
+import unittest
+
+from engine import decklib as dl
+from engine import reallib
+from engine.battle import Battle
+from engine.cards import EnergyDef, EnergyRef, PokeRef, TrainerRef
+from engine.agents import BaselineAI
+
+
+def _play(da, db, seed=1, max_steps=900):
+    b = Battle(da, db, seed=seed)
+    ags = [BaselineAI("a"), BaselineAI("b")]
+    steps = 0
+    while not b.finished and steps < max_steps:
+        steps += 1
+        b.step(ags[b.current].decide(b.view()))
+    return b, steps
+
+
+def _find_hand_card(deck_name: str, tag_prefix: str, need_hand: int = 1,
+                    seeds=range(1, 120)):
+    """扫描种子，找到起手含指定 tag 训练家的局面（避免用例依赖运气）"""
+    for s in seeds:
+        b = Battle(dl.make_deck(deck_name), dl.make_deck(deck_name), seed=s)
+        p = b.players[b.current]
+        if len(p.hand) < need_hand:
+            continue
+        for i, c in enumerate(p.hand):
+            if isinstance(c, TrainerRef) and c.tdef.tag.startswith(tag_prefix):
+                return b, i
+    return None, None
+
+
+class TestRealPoolData(unittest.TestCase):
+    def test_all_archetypes_are_60_cards(self):
+        for aid in reallib.archetype_ids():
+            deck = reallib.build_deck(aid)
+            self.assertEqual(len(deck), 60, f"{aid} 应为 60 张")
+            self.assertEqual(sum(int(c["count"]) for c in reallib.decklist(aid)), 60)
+
+    def test_every_card_is_in_catalog(self):
+        cat = reallib.catalog()
+        for aid in reallib.archetype_ids():
+            for entry in reallib.decklist(aid):
+                self.assertIn(entry["name"], cat, f"{aid} 卡名未收录: {entry['name']}")
+
+    def test_coverage_threshold_and_replace_report(self):
+        for aid in reallib.archetype_ids():
+            cov = reallib.coverage(aid)
+            self.assertGreaterEqual(cov["executable_rate"], 0.90, f"{aid} 可执行率不足")
+            self.assertTrue(cov["battle_ready"])
+            # 被替换的卡必须给出可追溯原因
+            for r in cov["replaced"]:
+                self.assertTrue(r["reason"])
+
+    def test_make_deck_supports_archetype_ids(self):
+        for aid in reallib.archetype_ids():
+            self.assertEqual(len(dl.make_deck(aid)), 60)
+            self.assertEqual(len(dl.make_deck(aid.lower())), 60)
+
+    def test_unknown_deck_raises_helpful_error(self):
+        with self.assertRaises(KeyError) as cm:
+            dl.make_deck("nope")
+        self.assertIn("未知卡组", str(cm.exception))
+
+
+class TestRealCardMechanics(unittest.TestCase):
+    def test_dragapult_line_and_colored_cost(self):
+        cat = reallib.catalog()
+        dragapult = cat["Dragapult ex"]["def"]
+        self.assertEqual(dragapult.stage, 2)
+        self.assertEqual(dragapult.evolves_from, "Drakloak")
+        self.assertEqual(dragapult.hp, 330)
+        phantom = [a for a in dragapult.attacks if a.name == "Phantom Dive"][0]
+        self.assertEqual(phantom.cost, (("fire", 1), ("psychic", 1)))
+        self.assertIn("spread_free:60", phantom.effects)
+        # 进化链完整（基础→一阶→二阶）
+        self.assertEqual(cat["Dreepy"]["def"].stage, 0)
+        self.assertEqual(cat["Drakloak"]["def"].stage, 1)
+        self.assertEqual(cat["Drakloak"]["def"].evolves_from, "Dreepy")
+        self.assertTrue(any(a.tag == "recon:2"
+                            for a in cat["Drakloak"]["def"].abilities))
+
+    def test_research_trainer_discards_hand_then_draws(self):
+        """Professor's Research：弃全部手牌 → 抽 n"""
+        b = Battle(dl.make_deck("A1"), dl.make_deck("A1"), seed=5)
+        # 造一个可控局面：手牌 = research + 3 张其他
+        p = b.players[b.current]
+        deck0 = len(p.deck)
+        res = [c for c in p.hand if isinstance(c, TrainerRef)
+               and c.tdef.tag.startswith("research:")]
+        if not res:
+            self.skipTest("起手未抽到 research 型支援者")
+        hi = p.hand.index(res[0])
+        hand_before = len(p.hand)
+        out = b.step({"verb": "trainer", "hand": hi})
+        self.assertTrue(out["ok"], out)
+        # 弃牌堆增加（手牌-1）+ 抽 7 → 牌库减少
+        self.assertLess(len(p.deck), deck0)
+        self.assertGreaterEqual(len(p.hand), 1)
+        self.assertLess(len(p.hand), hand_before + 7)
+
+    def test_shuffle_draw_trainer(self):
+        """Iono：手牌洗回 → 抽 n"""
+        b, hi = _find_hand_card("A3", "shuffle_draw:")
+        self.assertIsNotNone(b, "A3 卡组 120 种子内应能抽到 shuffle_draw 型支援者")
+        p = b.players[b.current]
+        deck0 = len(p.deck)
+        out = b.step({"verb": "trainer", "hand": hi})
+        self.assertTrue(out["ok"], out)
+        self.assertGreater(len(p.deck), deck0 - 8)   # 洗回的手牌回到牌库
+
+    def test_ultra_ball_keeps_hand_indexes_consistent(self):
+        """回归：Ultra Ball 内部弃牌后，训练家卡须被正确移除（按身份）"""
+        b, hi = _find_hand_card("A1", "ultra_ball", need_hand=3)
+        self.assertIsNotNone(b, "A1 卡组 120 种子内应能抽到 Ultra Ball + 手牌 ≥3")
+        p = b.players[b.current]
+        card = p.hand[hi]
+        out = b.step({"verb": "trainer", "hand": hi})
+        self.assertTrue(out["ok"], out)
+        self.assertNotIn(card, p.hand)               # 自身已被移除
+        self.assertIn("Ultra Ball", p.discard)       # 且进入弃牌堆
+
+
+class TestRealDeckBattles(unittest.TestCase):
+    def test_pairs_finish_without_error(self):
+        pairs = [("A1", "A1"), ("A1", "A3"), ("A2", "A4"), ("A3", "A4")]
+        for a, c in pairs:
+            b, steps = _play(dl.make_deck(a), dl.make_deck(c), seed=101)
+            self.assertTrue(b.finished, f"{a} vs {c} 未终局（steps={steps}）")
+            self.assertIn(b.winner, (0, 1))
+
+    def test_replays_are_deterministic(self):
+        b1, _ = _play(dl.make_deck("A1"), dl.make_deck("A2"), seed=42)
+        b2, _ = _play(dl.make_deck("A1"), dl.make_deck("A2"), seed=42)
+        self.assertEqual(b1.winner, b2.winner)
+        self.assertEqual(b1.turn_counts, b2.turn_counts)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

@@ -6,6 +6,10 @@ data/
 *.index
 *.jsonl
 
+# 例外：引擎自有的**卡池与卡表定义**（项目自撰，仅卡名/数值映射，无官方图像）需入库
+!packages/engine/engine/data/
+!packages/engine/engine/data/*.json
+
 # python
 __pycache__/
 *.py[cod]
@@ -41,3 +45,5 @@ apps/web/shots.err
 apps/web/_write_memory.py
 apps/api/tests/_append_tests.py
 apps/api/data/
+apps/web/dist4/
+apps/web/dist5/

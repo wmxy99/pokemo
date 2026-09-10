@@ -1,46 +1,53 @@
 # PokéLab AI · Web 客户端（apps/web）
 
-React + Vite 前端，对接 `apps/api` FastAPI 服务。页面结构沿用 UI/UX 规范（灰阶 + 品牌红、
-全屏不居中、等宽承载 seed/日志），当前实现 **对战 / 批量对战 / 统计报告** 三页 + 登录/注册。
+React 18 + Vite 前端，**严格对齐**《UI/UX 规范 v1.1》《PRD v1.2 F3/F5/F6/F7/F13》《技术方案 v1.0》
+与高保真原型 `D:\pokemo\prototype\PokéLab_Web_Prototype.html`（token/组件/双层结构一致）。
 
-> 原占位说明（P3 规划）：人机对战可视化（F5）/ 批量任务（F6）/ 数据看板（F7）；
-> **页脚必须含三处版权声明之 C3b**（PRD C3）——已实现于全局 `footer.site`，不得移除。
-
-## 1. 开发
+## 1. 运行
 
 ```bash
-# 终端 A：后端（127.0.0.1:8000）
+# 后端（同时托管前端构建产物：/app）
 cd <repo>/pokelab-ai && conda activate pokemo
 python -m uvicorn apps.api.app.main:app --reload --port 8000
+# → 前端 http://127.0.0.1:8000/app/   · API 文档 http://127.0.0.1:8000/docs
 
-# 终端 B：前端（5173，/api → 8000 由 Vite proxy 转发）
-cd <repo>/pokelab-ai/apps/web
-npm install --registry=https://registry.npmmirror.com
-npm run dev            # → http://127.0.0.1:5173
+# 前端开发模式（5173，/api → 8000 proxy）
+cd apps/web && npm install --registry=https://registry.npmmirror.com && npm run dev
+# 生产构建（产物 apps/web/dist，后端自动挂载）
+npm run build
 ```
 
-## 2. 生产/同源部署
+## 2. 页面 ↔ 文档映射
 
-```bash
-npm run build          # 产出 apps/web/dist
-# 后端启动时自动挂载 dist → 访问 http://127.0.0.1:8000/app/
-python -m uvicorn apps.api.app.main:app --port 8000
-```
-- 同源模式下前端自动用**相对路径**调 API（`/battles` 等）；dev 模式用 `/api` 前缀走 proxy；
-- 也可指定 `VITE_API_BASE=https://api.example.com` 构建以对接独立域名。
-
-## 3. 页面与 API 对应
-
-| 页面 | 关键调用 | 说明 |
+| 页面 | 规范出处 | 关键实现 |
 |---|---|---|
-| 对战 | `POST /battles` · `POST /battles/{id}/actions` · `GET /battles/{id}` | 游客可试玩；动作按钮 = 引擎 `legal_actions` 1:1；AI 强度 0=规则基线，>0=MCTS；显示 seed（可重放） |
-| 批量对战 | `POST /batch/jobs` · `GET /batch/jobs` · `GET /batch/jobs/{id}` · `POST .../cancel` · `GET .../report?format=md\|csv\|json` | 进度轮询 1.2s；取消保留已完成（K4）；报告含 `Unofficial community data` |
-| 统计报告 | `GET /batch/jobs` + 各任务 `result` / `report?format=csv` | 汇总累计对局与平均胜率；CSV 一键下载；胜率配色遵循中文惯例（红=我方占优） |
-| 登录 | `POST /auth/register` · `/auth/login` · `GET /auth/me` | 真 JWT（localStorage 保存）；训练管理接口需登录 |
+| 对战 | UI §4.1.1 / PRD F5 | 三列 300/1fr/300；`legal_actions` 1:1 动作面板（SVG 图标，禁 emoji）；HP 血条绿满/红低；回合日志 `role=log`；seed 复制；K3 >2s 兜底提示；`<900px` 动作面板置底 sticky |
+| 批量对战 | UI §4.1.2 / F6 | 配额条（≤500/并发≤2/日≤10）；乐观 ETA；二次确认取消（保留已完成 K4）；历史任务报告导出 |
+| 统计报告 | UI §4.1.3 / F7 | 3 KPI + 胜率矩阵（对角线 muted、hover 95%CI/n）+ 导出条 CSV/MD/JSON/复制 + MD 预览 + `Unofficial community data` |
+| 卡组管理 | UI §4.1.4 / F3 | mono textarea 导入 → 校验（60/同名4/含基础，逐条错误）+ 三色 pill + 我的卡组表 + 预设 A1–A4（Worlds 依据）+ 起手 1,000 次模拟 |
+| 后台仪表盘 M6 | UI §4.2.1 | 三 KPI + **K1–K4 看门狗表**（诚实标注 K1 未达成）+ 近 7 日 sparkline + F16 导出（beta 置灰） |
+| 后台 RL 训练 | UI §4.2.6 / M2 | 真实 `/train/jobs` 监控：提交/状态/曲线（stdout 解析）/日志 tail/取消 + 冲 70% 手册折叠区 |
+| 后台用户管理 M5 | UI §4.2.2 / F13 | 用户/角色/日配额表格 + 角色切换（admin）；越权隔离提示文案 |
 
-## 4. 已知边界
+## 3. 组件库（src/components）
 
-- 对局会话在服务内存：后端重启后需重开对局；
-- 卡组为演示字典（`lightning/fire/...`），卡表文本解析属 P3；
-- 统计页暂按任务聚合展示（跨卡组"胜率矩阵"待 P1 卡组池批量提交后补）；
-- 受限环境下 `vite build` 已设 `emptyOutDir:false`（沙箱回收站不可用）；正常环境可移除该选项获得清理效果。
+| 文件 | 组件 |
+|---|---|
+| `ui.jsx` | Spinner · Pill · StatusBadge · ErrBar · EmptyState · StatCard · LogBlock · CopyButton · Toast/useToasts |
+| `battle.jsx` | VerbIcon（SVG）· PokeChip 52×64/40×50 · HPRow（progressbar）· Zone · ActionPanel · TurnLog · SeedBar |
+| `stats.jsx` | WinrateMatrix · ExportBar · KvTable |
+| `tasks.jsx` | TaskCard（进度/ETA/取消确认）· TaskTable · QuotaHint |
+| `verbs.js` / `i18n.js` | 动词表（与引擎同源，F8.2）· i18n 键位（F14，中文为主 + EN 键） |
+
+## 4. 合规与无障碍
+
+- 页脚**恒定**复刻 C3 三段声明 + C1 非商用 + C2 无卡图 + C5 差异透明（不得在 view 层隐藏）；
+- a11y：chip `aria-label`、血条 `role=progressbar`、日志 `role=log aria-live`、表格 `th scope`、
+  焦点环 3px、触摸目标 ≥44px、`prefers-reduced-motion` 关闭动效；
+- 数字一律等宽（HP/牌库/百分比/seed/局数）；红=我方占优（中文数据惯例）。
+
+## 5. 已知边界
+
+- 卡池为 demo 卡组（M1 卡池补齐后替换预设 A1–A4 的真实卡表，已在 UI 标注）；
+- 对局会话驻留后端内存（重启需重开）；后台 M1/M2/M3 页面为"信息卡 + 链接"级别（P1 增补）；
+- 受限环境构建已设 `emptyOutDir:false`（沙箱回收站不可用），正常环境可移除。

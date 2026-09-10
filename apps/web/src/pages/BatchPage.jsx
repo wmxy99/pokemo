@@ -1,139 +1,103 @@
 import React, { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, DECKS } from '../api.js'
+import { t } from '../i18n.js'
+import { TaskCard, TaskTable, QuotaHint } from '../components/tasks.jsx'
+import { EmptyState, LogBlock, ErrBar } from '../components/ui.jsx'
 
-export default function BatchPage({ decks, onMsg, jobs, setJobs }) {
+export default function BatchPage({ onMsg }) {
   const [deckA, setDeckA] = useState('lightning')
-  const [deckB, setDeckB] = useState('fire')
+  const [deckB, setDeckB] = useState('draco')
   const [games, setGames] = useState(100)
   const [seed, setSeed] = useState(20260910)
+  const [jobs, setJobs] = useState([])
   const [detail, setDetail] = useState(null)
   const [report, setReport] = useState('')
+  const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
 
   async function refresh() {
-    try { setJobs((await api.listBatch()).jobs) } catch { /* 忽略 */ }
+    try { setJobs((await api.listBatch()).jobs || []) } catch { /* 忽略 */ }
   }
-  useEffect(() => {
-    refresh()
-    const t = setInterval(refresh, 6000)
-    return () => clearInterval(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // 运行中任务自动轮询
+  useEffect(() => { refresh(); const t2 = setInterval(refresh, 5000); return () => clearInterval(t2) }, [])
   useEffect(() => {
     if (!detail || detail.status !== 'running') return
-    const t = setTimeout(() => {
-      api.batchStatus(detail.id).then(setDetail).catch(() => {})
-    }, 1200)
-    return () => clearTimeout(t)
+    const t2 = setTimeout(() => api.batchStatus(detail.id).then(setDetail).catch(() => {}), 1500)
+    return () => clearTimeout(t2)
   }, [detail])
 
   async function submit() {
-    setBusy(true)
+    setBusy(true); setErr(null)
     try {
-      const r = await api.submitBatch({
-        deck_a: deckA, deck_b: deckB,
-        games: Number(games), seed_start: Number(seed),
-      })
-      onMsg(`批量任务已提交：${r.id}（≤500 局/任务 · 并发≤2 · 日配额≤10）`, 'ok')
-      setDetail(await api.batchStatus(r.id))
-      refresh()
-    } catch (e) { onMsg('提交失败：' + e.message, 'err') } finally { setBusy(false) }
+      const r = await api.submitBatch({ deck_a: deckA, deck_b: deckB, games: Number(games), seed_start: Number(seed) })
+      onMsg(`任务已提交 ${r.id}（≤500 局 · 并发≤2 · 日配额≤10）`, 'ok')
+      setDetail(await api.batchStatus(r.id)); refresh()
+    } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) } finally { setBusy(false) }
   }
 
-  async function cancel(id) {
-    try {
-      const r = await api.cancelBatch(id)
-      onMsg('已请求取消（保留已完成局，K4）', 'ok')
-      setDetail((d) => d && { ...d, status: r.status })
-    } catch (e) { onMsg('取消失败：' + e.message, 'err') }
-  }
-
-  async function loadReport(id, fmt) {
-    try { setReport(await api.report(id, fmt)); onMsg(`报告（${fmt}）已加载`, 'ok') }
-    catch (e) { onMsg('报告不可用：' + e.message, 'err') }
-  }
-
-  const pct = detail?.progress?.n
-    ? Math.round((detail.progress.done / detail.progress.n) * 100) : 0
+  const running = jobs.filter((j) => j.status === 'running' || j.status === 'queued')
+  const history = jobs.filter((j) => !['running', 'queued'].includes(j.status))
+  const quotaUsed = jobs.filter((j) => {
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0)
+    return (j.created || 0) >= t0.getTime() / 1000
+  }).length
 
   return (
     <div className="grid cols-2">
       <div className="card">
-        <h3>新建批量任务 <span className="pill sm">单任务≤500 · 并发≤2 · 日配额≤10</span></h3>
+        <h3>新建批量任务</h3>
+        <QuotaHint used={quotaUsed} />
         <div className="row">
-          <div><label htmlFor="ba">我方卡组</label>
+          <div><label htmlFor="ba">{t('lbl.deck_mine')}</label>
             <select id="ba" value={deckA} onChange={(e) => setDeckA(e.target.value)}>
-              {decks.map((d) => <option key={d}>{d}</option>)}</select></div>
-          <div><label htmlFor="bb">对手卡组</label>
+              {DECKS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
+          <div><label htmlFor="bb">{t('lbl.deck_opp')}</label>
             <select id="bb" value={deckB} onChange={(e) => setDeckB(e.target.value)}>
-              {decks.map((d) => <option key={d}>{d}</option>)}</select></div>
+              {DECKS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}</select></div>
         </div>
         <div className="row" style={{ marginTop: 8 }}>
-          <div><label htmlFor="bg">局数</label>
+          <div><label htmlFor="bg">{t('lbl.games')}</label>
             <input id="bg" type="number" min="1" max="500" value={games}
-                   onChange={(e) => setGames(e.target.value)} style={{ width: 110 }} /></div>
-          <div><label htmlFor="bs">起始 seed</label>
+              onChange={(e) => setGames(e.target.value)} style={{ width: 110 }} /></div>
+          <div><label htmlFor="bs">{t('lbl.seed')}</label>
             <input id="bs" type="number" value={seed}
-                   onChange={(e) => setSeed(e.target.value)} style={{ width: 150 }} /></div>
+              onChange={(e) => setSeed(e.target.value)} style={{ width: 150 }} /></div>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <button className="primary" disabled={busy} onClick={submit}>提交任务</button>
-          <button className="ghost" onClick={refresh}>刷新列表</button>
+        <p className="sm muted">先后手由引擎按 seed 交替决定（PRD §7.1 双盲口径需 200 局样本）</p>
+        <div className="row">
+          <button className="primary" disabled={busy} onClick={submit}>{t('btn.submit')}</button>
+          <button className="ghost" onClick={() => { setDeckA('lightning'); setDeckB('draco'); setGames(200); onMsg('已载入预设：我的卡组 × Dragapult 系 ×200') }}>
+            试试：× Dragapult 系 ×200
+          </button>
+          <button className="ghost" onClick={refresh}>刷新</button>
         </div>
-        <p className="sm muted">AI vs AI（规则基线）· 结果含 A 方胜率与平均回合 · 完成后导出 md/csv/json</p>
+        {err && <ErrBar code={err.code} message={err.message} onRetry={submit} />}
       </div>
 
       <div className="card">
-        <h3>任务进度</h3>
-        {!detail && <p className="muted sm">从左侧提交，或点列表中的任务查看进度/报告</p>}
-        {detail && (<>
-          <div className="zt"><b className="mono">{detail.id}</b><span className="pill">{detail.status}</span></div>
-          {detail.progress && (
-            <div style={{ margin: '10px 0' }}>
-              <div className="bar"><i style={{ width: pct + '%' }} /></div>
-              <span className="sm mono">{detail.progress.done}/{detail.progress.n}（{pct}%）</span>
-            </div>)}
-          {detail.result && (
-            <table className="tbl"><tbody>
-              <tr><td>样本 n</td><td className="mono">{detail.result.n}</td></tr>
-              <tr><td>A 胜率</td><td className="mono">{detail.result.win_rate_a}</td></tr>
-              <tr><td>胜/负/平</td>
-                <td className="mono">{detail.result.wins_a}/{detail.result.losses_a}/{detail.result.draws}</td></tr>
-              <tr><td>平均回合</td><td className="mono">{detail.result.avg_turns}</td></tr>
-              <tr><td>声明</td><td className="sm muted">{detail.result.declaration}</td></tr>
-            </tbody></table>)}
-          <div className="row" style={{ marginTop: 10 }}>
-            {detail.status === 'running' &&
-              <button className="ghost" onClick={() => cancel(detail.id)}>取消（保留已完成）</button>}
-            {['done', 'cancelled'].includes(detail.status) && (<>
-              <button className="ghost" onClick={() => loadReport(detail.id, 'md')}>报告 md</button>
-              <button className="ghost" onClick={() => loadReport(detail.id, 'csv')}>CSV</button>
-              <button className="ghost" onClick={() => loadReport(detail.id, 'json')}>JSON</button>
-            </>)}
-          </div>
-          {report && <pre className="log" style={{ marginTop: 10 }}>{report}</pre>}
-        </>)}
+        <h3>进行中任务</h3>
+        {running.length === 0 && <EmptyState text={t('empty.tasks')} cta={t('btn.submit')} onCta={submit} />}
+        {running.map((j) => (
+          <TaskCard key={j.id} job={j} progress={detail && detail.id === j.id ? detail.progress : j.progress}
+            etaText="剩余局数 × 经验单局时"
+            onView={(x) => api.batchStatus(x.id).then(setDetail)} 
+            onCancel={async (id) => { await api.cancelBatch(id); onMsg('已请求取消（保留已完成局）'); refresh() }} />
+        ))}
+        {detail && (detail.status === 'running') && (
+          <p className="sm muted">进度条为乐观 ETA（剩余局数 × 经验平均单局时）；取消仅停止后续调度（K4）。</p>
+        )}
+        {report && <LogBlock lines={report} label="报告预览" max={220} />}
       </div>
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
-        <h3>任务列表（近 50）</h3>
-        <table className="tbl">
-          <thead><tr><th>任务</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
-          <tbody>
-            {(jobs || []).map((j) => (
-              <tr key={j.id}>
-                <td className="mono">{j.id}</td>
-                <td><span className="dot" style={{ background: j.status === 'done' ? 'var(--ok)' : j.status === 'failed' ? 'var(--brand)' : 'var(--warn)' }} /> {j.status}</td>
-                <td className="sm muted">{new Date(j.created * 1000).toLocaleString()}</td>
-                <td><button className="pill sm" onClick={() => api.batchStatus(j.id).then(setDetail)}>查看</button></td>
-              </tr>
-            ))}
-            {(jobs || []).length === 0 &&
-              <tr><td colSpan="4" className="muted sm">暂无任务（游客任务归属 guest）</td></tr>}
-          </tbody>
-        </table>
+        <h3>历史任务 <span className="pill sm">报告 md/csv 可导出</span></h3>
+        <TaskTable jobs={history} onView={(j) => api.batchStatus(j.id).then(setDetail)} />
+        {detail?.result && (
+          <div className="row" style={{ marginTop: 10 }}>
+            <button className="ghost sm" onClick={() => api.report(detail.id, 'md').then(setReport)}>报告 md</button>
+            <button className="ghost sm" onClick={() => api.report(detail.id, 'csv').then(setReport)}>CSV</button>
+            <button className="ghost sm" onClick={() => api.report(detail.id, 'json').then(setReport)}>JSON</button>
+          </div>
+        )}
       </div>
     </div>
   )

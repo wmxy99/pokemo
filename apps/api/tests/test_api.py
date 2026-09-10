@@ -184,6 +184,71 @@ class TestBatch(unittest.TestCase):
             self.assertIn("n", end["result"])
 
 
+class TestDecks(unittest.TestCase):
+    """F3：导入解析/校验（60 张·同名4·含基础）· 起手模拟 · 导出往返"""
+
+    TEXT = "\n".join(["4 Dreepy TST 1", "3 Drakloak TST 2", "3 Dragapult ex TST 3",
+                       "4 Poffin TST 4", "4 Ultra Ball TST 5", "10 Energy TST 6",
+                       "4 Seedling TST 7", "4 Sunflora TST 8", "4 Emberling TST 9",
+                       "4 Flarex ex TST 10", "4 Toxibug TST 11", "4 Dreamoth TST 12",
+                       "4 Fangpuppy TST 13"])
+
+    def test_import_presets_opening_export(self):
+        h = user_headers()
+        r = client.post("/decks/import", headers=h,
+                        json={"text": self.TEXT, "name": "单测卡组"})
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertIn("summary", d)
+        self.assertTrue(d["parsed"])
+        # 起手模拟（引擎统计口径，不依赖对战）
+        op = client.post(f"/decks/{d['id']}/opening?trials=200", headers=h)
+        self.assertEqual(op.status_code, 200, op.text)
+        o = op.json()
+        self.assertGreaterEqual(o["brick_rate"], 0.0)
+        self.assertLessEqual(o["brick_rate"], 1.0)
+        self.assertEqual(sum(o["basics_hist"].values()) if isinstance(o["basics_hist"], dict) else 200, 200)
+        # 导出往返一致（行数=唯一种数）
+        ex = client.get(f"/decks/{d['id']}/export", headers=h).json()
+        self.assertEqual(ex["count"], len(d["parsed"]))
+        # 预设 A1–A4
+        pr = client.get("/decks/presets", headers=h).json()["presets"]
+        self.assertEqual([x["id"] for x in pr], ["A1", "A2", "A3", "A4"])
+
+    def test_validation_catches_over_limit(self):
+        h = user_headers()
+        bad = "\n".join(["12 Bolt TST 1", "11 Thundrex ex TST 2"] * 4)
+        r = client.post("/decks/import", headers=h, json={"text": bad})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["ok"])
+        self.assertTrue(any("同名上限" in e for e in r.json()["errors"]))
+
+    def test_cross_user_deck_denied(self):
+        h = user_headers()
+        d = client.post("/decks/import", headers=h,
+                        json={"text": self.TEXT}).json()
+        import uuid
+        rb = client.post("/auth/register", json={"name": "d_" + uuid.uuid4().hex[:8],
+                                                 "password": "pw123456"})
+        hb = {"Authorization": "Bearer " + rb.json()["token"]}
+        self.assertEqual(client.get(f"/decks/{d['id']}", headers=hb).status_code, 403)
+
+
+class TestStats(unittest.TestCase):
+    """F7：统计聚合 + K1–K4 看门狗"""
+
+    def test_summary_and_watchdog(self):
+        h = user_headers()
+        s = client.get("/stats/summary", headers=h).json()
+        self.assertIn("kpi", s)
+        self.assertIn("matrix", s)
+        self.assertEqual(len(s["recent7d"]), 7)
+        self.assertIn("Unofficial", s["declaration"])
+        w = client.get("/stats/watchdog", headers=h).json()
+        self.assertEqual([r["id"] for r in w["rows"]], ["K1", "K2", "K3", "K4"])
+        self.assertIn("诚实标注", w["disclaimer"])
+
+
 class TestTrain(unittest.TestCase):
     def test_train_minimal_run(self):
         r = client.post("/train/jobs", headers=user_headers(), json={

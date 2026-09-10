@@ -30,6 +30,9 @@ _conn.executescript(
       params TEXT, result TEXT, error TEXT, created REAL, updated REAL);
     CREATE TABLE IF NOT EXISTS users(
       name TEXT PRIMARY KEY, role TEXT, quota_day INTEGER DEFAULT 10);
+    CREATE TABLE IF NOT EXISTS decks(
+      id TEXT PRIMARY KEY, owner TEXT, name TEXT, text TEXT, valid INTEGER,
+      cards TEXT, summary TEXT, created REAL);
     """
 )
 # 迁移：真 JWT 需要口令哈希与创建时间列（幂等）
@@ -144,6 +147,46 @@ def list_jobs(kind: str, owner: str, limit: int = 50) -> list:
             "WHERE kind=? AND owner=? ORDER BY created DESC LIMIT ?",
             (kind, owner, limit)).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------- decks ----------
+def save_deck(rec: dict) -> None:
+    with _lock:
+        _conn.execute(
+            "INSERT OR REPLACE INTO decks(id,owner,name,text,valid,cards,"
+            "summary,created) VALUES(?,?,?,?,?,?,?,?)",
+            (rec["id"], rec["owner"], rec["name"], rec["text"],
+             1 if rec.get("valid") else 0,
+             json.dumps(rec.get("cards", []), ensure_ascii=False),
+             json.dumps(rec.get("summary", {}), ensure_ascii=False),
+             rec["created"]))
+        _conn.commit()
+
+
+def get_deck(did: str) -> Optional[dict]:
+    with _lock:
+        row = _conn.execute("SELECT * FROM decks WHERE id=?", (did,)).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    d["cards"] = json.loads(d["cards"] or "[]")
+    d["summary"] = json.loads(d["summary"] or "{}")
+    d["valid"] = bool(d["valid"])
+    return d
+
+
+def list_decks(owner: str, limit: int = 100) -> list:
+    with _lock:
+        rows = _conn.execute(
+            "SELECT id,owner,name,valid,summary,created FROM decks "
+            "WHERE owner=? ORDER BY created DESC LIMIT ?", (owner, limit)).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["summary"] = json.loads(d["summary"] or "{}")
+        d["valid"] = bool(d["valid"])
+        out.append(d)
+    return out
 
 
 # ---------- users ----------

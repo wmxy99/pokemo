@@ -1,6 +1,5 @@
 // PokéLab AI API 客户端（fetch 封装 + JWT localStorage）
-// BASE 规则：显式 VITE_API_BASE 优先；同源部署（由 FastAPI 挂载 /app）用 ''；
-// 开发（Vite dev server :5173）用 '/api' 经 proxy 转发到 127.0.0.1:8000
+// BASE：显式 VITE_API_BASE 优先；同源部署（FastAPI 挂 /app）用 ''；dev 用 '/api'（Vite proxy）
 const BASE = import.meta.env.VITE_API_BASE
   ?? (typeof location !== 'undefined' && location.pathname.startsWith('/app') ? '' : '/api')
 const TOKEN_KEY = 'pokelab_token'
@@ -13,11 +12,16 @@ export const token = {
 
 async function req(path, { method = 'GET', body, raw = false } = {}) {
   const headers = { 'Content-Type': 'application/json' }
-  const t = token.get()
-  if (t) headers.Authorization = `Bearer ${t}`
-  const res = await fetch(BASE + path, {
-    method, headers, body: body ? JSON.stringify(body) : undefined,
-  })
+  const tk = token.get()
+  if (tk) headers.Authorization = `Bearer ${tk}`
+  let res
+  try {
+    res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+  } catch (e) {
+    const err = new Error('网络不可达（后端未启动？）')
+    err.status = 0
+    throw err
+  }
   if (res.status === 401) token.clear()
   const text = await res.text()
   if (!res.ok) {
@@ -35,16 +39,43 @@ export const api = {
   register: (name, password) => req('/auth/register', { method: 'POST', body: { name, password } }),
   login: (name, password) => req('/auth/login', { method: 'POST', body: { name, password } }),
   me: () => req('/auth/me'),
-  // 对战
+  // F5 对战
   createBattle: (payload) => req('/battles', { method: 'POST', body: payload }),
   battleState: (id) => req(`/battles/${id}`),
   act: (id, action) => req(`/battles/${id}/actions`, { method: 'POST', body: { action } }),
-  // 批量
+  // F6 批量
   submitBatch: (payload) => req('/batch/jobs', { method: 'POST', body: payload }),
   listBatch: () => req('/batch/jobs'),
   batchStatus: (id) => req(`/batch/jobs/${id}`),
   cancelBatch: (id) => req(`/batch/jobs/${id}/cancel`, { method: 'POST' }),
   report: (id, format = 'md') => req(`/batch/jobs/${id}/report?format=${format}`, { raw: true }),
+  // F3 卡组
+  importDeck: (text, name) => req('/decks/import', { method: 'POST', body: { text, name } }),
+  myDecks: () => req('/decks'),
+  deckPresets: () => req('/decks/presets'),
+  opening: (id, trials = 1000) => req(`/decks/${id}/opening?trials=${trials}`, { method: 'POST' }),
+  exportDeck: (id) => req(`/decks/${id}/export`),
+  // F7 统计
+  statsSummary: () => req('/stats/summary'),
+  watchdog: () => req('/stats/watchdog'),
+  // 训练（M2/M6）
+  submitTrain: (payload) => req('/train/jobs', { method: 'POST', body: payload }),
+  listTrain: () => req('/train/jobs'),
+  trainStatus: (id) => req(`/train/jobs/${id}`),
+  trainLog: (id, lines = 60) => req(`/train/jobs/${id}/log?lines=${lines}`),
+  cancelTrain: (id) => req(`/train/jobs/${id}/cancel`, { method: 'POST' }),
+  // 管理（M5）
+  adminUsers: () => req('/admin/users'),
+  adminSetRole: (name, role) => req(`/admin/users/${name}?role=${role}`, { method: 'PATCH' }),
 }
 
-export const DECKS = ['lightning', 'fire', 'psychic', 'darkness', 'ability_demo']
+// demo 卡组字典（引擎内演示卡池；预设 A1–A4 映射见 /decks/presets）
+export const DECKS = [
+  { id: 'lightning', label: 'Lightning demo' },
+  { id: 'fire', label: 'Fire demo' },
+  { id: 'psychic', label: 'Psychic demo' },
+  { id: 'draco', label: 'Draco line（≈Dragapult 系）' },
+  { id: 'ability_demo', label: 'Ability demo' },
+  { id: 'grass', label: 'Grass demo' },
+  { id: 'status_demo', label: 'Status demo' },
+]

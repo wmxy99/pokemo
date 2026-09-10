@@ -82,9 +82,13 @@ def admin_set_role(name: str, role: str = Query("user"),
 from .battles import router as battles_router  # noqa: E402
 from .batch import router as batch_router      # noqa: E402
 from .train import router as train_router      # noqa: E402
+from .decks import router as decks_router      # noqa: E402
+from .stats import router as stats_router      # noqa: E402
 app.include_router(battles_router)
 app.include_router(batch_router)
 app.include_router(train_router)
+app.include_router(decks_router)
+app.include_router(stats_router)
 
 
 @app.get("/", tags=["meta"])

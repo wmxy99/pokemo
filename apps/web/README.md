@@ -21,12 +21,12 @@ npm run build
 
 | 页面 | 规范出处 | 关键实现 |
 |---|---|---|
-| 对战 | UI §4.1.1 / PRD F5 | 三列 300/1fr/300；`legal_actions` 1:1 动作面板（SVG 图标，禁 emoji）；HP 血条绿满/红低；回合日志 `role=log`；seed 复制；K3 >2s 兜底提示；`<900px` 动作面板置底 sticky |
-| 批量对战 | UI §4.1.2 / F6 | 配额条（≤500/并发≤2/日≤10）；乐观 ETA；二次确认取消（保留已完成 K4）；历史任务报告导出 |
-| 统计报告 | UI §4.1.3 / F7 | 3 KPI + 胜率矩阵（对角线 muted、hover 95%CI/n）+ 导出条 CSV/MD/JSON/复制 + MD 预览 + `Unofficial community data` |
-| 卡组管理 | UI §4.1.4 / F3 | mono textarea 导入 → 校验（60/同名4/含基础，逐条错误）+ 三色 pill + 我的卡组表 + 预设 A1–A4（Worlds 依据）+ 起手 1,000 次模拟 |
+| 对战 | UI §4.1.1 / PRD F5 | 三列 300/1fr/300；`legal_actions` 1:1 动作面板（SVG 图标，禁 emoji）；HP 血条绿满/红低；回合日志 `role=log`；seed 复制；K3 >2s 兜底提示；`<900px` 动作面板置底 sticky；**我方/对手可选 F3 已导入卡组**（deck_id 参战） |
+| 批量对战 | UI §4.1.2 / F6 + F7 | 模式切换 **单对位 / 卡组池矩阵**（多选卡组池 × 每对位局数，直出 F7 矩阵）；配额条（≤500/并发≤2/日≤10）；乐观 ETA；**SSE 实时进度（EventSource，异常回退轮询）**；二次确认取消（保留已完成 K4）；cells 对位表 + 报告导出 |
+| 统计报告 | UI §4.1.3 / F7 | KPI（含**卡组池任务/矩阵对位数**）+ 胜率矩阵（多对位聚合、对角线 muted、hover 95%CI/n）+ 导出条 CSV/MD/JSON/复制 + MD 预览 + `Unofficial community data` |
+| 卡组管理 | UI §4.1.4 / F3 | mono textarea 导入 → 校验（60/同名4/含基础，逐条错误）+ 三色 pill + 我的卡组表（可**直接用于对战**）+ 预设 A1–A4（Worlds 依据）+ 起手 1,000 次模拟 |
 | 后台仪表盘 M6 | UI §4.2.1 | 三 KPI + **K1–K4 看门狗表**（诚实标注 K1 未达成）+ 近 7 日 sparkline + F16 导出（beta 置灰） |
-| 后台 RL 训练 | UI §4.2.6 / M2 | 真实 `/train/jobs` 监控：提交/状态/曲线（stdout 解析）/日志 tail/取消 + 冲 70% 手册折叠区 |
+| 后台 RL 训练 | UI §4.2.6 / M2 | 真实 `/train/jobs` 监控：提交/状态/**SSE 实时日志与曲线**/取消 + 冲 70% 手册折叠区 |
 | 后台用户管理 M5 | UI §4.2.2 / F13 | 用户/角色/日配额表格 + 角色切换（admin）；越权隔离提示文案 |
 
 ## 3. 组件库（src/components）
@@ -58,8 +58,8 @@ npm run build
 | 4 | 运行时异常 | `node check_render.cjs http://127.0.0.1:8000/app/ <out.png>` → 看 `errors` / `failed`；`React #31` 类错误=把对象当 React child 渲染 |
 | 5 | 浏览器缓存 | `Ctrl+F5` 强刷（index.html 引用新 hash 后旧缓存无害） |
 
-**构建输出目录**：Windows 上 `dist` 若被进程占用（EPERM）→ 用 `VITE_OUTDIR=dist2 npm run build`，
-后端会**优先挂载 dist2**（`apps/api/app/main.py` 的候选列表 dist2 → dist）。
+**构建输出目录**：Windows 上 `dist` 若被进程占用（EPERM）→ 用 `VITE_OUTDIR=dist3 npm run build`，
+后端按 `dist3 → dist2 → dist` **顺序挂载第一个存在的目录**（`apps/api/app/main.py`）。
 
 **验证工具**：`check_render.cjs`（单页渲染+console 采集）、`shoot_pages.cjs`（前台 4 页+后台 3 页批量截图）
 → 注：受限环境下 Node 写项目盘可能 EPERM，可输出到用户主目录（如 `C:/Users/<user>/pokelab_shots`）。

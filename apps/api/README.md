@@ -45,12 +45,13 @@ python -m unittest apps.api.tests.test_api -v
 ### 创建对局
 ```
 POST /battles
-{ "deck_a": "lightning", "deck_b": "fire", "seed": null,
+{ "deck_a_id": "deck_...", "deck_b": "draco", "seed": null,
   "ai_iters": 0, "player_side": 0 }
 ```
 | 字段 | 说明 |
 |---|---|
-| deck_a / deck_b | 演示卡组名（lightning/fire/psychic/darkness/ability_demo 等，经 `engine.decklib.make_deck`；卡表文本解析属 P3 Web MVP） |
+| deck_a / deck_b | 演示卡组名（lightning/fire/psychic/draco/ability_demo 等，经 `engine.decklib.make_deck`）|
+| **deck_a_id / deck_b_id** | **F3 已导入卡组 id**（优先于名称）；owner 隔离；卡组含未收录卡/张数不足 → 422（"粘贴卡表 → 直接开打"闭环）|
 | seed | 确定性种子；留空随机。同一 seed 可重放（F10 数据基础） |
 | ai_iters | 对手强度：0=规则基线 AI（白盒，发布门槛参照）；>0=MCTS 迭代数（引擎 rollout 教师级） |
 | player_side | 人类操作方：0=deck_a（默认） |
@@ -98,9 +99,30 @@ POST /batch/jobs
 
 任务状态机：`queued → running → done | failed | cancelled`。
 
+### 卡组池矩阵任务（F7 胜率矩阵，直出对位数据）
+```
+POST /batch/pool-jobs
+{ "decks_a": ["lightning","fire"], "decks_b": ["draco","psychic"],
+  "games_each": 60, "seed_start": 20260910 }
+```
+- 语义：`decks_a × decks_b` **全对位**各跑 `games_each` 局（上限：池任务总局数 2000；
+  并发/日配额与单对位任务共用）；
+- 响应 202：`{ id, status, pairs, total_games }`；
+- 完成的 `result.cells`：`[{deck_a, deck_b, n, wins_a, losses_a, draws, win_rate_a, ci95, avg_turns}]`
+  —— **统计页胜率矩阵直接消费**（`GET /stats/summary` 的 `matrix` 会展开并聚合多任务 cells）；
+- 报告：`/batch/jobs/{id}/report?format=md|csv|json`（md 含对位明细表格；csv 每行一个对位）。
+
+### 实时进度（SSE，替代轮询）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/batch/jobs/{id}/stream` | `text/event-stream`：`event: update`（状态+进度+result）/`event: end` / `event: timeout`（默认 1s 间隔、1h 上限） |
+| GET | `/train/jobs/{id}/stream?lines=60` | 同上，附带 `log_tail` 与 `curve`（实时训练曲线） |
+
+> EventSource 不能自定义请求头 → 支持 `?token=<JWT>` 完成鉴权（无 token 时按 guest/普通 header 逻辑）。
+
 ## 4. 训练任务管理（M2/M6）
 
-> 训练在**独立子进程**执行仓库内 `examples/run_k1_longtrain.py`（BC→PPO vs 基线→冻结快照→MCTS 蒸馏 课程），API 仅做编排/监控/取消，训练产物隔离到 `apps/api/data/train_jobs/`。
+> 训练在**独立子进程**执行仓库内 `examples/run_k1_longtrain.py`（BC→PPO vs 基线→冻结快照→MCTS 蒸馏 课程），API 仅做编排/监控/取消，训练产物隔离到数据目录 `train_jobs/`（见 §5）。
 
 ### 提交训练
 ```
@@ -124,10 +146,18 @@ POST /train/jobs
 
 ## 5. 存储与数据目录
 
+**数据目录自动探测**（首个可写者胜，避免协同/沙箱写保护导致 `readonly database`）：
+```
+POKELAB_DATA_DIR  →  ~/.pokelab  →  <系统临时目录>/pokelab  →  apps/api/data
+```
+若探测到的目录里 `api.db` 因既有文件写保护不可写，会自动回退到 `api_<时间戳>.db`
+（可写但**不继承历史数据**——仅受限环境兜底；正常环境始终使用 `api.db`）。
+
 | 位置 | 内容 |
 |---|---|
-| `apps/api/data/api.db` | SQLite：`battles` 元数据 / `jobs`（batch/train 状态、params、result）/ `users` |
-| `apps/api/data/train_jobs/` | 训练权重 + K1 报告 + 子进程日志 |
+| `<数据目录>/api.db` | SQLite：`battles` 元数据 / `jobs`（batch/train 状态、params、result）/ `users` / `decks`（F3 已导入卡组与解析结果） |
+| `<数据目录>/train_jobs/` | 训练权重 + K1 报告 + 子进程日志 |
+| `<数据目录>/.jwt_secret` | JWT 密钥（0600，gitignore） |
 | 内存 | 对局引擎会话（Battle 对象，重启清空）+ 批量进度 + 训练 Popen 句柄 |
 
 ## 6. 已知边界与后续（诚实标注）

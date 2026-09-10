@@ -46,7 +46,25 @@ npm run build
   焦点环 3px、触摸目标 ≥44px、`prefers-reduced-motion` 关闭动效；
 - 数字一律等宽（HP/牌库/百分比/seed/局数）；红=我方占优（中文数据惯例）。
 
-## 5. 已知边界
+## 5. 黑屏（空白页）排查手册
+
+> 现象：打开 `/app/` 整页空白、只显示背景色。**根因多为资源 404 或运行时异常**，按序排查：
+
+| # | 检查 | 判据 / 修复 |
+|---|---|---|
+| 1 | 后端是否为**最新进程** | `netstat -ano \| findstr :8000` 查 PID；若 `GET /batch/jobs` 返回 405，说明跑的是旧代码 → 杀掉旧 PID 重启 |
+| 2 | 构建资源前缀 | `/app/` 下必须引用 `/app/assets/*`（`vite.config` build `base='/app/'`）；若引用 `/assets/*` → 全部 404 → 黑屏 |
+| 3 | 资源可达性 | `curl -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/app/assets/<hash>.js` 应为 200 |
+| 4 | 运行时异常 | `node check_render.cjs http://127.0.0.1:8000/app/ <out.png>` → 看 `errors` / `failed`；`React #31` 类错误=把对象当 React child 渲染 |
+| 5 | 浏览器缓存 | `Ctrl+F5` 强刷（index.html 引用新 hash 后旧缓存无害） |
+
+**构建输出目录**：Windows 上 `dist` 若被进程占用（EPERM）→ 用 `VITE_OUTDIR=dist2 npm run build`，
+后端会**优先挂载 dist2**（`apps/api/app/main.py` 的候选列表 dist2 → dist）。
+
+**验证工具**：`check_render.cjs`（单页渲染+console 采集）、`shoot_pages.cjs`（前台 4 页+后台 3 页批量截图）
+→ 注：受限环境下 Node 写项目盘可能 EPERM，可输出到用户主目录（如 `C:/Users/<user>/pokelab_shots`）。
+
+## 6. 已知边界
 
 - 卡池为 demo 卡组（M1 卡池补齐后替换预设 A1–A4 的真实卡表，已在 UI 标注）；
 - 对局会话驻留后端内存（重启需重开）；后台 M1/M2/M3 页面为"信息卡 + 链接"级别（P1 增补）；

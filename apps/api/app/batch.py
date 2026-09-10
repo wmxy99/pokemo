@@ -112,6 +112,12 @@ def submit_batch(req: schemas.BatchJobReq,
     return {"id": job_id, "status": "running", "note": f"games≤{MAX_GAMES}"}
 
 
+@router.get("/jobs")
+def list_batch(p: Principal = Depends(current_user), limit: int = 50):
+    """该 owner 的批量任务列表（前端统计页 / 任务中心）"""
+    return {"jobs": store.list_jobs("batch", p.name, limit)}
+
+
 @router.get("/jobs/{job_id}")
 def job_status(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)

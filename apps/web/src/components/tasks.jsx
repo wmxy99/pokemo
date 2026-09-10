@@ -54,7 +54,9 @@ export function TaskTable({ jobs, onView, extraCols }) {
           <th scope="col">任务</th>
           <th scope="col">状态</th>
           <th scope="col">创建时间</th>
-          {extraCols}
+          {extraCols && extraCols.map((c, i) => (
+            <th key={i} scope="col">{c.label || ''}</th>
+          ))}
           <th scope="col">操作</th>
         </tr>
       </thead>

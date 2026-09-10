@@ -34,4 +34,7 @@ match_*.jsonl
 # web
 node_modules/
 apps/web/dist/
+apps/web/dist2/
+apps/web/shots.json
+apps/web/shots.err
 apps/api/data/

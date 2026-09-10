@@ -101,8 +101,10 @@ def root():
 
 
 # ---------------- 前端静态托管（apps/web 构建产物，同源部署） ----------------
-_WEB_DIST = _REPO / "apps" / "web" / "dist"
-if _WEB_DIST.exists():
+# 优先 dist2（Windows 上 dist 偶发被进程占用时用 VITE_OUTDIR=dist2 重建），回退 dist
+_WEB_DIST = next((p for p in (_REPO / "apps" / "web" / "dist2",
+                              _REPO / "apps" / "web" / "dist") if p.exists()), None)
+if _WEB_DIST is not None:
     from fastapi.staticfiles import StaticFiles  # noqa: E402
     app.mount("/app", StaticFiles(directory=str(_WEB_DIST), html=True),
               name="web")

@@ -77,10 +77,8 @@ export default function StatsPage({ onMsg, onGoBatch }) {
 
       <div className="card">
         <h3>任务明细</h3>
-        <TaskTable jobs={jobs} onView={(j) => { setSel(j); api.report(j.id, 'md').then(setPreview).catch(() => {}) }}
-          extraCols={[
-            { render: (j) => j.status === 'done' ? '—' : '' },
-          ]} />
+        <TaskTable jobs={jobs}
+          onView={(j) => { setSel(j); api.report(j.id, 'md').then(setPreview).catch(() => {}) }} />
       </div>
     </div>
   )

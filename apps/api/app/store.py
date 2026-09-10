@@ -32,6 +32,12 @@ _conn.executescript(
       name TEXT PRIMARY KEY, role TEXT, quota_day INTEGER DEFAULT 10);
     """
 )
+# 迁移：真 JWT 需要口令哈希与创建时间列（幂等）
+_ucols = {r["name"] for r in _conn.execute("PRAGMA table_info(users)")}
+if "password_hash" not in _ucols:
+    _conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+if "created" not in _ucols:
+    _conn.execute("ALTER TABLE users ADD COLUMN created REAL")
 _conn.commit()
 
 # 内存对局会话：battle_id -> Battle（引擎对象）
@@ -140,12 +146,12 @@ def list_jobs(kind: str, owner: str, limit: int = 50) -> list:
     return [dict(r) for r in rows]
 
 
-# ---------- users（demo） ----------
-def upsert_user(name: str, role: str = "user") -> None:
+# ---------- users ----------
+def create_user(name: str, password_hash: str, role: str = "user") -> None:
     with _lock:
         _conn.execute(
-            "INSERT INTO users(name,role,quota_day) VALUES(?,?,10) "
-            "ON CONFLICT(name) DO UPDATE SET role=excluded.role", (name, role))
+            "INSERT INTO users(name,role,quota_day,password_hash,created) "
+            "VALUES(?,?,10,?,?)", (name, role, password_hash, now()))
         _conn.commit()
 
 
@@ -153,3 +159,22 @@ def get_user(name: str) -> Optional[dict]:
     with _lock:
         row = _conn.execute("SELECT * FROM users WHERE name=?", (name,)).fetchone()
     return dict(row) if row else None
+
+
+def count_users() -> int:
+    with _lock:
+        return int(_conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"])
+
+
+def list_users() -> list:
+    with _lock:
+        rows = _conn.execute(
+            "SELECT name,role,quota_day,created FROM users "
+            "ORDER BY created ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_user_role(name: str, role: str) -> None:
+    with _lock:
+        _conn.execute("UPDATE users SET role=? WHERE name=?", (role, name))
+        _conn.commit()

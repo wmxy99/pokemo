@@ -13,7 +13,6 @@
 OpenAPI 文档：http://127.0.0.1:8000/docs
 """
 from __future__ import annotations
-import hashlib
 import sys
 from pathlib import Path
 
@@ -22,10 +21,10 @@ _REPO = _APP_DIR.parents[3]                       # apps/api/app → pokelab-ai
 for pkg in ("engine", "agent"):
     sys.path.insert(0, str(_REPO / "packages" / pkg))
 
-from fastapi import FastAPI, Depends, Header, HTTPException, Query  # noqa: E402
+from fastapi import FastAPI, Depends, HTTPException, Query  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from . import store, schemas  # noqa: E402
+from . import store, schemas, auth  # noqa: E402
 
 app = FastAPI(
     title="PokéLab AI API",
@@ -37,43 +36,46 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
 
-# ---------------- auth（demo token；生产升级见 README §6） ----------------
-def _token(name: str) -> str:
-    return "demo." + hashlib.sha256(f"{name}:pokelab".encode()).hexdigest()[:24]
-
-
-def current_user(authorization: str = Header(default="")) -> str:
-    """解析 demo token → owner 名（默认 guest）。404 越权由各路由 owner 检查。"""
-    if authorization.startswith("Bearer "):
-        t = authorization[7:]
-        for row in _users_all():
-            if _token(row["name"]) == t:
-                return row["name"]
-    return "guest"
-
-
-def _users_all() -> list:
-    # store 只按名读写；demo 认证从 store.users 枚举
-    import sqlite3
-    con = sqlite3.connect(str(store.DB_PATH))
-    con.row_factory = sqlite3.Row
-    rows = con.execute("SELECT name FROM users").fetchall()
-    con.close()
-    return [dict(r) for r in rows]
-
-
+# ---------------- auth（真 JWT + PBKDF2 + RBAC，见 auth.py） ----------------
 @app.post("/auth/register", tags=["auth"])
 def register(req: schemas.RegisterReq):
-    store.upsert_user(req.name)
-    return {"name": req.name, "token": _token(req.name),
-            "note": "demo 认证，仅用于原型联调"}
+    if store.get_user(req.name) is not None:
+        raise HTTPException(409, "用户名已存在")
+    role = "admin" if store.count_users() == 0 else "user"  # 首个注册者为管理员
+    store.create_user(req.name, auth.hash_password(req.password), role)
+    return {"name": req.name, "role": role,
+            "token": auth.create_token(req.name, role)}
 
 
 @app.post("/auth/login", tags=["auth"])
 def login(req: schemas.LoginReq):
-    if store.get_user(req.name) is None:
-        raise HTTPException(404, "用户不存在，请先注册")
-    return {"name": req.name, "token": _token(req.name)}
+    u = store.get_user(req.name)
+    if not u or not auth.verify_password(req.password, u.get("password_hash")):
+        raise HTTPException(401, "用户名或密码错误")
+    return {"name": u["name"], "role": u["role"],
+            "token": auth.create_token(u["name"], u["role"])}
+
+
+@app.get("/auth/me", tags=["auth"])
+def me(p: auth.Principal = Depends(auth.current_user)):
+    return {"name": p.name, "role": p.role,
+            "is_admin": p.is_admin}
+
+
+@app.get("/admin/users", tags=["admin"])
+def admin_users(p: auth.Principal = Depends(auth.require_roles("admin"))):
+    return {"users": store.list_users()}
+
+
+@app.patch("/admin/users/{name}", tags=["admin"])
+def admin_set_role(name: str, role: str = Query("user"),
+                   p: auth.Principal = Depends(auth.require_roles("admin"))):
+    if role not in ("admin", "user"):
+        raise HTTPException(422, "role 仅支持 admin/user")
+    if store.get_user(name) is None:
+        raise HTTPException(404, "用户不存在")
+    store.set_user_role(name, role)
+    return {"name": name, "role": role}
 
 
 # ---------------- 子路由 ----------------
@@ -89,5 +91,14 @@ app.include_router(train_router)
 def root():
     return {"service": "PokéLab AI API", "version": "0.1.0",
             "docs": "/docs", "openapi": "/openapi.json",
+            "web": "/app（若 apps/web/dist 已构建）",
             "compliance": "Unofficial community project · Non-commercial · "
                           "Pokémon © Nintendo/Creatures/GAME FREAK/TPC"}
+
+
+# ---------------- 前端静态托管（apps/web 构建产物，同源部署） ----------------
+_WEB_DIST = _REPO / "apps" / "web" / "dist"
+if _WEB_DIST.exists():
+    from fastapi.staticfiles import StaticFiles  # noqa: E402
+    app.mount("/app", StaticFiles(directory=str(_WEB_DIST), html=True),
+              name="web")

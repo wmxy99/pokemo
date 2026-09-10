@@ -1,0 +1,82 @@
+/* PokéLab AI Web · 复用原型设计 token（灰阶 + 品牌红，全屏不居中） */
+:root{
+  --bg:#F8FAFC; --panel:#fff; --line:#CBD5E1; --line-2:#E4E9F0;
+  --ink:#0F172A; --ink-2:#475569; --muted:#64748B;
+  --brand:#DC2626; --brand-deep:#B91C1C; --ok:#16A34A; --warn:#B45309;
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body,#root{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans)}
+a{color:var(--brand-deep)}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:6px}
+button{font:inherit;cursor:pointer}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)} .sm{font-size:12px}
+
+/* 顶栏 */
+.topbar{position:sticky;top:0;z-index:20;display:flex;gap:18px;align-items:center;
+  padding:0 20px;height:44px;background:linear-gradient(90deg,#0F172A,#1E293B 62%,#7F1D1D);color:#E2E8F0}
+.brand{font-weight:800;letter-spacing:.2px}
+.brand b{color:#FCA5A5}
+header.site{display:flex;align-items:center;gap:20px;height:60px;padding:0 20px;background:#fff;
+  border-bottom:1px solid var(--line-2)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+.logo .mark{width:30px;height:30px;border-radius:50%;border:2px solid #0F172A;position:relative;
+  background:radial-gradient(circle at 32% 28%,#F87171,#DC2626 55%,#991B1B)}
+.logo .mark::after{content:"";position:absolute;inset:0;margin:auto;width:10px;height:10px;
+  border-radius:50%;background:#fff;border:2px solid #0F172A}
+nav.main{display:flex;gap:6px;flex:1}
+nav.main button{background:none;border:0;padding:10px 14px;border-radius:10px;color:var(--ink-2)}
+nav.main button:hover{background:#FEE2E2;color:#7F1D1D}
+nav.main button[aria-selected="true"]{color:var(--brand-deep);font-weight:800;
+  border-bottom:3px solid var(--brand)}
+.user{display:flex;align-items:center;gap:8px}
+
+/* 通用 */
+.wrap{padding:20px}
+.grid{display:grid;gap:16px}
+.cols-2{grid-template-columns:1.3fr 1fr}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.battle{grid-template-columns:300px 1fr 300px}
+@media(max-width:1000px){.cols-2,.cols-3,.battle{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;
+  padding:3px 10px;font-size:12px;background:#fff}
+.primary{background:linear-gradient(180deg,#DC2626,#B91C1C);color:#fff;border:0;border-radius:10px;
+  padding:10px 18px;font-weight:600}
+.primary:hover{filter:brightness(1.06)}
+.ghost{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+.ghost:hover{border-color:var(--brand);color:var(--brand-deep)}
+input,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+.tbl th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tbl tr:hover td{background:#FBF7F7}
+.bar{height:8px;background:#EFF3F8;border:1px solid #E2E8F0;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#B91C1C,#EF4444)}
+pre.log{font:12px/1.7 var(--mono);background:linear-gradient(180deg,#111827,#0B1120);color:#CBD5E1;
+  border-radius:10px;padding:10px 12px;max-height:260px;overflow:auto;border:1px solid #1E293B}
+.zone{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+.zt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  display:flex;justify-content:space-between}
+.chip{width:52px;height:64px;border:2px solid var(--line);border-radius:10px;display:grid;place-items:center;
+  font-size:11px;font-weight:700;background:linear-gradient(160deg,#fff 55%,#F1F5F9);text-align:center}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.act{font-family:var(--mono);font-size:12px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:9px;background:#fff}
+.act:hover{border-color:var(--brand);color:var(--brand-deep);background:#FFF5F5}
+.msg{margin:10px 20px;padding:10px 14px;border-radius:10px;font-size:13px}
+.msg.err{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B}
+.msg.ok{background:#F0FDF4;border:1px solid #BBF7D0;color:#166534}
+footer.site{border-top:3px solid var(--line-2);margin-top:26px;padding:16px 20px;font-size:12px;color:var(--muted)}
+.stats{display:flex;gap:16px;flex-wrap:wrap}
+.stat{flex:1;min-width:140px}
+.stat .n{font-family:var(--mono);font-size:24px;font-weight:800}
+.stat .l{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}

@@ -22,16 +22,23 @@ python -m uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000
 python -m unittest apps.api.tests.test_api -v
 ```
 
-## 1. 认证（demo 级；正式化见 §6）
+## 1. 认证与授权（真 JWT · PRD F13/M5）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/auth/register` | body `{name, password}` → 返回 `token`（`demo.xxx`） |
-| POST | `/auth/login` | 同上（需已注册） |
+| POST | `/auth/register` | body `{name, password}` → `{name, role, token}`；**首个注册者为 admin**；重名 409 |
+| POST | `/auth/login` | 校验 PBKDF2 哈希；错误/不存在统一 **401**（不泄露用户存在性） |
+| GET | `/auth/me` | 返回当前身份（需 Bearer） |
+| GET | `/admin/users` | 用户列表（**admin**） |
+| PATCH | `/admin/users/{name}?role=user\|admin` | 调整角色（**admin**） |
 
-- 调用受保护资源时带请求头：`Authorization: Bearer <token>`；
-- 未带 token 默认按 `guest`（游客配额独立）；`X 用户隔离`：任务/对局元数据按 owner 存，路由返回仅自己数据。
-- demo token 由 `sha256(name:pokelab)` 派生，**明文口令不落库（MVP），生产须换 JWT + 密码哈希（PRD F13 安全验收）**。
+- 调用受保护资源带 `Authorization: Bearer <JWT>`；**无令牌 = guest**（游客可试玩对战/批量，配额独立）；
+- 设置环境变量 `POKELAB_REQUIRE_AUTH=1` 可强制登录（无令牌一律 401）；
+- 口令存储：`pbkdf2_sha256$200000$<salt>$<hash>`（HMAC-SHA256，20 万迭代，无明文）；
+- 令牌：HS256 JWT（sub/role/iat/exp，默认 24h 有效）；密钥取 `POKELAB_JWT_SECRET`，
+  否则自动生成于 `apps/api/data/.jwt_secret`（已 gitignore）；
+- **RBAC**：admin/user/guest；`/train/*` 需登录（guest 403）；任务/对局按 owner 隔离，
+  跨用户访问 403（admin 例外）——满足 PRD F13「越权访问被拒」验收方向。
 
 ## 2. 人机对战（PRD F5）
 
@@ -127,7 +134,7 @@ POST /train/jobs
 
 | 项 | 现状 | 后续 |
 |---|---|---|
-| 认证 | demo token（明文口令仅校验存在性） | JWT + bcrypt/argon2 + RBAC（PRD F13 安全验收，M5） |
+| 认证 | ✅ 真 JWT + PBKDF2 + RBAC（admin/user/guest） | 后续：refresh token / 登录限流 / 配额管理面板（P1） |
 | 卡组 | 演示卡组名（make_deck） | 文本粘贴解析 + 校验 + 预设池（F3 Web 交付） |
 | 对局会话 | 进程内存，重启即失 | SQLite 事件日志 + seed 重放引擎（F10） |
 | 批量对手 | 规则基线 AI | 可加载策略权重（policy 权重复用 eval_matrix 路径） |

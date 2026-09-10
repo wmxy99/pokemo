@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from . import store, schemas
-from .main import current_user
+from .auth import Principal, current_user, ensure_owner
 
 router = APIRouter(prefix="/batch", tags=["batch"])
 
@@ -89,14 +89,14 @@ def _worker(job_id: str, da: list, db: list, games: int, seed0: int):
 
 @router.post("/jobs", status_code=202)
 def submit_batch(req: schemas.BatchJobReq,
-                 user: str = Depends(current_user)):
+                 p: Principal = Depends(current_user)):
     global _running
-    if _usage_today("batch", user) >= 10:
+    if _usage_today("batch", p.name) >= 10:
         raise HTTPException(429, "本日批量任务配额 10 已用尽（PRD F6）")
     da, db = _resolve_deck(req.deck_a), _resolve_deck(req.deck_b)
     params = {"deck_a": req.deck_a, "deck_b": req.deck_b,
               "games": req.games, "seed_start": req.seed_start}
-    job_id = store.create_job("batch", user, params)
+    job_id = store.create_job("batch", p.name, params)
     with _worker_lock:
         if _running >= MAX_CONCURRENT:
             store.update_job(job_id, status="failed",
@@ -113,10 +113,11 @@ def submit_batch(req: schemas.BatchJobReq,
 
 
 @router.get("/jobs/{job_id}")
-def job_status(job_id: str, user: str = Depends(current_user)):
+def job_status(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "任务不存在")
+    ensure_owner(j["owner"], p)
     prog = _progress.get(job_id, {})
     return {"id": job_id, "status": j["status"],
             "params": j["params"], "progress": prog,
@@ -125,10 +126,11 @@ def job_status(job_id: str, user: str = Depends(current_user)):
 
 
 @router.post("/jobs/{job_id}/cancel")
-def cancel_job(job_id: str, user: str = Depends(current_user)):
+def cancel_job(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "任务不存在")
+    ensure_owner(j["owner"], p)
     if job_id in _active:
         _active[job_id].set()
         return {"id": job_id, "status": "cancelling",
@@ -140,11 +142,12 @@ def cancel_job(job_id: str, user: str = Depends(current_user)):
 
 
 @router.get("/jobs/{job_id}/report")
-def report(job_id: str, user: str = Depends(current_user),
+def report(job_id: str, p: Principal = Depends(current_user),
            format: str = "md"):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "任务不存在")
+    ensure_owner(j["owner"], p)
     if j["status"] not in ("done", "cancelled"):
         raise HTTPException(409, "任务未完成，暂无报告")
     res = j["result"] or {}

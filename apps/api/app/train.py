@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 
 from . import store, schemas
-from .main import current_user
+from .auth import Principal, current_user, ensure_owner
 
 router = APIRouter(prefix="/train", tags=["train"])
 
@@ -68,14 +68,16 @@ def _monitor(job_id: str, proc: subprocess.Popen, logf: Path):
 
 @router.post("/jobs", status_code=202)
 def submit_train(req: schemas.TrainJobReq,
-                 user: str = Depends(current_user)):
+                 p: Principal = Depends(current_user)):
+    if p.role == "guest":
+        raise HTTPException(403, "训练管理需登录账号（F13/M5）")
     if not _RUN_K1.exists():
         raise HTTPException(500, "训练脚本缺失：" + str(_RUN_K1))
     with _lock:
         if len(_procs) >= _RUNNING_MAX:
             raise HTTPException(429, "训练并发已满（≤2）")
     params = req.model_dump()
-    job_id = store.create_job("train", user, params)
+    job_id = store.create_job("train", p.name, params)
     save = _JOB_DIR / f"policy_{job_id}.pt"
     report = _JOB_DIR / f"K1_report_{job_id}.md"
     logf = _JOB_DIR / f"{job_id}.log"
@@ -105,15 +107,16 @@ def submit_train(req: schemas.TrainJobReq,
 
 
 @router.get("/jobs")
-def list_trains(user: str = Depends(current_user), limit: int = 20):
-    return {"jobs": store.list_jobs("train", user, limit)}
+def list_trains(p: Principal = Depends(current_user), limit: int = 20):
+    return {"jobs": store.list_jobs("train", p.name, limit)}
 
 
 @router.get("/jobs/{job_id}")
-def train_status(job_id: str, user: str = Depends(current_user)):
+def train_status(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "训练任务不存在")
+    ensure_owner(j["owner"], p)
     logf = _log_paths.get(job_id)
     lines = _tail(logf, 40) if logf else []
     return {"id": job_id, "status": j["status"],
@@ -123,20 +126,22 @@ def train_status(job_id: str, user: str = Depends(current_user)):
 
 
 @router.get("/jobs/{job_id}/log")
-def train_log(job_id: str, user: str = Depends(current_user),
+def train_log(job_id: str, p: Principal = Depends(current_user),
               lines: int = 100):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "训练任务不存在")
+    ensure_owner(j["owner"], p)
     logf = _log_paths.get(job_id)
     return {"id": job_id, "lines": _tail(logf, lines) if logf else []}
 
 
 @router.post("/jobs/{job_id}/cancel")
-def cancel_train(job_id: str, user: str = Depends(current_user)):
+def cancel_train(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "训练任务不存在")
+    ensure_owner(j["owner"], p)
     proc = _procs.get(job_id)
     if proc and proc.poll() is None:
         proc.kill()

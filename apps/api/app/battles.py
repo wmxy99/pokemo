@@ -14,7 +14,7 @@ import time
 from fastapi import APIRouter, HTTPException, Depends
 
 from . import store, schemas
-from .main import current_user
+from .auth import Principal, current_user, ensure_owner
 
 router = APIRouter(prefix="/battles", tags=["battle"])
 
@@ -53,14 +53,14 @@ def _opp_agent(battle, iters: int, seed: int):
 
 @router.post("", status_code=201)
 def create_battle(req: schemas.BattleCreateReq,
-                  user: str = Depends(current_user)):
+                  p: Principal = Depends(current_user)):
     from engine.battle import Battle
     seed = req.seed if req.seed is not None else random.randrange(1 << 30)
     da = _resolve_deck(req.deck_a)
     db = _resolve_deck(req.deck_b)
     battle = Battle(da, db, seed=seed)
     bid = store.new_id("btl")
-    store.save_battle({"id": bid, "owner": user, "deck_a": req.deck_a,
+    store.save_battle({"id": bid, "owner": p.name, "deck_a": req.deck_a,
                        "deck_b": req.deck_b, "seed": seed, "status": "open",
                        "created": store.now(),
                        "payload": {"ai_iters": req.ai_iters,
@@ -70,7 +70,7 @@ def create_battle(req: schemas.BattleCreateReq,
             "battle": battle,
             "seed": seed,
             "ai_iters": req.ai_iters,
-            "player_side": req.player_side,
+            "player_side": req.player_side, "owner": p.name,
         }
     view = battle.view()
     ai_first = []
@@ -104,10 +104,11 @@ def _run_ai_until_human(bid: str):
 
 @router.post("/{bid}/actions")
 def act(bid: str, req: schemas.ActionReq,
-        user: str = Depends(current_user)):
+        p: Principal = Depends(current_user)):
     s = store.battle_sessions.get(bid)
     if not s:
         raise HTTPException(404, "对局不存在或已过期")
+    ensure_owner(s.get("owner", "guest"), p)
     battle = s["battle"]
     if battle.finished:
         raise HTTPException(409, "对局已结束")
@@ -130,10 +131,11 @@ def act(bid: str, req: schemas.ActionReq,
 
 
 @router.get("/{bid}")
-def get_state(bid: str, user: str = Depends(current_user)):
+def get_state(bid: str, p: Principal = Depends(current_user)):
     s = store.battle_sessions.get(bid)
     if not s:
         raise HTTPException(404, "对局不存在或已过期")
+    ensure_owner(s.get("owner", "guest"), p)
     battle = s["battle"]
     return {"id": bid, "seed": s["seed"], "turn": battle.view()["turn"],
             "phase": battle.view()["phase"], "winner": battle.winner,

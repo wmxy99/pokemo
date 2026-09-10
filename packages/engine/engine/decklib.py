@@ -10,52 +10,52 @@ from __future__ import annotations
 from .cards import (PokemonDef, AttackDef, PokeRef, EnergyRef, EnergyDef,
                     TrainerRef, TrainerDef, AbilityDef, CardRef)
 
-_E = EnergyDef()                # v1 通用无色能量
-_EF = EnergyDef("fire")
-_EP = EnergyDef("psychic")
+_E = EnergyDef(name_zh="基本能量")   # v1 通用无色能量
+_EF = EnergyDef("fire", name_zh="基本火能量")
+_EP = EnergyDef("psychic", name_zh="基本超能量")
 
 # ---------- 招式 ----------
-T1 = AttackDef("Spark Punch", cost=1, damage=30, desc="30")
-T2 = AttackDef("Thunderbolt", cost=3, damage=90, desc="90")
-T3 = AttackDef("Raid Volt", cost=2, damage=60,
+T1 = AttackDef("Spark Punch", name_zh="电击拳", cost=1, damage=30, desc="30")
+T2 = AttackDef("Thunderbolt", name_zh="十万伏特", cost=3, damage=90, desc="90")
+T3 = AttackDef("Raid Volt", name_zh="突袭伏特", cost=2, damage=60,
                effects=("spread:1:20",), desc="60 + 对手1只后备20")
-T4 = AttackDef("Leaf Cutter", cost=1, damage=40, desc="40")
-T5 = AttackDef("Solar Beam", cost=3, damage=100, desc="100")
-T6 = AttackDef("Ember", cost=1, damage=30, effects=("burn",), desc="30+烧伤")
-T7 = AttackDef("Inferno", cost=3, damage=110,
+T4 = AttackDef("Leaf Cutter", name_zh="叶刃", cost=1, damage=40, desc="40")
+T5 = AttackDef("Solar Beam", name_zh="日光束", cost=3, damage=100, desc="100")
+T6 = AttackDef("Ember", name_zh="火花", cost=1, damage=30, effects=("burn",), desc="30+烧伤")
+T7 = AttackDef("Inferno", name_zh="炼狱", cost=3, damage=110,
                effects=("self:20",), desc="110+自身20")
-T8 = AttackDef("Toxic Bite", cost=2, damage=40, effects=("poison",), desc="40+中毒")
-T9 = AttackDef("Sleep Powder", cost=2, damage=20, effects=("sleep",), desc="20+睡眠")
-T10 = AttackDef("Psy Bolt", cost=2, damage=50, effects=("confuse",), desc="50+混乱")
-T11 = AttackDef("Paralyze Fang", cost=2, damage=40,
+T8 = AttackDef("Toxic Bite", name_zh="毒咬", cost=2, damage=40, effects=("poison",), desc="40+中毒")
+T9 = AttackDef("Sleep Powder", name_zh="催眠粉", cost=2, damage=20, effects=("sleep",), desc="20+睡眠")
+T10 = AttackDef("Psy Bolt", name_zh="精神弹", cost=2, damage=50, effects=("confuse",), desc="50+混乱")
+T11 = AttackDef("Paralyze Fang", name_zh="麻痹牙", cost=2, damage=40,
                 effects=("paralyze",), desc="40+麻痹")
-T12 = AttackDef("Drain Fang", cost=2, damage=50, effects=("heal:20",), desc="50+自愈20")
-T13 = AttackDef("Draw Surge", cost=1, damage=10,
+T12 = AttackDef("Drain Fang", name_zh="吸血牙", cost=2, damage=50, effects=("heal:20",), desc="50+自愈20")
+T13 = AttackDef("Draw Surge", name_zh="抽牌涌流", cost=1, damage=10,
                 effects=("draw:2",), desc="10+抽2")
-T14 = AttackDef("Double Claw", cost=2, damage=60, desc="60")
+T14 = AttackDef("Double Claw", name_zh="双重爪", cost=2, damage=60, desc="60")
 
 # ---------- 宝可梦 ----------
-BOLT = PokemonDef("Bolt", hp=70, ptype="lightning", weakness="fighting",
+BOLT = PokemonDef("Bolt", name_zh="电光鼠", hp=70, ptype="lightning", weakness="fighting",
                   attacks=(T1, T2), desc="demo 基础雷系")
-THUNDREX = PokemonDef("Thundrex ex", hp=180, ptype="lightning", weakness="fighting",
+THUNDREX = PokemonDef("Thundrex ex", name_zh="雷克斯ex", hp=180, ptype="lightning", weakness="fighting",
                       retreat=1, attacks=(T3,), is_ex=True, desc="demo ex 主攻手")
-SEEDLING = PokemonDef("Seedling", hp=60, ptype="grass", weakness="fire",
+SEEDLING = PokemonDef("Seedling", name_zh="幼芽", hp=60, ptype="grass", weakness="fire",
                       resistance="water", attacks=(T4,))
-SUNFLORA = PokemonDef("Sunflora", hp=120, ptype="grass", weakness="fire",
+SUNFLORA = PokemonDef("Sunflora", name_zh="向日花", hp=120, ptype="grass", weakness="fire",
                       resistance="water", attacks=(T5,))
-EMBER = PokemonDef("Emberling", hp=70, ptype="fire", weakness="water",
+EMBER = PokemonDef("Emberling", name_zh="火苗兽", hp=70, ptype="fire", weakness="water",
                    attacks=(T6,))
-FLAREX = PokemonDef("Flarex ex", hp=190, ptype="fire", weakness="water",
+FLAREX = PokemonDef("Flarex ex", name_zh="焰克斯ex", hp=190, ptype="fire", weakness="water",
                     retreat=2, attacks=(T7,), is_ex=True)
-TOXIBUG = PokemonDef("Toxibug", hp=80, ptype="psychic", weakness="darkness",
+TOXIBUG = PokemonDef("Toxibug", name_zh="毒虫", hp=80, ptype="psychic", weakness="darkness",
                      attacks=(T8,))
-DREAMOTH = PokemonDef("Dreamoth", hp=90, ptype="psychic", weakness="darkness",
+DREAMOTH = PokemonDef("Dreamoth", name_zh="梦蛾", hp=90, ptype="psychic", weakness="darkness",
                       attacks=(T9, T10))
-FANGPUPPY = PokemonDef("Fangpuppy", hp=90, ptype="fighting", weakness="psychic",
+FANGPUPPY = PokemonDef("Fangpuppy", name_zh="牙犬", hp=90, ptype="fighting", weakness="psychic",
                        attacks=(T11, T12))
-SPARKIT = PokemonDef("Sparkit", hp=60, ptype="lightning", weakness="fighting",
+SPARKIT = PokemonDef("Sparkit", name_zh="电花", hp=60, ptype="lightning", weakness="fighting",
                      attacks=(T13,))
-CLAWMON = PokemonDef("Clawmon", hp=100, ptype="colorless", weakness="fighting",
+CLAWMON = PokemonDef("Clawmon", name_zh="爪兽", hp=100, ptype="colorless", weakness="fighting",
                      attacks=(T14,))
 
 
@@ -78,33 +78,33 @@ def _ref(item):
 
 
 # ---------- v0.2 · Y 版 Draco 进化线（≈ Dragapult 原型，P0-A） ----------
-D1 = AttackDef("Tackle", cost=1, damage=20, desc="20")
-D2 = AttackDef("Slam", cost=2, damage=60, desc="60")
-D3 = AttackDef("Phantom Rush", cost=(("fire", 1), ("psychic", 1)), damage=200,
+D1 = AttackDef("Tackle", name_zh="撞击", cost=1, damage=20, desc="20")
+D2 = AttackDef("Slam", name_zh="猛撞", cost=2, damage=60, desc="60")
+D3 = AttackDef("Phantom Rush", name_zh="幻影突袭", cost=(("fire", 1), ("psychic", 1)), damage=200,
                effects=("spread_free:60",),
                desc="200 + 对手后备共 60 点(6指示物) 任意分配")
-RECON_AB = AbilityDef("Recon Scout", tag="recon:2", location="field",
+RECON_AB = AbilityDef("Recon Scout", name_zh="侦察哨戒", tag="recon:2", location="field",
                       desc="每回合一次：检视牌库顶2取1入手（≈Recon Directive）")
-CURSED_AB = AbilityDef("Cursed Blast", tag="cursed:130", location="hand",
+CURSED_AB = AbilityDef("Cursed Blast", name_zh="诅咒爆破", tag="cursed:130", location="hand",
                        desc="手牌弃此卡 → 对手1只宝可梦放13个指示物（≈Cursed Blast）")
-DRAKLING = PokemonDef("Drakling", hp=60, ptype="dragon", weakness="darkness",
+DRAKLING = PokemonDef("Drakling", name_zh="幼龙", hp=60, ptype="dragon", weakness="darkness",
                       attacks=(D1,), stage=0, desc="Y版 基础（≈Dreepy）")
-DRACO = PokemonDef("Draco", hp=120, ptype="dragon", weakness="darkness",
+DRACO = PokemonDef("Draco", name_zh="龙兽", hp=120, ptype="dragon", weakness="darkness",
                    attacks=(D2,), stage=1, evolves_from="Drakling",
                    abilities=(RECON_AB,), desc="Y版 一阶（≈Drakloak，特性已实现 E3）")
-DRACO_EX = PokemonDef("Draco ex", hp=200, ptype="dragon", weakness="darkness",
+DRACO_EX = PokemonDef("Draco ex", name_zh="龙兽ex", hp=200, ptype="dragon", weakness="darkness",
                       retreat=1, attacks=(D3,), is_ex=True, stage=2,
                       evolves_from="Draco", desc="Y版 二阶ex（≈Dragapult ex）")
-SPECTOR = PokemonDef("Spector", hp=110, ptype="psychic", weakness="darkness",
-                     attacks=(AttackDef("Shadow Punch", cost=1, damage=30),
+SPECTOR = PokemonDef("Spector", name_zh="幽灵客", hp=110, ptype="psychic", weakness="darkness",
+                     attacks=(AttackDef("Shadow Punch", name_zh="暗影拳", cost=1, damage=30),
                               ),
                      abilities=(CURSED_AB,),
                      desc="Y版 手牌特性组件（≈Dusknoir，E3）")
 # E4 训练家（Y 版首批）
-T_POFFIN = TrainerDef("poffin", kind="item", name="Buddy Ball")
-T_UBALL = TrainerDef("ultra_ball", kind="item", name="Hyper Ball")
-T_HAMMER = TrainerDef("hammer", kind="item", name="Energy Crush")
-T_BOSS = TrainerDef("boss", kind="supporter", name="Orders")
+T_POFFIN = TrainerDef("poffin", kind="item", name="Buddy Ball", name_zh="伙伴球")
+T_UBALL = TrainerDef("ultra_ball", kind="item", name="Hyper Ball", name_zh="超级球")
+T_HAMMER = TrainerDef("hammer", kind="item", name="Energy Crush", name_zh="能量粉碎")
+T_BOSS = TrainerDef("boss", kind="supporter", name="Orders", name_zh="指令")
 
 # ---------- 原 demo 卡组 ----------
 def deck_lightning_demo() -> list:
@@ -168,6 +168,37 @@ def _real_deck(arch_id: str):
 for _aid in ("A1", "A2", "A3", "A4"):
     ALL_DECKS[_aid] = _real_deck(_aid)
     ALL_DECKS[_aid.lower()] = ALL_DECKS[_aid]
+
+
+# 卡组中文展示名（前端/报告优先展示；英文 id 保持不变作为数据键）
+DECK_LABELS_ZH = {
+    "lightning": "雷电演示卡组",
+    "grass": "草系演示卡组",
+    "fire": "火系演示卡组",
+    "psychic": "超能演示卡组",
+    "status": "状态流演示卡组",
+    "draco": "龙系进化演示卡组",
+    "ability": "特性演示卡组",
+    "A1": "A1 · 多龙巴鲁托ex / 黑夜魔灵",
+    "A2": "A2 · 多龙巴鲁托ex / 火焰鸡ex",
+    "A3": "A3 · N的索罗亚克ex",
+    "A4": "A4 · 基础盒（厄诡椪ex / 皮皮ex）",
+}
+
+
+def deck_label_zh(name: str) -> str:
+    """卡组中文展示名（无法识别时回退原名）"""
+    key = (name or "").strip()
+    if key in DECK_LABELS_ZH:
+        return DECK_LABELS_ZH[key]
+    if key.upper() in DECK_LABELS_ZH:
+        return DECK_LABELS_ZH[key.upper()]
+    try:
+        from . import reallib
+        a = reallib._arch_raw(key)          # noqa: SLF001
+        return f"{a['id']} · {a.get('label_zh') or a['label']}"
+    except Exception:
+        return key
 
 
 def archetype_ids() -> list:

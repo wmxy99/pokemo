@@ -206,6 +206,7 @@ class Battle:
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
                 out.append({"verb": "ability", "name": ab.name,
+                            "name_zh": ab.name_zh,
                             "pos": tpos, "tag": ab.tag})
         for hi, c in enumerate(p.hand):
             if isinstance(c, PokeRef):
@@ -215,6 +216,8 @@ class Battle:
                     if ab.tag.startswith("cursed:"):
                         for tpos in range(1 + len(opp.bench)):
                             out.append({"verb": "ability", "name": ab.name,
+                                        "name_zh": ab.name_zh,
+                            "name_zh": ab.name_zh,
                                         "hand": hi, "tag": ab.tag,
                                         "target": tpos})
         return out
@@ -687,10 +690,16 @@ class Battle:
             d["ex"] = fp.pdef.is_ex
             d["evolves_from"] = fp.pdef.evolves_from
             d["ability_used"] = sorted(fp.ability_used)
-            d["abilities"] = [{"name": a.name, "tag": a.tag,
-                               "location": a.location}
+            # i18n：英文名保留（数据键），新增 name_zh / display（中文展示，前端优先用）
+            d["name_zh"] = fp.pdef.name_zh
+            d["display"] = fp.pdef.display
+            d["abilities"] = [{"name": a.name, "name_zh": a.name_zh,
+                               "display": a.name_zh or a.name,
+                               "tag": a.tag, "location": a.location}
                               for a in fp.pdef.abilities]
-            d["attacks"] = [{"name": a.name, "cost": a.cost_total,
+            d["attacks"] = [{"name": a.name, "name_zh": a.name_zh,
+                             "display": a.name_zh or a.name,
+                             "cost": a.cost_total,
                              "cost_map": list(a.cost), "damage": a.damage,
                              "tags": list(a.effects), "desc": a.desc}
                             for a in fp.pdef.attacks]
@@ -700,16 +709,26 @@ class Battle:
         for c in me.hand:
             if isinstance(c, PokeRef):
                 hand.append({"type": "pokemon", "name": c.pdef.name,
+                             "name_zh": c.pdef.name_zh,
+                             "display": c.pdef.display,
                              "hp": c.pdef.hp, "stage": c.pdef.stage,
+                             "evolves_from_zh": _evolves_from_zh(
+                                 c.pdef.evolves_from),
                              "evolves_from": c.pdef.evolves_from,
-                             "abilities": [{"name": a.name, "tag": a.tag,
+                             "abilities": [{"name": a.name, "name_zh": a.name_zh,
+                                            "display": a.name_zh or a.name,
+                                            "tag": a.tag,
                                             "location": a.location}
                                            for a in c.pdef.abilities]})
             elif isinstance(c, EnergyRef):
                 hand.append({"type": "energy", "name": c.edef.name,
+                             "name_zh": c.edef.name_zh,
+                             "display": c.edef.display,
                              "etype": c.edef.type})
             elif isinstance(c, TrainerRef):
                 hand.append({"type": c.tdef.kind, "name": c.tdef.name,
+                             "name_zh": c.tdef.name_zh,
+                             "display": c.tdef.display,
                              "tag": c.tdef.tag})
         return {
             "me": pi,
@@ -739,6 +758,13 @@ class Battle:
 
 
 # ---------- 工具 ----------
+def _evolves_from_zh(name):
+    """进化前卡的中文展示名（未登记则空串）"""
+    from .cards import pokemon_def
+    pd = pokemon_def(name)
+    return pd.name_zh if pd is not None else ""
+
+
 def _card_label(c) -> str:
     if isinstance(c, PokeRef):
         return c.pdef.name

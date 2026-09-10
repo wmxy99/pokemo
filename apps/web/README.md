@@ -54,6 +54,16 @@ npm run build
 游标持久化在 `sessionStorage`（`pokelab_sse_cursor_<jobId>`）→ **刷新页面也不丢进度**（重连时以
 `?last_event_id=` 续传）。
 
+## 3.5 中文展示（i18n）
+
+- `src/names.js`：`disp(o)`（`display` → `name_zh` → `name` 回退）、`actionContext(view)`（把合法动作里的
+  索引解析成中文招式/卡名）、`shortDeckLabel`；
+- `verbs.js` 的 `verbLabel(a, ctx)`：动作按钮显示**中文招式名 / 卡名**（如「攻击：幻影俯冲」、
+  「训练家：奇妙之月」「进化：多龙奇 → 多龙巴鲁托ex」）；
+- 对战棋盘 `PokeChip`、手牌列表、回合日志、批量对位表、胜率矩阵（含 `aria-label`）、预设逐卡表
+  全部走中文；预设逐卡表保留英文小字用于追溯；
+- 卡组下拉（`api.js` 的 `DECKS`）与短标签 `shortDeck()` 亦为中文。
+
 ## 4. 合规与无障碍
 
 - 页脚**恒定**复刻 C3 三段声明 + C1 非商用 + C2 无卡图 + C5 差异透明（不得在 view 层隐藏）；

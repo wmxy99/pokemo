@@ -11,13 +11,39 @@ export const VERBS = {
   pass: { zh: '结束回合', en: 'End turn', icon: 'M5 4v16M19 4l-11 8 11 8V4Z' },
 }
 
-export function verbLabel(a) {
+/** 动词按钮文案（中文）。ctx 可选：{hand[], field[], attacks[], energy} 展示名数组
+ *  —— 有 ctx 时显示「中文卡名 / 招式名」，无 ctx 时回退到卡位序号形式。 */
+export function verbLabel(a, ctx) {
   const v = VERBS[a.verb] || { zh: a.verb, en: a.verb }
   const zh = v.zh
-  if (a.verb === 'attack') return `${zh}：招式${a.attack != null ? ' #' + a.attack : ''}`
-  if (a.verb === 'attach') return `${zh} → 目标${a.target != null ? ' #' + a.target : ''}`
-  if (a.verb === 'evolve') return `${zh} → 卡位${a.index != null ? ' #' + a.index : ''}`
-  if (a.verb === 'trainer') return `${zh}：卡位${a.index != null ? ' #' + a.index : ''}`
-  if (a.verb === 'play') return `${zh} #${a.index ?? 0}`
+  const c = ctx || {}
+  const at = (arr, i) => (arr && i != null && arr[i] != null ? arr[i] : null)
+  const slot = (i) => (i === 0 ? '战斗位' : `后备 ${i}`)
+  if (a.verb === 'attack') {
+    const nm = at(c.attacks, a.attack)
+    return nm ? `${zh}：${nm}` : `${zh}：招式 #${a.attack ?? 0}`
+  }
+  if (a.verb === 'attach') {
+    const where = slot(a.target ?? 0)
+    return c.energy ? `${zh}：${c.energy} → ${where}` : `${zh} → 目标 #${a.target ?? 0}`
+  }
+  if (a.verb === 'evolve') {
+    const from = at(c.hand, a.hand)
+    const to = at(c.field, a.target)
+    return from && to ? `${zh}：${from} → ${to}` : `${zh} → 卡位 #${a.hand ?? 0}`
+  }
+  if (a.verb === 'trainer') {
+    const nm = at(c.hand, a.hand ?? a.index)
+    return nm ? `${zh}：${nm}` : `${zh}：卡位 #${a.index ?? a.hand ?? 0}`
+  }
+  if (a.verb === 'play') {
+    const nm = at(c.hand, a.index)
+    return nm ? `${zh}：${nm}` : `${zh} #${a.index ?? 0}`
+  }
+  if (a.verb === 'retreat') {
+    const to = at(c.field, (a.bench ?? 0) + 1)
+    return to ? `${zh} → ${to}` : zh
+  }
+  if (a.verb === 'ability') return `${zh}：${a.name_zh || a.name || ''}`
   return zh
 }

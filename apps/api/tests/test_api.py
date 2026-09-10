@@ -381,8 +381,10 @@ class TestPoolMatrix(unittest.TestCase):
         self.assertEqual(sum(c["n"] for c in cells), 6)
         self.assertIn("ci95", cells[0])
         rep = client.get(f"/batch/jobs/{jid}/report?format=csv", headers=h).text
-        self.assertIn("deck_a,deck_b", rep)              # 表头
-        self.assertIn("lightning,psychic", rep)          # 首个对位行
+        # 报告面向人阅读 → 表头与卡组名输出中文（英文仍为 JSON/数据键）
+        self.assertIn("我方卡组,对手卡组", rep)
+        self.assertIn("演示卡组", rep)
+        self.assertIn("雷电演示卡组,超能演示卡组", rep)     # 首个对位行（中文）
         self.assertGreaterEqual(len(rep.strip().splitlines()), 3)
         s = client.get("/stats/summary", headers=h).json()
         self.assertGreaterEqual(len(s["matrix"]), 2)
@@ -580,6 +582,160 @@ class TestSSEHeartbeat(unittest.IsolatedAsyncioTestCase):
         self.assertIn("event: replay", text)
         self.assertIn("id: 4", text)
         self.assertLess(text.index("event: replay"), text.index("event: update"))
+
+
+class TestI18nZhLabels(unittest.TestCase):
+    """i18n：卡名 / 招式 / 卡组名对外展示一律中文（英文仍为数据键）"""
+
+    def test_presets_label_is_chinese(self):
+        h = user_headers()
+        rows = client.get("/decks/presets", headers=h).json()["presets"]
+        self.assertEqual(rows[0]["label"], "多龙巴鲁托ex / 黑夜魔灵")
+        self.assertEqual(rows[0]["label_en"], "Dragapult ex / Dusknoir")
+        self.assertEqual(rows[3]["label"], "基础盒（厄诡椪ex / 皮皮ex）")
+
+    def test_preset_detail_cards_have_zh_display(self):
+        h = user_headers()
+        d = client.get("/decks/presets/A1", headers=h).json()
+        by_en = {c["name"]: c for c in d["cards"]}
+        self.assertEqual(by_en["Dragapult ex"]["display"], "多龙巴鲁托ex")
+        self.assertEqual(by_en["Ultra Ball"]["display"], "高级球")
+        self.assertEqual(by_en["Basic Fire Energy"]["display"], "基本火能量")
+        self.assertTrue(all(c.get("display") for c in d["cards"]))
+        # 英文键保持不变（数据/追溯用）
+        self.assertIn("Dragapult ex", by_en)
+
+    def test_battle_view_carries_zh_names(self):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": 7})
+        self.assertEqual(r.status_code, 201, r.text)
+        view = r.json()["view"]
+        hand = view["me_state"]["hand"]
+        self.assertTrue(all(c.get("display") for c in hand))
+        self.assertTrue(any(not c["display"].isascii() for c in hand))
+        legal = view["legal"]
+        self.assertTrue(legal)
+        # 招式/训练家等合法动作应能在前端解析为中文（引擎提供 name_zh/display 依据）
+        fp = view["me_state"]["active"] or (view["me_state"]["bench"] or [None])[0]
+        if fp:
+            for atk in fp["attacks"]:
+                self.assertTrue(atk["display"])
+
+    def test_report_and_matrix_are_chinese(self):
+        """池任务报告（md/csv）与统计矩阵输出中文卡组名"""
+        h = user_headers()
+        r = client.post("/batch/pool-jobs", headers=h,
+                        json={"decks_a": ["A1"], "decks_b": ["A3"],
+                              "games_each": 4, "seed_start": 31})
+        self.assertIn(r.status_code, (200, 202), r.text)
+        jid = r.json()["id"]
+        done = _wait_job(jid, headers=h, timeout=120)
+        self.assertEqual(done["status"], "done", done)
+        md = client.get(f"/batch/jobs/{jid}/report?format=md", headers=h).text
+        self.assertIn("多龙巴鲁托ex", md)
+        self.assertIn("N的索罗亚克ex", md)
+        csv = client.get(f"/batch/jobs/{jid}/report?format=csv", headers=h).text
+        self.assertIn("我方卡组", csv.splitlines()[0])
+        self.assertIn("多龙巴鲁托ex", csv)
+        js = client.get(f"/batch/jobs/{jid}/report?format=json", headers=h).json()
+        cell = js["cells"][0]
+        self.assertEqual(cell["deck_a"], "A1")            # 英文键不变
+        self.assertEqual(cell["deck_a_zh"], "A1 · 多龙巴鲁托ex / 黑夜魔灵")
+        self.assertEqual(cell["deck_b_zh"], "A3 · N的索罗亚克ex")
+        m = client.get("/stats/summary", headers=h).json()["matrix"]
+        self.assertTrue(m)
+        self.assertTrue(all("deck_a_zh" in x and "deck_b_zh" in x for x in m))
+
+    def test_import_warning_uses_zh_card_name(self):
+        h = user_headers()
+        text = "\n".join(["4 Dragapult ex TWM 130"] * 5)   # 超同名上限
+        r = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "中文校验用例"})
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertFalse(d["ok"])
+        # 校验错误里出现的是英文名（用户输入原文），但卡池 meta 附带中文展示名供前端渲染
+        meta = next(e["meta"] for e in d["parsed"] if e["matched"])
+        self.assertEqual(meta["display"], "多龙巴鲁托ex")
+        self.assertEqual(meta["name"], "Dragapult ex")
+
+
+class TestI18nZhLabels(unittest.TestCase):
+    """i18n：卡名 / 招式 / 卡组名对外展示一律中文（英文仍为数据键）"""
+
+    def test_presets_label_is_chinese(self):
+        h = user_headers()
+        rows = client.get("/decks/presets", headers=h).json()["presets"]
+        self.assertEqual(rows[0]["label"], "多龙巴鲁托ex / 黑夜魔灵")
+        self.assertEqual(rows[0]["label_en"], "Dragapult ex / Dusknoir")
+        self.assertEqual(rows[3]["label"], "基础盒（厄诡椪ex / 皮皮ex）")
+
+    def test_preset_detail_cards_have_zh_display(self):
+        h = user_headers()
+        d = client.get("/decks/presets/A1", headers=h).json()
+        by_en = {c["name"]: c for c in d["cards"]}
+        self.assertEqual(by_en["Dragapult ex"]["display"], "多龙巴鲁托ex")
+        self.assertEqual(by_en["Ultra Ball"]["display"], "高级球")
+        self.assertEqual(by_en["Basic Fire Energy"]["display"], "基本火能量")
+        self.assertTrue(all(c.get("display") for c in d["cards"]))
+        # 英文键保持不变（数据/追溯用）
+        self.assertIn("Dragapult ex", by_en)
+
+    def test_battle_view_carries_zh_names(self):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": 7})
+        self.assertEqual(r.status_code, 201, r.text)
+        view = r.json()["view"]
+        hand = view["me_state"]["hand"]
+        self.assertTrue(all(c.get("display") for c in hand))
+        self.assertTrue(any(not c["display"].isascii() for c in hand))
+        legal = view["legal"]
+        self.assertTrue(legal)
+        # 招式/训练家等合法动作应能在前端解析为中文（引擎提供 name_zh/display 依据）
+        fp = view["me_state"]["active"] or (view["me_state"]["bench"] or [None])[0]
+        if fp:
+            for atk in fp["attacks"]:
+                self.assertTrue(atk["display"])
+
+    def test_report_and_matrix_are_chinese(self):
+        """池任务报告（md/csv）与统计矩阵输出中文卡组名"""
+        h = user_headers()
+        r = client.post("/batch/pool-jobs", headers=h,
+                        json={"decks_a": ["A1"], "decks_b": ["A3"],
+                              "games_each": 4, "seed_start": 31})
+        self.assertIn(r.status_code, (200, 202), r.text)
+        jid = r.json()["id"]
+        done = _wait_job(jid, headers=h, timeout=120)
+        self.assertEqual(done["status"], "done", done)
+        md = client.get(f"/batch/jobs/{jid}/report?format=md", headers=h).text
+        self.assertIn("多龙巴鲁托ex", md)
+        self.assertIn("N的索罗亚克ex", md)
+        csv = client.get(f"/batch/jobs/{jid}/report?format=csv", headers=h).text
+        self.assertIn("我方卡组", csv.splitlines()[0])
+        self.assertIn("多龙巴鲁托ex", csv)
+        js = client.get(f"/batch/jobs/{jid}/report?format=json", headers=h).json()
+        cell = js["cells"][0]
+        self.assertEqual(cell["deck_a"], "A1")            # 英文键不变
+        self.assertEqual(cell["deck_a_zh"], "A1 · 多龙巴鲁托ex / 黑夜魔灵")
+        self.assertEqual(cell["deck_b_zh"], "A3 · N的索罗亚克ex")
+        m = client.get("/stats/summary", headers=h).json()["matrix"]
+        self.assertTrue(m)
+        self.assertTrue(all("deck_a_zh" in x and "deck_b_zh" in x for x in m))
+
+    def test_import_warning_uses_zh_card_name(self):
+        h = user_headers()
+        text = "\n".join(["4 Dragapult ex TWM 130"] * 5)   # 超同名上限
+        r = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "中文校验用例"})
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertFalse(d["ok"])
+        # 校验错误里出现的是英文名（用户输入原文），但卡池 meta 附带中文展示名供前端渲染
+        meta = next(e["meta"] for e in d["parsed"] if e["matched"])
+        self.assertEqual(meta["display"], "多龙巴鲁托ex")
+        self.assertEqual(meta["name"], "Dragapult ex")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Pill, LogBlock } from './ui.jsx'
 import { t } from '../i18n.js'
+import { shortDeck } from '../api.js'
 
 /** 统计与报告组件（UI 规范 §5.4 胜率矩阵 / §5.5 导出条） */
 
@@ -34,8 +35,16 @@ function _agg(list) {
 }
 
 export function WinrateMatrix({ rows }) {
+  // 展示名：优先 API 下发的中文字段，其次本地短标签映射（id 保持英文作数据键）
+  const zhA = (r) => r.deck_a_zh || shortDeck(r.deck_a)
+  const zhB = (r) => r.deck_b_zh || shortDeck(r.deck_b)
   const decksA = [...new Set(rows.map((r) => r.deck_a))]
   const decksB = [...new Set(rows.map((r) => r.deck_b))]
+  const nameOf = (id, list) => {
+    const hit = list.find((r) => r.deck_a === id) || list.find((r) => r.deck_b === id)
+    if (!hit) return shortDeck(id)
+    return hit.deck_a === id ? zhA(hit) : zhB(hit)
+  }
   const cell = (a, b) => rows.find((r) => r.deck_a === a && r.deck_b === b)
   const rowAgg = (a) => _agg(rows.filter((r) => r.deck_a === a))
   const colAgg = (b) => _agg(rows.filter((r) => r.deck_b === b))
@@ -63,7 +72,7 @@ export function WinrateMatrix({ rows }) {
           <thead>
             <tr>
               <th scope="col">我方 \ 对手</th>
-              {decksB.map((b) => <th key={b} scope="col" className="mono">{b}</th>)}
+              {decksB.map((b) => <th key={b} scope="col">{nameOf(b, rows)}</th>)}
               <th scope="col" className="agg-h">行平均</th>
             </tr>
           </thead>
@@ -72,7 +81,7 @@ export function WinrateMatrix({ rows }) {
               const ra = rowAgg(a)
               return (
                 <tr key={a}>
-                  <th scope="row" className="mono">{a}</th>
+                  <th scope="row">{nameOf(a, rows)}</th>
                   {decksB.map((b) => {
                     if (a === b) {
                       return <td key={b} className="diag" title="自对自身无意义（对角线）">—</td>
@@ -81,7 +90,7 @@ export function WinrateMatrix({ rows }) {
                     if (!c) return <td key={b} className="muted">·</td>
                     const pct = (c.win_rate_a * 100).toFixed(1)
                     const st = heatStyle(c.win_rate_a, c.n)
-                    const label = `${a} vs ${b}：胜率 ${pct}%（n=${c.n}，95%CI ±${c.ci95}）`
+                    const label = `${nameOf(a, rows)} vs ${nameOf(b, rows)}：胜率 ${pct}%（n=${c.n}，95%CI ±${c.ci95}）`
                     return (
                       <td key={b} className="mono heat" style={{ background: st.background, color: st.color }}
                         tabIndex={0} role="cell" aria-label={label} title={label}>

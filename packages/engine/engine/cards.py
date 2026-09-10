@@ -35,6 +35,7 @@ class AttackDef:
     damage: int = 0
     effects: tuple = ()
     desc: str = ""
+    name_zh: str = ""               # 中文展示名（i18n：英文为数据键，中文用于前端/日志）
 
     def __post_init__(self):
         object.__setattr__(self, "cost", _norm_cost(self.cost))
@@ -59,6 +60,16 @@ class AbilityDef:
     tag: str = "recon:2"
     location: str = "field"       # field | hand
     desc: str = ""
+    name_zh: str = ""             # 中文展示名
+
+
+# 卡定义注册表（名称 → PokemonDef）：用于按名取中文展示名（如进化链来源）
+POKEMON_REGISTRY: dict = {}
+
+
+def pokemon_def(name):
+    """按英文名查已定义的宝可梦（未登记 → None）"""
+    return POKEMON_REGISTRY.get(name) if name else None
 
 
 @dataclass(frozen=True)
@@ -76,18 +87,32 @@ class PokemonDef:
     evolves_from: Optional[str] = None  # E2: 由谁进化而来
     abilities: tuple = ()             # E3: tuple[AbilityDef]
     desc: str = ""
+    name_zh: str = ""                 # 中文展示名
+
+    def __post_init__(self):
+        POKEMON_REGISTRY.setdefault(self.name, self)
+
+    @property
+    def display(self) -> str:
+        """展示名：优先中文，缺省回退英文"""
+        return self.name_zh or self.name
 
 
 @dataclass(frozen=True)
 class EnergyDef:
     """能量牌（v0.2 支持彩色）"""
     type: str = COLORLESS
-    name: str = ""                    # 展示用；默认按 type 生成
+    name: str = ""                    # 数据键；默认按 type 生成
+    name_zh: str = ""                 # 中文展示名（如「基本火能量」）
 
     def __post_init__(self):
         if not self.name:
             object.__setattr__(self, "name",
                                f"{self.type.capitalize()} Energy")
+
+    @property
+    def display(self) -> str:
+        return self.name_zh or self.name
 
 
 @dataclass(frozen=True)
@@ -95,7 +120,12 @@ class TrainerDef:
     """训练家牌定义（E4 最小集，行为由 tag 派发）"""
     tag: str                          # poffin / ultra_ball / hammer / boss ...
     kind: str = "item"                # item | supporter
-    name: str = ""
+    name: str = ""                    # 数据键
+    name_zh: str = ""                 # 中文展示名
+
+    @property
+    def display(self) -> str:
+        return self.name_zh or self.name
 
     def __post_init__(self):
         if not self.name:
@@ -205,7 +235,9 @@ class FieldPokemon:
 
     def summary(self) -> dict:
         return {
-            "name": self.name, "hp": self.max_hp, "dmg": self.damage,
+            "name": self.name, "name_zh": self.pdef.name_zh,
+            "display": self.pdef.display,
+            "hp": self.max_hp, "dmg": self.damage,
             "energy": self.total_energy(), "energy_map": dict(self.energy),
             "status": sorted(self.status), "stage": self.stage,
         }

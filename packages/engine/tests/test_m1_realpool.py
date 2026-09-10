@@ -152,5 +152,67 @@ class TestRealDeckBattles(unittest.TestCase):
         self.assertEqual(b1.turn_counts, b2.turn_counts)
 
 
+class TestI18nZhNames(unittest.TestCase):
+    """i18n：卡名 / 招式 / 特性 / 卡组名 均提供中文展示层（英文保留为数据键）"""
+
+    def test_catalog_has_zh_for_all_cards(self):
+        cat = reallib.catalog()
+        missing = [n for n, it in cat.items() if not it["def"].display]
+        self.assertEqual(missing, [], f"缺中文展示名：{missing}")
+        self.assertEqual(cat["Dragapult ex"]["def"].display, "多龙巴鲁托ex")
+        self.assertEqual(cat["Dusknoir"]["def"].display, "黑夜魔灵")
+        self.assertEqual(cat["Ogerpon ex"]["def"].display, "厄诡椪ex")
+        self.assertEqual(cat["Ultra Ball"]["def"].display, "高级球")
+        self.assertEqual(cat["Professor's Research"]["def"].display, "博士的研究")
+        self.assertEqual(cat["Basic Fire Energy"]["def"].display, "基本火能量")
+
+    def test_attacks_and_abilities_have_zh(self):
+        cat = reallib.catalog()
+        drag = cat["Dragapult ex"]["def"]
+        names = {a.name: a.name_zh for a in drag.attacks}
+        self.assertEqual(names["Phantom Dive"], "幻影俯冲")
+        self.assertEqual(names["Jet Headbutt"], "喷射头击")
+        self.assertEqual(cat["Drakloak"]["def"].abilities[0].name_zh, "侦察指令")
+        self.assertEqual(cat["Dusknoir"]["def"].abilities[0].name_zh, "诅咒爆破")
+        # 英文数据键必须保持不变（Limitless 文本匹配以此为准）
+        self.assertEqual(drag.name, "Dragapult ex")
+
+    def test_archetype_labels_are_chinese(self):
+        rows = reallib.archetypes()
+        self.assertEqual([r["id"] for r in rows], ["A1", "A2", "A3", "A4"])
+        self.assertEqual(rows[0]["label"], "多龙巴鲁托ex / 黑夜魔灵")
+        self.assertEqual(rows[3]["label"], "基础盒（厄诡椪ex / 皮皮ex）")
+        self.assertEqual(rows[0]["label_en"], "Dragapult ex / Dusknoir")
+        for r in rows:
+            latin = [ch for ch in r["label"] if ch.isascii() and ch.isalpha()]
+            self.assertTrue(set(latin) <= {"A", "N", "e", "x"},
+                            f"{r['label']} 残留拉丁字母：{''.join(latin)}")
+
+    def test_view_carries_display_names(self):
+        b = Battle(dl.make_deck("A1"), dl.make_deck("A3"), seed=7)
+        v = b.view()
+        hand = v["me_state"]["hand"]
+        self.assertTrue(hand)
+        self.assertTrue(all(c.get("display") for c in hand))
+        self.assertTrue(any(not c["display"].isascii() for c in hand),
+                        "手牌展示名应出现中文")
+        fp = v["me_state"]["active"] or (v["me_state"]["bench"] or [None])[0]
+        if fp:
+            self.assertTrue(fp["display"])
+            for atk in fp["attacks"]:
+                self.assertTrue(atk["display"])
+            for ab in fp["abilities"]:
+                self.assertTrue(ab["display"])
+
+    def test_demo_deck_zh_labels(self):
+        self.assertEqual(dl.deck_label_zh("draco"), "龙系进化演示卡组")
+        self.assertEqual(dl.deck_label_zh("A3"), "A3 · N的索罗亚克ex")
+        self.assertEqual(dl.deck_label_zh("unknown-x"), "unknown-x")
+        b = Battle(dl.make_deck("draco"), dl.make_deck("lightning"), seed=3)
+        names = [c.get("display") for c in b.view()["me_state"]["hand"]]
+        self.assertTrue(any(n and not n.isascii() for n in names),
+                        "演示卡组手牌也应有中文名")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

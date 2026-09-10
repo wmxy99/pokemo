@@ -18,6 +18,7 @@ from fastapi.responses import PlainTextResponse
 
 from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
+from .labels import deck_label_zh, card_display
 from .sse import sse_response, FINAL, parse_last_event_id as sse_parse_last
 
 router = APIRouter(prefix="/batch", tags=["batch"])
@@ -306,8 +307,8 @@ def report(job_id: str, p: Principal = Depends(current_user),
                      f"{params.get('games_each')} 局 = "
                      f"{params.get('total_games')} 局")
     else:
-        lines.append(f"- 卡组：{params.get('deck_a')}（A）vs "
-                     f"{params.get('deck_b')}（B）")
+        lines.append(f"- 卡组：{deck_label_zh(params.get('deck_a'))}（A）vs "
+                     f"{deck_label_zh(params.get('deck_b'))}（B）")
     lines += [f"- 实际完成：{res.get('n')} 局 · seed 起点：{res.get('seed_start')}",
               f"- 总胜率（A）：{res.get('win_rate_a')} · 平均回合："
               f"{res.get('avg_turns')}",
@@ -318,20 +319,27 @@ def report(job_id: str, p: Principal = Depends(current_user),
                   "| 我方 \\ 对手 | n | A 胜率 | 95%CI | 平均回合 |",
                   "|---|---|---|---|---|"]
         for c in cells:
-            lines.append(f"| {c['deck_a']} vs {c['deck_b']} | {c['n']} | "
+            lines.append(f"| {deck_label_zh(c['deck_a'])} vs "
+                         f"{deck_label_zh(c['deck_b'])} | {c['n']} | "
                          f"{c['win_rate_a']:.4f} | ±{c['ci95']} | "
                          f"{c['avg_turns']} |")
     if format == "json":
         import json as _json
+        # 保留英文原始键（数据键不变），另附中文展示字段
+        cells_zh = [{**c, "deck_a_zh": deck_label_zh(c["deck_a"]),
+                     "deck_b_zh": deck_label_zh(c["deck_b"])} for c in cells]
         return PlainTextResponse(
-            _json.dumps({**res, "params": params}, ensure_ascii=False,
-                        indent=1), media_type="application/json")
+            _json.dumps({**res, "cells": cells_zh, "params": params},
+                        ensure_ascii=False, indent=1),
+            media_type="application/json")
     if format == "csv":
-        head = "deck_a,deck_b,n,wins_a,losses_a,draws,win_rate_a,ci95,avg_turns"
-        rows = [",".join(str(c.get(k)) for k in
-                         ("deck_a", "deck_b", "n", "wins_a", "losses_a",
-                          "draws", "win_rate_a", "ci95", "avg_turns"))
-                for c in cells]
+        # 报告面向人阅读 → 卡组名输出中文；表头亦中文
+        head = "我方卡组,对手卡组,对局数,A胜场,A负场,平局,A胜率,95%CI,平均回合"
+        rows = [",".join([deck_label_zh(c["deck_a"]), deck_label_zh(c["deck_b"]),
+                          str(c.get("n")), str(c.get("wins_a")),
+                          str(c.get("losses_a")), str(c.get("draws")),
+                          str(c.get("win_rate_a")), str(c.get("ci95")),
+                          str(c.get("avg_turns"))]) for c in cells]
         return PlainTextResponse(head + "\n" + "\n".join(rows),
                                  media_type="text/csv; charset=utf-8")
     return PlainTextResponse("\n".join(lines),

@@ -64,12 +64,14 @@ def _build_card(entry: dict):
             AttackDef(a["name"], cost=_cost(a.get("cost")),
                       damage=int(a.get("damage", 0)),
                       effects=tuple(a.get("effects", ())),
-                      desc=a.get("desc", ""))
+                      desc=a.get("desc", ""),
+                      name_zh=a.get("name_zh", ""))
             for a in entry.get("attacks", []))
         abilities = tuple(
             AbilityDef(ab["name"], tag=ab.get("tag", ""),
                        location=ab.get("location", "field"),
-                       desc=ab.get("desc", ""))
+                       desc=ab.get("desc", ""),
+                       name_zh=ab.get("name_zh", ""))
             for ab in entry.get("abilities", []))
         return PokemonDef(
             entry["name"], hp=int(entry["hp"]),
@@ -78,12 +80,13 @@ def _build_card(entry: dict):
             retreat=int(entry.get("retreat", 1)), attacks=attacks,
             is_ex=bool(entry.get("is_ex")), stage=int(entry.get("stage", 0)),
             evolves_from=entry.get("evolves_from"), abilities=abilities,
-            desc=entry.get("note", ""))
+            desc=entry.get("note", ""), name_zh=entry.get("name_zh", ""))
     if st == "Trainer":
         return TrainerDef(entry["tag"], kind=entry.get("kind", "item"),
-                          name=entry["name"])
+                          name=entry["name"], name_zh=entry.get("name_zh", ""))
     if st == "Energy":
-        return EnergyDef(entry.get("type", "colorless"), name=entry["name"])
+        return EnergyDef(entry.get("type", "colorless"), name=entry["name"],
+                         name_zh=entry.get("name_zh", ""))
     raise ValueError(f"未知 supertype: {st} ({entry.get('name')})")
 
 
@@ -117,6 +120,14 @@ def catalog() -> dict:
     return out
 
 
+def display_name(name: str) -> str:
+    """卡名中文展示（英文为数据键；未收录中文时回退英文）"""
+    item = catalog().get(name)
+    if item is None:
+        return name
+    return item["def"].display
+
+
 @lru_cache(maxsize=1)
 def catalog_meta() -> dict:
     return _catalog_raw()["meta"]
@@ -141,7 +152,10 @@ def archetypes() -> list:
     for a in _decklists_raw()["archetypes"]:
         cov = coverage(a["id"])
         out.append({
-            "id": a["id"], "label": a["label"], "role": a.get("role", ""),
+            "id": a["id"],
+            "label": a.get("label_zh") or a["label"],       # 中文（前端直接展示）
+            "label_en": a["label"],                          # 英文原型名（数据/出处追溯）
+            "role": a.get("role", ""),
             "style": a.get("style", ""), "note": a.get("meta_note", ""),
             "cards_total": cov["total"],
             "unique_cards": cov["unique_cards"],
@@ -208,7 +222,8 @@ def coverage(arch_id: str) -> dict:
     replaced_n = sum(r["count"] for r in replaced)
     playable = total - replaced_n
     return {
-        "id": a["id"], "label": a["label"], "total": total,
+        "id": a["id"], "label": a.get("label_zh") or a["label"],
+        "label_en": a["label"], "total": total,
         "unique_cards": unique, "playable": playable,
         "executable_rate": round(playable / total, 4) if total else 0.0,
         "replaced": replaced, "approximated": approximated,
@@ -226,7 +241,10 @@ def describe(arch_id: str) -> dict:
         item = cat.get(entry["name"])
         status = "replaced" if (item is None or item["unsupported"]) else (
             "approximated" if item["reason"] else "mapped")
-        cards.append({"name": entry["name"], "count": int(entry["count"]),
+        cards.append({"name": entry["name"],
+                      "name_zh": (item["meta"].get("name_zh") if item else ""),
+                      "display": (item["def"].display if item else entry["name"]),
+                      "count": int(entry["count"]),
                       "status": status,
                       "engine": (item["meta"].get("supertype")
                                  if item else None),

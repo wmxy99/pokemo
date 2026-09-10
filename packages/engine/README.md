@@ -90,6 +90,24 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | 确定性 | `random.Random(seed)` 全驱动：同 seed → 同事件序列（有单测） |
 | 事件日志 | 结构化 dict 序列 → `matches.events_log` JSONL 可直接落库 |
 
+## i18n · 中文展示层（英文为数据键）
+
+| 层 | 字段 | 说明 |
+|---|---|---|
+| 卡池数据 | `name`（英文） + `name_zh`（中文） | 英文是**数据键**（Limitless 文本匹配/文件字段/URL 参数）；中文用于展示 |
+| 卡定义 | `PokemonDef/TrainerDef/EnergyDef.name_zh`、`.display`（中文优先，缺省回退英文） | `AttackDef.name_zh` / `AbilityDef.name_zh` 覆盖招式与特性 |
+| 卡表 | `decklists.json` 的 `label`（英文原型） + `label_zh`（中文卡组名） | `reallib.archetypes()` 返回 `label`(中文) + `label_en` |
+| 视图 | `view()` 的每条手牌/场上宝可梦/招式/特性都带 `name_zh` 与 `display` | 前端直接渲染 `display` 即全中文 |
+| 卡组名 | `decklib.deck_label_zh(id)`（`A1` → 「A1 · 多龙巴鲁托ex / 黑夜魔灵」） | 演示卡组亦有中文名 |
+| 注册表 | `cards.pokemon_def(name)` | 按英文键取定义（用于进化链中文名等） |
+
+```python
+from engine import reallib, decklib
+reallib.display_name("Dragapult ex")      # '多龙巴鲁托ex'
+reallib.archetypes()[0]["label"]          # '多龙巴鲁托ex / 黑夜魔灵'
+decklib.deck_label_zh("draco")            # '龙系进化演示卡组'
+```
+
 ## ⚠️ 规则边界（与官方规则的已知差异，后续经 ptcg-engine oracle 校准）
 
 1. ~~能量不分颜色~~ → **v0.2 已支持彩色**；特殊能量（宝可梦能量/双重能量）仍为灰名单；

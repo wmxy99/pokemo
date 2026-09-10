@@ -47,3 +47,4 @@ apps/api/tests/_append_tests.py
 apps/api/data/
 apps/web/dist4/
 apps/web/dist5/
+apps/web/dist6/

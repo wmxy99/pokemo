@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { api, DECKS } from '../api.js'
+import { api, DECKS, shortDeck } from '../api.js'
 import { t } from '../i18n.js'
 import { TaskCard, TaskTable, QuotaHint } from '../components/tasks.jsx'
 import { EmptyState, LogBlock, ErrBar, Pill, SsePill } from '../components/ui.jsx'
@@ -232,7 +232,9 @@ export default function BatchPage({ onMsg }) {
               <tbody>
                 {cells.map((c, i) => (
                   <tr key={i}>
-                    <td className="mono sm">{c.deck_a} vs {c.deck_b}</td>
+                    <td className="sm">{c.deck_a_zh || shortDeck(c.deck_a)}
+                      {' vs '}
+                      {c.deck_b_zh || shortDeck(c.deck_b)}</td>
                     <td className="mono">{c.n}</td>
                     <td className={`mono ${c.win_rate_a >= 0.5 ? 'win' : 'lose'}`}>
                       {(c.win_rate_a * 100).toFixed(1)}%</td>

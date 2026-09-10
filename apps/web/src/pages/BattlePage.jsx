@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { api, DECKS } from '../api.js'
 import { t } from '../i18n.js'
+import { verbLabel } from '../verbs.js'
 import { Zone, ActionPanel, TurnLog, SeedBar } from '../components/battle.jsx'
+import { actionContext } from '../names.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 
@@ -48,9 +50,11 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     try {
       const r = await api.act(state.id, a)
       setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
+      const ctx = actionContext(state.view)          // 提交前的局面（含中文名）
+      const zh = (x) => verbLabel(x, ctx)
       setLog((l) => [...l,
-        `> 我方：${a.verb}${a.index != null ? ' #' + a.index : ''}${a.attack != null ? ' atk' + a.attack : ''}`,
-        ...(r.ai_actions || []).map((x) => `< AI：${x.verb}${x.index != null ? ' #' + x.index : ''}`),
+        `> 我方：${zh(a)}`,
+        ...(r.ai_actions || []).map((x) => `< AI：${x.verb === 'attack' ? '攻击' : verbLabel(x)}`),
         r.winner != null ? `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==` : null,
       ].filter(Boolean))
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
@@ -141,6 +145,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
             <Zone title="我方" st={view.me_state} side="me" showHand />
           </div>
           <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
+            ctx={actionContext(view)}
             onAct={act}
             hint={finished ? '对局已结束' : '（等待对手 / 无可用动作）'} />
           <TurnLog lines={log} />

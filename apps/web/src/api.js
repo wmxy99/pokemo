@@ -80,23 +80,28 @@ export const api = {
   adminSetRole: (name, role) => req(`/admin/users/${name}?role=${role}`, { method: 'PATCH' }),
 }
 
-// 卡组字典：M1 起预设 A1–A4 为**真实卡表**（引擎可直接 make_deck('A1')）
+// 卡组字典（中文展示；id 为数据键，保持英文）
 export const DECKS = [
-  { id: 'A1', label: 'A1 · Dragapult ex / Dusknoir（真实卡表）' },
-  { id: 'A2', label: 'A2 · Dragapult ex / Blaziken ex（真实卡表）' },
-  { id: 'A3', label: "A3 · N's Zoroark ex（真实卡表）" },
-  { id: 'A4', label: 'A4 · Basic Box（真实卡表）' },
-  { id: 'draco', label: 'Draco line（Y 版映射）' },
-  { id: 'lightning', label: 'Lightning demo' },
-  { id: 'fire', label: 'Fire demo' },
-  { id: 'psychic', label: 'Psychic demo' },
-  { id: 'ability_demo', label: 'Ability demo' },
-  { id: 'grass', label: 'Grass demo' },
-  { id: 'status_demo', label: 'Status demo' },
+  { id: 'A1', label: 'A1 · 多龙巴鲁托ex / 黑夜魔灵（真实卡表）' },
+  { id: 'A2', label: 'A2 · 多龙巴鲁托ex / 火焰鸡ex（真实卡表）' },
+  { id: 'A3', label: 'A3 · N的索罗亚克ex（真实卡表）' },
+  { id: 'A4', label: 'A4 · 基础盒 · 厄诡椪ex / 皮皮ex（真实卡表）' },
+  { id: 'draco', label: '龙系进化演示卡组' },
+  { id: 'lightning', label: '雷电演示卡组' },
+  { id: 'fire', label: '火系演示卡组' },
+  { id: 'psychic', label: '超能演示卡组' },
+  { id: 'ability_demo', label: '特性演示卡组' },
+  { id: 'grass', label: '草系演示卡组' },
+  { id: 'status_demo', label: '状态流演示卡组' },
 ]
 
-/** 预设卡组短标签（矩阵/表格用，避免长名撑破列宽） */
 export function shortDeck(id) {
-  const m = { A1: 'A1 Dragapult/Dusknoir', A2: 'A2 Dragapult/Blaziken', A3: "A3 N's Zoroark", A4: 'A4 Basic Box' }
+  const m = {
+    A1: '多龙巴鲁托ex/黑夜魔灵', A2: '多龙巴鲁托ex/火焰鸡ex',
+    A3: 'N的索罗亚克ex', A4: '基础盒',
+    draco: '龙系进化演示', lightning: '雷电演示', fire: '火系演示',
+    psychic: '超能演示', ability_demo: '特性演示', grass: '草系演示',
+    status_demo: '状态流演示',
+  }
   return m[id] || id
 }

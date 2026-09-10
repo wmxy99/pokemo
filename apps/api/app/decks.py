@@ -68,6 +68,8 @@ def _pool() -> dict:
     def _put_pokemon(name, pdef, source, engine_ready=True, note=""):
         out[name.lower()] = {
             "kind": "pokemon", "name": name,
+            "name_zh": getattr(pdef, "name_zh", ""),
+            "display": getattr(pdef, "display", name),
             "stage": getattr(pdef, "stage", 0),
             "is_ex": bool(getattr(pdef, "is_ex", False)),
             "hp": getattr(pdef, "hp", None),
@@ -86,12 +88,16 @@ def _pool() -> dict:
                              note=item["reason"])
             elif meta.get("supertype") == "Energy":
                 out[name.lower()] = {"kind": "energy", "name": name,
+                                     "name_zh": getattr(cdef, "name_zh", ""),
+                                     "display": getattr(cdef, "display", name),
                                      "is_basic": False, "is_basic_energy": True,
                                      "engine_ready": True, "source": "real-pool"}
                 _POOL_OBJ[name.lower()] = cdef
             else:                                    # Trainer
                 tag = getattr(cdef, "tag", "")
                 out[name.lower()] = {"kind": "trainer", "name": name,
+                                     "name_zh": getattr(cdef, "name_zh", ""),
+                                     "display": getattr(cdef, "display", name),
                                      "is_basic": False, "tag": tag,
                                      "engine_ready": tag != "unsupported",
                                      "note": item["reason"],
@@ -117,6 +123,8 @@ def _pool() -> dict:
                 elif tdef is not None and tdef.name.lower() not in out:
                     out[tdef.name.lower()] = {
                         "kind": "trainer", "name": tdef.name,
+                        "name_zh": getattr(tdef, "name_zh", ""),
+                        "display": getattr(tdef, "display", tdef.name),
                         "is_basic": False, "engine_ready": True,
                         "source": "decklib"}
                     _POOL_OBJ[tdef.name.lower()] = tdef
@@ -124,7 +132,10 @@ def _pool() -> dict:
                     nm = getattr(edef, "name", "Energy")
                     if nm.lower() not in out:
                         out[nm.lower()] = {
-                            "kind": "energy", "name": nm, "is_basic": False,
+                            "kind": "energy", "name": nm,
+                            "name_zh": getattr(edef, "name_zh", ""),
+                            "display": getattr(edef, "display", nm),
+                            "is_basic": False,
                             "is_basic_energy": True, "engine_ready": True,
                             "source": "decklib"}
                         _POOL_OBJ[nm.lower()] = edef
@@ -375,7 +386,8 @@ def presets(p: Principal = Depends(current_user)):
     except Exception as e:                       # noqa: BLE001
         raise HTTPException(500, f"真实卡池不可用：{e}") from e
     return {
-        "presets": [{"id": a["id"], "label": a["label"], "role": a["role"],
+        "presets": [{"id": a["id"], "label": a["label"],
+                     "label_en": a.get("label_en", ""), "role": a["role"],
                      "style": a["style"], "note": a["note"],
                      "cards_total": a["cards_total"],
                      "unique_cards": a["unique_cards"],

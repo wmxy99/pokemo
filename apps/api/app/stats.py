@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 
 from . import store
+from .labels import deck_label_zh
 from .auth import Principal, current_user
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -62,7 +63,9 @@ def summary(p: Principal = Depends(current_user)):
     for (a, b), v in sorted(cells.items()):
         n = v["n"] or 0
         wr = v["wins"] / n if n else 0.0
-        matrix.append({"deck_a": a, "deck_b": b, "n": n,
+        matrix.append({"deck_a": a, "deck_b": b,
+                       "deck_a_zh": deck_label_zh(a),
+                       "deck_b_zh": deck_label_zh(b), "n": n,
                        "win_rate_a": round(wr, 4), "ci95": _ci_half(wr, n)})
     # 近 7 日
     today = datetime.now().date()

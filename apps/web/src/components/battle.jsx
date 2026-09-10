@@ -1,5 +1,6 @@
 import React from 'react'
 import { VERBS, verbLabel } from '../verbs.js'
+import { disp } from '../names.js'
 import { t } from '../i18n.js'
 
 function VerbIcon({ verb, size = 16 }) {
@@ -25,9 +26,9 @@ export function PokeChip({ p, small }) {
   const ko = left === 0
   return (
     <div className={`chip ${small ? 'sm' : ''} ${ko ? 'ko' : ''}`}
-      title={`${p.name || p.card_id || '?'} HP ${left}/${hp}`}
-      aria-label={`${p.name || p.card_id || '?'} HP ${left}/${hp}`}>
-      <span className="chip-name">{p.name || p.card_id || '?'}</span>
+      title={`${disp(p)} HP ${left}/${hp}`}
+      aria-label={`${disp(p)} HP ${left}/${hp}`}>
+      <span className="chip-name">{disp(p)}</span>
     </div>
   )
 }
@@ -84,14 +85,14 @@ export function Zone({ title, st, side, showHand }) {
       </div>
       {side === 'me' && (st.hand || []).length > 0 && (
         <div className="hand sm muted">
-          手牌：{(st.hand || []).map((c, i) => (c.name || c.card_id || '?')).join('、')}
+          手牌：{(st.hand || []).map((c) => disp(c)).join('、')}
         </div>
       )}
     </section>
   )
 }
 
-export function ActionPanel({ legal, disabled, busy, onAct, hint }) {
+export function ActionPanel({ legal, disabled, busy, onAct, hint, ctx }) {
   return (
     <section className="panel-actions" aria-label={t('tip.legal')} title={t('tip.legal')}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -102,9 +103,10 @@ export function ActionPanel({ legal, disabled, busy, onAct, hint }) {
         {(legal || []).length === 0 && <span className="sm muted">{hint || '（无可用动作）'}</span>}
         {(legal || []).map((a, i) => (
           <button key={i} className="act" disabled={disabled}
-            aria-label={verbLabel(a)} onClick={() => onAct(a)}>
+            aria-label={verbLabel(a, ctx)} title={verbLabel(a, ctx)}
+            onClick={() => onAct(a)}>
             <VerbIcon verb={a.verb} />
-            <span>{verbLabel(a)}</span>
+            <span>{verbLabel(a, ctx)}</span>
           </button>
         ))}
       </div>

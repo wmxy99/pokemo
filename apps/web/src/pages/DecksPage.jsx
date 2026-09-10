@@ -200,7 +200,9 @@ export default function DecksPage({ onMsg, onGoBattle }) {
                 {pd.cards.map((c, i) => (
                   <tr key={i}>
                     <td className="mono">{c.count}</td>
-                    <td>{c.name}</td>
+                    <td>{c.display || c.name_zh || c.name}
+                      {c.display && c.display !== c.name && (
+                        <span className="sm muted"> · {c.name}</span>)}</td>
                     <td className="sm muted">{c.engine || '—'}</td>
                     <td>
                       <Pill tone={c.status === 'mapped' ? 'ok' : c.status === 'approximated' ? 'warn' : 'brand'}>

@@ -162,6 +162,22 @@ POST /train/jobs
 - 进度曲线来源：`[k1:eval:*] vs baseline win_rate=*` 行的 stdout 解析；
 - **边界**：训练为长任务（小时级），API 不阻塞；服务重启后进程随重启终止（任务状态留在 SQLite，重启不自动恢复——文档声明）。
 
+## 4.5 展示层本地化（i18n，中文优先）
+
+> 原则：**英文名是数据键**（Limitless 文本匹配、文件/库字段、路径参数都用英文），
+> 对外展示（响应展示字段 / 报告 / 矩阵）一律优先中文。
+
+| 接口 | 中文字段 |
+|---|---|
+| `GET /decks/presets` | `label`（中文）+ `label_en`（英文原型追溯） |
+| `GET /decks/presets/{id}` | 每卡 `display`（中文）+ `name`（英文键） |
+| `POST /decks/import` | `parsed[].meta.name_zh/display`（校验提示渲染用） |
+| `POST /battles` · `GET /battles/{id}` | `view` 内手牌/场上/招式/特性均带 `display`（中文） |
+| `GET /batch/jobs/{id}/report` | md：卡组名中文；csv：**表头与卡组名均中文**；json：保留英文键 + `deck_a_zh`/`deck_b_zh` |
+| `GET /stats/summary` | `matrix[].deck_a_zh/deck_b_zh` |
+
+实现见 `apps/api/app/labels.py`（`deck_label_zh` / `card_display`；未识别的用户自建卡组名原样保留）。
+
 ## 5. 存储与数据目录
 
 **数据目录自动探测**（首个可写者胜，避免协同/沙箱写保护导致 `readonly database`）：

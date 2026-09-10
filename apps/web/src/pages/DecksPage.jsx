@@ -3,7 +3,34 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { Pill, ErrBar, EmptyState, LogBlock, Spinner } from '../components/ui.jsx'
 
-const SAMPLE = `4 Dreepy TWM 128
+// 中文卡表（推荐）：卡名可用中文，系列/编号可省略；英文规范名同样支持
+const SAMPLE_ZH = `4 多龙梅西亚
+4 多龙奇
+3 多龙巴鲁托ex
+2 夜巡灵
+1 彷徨夜灵
+1 黑夜魔灵
+2 愿增猿
+1 含羞苞
+1 土龙弟弟
+1 土龙节节
+1 喵喵ex
+1 吉雉鸡ex
+4 好朋友宝芬
+4 高级球
+3 破坏之锤
+2 老大的指令
+2 反攻捕捉器
+3 博士的研究
+2 奇树
+1 夜之担架
+2 大地之器
+2 神奇糖果
+8 基本超能量
+5 基本火能量`
+
+// 英文规范名（Limitless 原始格式，与官方/社区文本互通）
+const SAMPLE_EN = `4 Dreepy TWM 128
 4 Drakloak TWM 129
 3 Dragapult ex TWM 130
 2 Duskull SIT 68
@@ -15,6 +42,8 @@ const SAMPLE = `4 Dreepy TWM 128
 2 Boss's Orders PAL 172
 8 Basic Psychic Energy SVE 5
 5 Basic Fire Energy SVE 2`
+
+const SAMPLE = SAMPLE_ZH
 
 export default function DecksPage({ onMsg, onGoBattle }) {
   const [text, setText] = useState('')
@@ -67,7 +96,8 @@ export default function DecksPage({ onMsg, onGoBattle }) {
   return (
     <div className="grid cols-2">
       <div className="card">
-        <h3>导入卡组 <span className="pill sm">Limitless 格式：`数量 卡名 系列 编号`</span></h3>
+        <h3>导入卡组
+          <span className="pill sm">支持中文卡名 · `数量 卡名 [系列 编号]`</span></h3>
         <label htmlFor="dn">卡组名称</label>
         <input id="dn" value={name} onChange={(e) => setName(e.target.value)} style={{ width: '100%' }} />
         <label htmlFor="dt">卡表（粘贴；mono 字体）</label>
@@ -78,12 +108,15 @@ export default function DecksPage({ onMsg, onGoBattle }) {
           <button className="primary" disabled={busy || !text.trim()} onClick={doImport}>
             {busy ? <Spinner label="校验中…" /> : t('btn.parse')}
           </button>
-          <button className="ghost" onClick={() => setText(SAMPLE)}>填入示例卡表</button>
+          <button className="ghost" onClick={() => setText(SAMPLE_ZH)}>填入中文示例</button>
+          <button className="ghost" onClick={() => setText(SAMPLE_EN)}>填入英文示例</button>
           <button className="ghost" onClick={() => { setText(''); setRes(null) }}>清空</button>
         </div>
         <p className="sm muted">
           校验规则（PRD F3）：60 张上限 · 同名 ≤4（基本能量豁免）· 必须含基础宝可梦；
           未收录卡进灰名单（C5 差异透明）并标记「不可对战」。
+          <br />卡名既可用<b>中文</b>（多龙巴鲁托ex / 高级球 / 基本超能量），也可用<b>英文规范名</b>
+          （Dragapult ex / Ultra Ball）；中英混写同一张卡按同一张合并计数。
         </p>
         {err && <ErrBar code={err.code} message={err.message} onRetry={doImport} />}
 
@@ -106,9 +139,46 @@ export default function DecksPage({ onMsg, onGoBattle }) {
             {res.warnings.length > 0 && (
               <ul className="warn-list">{res.warnings.map((x, i) => <li key={i} className="sm">⚠ {x}</li>)}</ul>
             )}
+            {res.parsed?.length > 0 && (
+              <details style={{ marginTop: 8 }}>
+                <summary className="sm">
+                  解析明细（{res.parsed.length} 行 · 中文卡名自动归一到英文数据键）
+                </summary>
+                <table className="tbl">
+                  <thead><tr>
+                    <th scope="col">张数</th>
+                    <th scope="col">卡名（展示）</th>
+                    <th scope="col">数据键</th>
+                    <th scope="col">输入</th>
+                    <th scope="col">状态</th>
+                  </tr></thead>
+                  <tbody>
+                    {res.parsed.map((e, i) => (
+                      <tr key={i}>
+                        <td className="mono">{e.count}</td>
+                        <td>{e.display || e.name}
+                          {e.display && e.display !== e.name && (
+                            <span className="sm muted"> · {e.name}</span>)}
+                        </td>
+                        <td className="mono sm">{e.canonical || '—'}</td>
+                        <td className="sm">{e.input_lang === 'zh' ? '中文' : 'EN'}</td>
+                        <td className="sm">
+                          {!e.matched ? <Pill tone="warn">未收录</Pill>
+                            : (e.meta?.engine_ready === false
+                              ? <Pill tone="warn">占位</Pill>
+                              : <Pill tone="ok">可对战</Pill>)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            )}
             <div className="row" style={{ marginTop: 8 }}>
               <button className="ghost sm" onClick={() => doOpening(res.id)}>{t('btn.opening')}</button>
-              <button className="ghost sm" onClick={() => api.exportDeck(res.id).then((r) => { setText(r.text); onMsg('已导出为文本（往返一致）') })}>导出文本</button>
+              <button className="ghost sm" onClick={() => api.exportDeck(res.id, 'zh').then((r) => { setText(r.text); onMsg('已导出中文卡表（可直接再导入）') })}>导出中文</button>
+              <button className="ghost sm" onClick={() => api.exportDeck(res.id, 'en').then((r) => { setText(r.text); onMsg('已导出英文规范名（Limitless 互通）') })}>导出英文</button>
+              <button className="ghost sm" onClick={() => api.importDeck(text, name + ' 副本').then((r) => { setRes(r); load(); onMsg(r.ok ? '副本已保存' : '副本存在校验错误') })}>存为副本</button>
               {res.ok && <button className="primary sm" onClick={onGoBattle}>去对战</button>}
             </div>
           </div>
@@ -137,7 +207,7 @@ export default function DecksPage({ onMsg, onGoBattle }) {
                 <td className="mono">{d.summary?.total ?? '—'}</td>
                 <td>{d.valid ? <Pill tone="ok">通过</Pill> : <Pill tone="brand">未通过</Pill>}</td>
                 <td>
-                  <button className="pill sm" onClick={() => api.exportDeck(d.id).then((r) => { setText(r.text); onMsg('已载入到编辑区') })}>载入</button>
+                  <button className="pill sm" onClick={() => api.exportDeck(d.id, 'zh').then((r) => { setText(r.text); onMsg('已载入中文卡表到编辑区') })}>载入</button>
                   <button className="pill sm" style={{ marginLeft: 6 }} onClick={() => doOpening(d.id)}>起手</button>
                 </td>
               </tr>

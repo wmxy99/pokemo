@@ -207,7 +207,33 @@ def archetype_ids() -> list:
     return reallib.archetype_ids()
 
 
+def resolve_deck_id(name: str) -> str:
+    """卡组名 → 数据键（支持中文展示名：'A1 · 多龙巴鲁托ex / 黑夜魔灵' → 'A1'）
+
+    解析顺序：规范名（大小写回正，'a1' → 'A1'）→ 原始键（'lightning'）→
+    中文展示名（DECK_LABELS_ZH / reallib.archetypes 的 label · label_en）。
+    """
+    key = (name or "").strip()
+    if key.upper() in ALL_DECKS:          # 规范名优先（a1/A1 统一回 'A1'）
+        return key.upper()
+    if key in ALL_DECKS:
+        return key
+    for did, zh in DECK_LABELS_ZH.items():
+        if key == zh or key.startswith(zh) or zh in key:
+            return did
+    try:
+        from . import reallib
+        for a in reallib.archetypes():
+            if key == a["label"] or key == a.get("label_en") or a["label"] in key:
+                return a["id"]
+    except Exception:                                # noqa: BLE001
+        pass
+    return key
+
+
 def make_deck(name: str) -> list:
-    if name not in ALL_DECKS:
-        raise KeyError(f"未知卡组 {name}（可用：{'/'.join(sorted(ALL_DECKS))}）")
-    return ALL_DECKS[name]()
+    did = resolve_deck_id(name)
+    if did not in ALL_DECKS:
+        raise KeyError(f"未知卡组 {name}（可用：{'/'.join(sorted(ALL_DECKS))}；"
+                       f"亦支持中文卡组名）")
+    return ALL_DECKS[did]()

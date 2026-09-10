@@ -33,6 +33,13 @@ export function actionContext(view) {
   const field = [me.active, ...(me.bench || [])]
     .filter(Boolean).map((p) => disp(p))
   const attacks = (me.active?.attacks || []).map((a) => disp(a))
-  const energy = (me.hand || []).find((c) => c.type === 'energy')
-  return { hand, field, attacks, energy: energy ? disp(energy) : '能量' }
+  // 引擎附能量时取**手牌中最后一张**能量（state.attach_energy_to 的实现口径），
+  // 这里与之保持一致，避免手牌有多种能量时标签张冠李戴。
+  const energies = (me.hand || []).filter((c) => c.type === 'energy')
+  const last = energies.length ? energies[energies.length - 1] : null
+  return {
+    hand, field, attacks,
+    energy: last ? disp(last) : '能量',
+    energyList: energies.map((c) => disp(c)),
+  }
 }

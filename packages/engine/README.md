@@ -108,6 +108,19 @@ reallib.archetypes()[0]["label"]          # '多龙巴鲁托ex / 黑夜魔灵'
 decklib.deck_label_zh("draco")            # '龙系进化演示卡组'
 ```
 
+### 中文名作为**输入**（不只展示）
+
+| API | 作用 |
+|---|---|
+| `reallib.resolve_name(zh_or_en)` | 中文展示名 → 英文数据键（`'高级球'` → `'Ultra Ball'`；已是英文键则规范回填；未收录原样返回） |
+| `reallib.zh_index()` | 中文展示名 → 英文键索引（`zh → en` 全量映射，含招式/特性） |
+| `reallib.is_zh_name(s)` | 判断是否含中文（用于提示/归一化） |
+| `decklib.resolve_deck_id(name)` | 卡组名 → 数据键，支持中文（`'A1 · 多龙巴鲁托ex / 黑夜魔灵'` / `'龙系进化演示卡组'` → `A1` / `draco`），大小写回正 |
+| `decklib.make_deck(name)` | 直接接受中文卡组名 |
+
+> 数据键**始终**是英文（Limitless 文本匹配 / 文件与库字段 / URL 参数不变）；
+> 中文只是「输入别名 + 展示名」。
+
 ## ⚠️ 规则边界（与官方规则的已知差异，后续经 ptcg-engine oracle 校准）
 
 1. ~~能量不分颜色~~ → **v0.2 已支持彩色**；特殊能量（宝可梦能量/双重能量）仍为灰名单；

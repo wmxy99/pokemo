@@ -32,6 +32,16 @@ DECKS_FILE = _DATA_DIR / "decklists.json"
 _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
                            "research", "shuffle_draw")
 
+# 基本能量中文名（占位替换时也用中文展示）
+_ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",
+              "water": "水", "lightning": "雷", "fighting": "斗",
+              "metal": "钢", "colorless": ""}
+
+# 基本能量中文名（占位替换时也用中文展示）
+_ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",
+              "water": "水", "lightning": "雷", "fighting": "斗",
+              "metal": "钢", "colorless": ""}
+
 
 # ---------------- 数据加载 ----------------
 def _read(path: Path) -> dict:
@@ -184,8 +194,9 @@ def build_deck(arch_id: str) -> list:
     """
     a = _arch_raw(arch_id)
     cat = catalog()
-    fb = EnergyDef(a.get("fallback_energy", "colorless"),
-                   name=f"Basic {a.get('fallback_energy', 'colorless').title()} Energy")
+    fb_type = a.get("fallback_energy", "colorless")
+    fb = EnergyDef(fb_type, name=f"Basic {fb_type.title()} Energy",
+                   name_zh=f"基本{_ENERGY_ZH[fb_type]}能量")
     out: list = []
     for entry in decklist(arch_id):
         item = cat.get(entry["name"])
@@ -253,3 +264,53 @@ def describe(arch_id: str) -> dict:
     base["cards"] = cards
     base["coverage"] = coverage(arch_id)
     return base
+
+# ---------------- 中文卡名 → 英文键（别名解析） ----------------
+@lru_cache(maxsize=1)
+def zh_index() -> dict:
+    """中文展示名 → 英文数据键（覆盖真实卡池 + Y 版演示卡）
+
+    用途：让「粘贴中文卡表」也能被识别（F3 导入既接受英文规范名，
+    也接受中文展示名；数据键仍统一为英文）。
+    """
+    out: dict = {}
+    for name, item in catalog().items():
+        zh = getattr(item["def"], "name_zh", "") or item["meta"].get("name_zh", "")
+        if zh:
+            out[zh] = name
+    # Y 版演示卡（decklib 模块级定义对象；无 JSON 数据）
+    try:
+        from . import decklib as _dl
+        for v in vars(_dl).values():
+            nm = getattr(v, "name", None)
+            zh = getattr(v, "name_zh", "")
+            if nm and zh:
+                out.setdefault(zh, nm)
+            for atk in getattr(v, "attacks", ()) or ():
+                if getattr(atk, "name", None) and getattr(atk, "name_zh", ""):
+                    out.setdefault(atk.name_zh, atk.name)
+            for ab in getattr(v, "abilities", ()) or ():
+                if getattr(ab, "name", None) and getattr(ab, "name_zh", ""):
+                    out.setdefault(ab.name_zh, ab.name)
+    except Exception:                                # noqa: BLE001
+        pass
+    return out
+
+
+def resolve_name(name: str) -> str:
+    """把（可能是中文的）卡名解析为英文数据键；无法解析时原样返回"""
+    if not name:
+        return name
+    key = str(name).strip()
+    if key in catalog():                             # 已是英文键
+        return key
+    hit = zh_index().get(key)
+    if hit:
+        return hit
+    lowered = {k.lower(): k for k in catalog()}
+    return lowered.get(key.lower(), key)
+
+
+def is_zh_name(name: str) -> bool:
+    """判断输入是否为中文卡名（用于提示/归一化）"""
+    return bool(name) and any("\u4e00" <= ch <= "\u9fff" for ch in str(name))

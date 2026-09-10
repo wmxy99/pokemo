@@ -32,6 +32,8 @@ MAX_CARDS = 60
 MAX_SAME = 4
 # Limitless 行格式：`4 Dreepy TWM 128` / `3 Ultra Ball SVI 196 PH`
 LINE_RE = re.compile(r"^\s*(\d+)\s+(.+?)\s+([A-Z]{2,5})\s+(\d+[a-zA-Z]?)\s*(\*|PH)?\s*$")
+# 简化行：`数量 卡名`（无系列/编号；中文卡表/手写卡表常用）
+SHORT_RE = re.compile(r"^\s*(\d+)\s+(\S.*?)\s*$")
 
 
 # ---------------- 卡池（真实卡池 M1 + demo decks 全量去重 + card-db 补充） ----------------
@@ -160,6 +162,12 @@ def _pool() -> dict:
             con.close()
     except Exception:
         pass
+    # 4) 中文别名索引：让「粘贴中文卡表」也能命中（数据键仍为英文）
+    for key, meta in list(out.items()):
+        zh = meta.get("name_zh")
+        if zh and zh not in out:
+            out[zh] = {**meta, "via": "zh-alias", "canonical": meta.get("name")}
+            _POOL_OBJ[zh] = _POOL_OBJ.get(key)
     _POOL = out
     return out
 
@@ -174,12 +182,20 @@ def _parse(text: str) -> tuple[list, list]:
             continue
         m = LINE_RE.match(line)
         if not m:
+            # 简化格式：`数量 卡名`（无系列/编号）—— 中文卡表常用写法，直接接受
+            m2 = SHORT_RE.match(line)
+            if m2:
+                entries.append({"count": int(m2.group(1)),
+                                "name": m2.group(2).strip(),
+                                "set": None, "num": None, "raw": line,
+                                "format": "short"})
+                continue
             # 容错：只写卡名（默认 1 张）
             if re.match(r"^\d+\s+\S", line):
-                errs.append(f"第 {i} 行无法解析（格式：`数量 卡名 系列 编号`）：{line}")
+                errs.append(f"第 {i} 行无法解析（支持 `数量 卡名 [系列 编号]`）：{line}")
             else:
                 entries.append({"count": 1, "name": line, "set": None,
-                                "num": None, "raw": line})
+                                "num": None, "raw": line, "format": "name-only"})
             continue
         cnt, name, setc, num = int(m.group(1)), m.group(2).strip(), m.group(3), m.group(4)
         entries.append({"count": cnt, "name": name, "set": setc, "num": num,
@@ -187,9 +203,19 @@ def _parse(text: str) -> tuple[list, list]:
     # 匹配卡池 + 外链
     pool = _pool()
     for e in entries:
-        meta = pool.get(e["name"].lower())
+        raw = e["name"]
+        meta = pool.get(raw.lower()) or pool.get(raw.strip())
         e["matched"] = bool(meta)
         e["meta"] = meta
+        if meta:
+            # canonical = 英文数据键（同名上限等按它合并计数）；display = 中文展示名
+            e["canonical"] = meta.get("name")
+            e["display"] = meta.get("display") or meta.get("name_zh") or raw
+            e["input_lang"] = "zh" if any("\u4e00" <= ch <= "\u9fff"
+                                          for ch in raw) else "en"
+        else:
+            e["canonical"] = None
+            e["display"] = raw
         if e.get("set") and e.get("num"):
             e["url"] = f"https://limitlesstcg.com/cards/{e['set']}/{e['num']}"
         else:
@@ -206,10 +232,14 @@ def validate(text: str) -> dict:
         return {"ok": False, "errors": ["卡表为空或格式无法识别"],
                 "warnings": [], "parsed": [], "summary": {}}
     total = sum(e["count"] for e in entries)
-    by_name = Counter()
+    by_name = Counter()          # canonical（英文键）→ 数量：中英混写合并
+    display_of = {}
+    meta_of = {}
     for e in entries:
-        by_name[e["name"].lower()] += e["count"]
-    meta_of = {e["name"].lower(): e["meta"] for e in entries}
+        key = (e.get("canonical") or e["name"]).lower()
+        by_name[key] += e["count"]
+        display_of.setdefault(key, e.get("display") or e["name"])
+        meta_of.setdefault(key, e["meta"])
 
     def _is_basic_energy(key: str) -> bool:
         m = meta_of.get(key) or {}
@@ -219,7 +249,8 @@ def validate(text: str) -> dict:
 
     for key, n in by_name.items():
         if n > MAX_SAME and not _is_basic_energy(key):
-            errors.append(f"「{key}」超过同名上限 {MAX_SAME}（当前 {n}）")
+            errors.append(f"「{display_of.get(key, key)}」超过同名上限 "
+                          f"{MAX_SAME}（当前 {n}）")
     if total > MAX_CARDS:
         errors.append(f"张数 {total} 超过上限 {MAX_CARDS}")
     elif total < MAX_CARDS:
@@ -237,15 +268,16 @@ def validate(text: str) -> dict:
         else:
             errors.append("卡组必须含至少 1 张基础宝可梦")
 
-    unmatched = sorted({k for k, m in meta_of.items() if not m})
+    unmatched = sorted({(display_of.get(k) if False else k)
+                        for k, m in meta_of.items() if not m})
     if unmatched:
-        warnings.append("未收录卡（灰名单/卡库未接入 F2）：" +
+        warnings.append("未收录卡（灰名单，中英文均未命中卡池）：" +
                         "、".join(unmatched[:8]) +
                         ("…" if len(unmatched) > 8 else "") +
                         " → 含此类卡的卡组暂不可对战")
 
     # M1：卡名已收录但引擎未实现（tag=unsupported）→ 对战时可占位替换，显式告知
-    not_impl = sorted({k for k, m in meta_of.items()
+    not_impl = sorted({display_of.get(k, k) for k, m in meta_of.items()
                        if m and not m.get("engine_ready", True)})
     if not_impl:
         warnings.append("引擎未实现卡（M1 灰名单，对战时以基础能量占位）：" +
@@ -296,7 +328,8 @@ def deck_build_report(did: str) -> dict:
     for e in d.get("cards") or []:
         n = int(e.get("count") or 0)
         total += n
-        m = pool.get((e.get("name") or "").lower())
+        raw = e.get("name") or ""
+        m = pool.get((e.get("canonical") or raw).lower()) or pool.get(raw.strip())
         if m is None:
             missing.append({"name": e.get("name"), "count": n,
                             "reason": "卡池未收录"})
@@ -328,18 +361,25 @@ def build_engine_deck(did: str) -> list:
     cards = d.get("cards") or []
     fb_type = _fallback_energy_type(cards)
     from engine.cards import EnergyDef
+    _EZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",
+            "water": "水", "lightning": "雷", "fighting": "斗",
+            "metal": "钢", "colorless": ""}
     deck: list = []
     missing: list = []
     for e in cards:
-        key = (e.get("name") or "").lower()
-        meta = pool.get(key)
-        obj = _POOL_OBJ.get(key)
+        raw = e.get("name") or ""
+        key = (e.get("canonical") or raw).lower()
+        meta = pool.get(key) or pool.get(raw.strip())
+        obj = _POOL_OBJ.get(key) or _POOL_OBJ.get(raw.strip())
         n = int(e.get("count") or 0)
         if meta is None or obj is None:
             missing.append(e.get("name") or "?")
             continue
         if not meta.get("engine_ready", True):
-            deck.extend(_ref_of(EnergyDef(fb_type)) for _ in range(n))
+            # 引擎未实现卡 → 基础能量占位（中文展示名同样给出，C5 透明）
+            deck.extend(_ref_of(EnergyDef(
+                fb_type, name=f"Basic {fb_type.title()} Energy",
+                name_zh=f"基本{_EZH.get(fb_type, '')}能量")) for _ in range(n))
             continue
         deck.extend(_ref_of(obj) for _ in range(n))
     if missing:
@@ -474,17 +514,26 @@ def opening(did: str, trials: int = Query(1000, ge=10, le=10000),
 
 
 @router.get("/{did}/export")
-def export_deck(did: str, p: Principal = Depends(current_user)):
-    """导出为 Limitless 兼容文本（往返一致）"""
+def export_deck(did: str, p: Principal = Depends(current_user),
+                lang: str = Query("zh", pattern="^(zh|en)$")):
+    """导出为 Limitless 兼容文本（往返一致）
+
+    lang=zh（默认）：卡名输出**中文展示名**（如「4 多龙巴鲁托ex」），导入端亦接受中文；
+    lang=en：输出英文规范名（`4 Dragapult ex TWM 130`），与原版 Limitless 文本互通。
+    """
     d = store.get_deck(did)
     if not d:
         raise HTTPException(404, "卡组不存在")
     ensure_owner(d["owner"], p)
     lines = []
     for e in d["cards"] or []:
+        nm = ((e.get("display") or e.get("name")) if lang == "zh"
+              else (e.get("canonical") or e.get("name")))
         if e.get("set") and e.get("num"):
-            lines.append(f"{e['count']} {e['name']} {e['set']} {e['num']}")
+            lines.append(f"{e['count']} {nm} {e['set']} {e['num']}")
         else:
-            lines.append(f"{e['count']} {e['name']}")
-    return {"deck_id": did, "name": d["name"],
-            "text": "\n".join(lines), "count": len(lines)}
+            lines.append(f"{e['count']} {nm}")
+    return {"deck_id": did, "name": d["name"], "lang": lang,
+            "text": "\n".join(lines), "count": len(lines),
+            "note": "中文名可直接再导入（导入端中英文均识别）" if lang == "zh"
+                    else "英文规范名，兼容 Limitless 原版文本"}

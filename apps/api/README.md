@@ -176,6 +176,15 @@ POST /train/jobs
 | `GET /batch/jobs/{id}/report` | md：卡组名中文；csv：**表头与卡组名均中文**；json：保留英文键 + `deck_a_zh`/`deck_b_zh` |
 | `GET /stats/summary` | `matrix[].deck_a_zh/deck_b_zh` |
 
+### 中文卡名作为输入（粘贴中文卡表即可）
+
+- `POST /decks/import`：**卡名可用中文**，系列/编号可省略（`4 多龙巴鲁托ex`）；
+  解析结果每条附 `canonical`（英文数据键）· `display`（中文展示）· `input_lang`（`zh`/`en`）；
+- **中英混写同一张卡按同一张合并计数**（`4 Dragapult ex` + `3 多龙巴鲁托ex` = 7，超 4 张上限报错）；
+- `GET /decks/{id}/export?lang=zh|en`：`zh`（默认）输出中文卡表，`en` 输出 Limitless 规范名；
+  **中文输出可直接再导入**（往返一致）；
+- `POST /battles` 的 `deck_a`/`deck_b` 亦接受中文卡组名（如 `A1 · 多龙巴鲁托ex / 黑夜魔灵`、`龙系进化演示卡组`）。
+
 实现见 `apps/api/app/labels.py`（`deck_label_zh` / `card_display`；未识别的用户自建卡组名原样保留）。
 
 ## 5. 存储与数据目录

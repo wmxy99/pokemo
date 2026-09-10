@@ -214,5 +214,47 @@ class TestI18nZhNames(unittest.TestCase):
                         "演示卡组手牌也应有中文名")
 
 
+class TestZhNameResolution(unittest.TestCase):
+    """中文卡名可作为输入（resolve_name / resolve_deck_id）：数据键仍为英文"""
+
+    def test_zh_index_covers_pool(self):
+        idx = reallib.zh_index()
+        self.assertIn("多龙巴鲁托ex", idx)
+        self.assertEqual(idx["多龙巴鲁托ex"], "Dragapult ex")
+        self.assertEqual(idx["高级球"], "Ultra Ball")
+        self.assertGreaterEqual(len(idx), 40)
+
+    def test_resolve_name_zh_to_en_key(self):
+        self.assertEqual(reallib.resolve_name("多龙巴鲁托ex"), "Dragapult ex")
+        self.assertEqual(reallib.resolve_name("高级球"), "Ultra Ball")
+        self.assertEqual(reallib.resolve_name("基本火能量"), "Basic Fire Energy")
+
+    def test_resolve_name_is_idempotent_for_en(self):
+        """英文键原样返回（大小写不敏感回填规范键）"""
+        self.assertEqual(reallib.resolve_name("Dragapult ex"), "Dragapult ex")
+        self.assertEqual(reallib.resolve_name("dragapult ex"), "Dragapult ex")
+
+    def test_resolve_name_unknown_passthrough(self):
+        self.assertEqual(reallib.resolve_name("不存在的卡"), "不存在的卡")
+        self.assertEqual(reallib.resolve_name(""), "")
+
+    def test_is_zh_name(self):
+        self.assertTrue(reallib.is_zh_name("多龙巴鲁托ex"))
+        self.assertTrue(reallib.is_zh_name("高级球"))
+        self.assertFalse(reallib.is_zh_name("Dragapult ex"))
+        self.assertFalse(reallib.is_zh_name(""))
+
+    def test_resolve_deck_id_supports_zh(self):
+        self.assertEqual(dl.resolve_deck_id("A1"), "A1")
+        self.assertEqual(dl.resolve_deck_id("a1"), "A1")
+        self.assertEqual(dl.resolve_deck_id("A1 · 多龙巴鲁托ex / 黑夜魔灵"), "A1")
+        self.assertEqual(dl.resolve_deck_id("龙系进化演示卡组"), "draco")
+        self.assertEqual(dl.resolve_deck_id("多龙巴鲁托ex / 黑夜魔灵"), "A1")
+
+    def test_make_deck_accepts_zh_deck_name(self):
+        self.assertEqual(len(dl.make_deck("龙系进化演示卡组")), 60)
+        self.assertEqual(len(dl.make_deck("A3 · N的索罗亚克ex")), 60)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -28,9 +28,11 @@ export function verbLabel(a, ctx) {
     return c.energy ? `${zh}：${c.energy} → ${where}` : `${zh} → 目标 #${a.target ?? 0}`
   }
   if (a.verb === 'evolve') {
-    const from = at(c.hand, a.hand)
-    const to = at(c.field, a.target)
-    return from && to ? `${zh}：${from} → ${to}` : `${zh} → 卡位 #${a.hand ?? 0}`
+    const card = at(c.hand, a.hand)          // 手牌中的进化卡
+    const onto = at(c.field, a.target)       // 场上被进化的宝可梦
+    // 读作「场上宝可梦 → 进化后」（更符合玩家心智模型）
+    return card && onto ? `${zh}：${onto} → ${card}`
+      : `${zh} → 卡位 #${a.hand ?? 0}`
   }
   if (a.verb === 'trainer') {
     const nm = at(c.hand, a.hand ?? a.index)

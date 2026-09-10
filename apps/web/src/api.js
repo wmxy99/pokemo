@@ -55,7 +55,7 @@ export const api = {
   deckPresets: () => req('/decks/presets'),
   deckPresetDetail: (id) => req(`/decks/presets/${id}`),
   opening: (id, trials = 1000) => req(`/decks/${id}/opening?trials=${trials}`, { method: 'POST' }),
-  exportDeck: (id) => req(`/decks/${id}/export`),
+  exportDeck: (id, lang = 'zh') => req(`/decks/${id}/export?lang=${lang}`),
   // F7 统计
   statsSummary: () => req('/stats/summary'),
   watchdog: () => req('/stats/watchdog'),

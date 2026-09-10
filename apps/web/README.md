@@ -56,6 +56,11 @@ npm run build
 
 ## 3.5 中文展示（i18n）
 
+- **中文卡名可作输入**：卡组管理页示例卡表为中文（A1 真实卡表 60 张），
+  解析后展示「解析明细」表（张数 / 中文展示名 / 英文数据键 / 输入语言 / 状态）；
+  导出可切换**导出中文**（默认，可直接再导入）与**导出英文**（Limitless 互通）。
+
+
 - `src/names.js`：`disp(o)`（`display` → `name_zh` → `name` 回退）、`actionContext(view)`（把合法动作里的
   索引解析成中文招式/卡名）、`shortDeckLabel`；
 - `verbs.js` 的 `verbLabel(a, ctx)`：动作按钮显示**中文招式名 / 卡名**（如「攻击：幻影俯冲」、

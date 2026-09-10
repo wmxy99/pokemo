@@ -13,10 +13,11 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from . import store, schemas
+from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
+from .sse import sse_response, FINAL as _FINAL
 
 router = APIRouter(prefix="/train", tags=["train"])
 
@@ -32,7 +33,7 @@ _RUNNING_MAX = 2
 
 _EVAL_RE = re.compile(r"\[k1:eval:(\S+)\]\s+vs baseline win_rate=([\d.]+)")
 
-_JOB_DIR = Path(__file__).resolve().parents[1] / "data" / "train_jobs"
+_JOB_DIR = store.DATA_DIR / "train_jobs"          # 与 DB 同目录（可写位置）
 _JOB_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -123,6 +124,31 @@ def train_status(job_id: str, p: Principal = Depends(current_user)):
             "params": j["params"], "result": j["result"],
             "error": j.get("error"),
             "log_tail": lines, "created": j["created"]}
+
+
+@router.get("/jobs/{job_id}/stream")
+def train_stream(job_id: str, token: str = Query(default=""),
+                 lines: int = Query(60, ge=5, le=400),
+                 p: Principal = Depends(current_user)):
+    """SSE 实时训练进度：状态 + 日志 tail + 评估曲线（替代前端轮询）"""
+    if token:
+        p = auth.user_from_token(token)
+    j = store.get_job(job_id)
+    if not j:
+        raise HTTPException(404, "训练任务不存在")
+    ensure_owner(j["owner"], p)
+
+    def snap() -> dict:
+        jj = store.get_job(job_id)
+        logf = _log_paths.get(job_id)
+        tail = _tail(logf, lines) if logf else []
+        return {"id": job_id, "status": jj["status"],
+                "log_tail": tail,
+                "curve": _parse_curve(tail),
+                "result": jj["result"] if jj["status"] in _FINAL else None,
+                "error": jj.get("error")}
+
+    return sse_response(snap, interval=1.0)
 
 
 @router.get("/jobs/{job_id}/log")

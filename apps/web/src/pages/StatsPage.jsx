@@ -55,6 +55,8 @@ export default function StatsPage({ onMsg, onGoBatch }) {
           <StatCard n={k.win_rate_a != null ? (k.win_rate_a * 100).toFixed(1) + '%' : '—'}
             label="A 方总胜率" tone="win" />
           <StatCard n={k.avg_turns ?? '—'} label="平均回合" />
+          <StatCard n={k.pool_jobs ?? 0} label="卡组池任务" />
+          <StatCard n={k.matrix_pairs ?? 0} label="矩阵对位数" />
         </div>
         <p className="sm muted">{sum?.sample_note || '样本量见矩阵 tooltip'}</p>
         <div className="row" style={{ marginTop: 8 }}>

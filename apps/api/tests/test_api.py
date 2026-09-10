@@ -266,5 +266,118 @@ class TestTrain(unittest.TestCase):
                         or any("k1" in x for x in lg.json()["lines"]))
 
 
+# ---------------- F3 打通 / 池矩阵 / SSE ----------------
+def _legal_deck_text() -> str:
+    """从引擎卡池构造 15 种 × 4 张 = 60 张合法卡表（含基础宝可梦）"""
+    from engine import decklib
+    seen = {}
+    for fn in [n for n in dir(decklib) if n.startswith("deck_")]:
+        try:
+            deck = getattr(decklib, fn)()
+        except Exception:
+            continue
+        for c in deck:
+            pdef = getattr(c, "pdef", None)
+            tdef = getattr(c, "tdef", None)
+            edef = getattr(c, "edef", None)
+            if pdef is not None:
+                nm, basic = pdef.name, getattr(pdef, "stage", 0) == 0
+            elif tdef is not None:
+                nm, basic = tdef.name, False
+            elif edef is not None:
+                nm, basic = getattr(edef, "name", "Energy"), False
+            else:
+                continue
+            seen[nm] = basic
+    basics = [n for n, b in seen.items() if b]
+    others = [n for n in seen if n not in basics]
+    picks = (basics[:4] + others)[:15]
+    return "\n".join(f"4 {n} TST 1" for n in picks)
+
+
+class TestF3Battle(unittest.TestCase):
+    """F3 → F5：粘贴卡表 → 校验 → 直接用于对战"""
+
+    def test_imported_deck_plays(self):
+        h = user_headers()
+        text = _legal_deck_text()
+        d = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "F3 对战卡组"}).json()
+        self.assertTrue(d["summary"]["battle_ready"], d.get("errors"))
+        r = client.post("/battles", headers=h,
+                        json={"deck_a_id": d["id"], "deck_b": "fire",
+                              "ai_iters": 0})
+        self.assertEqual(r.status_code, 201, r.text)
+        bid = r.json()["id"]
+        st = client.get(f"/battles/{bid}", headers=h).json()
+        legal = (st["view"] or {}).get("legal") or []
+        act = next((a for a in legal if a.get("verb") == "pass"),
+                   legal[0] if legal else {"verb": "pass"})
+        ar = client.post(f"/battles/{bid}/actions", headers=h,
+                         json={"action": act})
+        self.assertEqual(ar.status_code, 200, ar.text)
+
+    def test_unmatched_deck_blocked(self):
+        h = user_headers()
+        d = client.post("/decks/import", headers=h,
+                        json={"text": "60 Unknown Card TST 1"}).json()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a_id": d["id"], "deck_b": "fire"})
+        self.assertIn(r.status_code, (400, 422), r.text)
+
+
+class TestPoolMatrix(unittest.TestCase):
+    """F7：卡组池批量任务 → cells → 统计矩阵聚合"""
+
+    def test_pool_job_and_matrix(self):
+        h = user_headers()
+        r = client.post("/batch/pool-jobs", headers=h, json={
+            "decks_a": ["lightning", "fire"], "decks_b": ["psychic"],
+            "games_each": 3, "seed_start": 11})
+        self.assertEqual(r.status_code, 202, r.text)
+        jid = r.json()["id"]
+        self.assertEqual(r.json()["pairs"], 2)
+        done = _wait_job(jid, headers=h, timeout=120)
+        self.assertEqual(done["status"], "done", done.get("error"))
+        cells = done["result"]["cells"]
+        self.assertEqual(len(cells), 2)
+        self.assertEqual(sum(c["n"] for c in cells), 6)
+        self.assertIn("ci95", cells[0])
+        rep = client.get(f"/batch/jobs/{jid}/report?format=csv", headers=h).text
+        self.assertIn("deck_a,deck_b", rep)              # 表头
+        self.assertIn("lightning,psychic", rep)          # 首个对位行
+        self.assertGreaterEqual(len(rep.strip().splitlines()), 3)
+        s = client.get("/stats/summary", headers=h).json()
+        self.assertGreaterEqual(len(s["matrix"]), 2)
+        self.assertGreaterEqual(s["kpi"]["pool_jobs"], 1)
+
+
+class TestSSE(unittest.TestCase):
+    """SSE：批量/训练进度流（替代轮询）"""
+
+    def test_batch_stream_events(self):
+        h = user_headers()
+        r = client.post("/batch/jobs", headers=h, json={
+            "deck_a": "lightning", "deck_b": "fire", "games": 6,
+            "seed_start": 3})
+        jid = r.json()["id"]
+        events = []
+        with client.stream("GET", f"/batch/jobs/{jid}/stream",
+                           headers=h) as resp:
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("text/event-stream", resp.headers["content-type"])
+            for line in resp.iter_lines():
+                if line.startswith("event:"):
+                    events.append(line.strip())
+                if "event: end" in line or len(events) > 8:
+                    break
+        self.assertTrue(any("update" in e for e in events), events)
+
+    def test_train_stream_requires_job(self):
+        h = user_headers()
+        r = client.get("/train/jobs/no_such_job/stream", headers=h)
+        self.assertEqual(r.status_code, 404)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

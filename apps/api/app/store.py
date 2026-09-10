@@ -13,13 +13,74 @@ from pathlib import Path
 from typing import Optional
 
 REPO = Path(__file__).resolve().parents[3]          # pokelab-ai
-DB_PATH = Path(__file__).resolve().parents[1] / "data" / "api.db"
-# apps/api/data/api.db
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-_lock = threading.RLock()
-_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+
+def _writable_dir(d: Path) -> bool:
+    """探测目录能否容纳可写 SQLite（新建+写入+清理）"""
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        probe = d / "_wprobe.db"
+        con = sqlite3.connect(str(probe))
+        con.execute("CREATE TABLE IF NOT EXISTS t(x)")
+        con.execute("INSERT INTO t VALUES (1)")
+        con.commit()
+        con.close()
+        try:
+            probe.unlink()
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+
+def _pick_data_dir() -> Path:
+    """数据目录候选（首个可写者胜）：env → 主目录 → 临时目录 → 项目内 data/
+
+    受限环境（协同/沙箱写保护）下项目盘常不可写，自动回退保证服务可用。
+    """
+    import os as _os
+    import tempfile
+    cands = []
+    env = _os.environ.get("POKELAB_DATA_DIR")
+    if env:
+        cands.append(Path(env))
+    cands += [Path.home() / ".pokelab",
+              Path(tempfile.gettempdir()) / "pokelab",
+              Path(__file__).resolve().parents[1] / "data"]
+    for d in cands:
+        if _writable_dir(d):
+            return d
+    return cands[-1]
+
+
+DATA_DIR = _pick_data_dir()
+
+
+def _open_db(d: Path):
+    """打开可写 SQLite：优先 api.db；若既有文件被环境写保护（readonly）→
+    回退到带时间戳的新文件（新建文件总是可写，代价是重启不继承数据）。
+    """
+    last_err = None
+    for name in ("api.db", f"api_{int(time.time())}.db"):
+        p = d / name
+        try:
+            con = sqlite3.connect(str(p), check_same_thread=False)
+            con.execute("CREATE TABLE IF NOT EXISTS _wprobe(x INTEGER)")
+            con.execute("INSERT INTO _wprobe VALUES (1)")
+            con.execute("DELETE FROM _wprobe")
+            con.commit()
+            return p, con
+        except sqlite3.OperationalError as e:        # readonly / locked
+            last_err = e
+            continue
+    raise RuntimeError(f"无可用可写数据库（{d}）：{last_err}")
+
+
+DB_PATH, _conn = _open_db(DATA_DIR)
+DB_FALLBACK = DB_PATH.name != "api.db"
 _conn.row_factory = sqlite3.Row
+_lock = threading.RLock()
 _conn.executescript(
     """
     CREATE TABLE IF NOT EXISTS battles(

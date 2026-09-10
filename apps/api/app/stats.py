@@ -41,12 +41,23 @@ def summary(p: Principal = Depends(current_user)):
         "avg_turns": round(sum(turns) / len(turns), 2) if turns else None,
     }
     # 胜率矩阵（我方 deck_a × 对手 deck_b）
+    # - 单对位任务：1 个 cell
+    # - **卡组池任务**（F7）：展开 result.cells 后逐对位累加（多任务可叠加）
     cells: dict = defaultdict(lambda: {"n": 0, "wins": 0})
+    pool_jobs = 0
     for f in done:
+        res = f["result"] or {}
         pa = f["params"] or {}
-        key = (pa.get("deck_a", "?"), pa.get("deck_b", "?"))
-        cells[key]["n"] += int(f["result"].get("n") or 0)
-        cells[key]["wins"] += int(f["result"].get("wins_a") or 0)
+        if pa.get("pool") and res.get("cells"):
+            pool_jobs += 1
+            for c in res["cells"]:
+                key = (c.get("deck_a", "?"), c.get("deck_b", "?"))
+                cells[key]["n"] += int(c.get("n") or 0)
+                cells[key]["wins"] += int(c.get("wins_a") or 0)
+        else:
+            key = (pa.get("deck_a", "?"), pa.get("deck_b", "?"))
+            cells[key]["n"] += int(res.get("n") or 0)
+            cells[key]["wins"] += int(res.get("wins_a") or 0)
     matrix = []
     for (a, b), v in sorted(cells.items()):
         n = v["n"] or 0
@@ -62,6 +73,8 @@ def summary(p: Principal = Depends(current_user)):
         s1 = s0 + 86400
         n = sum(1 for j in jobs if s0 <= j["created"] < s1)
         recent.append({"date": day.isoformat(), "tasks": n})
+    kpi["pool_jobs"] = pool_jobs
+    kpi["matrix_pairs"] = len(matrix)
     return {"kpi": kpi, "matrix": matrix, "recent7d": recent,
             "declaration": "Unofficial community data · 非官方数据（PRD C1）",
             "sample_note": "样本量标注于矩阵 tooltip；n<30 时 CI 较宽，勿据此下结论"}

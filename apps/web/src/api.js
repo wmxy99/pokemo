@@ -58,6 +58,16 @@ export const api = {
   // F7 统计
   statsSummary: () => req('/stats/summary'),
   watchdog: () => req('/stats/watchdog'),
+  // F7 卡组池矩阵（多对位批量任务）
+  submitPool: (payload) => req('/batch/pool-jobs', { method: 'POST', body: payload }),
+  // SSE 事件流 URL（EventSource 无法带 header → token 走 query）
+  streamUrl: (path, params = {}) => {
+    const q = new URLSearchParams(params)
+    const tk = token.get()
+    if (tk) q.set('token', tk)
+    const qs = q.toString()
+    return BASE + path + (qs ? (path.includes('?') ? '&' : '?') + qs : '')
+  },
   // 训练（M2/M6）
   submitTrain: (payload) => req('/train/jobs', { method: 'POST', body: payload }),
   listTrain: () => req('/train/jobs'),

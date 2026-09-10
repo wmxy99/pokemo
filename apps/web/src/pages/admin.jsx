@@ -89,12 +89,32 @@ export function TrainingPage({ onMsg, authed }) {
   const [err, setErr] = useState(null)
 
   async function load() { try { setJobs((await api.listTrain()).jobs || []) } catch { /* 忽略 */ } }
-  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t) }, [])
+  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t) }, [])
+  // 实时进度：SSE（EventSource）优先，异常自动回退轮询（2s）
   useEffect(() => {
-    if (!detail || detail.status !== 'running') return
-    const t = setTimeout(() => api.trainStatus(detail.id).then(setDetail).catch(() => {}), 2000)
-    return () => clearTimeout(t)
-  }, [detail])
+    if (!detail || detail.status !== 'running') return undefined
+    let es = null, timer = null
+    const startPolling = () => {
+      timer = setInterval(() => {
+        api.trainStatus(detail.id).then((s) => {
+          setDetail(s)
+          if (s.status !== 'running') { clearInterval(timer); load() }
+        }).catch(() => {})
+      }, 2000)
+    }
+    try {
+      es = new EventSource(api.streamUrl(`/train/jobs/${detail.id}/stream`, { lines: 60 }))
+      es.addEventListener('update', (ev) => {
+        try { setDetail((d) => (d ? { ...d, ...JSON.parse(ev.data) } : d)) } catch { /* 忽略 */ }
+      })
+      es.addEventListener('end', () => { es.close(); load() })
+      es.onerror = () => { try { es.close() } catch { /* 忽略 */ } startPolling() }
+    } catch { startPolling() }
+    return () => {
+      if (es) { try { es.close() } catch { /* 忽略 */ } }
+      if (timer) clearInterval(timer)
+    }
+  }, [detail && detail.id, detail && detail.status])   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit() {
     setBusy(true); setErr(null)

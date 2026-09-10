@@ -52,6 +52,11 @@ const clickByText = async (page, sel, text) => page.evaluate((s, t) => {
   ]) {
     await clickByText(page, 'nav.main button', label)
     await take(file)
+    if (key === 'batch') {
+      await clickByText(page, '.seg button', '卡组池矩阵')
+      await clickByText(page, '.preset', 'Lightning')      // 勾选一个池成员
+      await take('02b_front_batch_pool')                   // F7 卡组池矩阵模式
+    }
   }
   await clickByText(page, '.app-switch button', '后台')
   for (const [label, file] of [['仪表盘', '05_admin_dashboard'], ['RL 训练', '06_admin_training'], ['用户管理', '07_admin_users']]) {

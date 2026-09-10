@@ -23,6 +23,8 @@ class DeckImportReq(BaseModel):
 class BattleCreateReq(BaseModel):
     deck_a: Optional[str] = "lightning"      # 我方卡组（name / 文本）
     deck_b: Optional[str] = "fire"           # AI 卡组
+    deck_a_id: Optional[str] = None          # F3 已导入卡组 id（优先于 deck_a）
+    deck_b_id: Optional[str] = None          # 对手也可用导入卡组
     seed: Optional[int] = None
     ai_iters: Optional[int] = Field(0, ge=0, le=200,
                                     description="AI 决策 MCTS iters，0=策略网/uniform")
@@ -36,9 +38,19 @@ class ActionReq(BaseModel):
 class BatchJobReq(BaseModel):
     deck_a: Optional[str] = "lightning"
     deck_b: Optional[str] = "fire"
+    deck_a_id: Optional[str] = None          # 已导入卡组（优先）
+    deck_b_id: Optional[str] = None
     games: int = Field(100, ge=1, le=500)    # 单任务 ≤500（PRD F6）
     seed_start: Optional[int] = 20260909
     ai_iters: Optional[int] = Field(0, ge=0, le=200)
+
+
+class PoolJobReq(BaseModel):
+    """卡组池批量任务（F7 胜率矩阵）：decks_a × decks_b 全对位各 games_each 局"""
+    decks_a: List[str] = Field(min_length=1, max_length=6)
+    decks_b: List[str] = Field(min_length=1, max_length=6)
+    games_each: int = Field(60, ge=1, le=500)
+    seed_start: Optional[int] = 20260910
 
 
 class BatchJobOut(BaseModel):

@@ -162,6 +162,14 @@ footer.site{border-top:3px solid var(--line-2);margin-top:26px;padding:16px 20px
   font-size:12px;color:var(--muted)}
 footer.site p{margin:4px 0;max-width:1100px}
 
+/* 段控件（模式切换：单对位 / 卡组池矩阵） */
+.seg{display:inline-flex;gap:4px;margin-left:8px}
+.seg button{border:1px solid var(--line);background:#fff;padding:4px 12px;
+  border-radius:999px;font-size:12px;min-height:28px;color:var(--ink-2)}
+.seg button[aria-selected="true"]{background:var(--brand);color:#fff;
+  border-color:var(--brand);font-weight:700}
+.seg button:hover{color:var(--brand-deep)}
+
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important;animation:none !important}
 }

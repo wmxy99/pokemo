@@ -23,7 +23,7 @@ from fastapi import Depends, Header, HTTPException
 
 from . import store
 
-SECRET_FILE = Path(__file__).resolve().parents[1] / "data" / ".jwt_secret"
+SECRET_FILE = store.DATA_DIR / ".jwt_secret"      # 与 DB 同目录（可写位置）
 ALGO = "HS256"
 TOKEN_TTL_H = int(os.environ.get("POKELAB_TOKEN_TTL_H", "24"))
 REQUIRE_AUTH = os.environ.get("POKELAB_REQUIRE_AUTH", "0") == "1"
@@ -92,6 +92,12 @@ class Principal:
 
     def __repr__(self) -> str:                    # pragma: no cover
         return f"Principal({self.name},{self.role})"
+
+
+def user_from_token(token: str) -> Principal:
+    """从 JWT 字符串解析身份（供 SSE 等无法设置 header 的场景 ?token=）"""
+    payload = decode_token(token)
+    return Principal(payload["sub"], payload.get("role", "user"))
 
 
 def current_user(authorization: str = Header(default="")) -> Principal:

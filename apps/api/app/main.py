@@ -101,8 +101,9 @@ def root():
 
 
 # ---------------- 前端静态托管（apps/web 构建产物，同源部署） ----------------
-# 优先 dist2（Windows 上 dist 偶发被进程占用时用 VITE_OUTDIR=dist2 重建），回退 dist
-_WEB_DIST = next((p for p in (_REPO / "apps" / "web" / "dist2",
+# 优先最新构建（Windows 上既有目录可能被进程占用 → 用 VITE_OUTDIR=dist3 等重建）
+_WEB_DIST = next((p for p in (_REPO / "apps" / "web" / "dist3",
+                              _REPO / "apps" / "web" / "dist2",
                               _REPO / "apps" / "web" / "dist") if p.exists()), None)
 if _WEB_DIST is not None:
     from fastapi.staticfiles import StaticFiles  # noqa: E402

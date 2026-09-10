@@ -1,83 +1,127 @@
 # -*- coding: utf-8 -*-
 """PokéLab AI API · 批量自动对战路由（PRD F6/F7）
 
-- 异步任务：提交后后台线程逐局执行（AI vs AI：两侧均 BaselineAI，可用 MCTS 加强）
-- 配额：单任务 ≤500 局（参数强制）· 全局并发 ≤2 · 每用户日配额 ≤10（PRD §5.2）
-- 可取消（保留已完成局）· 完成后按 format 导出平衡性报告（含先后手/回合，
-  "Unofficial community data" 声明，对齐 PRD C1）
+- 单对位任务：POST /batch/jobs（AI vs AI，两侧规则基线）
+- **卡组池矩阵任务**：POST /batch/pool-jobs（decks_a × decks_b 全对位 × games_each，
+  直出 F7 胜率矩阵 cells，含 n 与 95%CI）
+- 配额：单任务 ≤500 局 · 全局并发 ≤2 · 每用户日配额 ≤10（PRD §5.2）
+- 可取消（保留已完成局，K4）· 报告 md/csv/json（含 "Unofficial community data"）
+- **实时进度**：GET /batch/jobs/{id}/stream（SSE，替代轮询）
+- 卡组入参支持：demo 卡组名 或 F3 已导入卡组 id（owner 隔离）
 """
 from __future__ import annotations
 import threading
-import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 
-from . import store, schemas
+from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
+from .sse import sse_response, FINAL
 
 router = APIRouter(prefix="/batch", tags=["batch"])
 
 MAX_GAMES = 500
 MAX_CONCURRENT = 2
+DAILY_QUOTA = 10
 _worker_lock = threading.Lock()
 _active: dict = {}                     # job_id -> cancel threading.Event
-_progress: dict = {}                   # job_id -> {done, n, wins, ...}（内存进度）
+_progress: dict = {}                   # job_id -> {done, n, ...}（内存进度）
 _running = 0
 
 
-def _resolve_deck(spec: str) -> list:
-    from .battles import _resolve_deck as _r
-    return _r(spec)
+def _deck_of(spec: str, p: Principal):
+    """demo 卡组名 或 F3 已导入卡组 id → (引擎卡组列表, 标签)"""
+    d = store.get_deck(spec) if spec else None
+    if d:
+        ensure_owner(d["owner"], p)
+        from .decks import build_engine_deck
+        try:
+            return build_engine_deck(spec), d["name"]
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+    from .battles import _resolve_deck
+    return _resolve_deck(spec), spec
 
 
 def _usage_today(kind: str, owner: str) -> int:
     start = datetime.combine(datetime.now().date(), datetime.min.time()) \
         .replace(tzinfo=timezone.utc).timestamp()
-    rows = [j for j in store.list_jobs(kind, owner, limit=500)
-            if j["created"] >= start]
-    return len(rows)
+    return len([j for j in store.list_jobs(kind, owner, limit=500)
+                if j["created"] >= start])
 
 
-def _worker(job_id: str, da: list, db: list, games: int, seed0: int):
+def _ci_half(p: float, n: int) -> float:
+    if not n:
+        return 0.0
+    return round(1.96 * (max(p * (1 - p), 1e-9) / n) ** 0.5, 4)
+
+
+DECLARATION = "Unofficial community data · 非官方数据（PRD C1）"
+
+
+def _run_pairs(job_id: str, pairs: list, games_each: int, seed0: int,
+               total_override: int | None = None) -> dict:
+    """执行 (label_a, da, label_b, db) × games_each；返回 result（含 cells）"""
     from engine.simulator import run_match
     from engine.agents import BaselineAI
-    global _running
     cancel = _active[job_id]
-    a_agent = BaselineAI("a")
-    b_agent = BaselineAI("b")
-    wins = losses = draws = 0
-    first_wins = first_total = 0        # a 先手子样本
-    turns_total = 0
-    stats = {"games_done": 0}
-    store.update_job(job_id, status="running")
-    try:
-        for i in range(games):
+    a_agent, b_agent = BaselineAI("a"), BaselineAI("b")
+    total = total_override or len(pairs) * games_each
+    cells, done = [], 0
+    tot_w = tot_l = tot_d = 0
+    tot_turns = 0.0
+    for (la, da, lb, db) in pairs:
+        w = l = dr = 0
+        turns = 0.0
+        for i in range(games_each):
             if cancel.is_set():
                 break
-            seed = seed0 + i
-            b = run_match(da, db, a_agent, b_agent, seed=seed)
+            b = run_match(da, db, a_agent, b_agent, seed=seed0 + done)
             if b.winner == 0:
-                wins += 1
+                w += 1
             elif b.winner is None:
-                draws += 1
+                dr += 1
             else:
-                losses += 1
-            turns_total += b.turn if hasattr(b, "turn") else 0
-            _progress[job_id] = {"done": i + 1, "n": games}
-            if i and i % 10 == 0:
+                l += 1
+            turns += b.turn if hasattr(b, "turn") else 0
+            done += 1
+            _progress[job_id] = {"done": done, "n": total,
+                                 "pair": f"{la} vs {lb}"}
+            if done % 10 == 0:
                 store.update_job(job_id, result={"partial": _progress[job_id]})
-        done = min(games, _progress[job_id]["done"])
-        first_rate = wins / done if done else 0.0
-        result = {
-            "n": done, "wins_a": wins, "losses_a": losses, "draws": draws,
-            "win_rate_a": round(wins / done, 4) if done else 0.0,
-            "avg_turns": round(turns_total / done, 2) if done else 0.0,
-            "seed_start": seed0, "cancelled": cancel.is_set(),
-            "declaration": "Unofficial community data · 非官方数据（PRD C1）",
-        }
-        store.update_job(job_id, status="cancelled" if cancel.is_set()
-                         else "done", result=result)
+        k = w + l + dr
+        wr = round(w / k, 4) if k else 0.0
+        cells.append({"deck_a": la, "deck_b": lb, "n": k, "wins_a": w,
+                      "losses_a": l, "draws": dr, "win_rate_a": wr,
+                      "ci95": _ci_half(wr, k),
+                      "avg_turns": round(turns / k, 2) if k else 0.0})
+        tot_w += w
+        tot_l += l
+        tot_d += dr
+        tot_turns += turns
+        if cancel.is_set():
+            break
+    n = tot_w + tot_l + tot_d
+    return {
+        "n": n, "wins_a": tot_w, "losses_a": tot_l, "draws": tot_d,
+        "win_rate_a": round(tot_w / n, 4) if n else 0.0,
+        "avg_turns": round(tot_turns / n, 2) if n else 0.0,
+        "cells": cells, "pairs": len(cells), "games_each": games_each,
+        "seed_start": seed0, "cancelled": cancel.is_set(),
+        "declaration": DECLARATION,
+    }
+
+
+def _worker(job_id: str, la: str, da: list, lb: str, db: list,
+            games: int, seed0: int):
+    global _running
+    try:
+        store.update_job(job_id, status="running")
+        res = _run_pairs(job_id, [(la, da, lb, db)], games, seed0)
+        store.update_job(job_id, status="cancelled" if res["cancelled"]
+                         else "done", result=res)
     except Exception as e:                       # noqa: BLE001
         store.update_job(job_id, status="failed", error=str(e))
     finally:
@@ -87,29 +131,81 @@ def _worker(job_id: str, da: list, db: list, games: int, seed0: int):
             _running -= 1
 
 
-@router.post("/jobs", status_code=202)
-def submit_batch(req: schemas.BatchJobReq,
-                 p: Principal = Depends(current_user)):
+def _pool_worker(job_id: str, pairs: list, games_each: int, seed0: int):
     global _running
-    if _usage_today("batch", p.name) >= 10:
-        raise HTTPException(429, "本日批量任务配额 10 已用尽（PRD F6）")
-    da, db = _resolve_deck(req.deck_a), _resolve_deck(req.deck_b)
-    params = {"deck_a": req.deck_a, "deck_b": req.deck_b,
-              "games": req.games, "seed_start": req.seed_start}
-    job_id = store.create_job("batch", p.name, params)
+    try:
+        store.update_job(job_id, status="running")
+        res = _run_pairs(job_id, pairs, games_each, seed0)
+        store.update_job(job_id, status="cancelled" if res["cancelled"]
+                         else "done", result=res)
+    except Exception as e:                       # noqa: BLE001
+        store.update_job(job_id, status="failed", error=str(e))
+    finally:
+        _progress.pop(job_id, None)
+        _active.pop(job_id, None)
+        with _worker_lock:
+            _running -= 1
+
+
+def _slot(job_id: str) -> bool:
+    """占用并发槽；满则标记失败并返回 False"""
+    global _running
     with _worker_lock:
         if _running >= MAX_CONCURRENT:
             store.update_job(job_id, status="failed",
                              error="并发已满（全局≤2），请稍后重试")
-            return {"id": job_id, "status": "failed",
-                    "error": "并发已满（≤2），请稍后重试"}
+            return False
         _running += 1
-    cancel = threading.Event()
-    _active[job_id] = cancel
-    threading.Thread(target=_worker,
-                     args=(job_id, da, db, req.games, req.seed_start),
-                     daemon=True).start()
+    return True
+
+
+@router.post("/jobs", status_code=202)
+def submit_batch(req: schemas.BatchJobReq,
+                 p: Principal = Depends(current_user)):
+    if _usage_today("batch", p.name) >= DAILY_QUOTA:
+        raise HTTPException(429, f"本日批量任务配额 {DAILY_QUOTA} 已用尽（PRD F6）")
+    da, la = _deck_of(req.deck_a_id or req.deck_a, p)
+    db, lb = _deck_of(req.deck_b_id or req.deck_b, p)
+    params = {"deck_a": la, "deck_b": lb, "games": req.games,
+              "seed_start": req.seed_start}
+    job_id = store.create_job("batch", p.name, params)
+    if not _slot(job_id):
+        return {"id": job_id, "status": "failed", "error": "并发已满（≤2）"}
+    _active[job_id] = threading.Event()
+    threading.Thread(target=_worker, args=(job_id, la, da, lb, db, req.games,
+                                           req.seed_start), daemon=True).start()
     return {"id": job_id, "status": "running", "note": f"games≤{MAX_GAMES}"}
+
+
+@router.post("/pool-jobs", status_code=202)
+def submit_pool(req: schemas.PoolJobReq,
+                p: Principal = Depends(current_user)):
+    """卡组池矩阵任务：decks_a × decks_b 全对位，直出 F7 胜率矩阵"""
+    if _usage_today("batch", p.name) >= DAILY_QUOTA:
+        raise HTTPException(429, f"本日批量任务配额 {DAILY_QUOTA} 已用尽（PRD F6）")
+    total = len(req.decks_a) * len(req.decks_b) * req.games_each
+    if total > 2000:
+        raise HTTPException(422, f"池任务总局数 {total} 超上限 2000"
+                                 f"（{len(req.decks_a)}×{len(req.decks_b)}"
+                                 f"×{req.games_each}）")
+    pairs = []
+    for a in req.decks_a:
+        da, la = _deck_of(a, p)
+        for b in req.decks_b:
+            db, lb = _deck_of(b, p)
+            pairs.append((la, da, lb, db))
+    params = {"pool": True, "decks_a": req.decks_a, "decks_b": req.decks_b,
+              "games_each": req.games_each, "pairs": len(pairs),
+              "total_games": total, "seed_start": req.seed_start}
+    job_id = store.create_job("batch", p.name, params)
+    if not _slot(job_id):
+        return {"id": job_id, "status": "failed", "error": "并发已满（≤2）"}
+    _active[job_id] = threading.Event()
+    threading.Thread(target=_pool_worker,
+                     args=(job_id, pairs, req.games_each, req.seed_start),
+                     daemon=True).start()
+    return {"id": job_id, "status": "running",
+            "pairs": len(pairs), "total_games": total}
 
 
 @router.get("/jobs")
@@ -118,17 +214,38 @@ def list_batch(p: Principal = Depends(current_user), limit: int = 50):
     return {"jobs": store.list_jobs("batch", p.name, limit)}
 
 
+def _snapshot(job_id: str) -> dict:
+    j = store.get_job(job_id)
+    if not j:
+        return {"id": job_id, "status": "failed", "error": "任务不存在"}
+    return {"id": job_id, "status": j["status"],
+            "progress": _progress.get(job_id, {}),
+            "result": j["result"] if j["status"] in FINAL else None,
+            "error": j.get("error")}
+
+
 @router.get("/jobs/{job_id}")
 def job_status(job_id: str, p: Principal = Depends(current_user)):
     j = store.get_job(job_id)
     if not j:
         raise HTTPException(404, "任务不存在")
     ensure_owner(j["owner"], p)
-    prog = _progress.get(job_id, {})
-    return {"id": job_id, "status": j["status"],
-            "params": j["params"], "progress": prog,
-            "result": j["result"], "error": j.get("error"),
-            "created": j["created"]}
+    return {"id": job_id, "status": j["status"], "params": j["params"],
+            "progress": _progress.get(job_id, {}), "result": j["result"],
+            "error": j.get("error"), "created": j["created"]}
+
+
+@router.get("/jobs/{job_id}/stream")
+def job_stream(job_id: str, token: str = Query(default=""),
+               p: Principal = Depends(current_user)):
+    """SSE 实时进度（EventSource 无自定义 header → 支持 ?token=<JWT>）"""
+    if token:
+        p = auth.user_from_token(token)
+    j = store.get_job(job_id)
+    if not j:
+        raise HTTPException(404, "任务不存在")
+    ensure_owner(j["owner"], p)
+    return sse_response(lambda: _snapshot(job_id), interval=1.0)
 
 
 @router.post("/jobs/{job_id}/cancel")
@@ -141,7 +258,7 @@ def cancel_job(job_id: str, p: Principal = Depends(current_user)):
         _active[job_id].set()
         return {"id": job_id, "status": "cancelling",
                 "note": "已在当前局后停止；已完成局保留（K4）"}
-    if j["status"] in ("done", "failed", "cancelled"):
+    if j["status"] in FINAL:
         return {"id": job_id, "status": j["status"]}
     store.update_job(job_id, status="cancelled")
     return {"id": job_id, "status": "cancelled"}
@@ -157,24 +274,43 @@ def report(job_id: str, p: Principal = Depends(current_user),
     if j["status"] not in ("done", "cancelled"):
         raise HTTPException(409, "任务未完成，暂无报告")
     res = j["result"] or {}
-    lines = [
-        f"# 批量对战报告（{job_id}）",
-        "",
-        f"- 卡组：{j['params']['deck_a']}（A）vs {j['params']['deck_b']}（B）",
-        f"- 局数：{res.get('n')} · seed 起点：{res.get('seed_start')}",
-        f"- A 胜率：{res.get('win_rate_a')} · A 胜 {res.get('wins_a')} / "
-        f"负 {res.get('losses_a')} / 平 {res.get('draws')}",
-        f"- 平均回合：{res.get('avg_turns')}",
-        f"- 取消标记：{res.get('cancelled')}",
-        f"- 声明：{res.get('declaration')}",
-    ]
+    cells = res.get("cells") or []
+    params = j["params"]
+    is_pool = bool(params.get("pool"))
+    lines = [f"# {'卡组池矩阵' if is_pool else '批量对战'}报告（{job_id}）", ""]
+    if is_pool:
+        lines.append(f"- 卡组池：我方 {len(params.get('decks_a', []))} 组 × "
+                     f"对手 {len(params.get('decks_b', []))} 组 × "
+                     f"{params.get('games_each')} 局 = "
+                     f"{params.get('total_games')} 局")
+    else:
+        lines.append(f"- 卡组：{params.get('deck_a')}（A）vs "
+                     f"{params.get('deck_b')}（B）")
+    lines += [f"- 实际完成：{res.get('n')} 局 · seed 起点：{res.get('seed_start')}",
+              f"- 总胜率（A）：{res.get('win_rate_a')} · 平均回合："
+              f"{res.get('avg_turns')}",
+              f"- 取消标记：{res.get('cancelled')}",
+              f"- 声明：{res.get('declaration')}", ""]
+    if cells:
+        lines += ["## 对位明细（F7 胜率矩阵数据源）", "",
+                  "| 我方 \\ 对手 | n | A 胜率 | 95%CI | 平均回合 |",
+                  "|---|---|---|---|---|"]
+        for c in cells:
+            lines.append(f"| {c['deck_a']} vs {c['deck_b']} | {c['n']} | "
+                         f"{c['win_rate_a']:.4f} | ±{c['ci95']} | "
+                         f"{c['avg_turns']} |")
     if format == "json":
         import json as _json
-        return _json.dumps({**res, "params": j["params"]}, ensure_ascii=False,
-                           indent=1)
+        return PlainTextResponse(
+            _json.dumps({**res, "params": params}, ensure_ascii=False,
+                        indent=1), media_type="application/json")
     if format == "csv":
-        head = "n,wins_a,losses_a,draws,win_rate_a,avg_turns"
-        row = f"{res.get('n')},{res.get('wins_a')},{res.get('losses_a')}," \
-              f"{res.get('draws')},{res.get('win_rate_a')},{res.get('avg_turns')}"
-        return head + "\n" + row
-    return "\n".join(lines)
+        head = "deck_a,deck_b,n,wins_a,losses_a,draws,win_rate_a,ci95,avg_turns"
+        rows = [",".join(str(c.get(k)) for k in
+                         ("deck_a", "deck_b", "n", "wins_a", "losses_a",
+                          "draws", "win_rate_a", "ci95", "avg_turns"))
+                for c in cells]
+        return PlainTextResponse(head + "\n" + "\n".join(rows),
+                                 media_type="text/csv; charset=utf-8")
+    return PlainTextResponse("\n".join(lines),
+                             media_type="text/markdown; charset=utf-8")

@@ -36,6 +36,7 @@ LINE_RE = re.compile(r"^\s*(\d+)\s+(.+?)\s+([A-Z]{2,5})\s+(\d+[a-zA-Z]?)\s*(\*|P
 
 # ---------------- 卡池（demo decks 全量去重 + card-db 补充） ----------------
 _POOL: dict | None = None
+_POOL_OBJ: dict = {}          # name(lower) -> 引擎 CardRef 原型（F3 打通对战：重建卡组）
 
 
 def _pool() -> dict:
@@ -71,15 +72,18 @@ def _pool() -> dict:
                         "is_basic": getattr(pdef, "stage", 0) == 0,
                         "source": "decklib",
                     }
+                    _POOL_OBJ[pdef.name.lower()] = c
                 elif tdef is not None:
                     out[tdef.name.lower()] = {
                         "kind": "trainer", "name": tdef.name,
                         "is_basic": False, "source": "decklib"}
+                    _POOL_OBJ[tdef.name.lower()] = c
                 elif edef is not None:
                     nm = getattr(edef, "name", "Energy")
                     out[nm.lower()] = {
                         "kind": "energy", "name": nm, "is_basic": False,
                         "is_basic_energy": True, "source": "decklib"}
+                    _POOL_OBJ[nm.lower()] = c
     except Exception:
         pass
     # card-db 补充（P0 仅 3 张样本，命中即用其 supertype）
@@ -194,6 +198,32 @@ def validate(text: str) -> dict:
     }
     return {"ok": not errors, "errors": errors, "warnings": warnings,
             "parsed": entries, "summary": summary}
+
+
+# ---------------- F3 → F5 打通：按已入库卡组重建引擎卡组 ----------------
+def build_engine_deck(did: str) -> list:
+    """读库内卡组 → 引擎卡对象列表（供对战）；未收录卡/张数不足 → ValueError
+
+    使用卡池原型对象的重复引用（与 engine.decklib 内部一致：同一 pdef 复用）。
+    """
+    d = store.get_deck(did)
+    if not d:
+        raise ValueError(f"卡组 {did} 不存在")
+    _pool()
+    deck: list = []
+    missing: list = []
+    for e in d.get("cards") or []:
+        obj = _POOL_OBJ.get((e.get("name") or "").lower())
+        if obj is None:
+            missing.append(e.get("name") or "?")
+            continue
+        deck.extend([obj] * int(e.get("count") or 0))
+    if missing:
+        raise ValueError("含未收录卡，暂不可对战（灰名单/C5）：" +
+                         "、".join(sorted(set(missing))[:6]))
+    if len(deck) < 8:
+        raise ValueError(f"卡组仅 {len(deck)} 张，不足以对战（至少 8 张）")
+    return deck
 
 
 # ---------------- 路由 ----------------

@@ -28,9 +28,13 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   async function create(deckAVal = deckA, deckBVal = deckB) {
     setBusy(true); setErr(null)
     try {
-      const r = await api.createBattle({
-        deck_a: deckAVal, deck_b: deckBVal, ai_iters: Number(aiIters),
-      })
+      // F3 打通：下拉项若为已导入卡组 id（deck_ 前缀）→ 走 deck_a_id/deck_b_id
+      const payload = { ai_iters: Number(aiIters) }
+      if (String(deckAVal).startsWith('deck_')) payload.deck_a_id = deckAVal
+      else payload.deck_a = deckAVal
+      if (String(deckBVal).startsWith('deck_')) payload.deck_b_id = deckBVal
+      else payload.deck_b = deckBVal
+      const r = await api.createBattle(payload)
       setState(r); setLog([]); onMsg(`对局已创建 seed=${r.seed}`, 'ok')
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
     finally { setBusy(false) }
@@ -79,6 +83,9 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         <label htmlFor="dy">对手卡组</label>
         <select id="dy" value={deckB} onChange={(e) => setDeckB(e.target.value)}>
           {DECKS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+          {myDecks.filter((d) => d.valid).map((d) => (
+            <option key={d.id} value={d.id}>{`我的：${d.name}`}</option>
+          ))}
         </select>
         <label htmlFor="di">AI 强度</label>
         <select id="di" value={aiIters} onChange={(e) => setAiIters(e.target.value)}>

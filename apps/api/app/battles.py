@@ -40,6 +40,21 @@ def _resolve_deck(spec: str) -> list:
         ) from e
 
 
+def _deck_of(deck_id, name, p):
+    """返回 (引擎卡组, 标签)：优先 F3 已导入卡组 id（owner 隔离 + 未收录卡拦截）"""
+    if not deck_id:
+        return _resolve_deck(name), name
+    d = store.get_deck(deck_id)
+    if not d:
+        raise HTTPException(404, f"卡组 {deck_id} 不存在（F3 需先导入）")
+    ensure_owner(d["owner"], p)
+    from .decks import build_engine_deck
+    try:
+        return build_engine_deck(deck_id), f"{d['name']}[{deck_id[:10]}]"
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
 def _opp_agent(battle, iters: int, seed: int):
     """AI 对手：MCTS(引擎 rollout) 或规则基线 AI"""
     from engine.agents import BaselineAI
@@ -56,12 +71,12 @@ def create_battle(req: schemas.BattleCreateReq,
                   p: Principal = Depends(current_user)):
     from engine.battle import Battle
     seed = req.seed if req.seed is not None else random.randrange(1 << 30)
-    da = _resolve_deck(req.deck_a)
-    db = _resolve_deck(req.deck_b)
+    da, label_a = _deck_of(req.deck_a_id, req.deck_a, p)
+    db, label_b = _deck_of(req.deck_b_id, req.deck_b, p)
     battle = Battle(da, db, seed=seed)
     bid = store.new_id("btl")
-    store.save_battle({"id": bid, "owner": p.name, "deck_a": req.deck_a,
-                       "deck_b": req.deck_b, "seed": seed, "status": "open",
+    store.save_battle({"id": bid, "owner": p.name, "deck_a": label_a,
+                       "deck_b": label_b, "seed": seed, "status": "open",
                        "created": store.now(),
                        "payload": {"ai_iters": req.ai_iters,
                                    "player_side": req.player_side}})

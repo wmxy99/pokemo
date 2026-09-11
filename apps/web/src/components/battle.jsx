@@ -133,3 +133,63 @@ export function SeedBar({ seed, onCopied }) {
     </div>
   )
 }
+
+
+/**
+ * 指令输入栏（UI 规范 §5.2 动作面板的补充交互 · F5 增强）
+ *
+ * 直接把**中文招式名 / 卡名 / 位置**作为指令下达：
+ *   `幻影俯冲` · `高级球` · `附能量到后备1` · `结束回合`
+ * 支持 datalist 自动补全（候选来自引擎 command_catalog，与合法动作同源）；
+ * 歧义时展示候选供点选（绝不静默替玩家选目标）。
+ */
+export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatched, error }) {
+  const [text, setText] = React.useState('')
+  const listId = React.useMemo(
+    () => 'cmd-list-' + Math.random().toString(36).slice(2, 8), [])
+  const submit = (value) => {
+    const v = (value != null ? value : text).trim()
+    if (!v || disabled || busy) return
+    onSubmit(v)
+    setText('')
+  }
+  const cands = error && typeof error === 'object'
+    ? (error.candidates || []).map((c) => c.label || c).filter(Boolean) : []
+  return (
+    <div className="cmdbar">
+      <form className="row" onSubmit={(e) => { e.preventDefault(); submit() }}>
+        <label htmlFor="cmd-in" className="sm">指令输入</label>
+        <input id="cmd-in" list={listId} value={text} disabled={disabled || busy}
+          placeholder="中文招式名 / 卡名，如「幻影俯冲」「高级球」「附能量到后备1」"
+          onChange={(e) => setText(e.target.value)}
+          aria-describedby="cmd-hint" style={{ flex: 1, minWidth: 180 }} />
+        <datalist id={listId}>
+          {commands.map((c, i) => <option key={i} value={c.label} />)}
+        </datalist>
+        <button type="submit" className="primary sm" disabled={disabled || busy || !text.trim()}>
+          执行
+        </button>
+      </form>
+      <p id="cmd-hint" className="sm muted" style={{ margin: '4px 0 0' }}>
+        可直接输入中文指令；也可从下方候选点选（与合法动作一一对应）
+        {lastMatched ? ` · 上次：${lastMatched}` : ''}
+      </p>
+      <div className="cmd-chips" role="group" aria-label="可用指令">
+        {commands.slice(0, 10).map((c, i) => (
+          <button key={i} type="button" className="chip-btn"
+            disabled={disabled || busy} title={`点击执行：${c.label}`}
+            onClick={() => submit(c.label)}>{c.label}</button>
+        ))}
+      </div>
+      {cands.length > 0 && (
+        <div className="cmd-chips" role="group" aria-label="歧义候选">
+          <span className="sm muted">请指明：</span>
+          {cands.map((c, i) => (
+            <button key={i} type="button" className="chip-btn warn"
+              onClick={() => submit(c)}>{c}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

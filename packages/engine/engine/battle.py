@@ -17,6 +17,8 @@ from .cards import (CardRef, PokeRef, EnergyRef, TrainerRef, FieldPokemon,
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage)
+# 名称型字段的优先顺序（与 engine.commands 同源，避免两处漂移）
+from .commands import NAME_KEYS as _NAME_KEYS
 
 WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
 
@@ -164,7 +166,10 @@ class Battle:
         for i, c in enumerate(p.hand):
             if isinstance(c, PokeRef) and c.pdef.stage == 0:
                 if len(p.bench) < self.cfg.max_bench:
-                    acts.append({"verb": "play", "index": i})
+                    acts.append({"verb": "play", "index": i,
+                                 "name": c.pdef.name,
+                                 "name_zh": c.pdef.name_zh,
+                                 "display": c.pdef.display})
         # 附能量
         if p.energy_in_hand() > 0 and p.attached_energy_this_turn == 0 \
                 and p.has_pokemon:
@@ -177,7 +182,12 @@ class Battle:
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
                     if p.active.can_pay(atk.cost):
-                        acts.append({"verb": "attack", "attack": ai})
+                        acts.append({"verb": "attack", "attack": ai,
+                                     "name": atk.name,
+                                     "name_zh": atk.name_zh,
+                                     "display": atk.name_zh or atk.name,
+                                     "damage": atk.damage,
+                                     "cost_map": list(atk.cost)})
                 if p.active.total_energy() >= p.active.pdef.retreat \
                         and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
@@ -189,7 +199,13 @@ class Battle:
                             and tgt.pdef.name == c.pdef.evolves_from \
                             and tgt.stage + 1 == c.pdef.stage:
                         acts.append({"verb": "evolve", "hand": hi,
-                                     "target": tpos})
+                                     "target": tpos,
+                                     "name": c.pdef.name,
+                                     "name_zh": c.pdef.name_zh,
+                                     "display": c.pdef.display,
+                                     # 被进化对象（场上）的名称，便于生成可读指令
+                                     "onto": tgt.pdef.display,
+                                     "onto_name": tgt.pdef.name})
         # E4 训练家
         acts += self._trainer_legals(p, opp)
         # E3 特性（field 每回合一次 / hand 弃卡发动）
@@ -217,7 +233,7 @@ class Battle:
                         for tpos in range(1 + len(opp.bench)):
                             out.append({"verb": "ability", "name": ab.name,
                                         "name_zh": ab.name_zh,
-                            "name_zh": ab.name_zh,
+                                        "display": ab.name_zh or ab.name,
                                         "hand": hi, "tag": ab.tag,
                                         "target": tpos})
         return out
@@ -230,24 +246,54 @@ class Battle:
             tag, kind = c.tdef.tag, c.tdef.kind
             if kind == "supporter" and p.supporter_used:
                 continue
+            # 统一带上标识（英文键 name / 中文 name_zh / 展示名 display），
+            # 供前端与「按名称下达指令」（engine.commands.find_action）使用。
+            base = {"verb": "trainer", "hand": i,
+                    "name": c.tdef.name, "name_zh": c.tdef.name_zh,
+                    "display": c.tdef.display}
             if tag == "poffin":
                 if len(p.bench) < self.cfg.max_bench:
-                    out.append({"verb": "trainer", "hand": i})
+                    out.append(dict(base))
             elif tag == "ultra_ball":
                 if len(p.hand) >= 3:   # 自身 + 弃 2
-                    out.append({"verb": "trainer", "hand": i})
+                    out.append(dict(base))
             elif tag == "hammer":
                 if opp.active is not None and opp.active.total_energy() > 0:
-                    out.append({"verb": "trainer", "hand": i})
+                    out.append(dict(base))
             elif tag == "boss":
                 if opp.bench:
                     for bi in range(len(opp.bench)):
-                        out.append({"verb": "trainer", "hand": i,
-                                    "target": bi})
+                        out.append({**base, "target": bi})
             elif tag.startswith("research:") or tag.startswith("shuffle_draw:"):
                 # 抽牌型支援者（Professor's Research / Iono）：需牌库非空
                 if p.deck:
-                    out.append({"verb": "trainer", "hand": i})
+                    out.append(dict(base))
+        return out
+
+    # ---------- 自由文本指令（中文别名 → 合法动作） ----------
+    def command_catalog(self, pi: Optional[int] = None) -> list:
+        """当前可用指令清单（label 为中文可读文案，action 为可直接 step 的动作）"""
+        from .commands import command_catalog
+        return command_catalog(self.legal_actions(pi))
+
+    def resolve_command(self, text: str, verb: Optional[str] = None) -> dict:
+        """把「招式名 / 卡名 / 动词」文本解析成合法动作
+
+        支持中文与英文名称、忽略大小写与标点；返回 {ok, action, matched, ...}。
+        """
+        from .commands import find_action
+        return find_action(self.legal_actions(), text, verb=verb)
+
+    def step_command(self, text: str, verb: Optional[str] = None) -> dict:
+        """按名称直接出招/用卡（解析失败 → {"ok": False, "error": ...}）"""
+        res = self.resolve_command(text, verb=verb)
+        if not res.get("ok"):
+            return {"ok": False, "error": res.get("error", "指令无法解析"),
+                    "candidates": res.get("candidates", []),
+                    "matched": res.get("matched")}
+        out = self.step(res["action"])
+        out["matched"] = res.get("matched")
+        out["action"] = res["action"]
         return out
 
     # ---------- 动作执行 ----------
@@ -281,7 +327,14 @@ class Battle:
             return {"ok": False, "error": str(e)}
 
     def _do_play(self, p: PlayerState, action: dict) -> dict:
-        idx = int(action["index"])
+        idx = _hand_index_from_action(p.hand, action, want="basic")
+        if idx is None:
+            known = "、".join(
+                c.pdef.display for c in p.hand
+                if isinstance(c, PokeRef) and c.pdef.stage == 0)
+            raise ValueError(
+                f"无法识别要上场的基础宝可梦「{_name_hint(action)}」"
+                f"（手牌可用：{known or '无'}）")
         c = p.hand[idx]
         if not isinstance(c, PokeRef) or c.pdef.stage != 0:
             raise ValueError("该牌不是基础宝可梦")
@@ -335,7 +388,14 @@ class Battle:
         return {"ok": True, "event": self.events[-1]}
 
     def _do_evolve(self, p: PlayerState, action: dict) -> dict:
-        hi = int(action["hand"])
+        hi = _hand_index_from_action(p.hand, action, want="stage")
+        if hi is None:
+            known = "、".join(
+                c.pdef.display for c in p.hand
+                if isinstance(c, PokeRef) and c.pdef.stage > 0)
+            raise ValueError(
+                f"无法识别要进化的卡「{_name_hint(action)}」"
+                f"（手牌可用：{known or '无'}）")
         c = p.hand[hi]
         if not isinstance(c, PokeRef) or c.pdef.stage <= 0:
             raise ValueError("该牌不可进化")
@@ -414,7 +474,13 @@ class Battle:
         raise ValueError("ability 动作缺少 pos/hand")
 
     def _do_trainer(self, p: PlayerState, action: dict) -> dict:
-        hi = int(action["hand"])
+        hi = _hand_index_from_action(p.hand, action)
+        if hi is None:
+            known = "、".join(
+                c.tdef.display for c in p.hand if isinstance(c, TrainerRef))
+            raise ValueError(
+                f"无法识别训练家卡「{_name_hint(action)}」"
+                f"（手牌可用：{known or '无'}）")
         c = p.hand[hi]
         if not isinstance(c, TrainerRef):
             raise ValueError("该牌不是训练家")
@@ -533,7 +599,12 @@ class Battle:
             raise ValueError("先手第一回合不可攻击")
         if {"sleep", "paralyzed"} & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
-        ai = int(action["attack"])
+        ai = _attack_index_from_action(p.active.pdef.attacks, action)
+        if ai is None:
+            known = "、".join(
+                (a.name_zh or a.name) for a in p.active.pdef.attacks)
+            raise ValueError(
+                f"无法识别招式「{_name_hint(action)}」（可用：{known}）")
         if ai >= len(p.active.pdef.attacks):
             raise ValueError("招式越界")
         atk = p.active.pdef.attacks[ai]
@@ -758,6 +829,77 @@ class Battle:
 
 
 # ---------- 工具 ----------
+
+
+def _name_hint(action: dict) -> str:
+    """从动作里取出用户想用的名称（用于报错提示）"""
+    for k in _NAME_KEYS:
+        if action.get(k):
+            return str(action[k])
+    return str(action.get("attack", "?"))
+
+
+def _candidates_from(objs, keys) -> list:
+    """把对象序列的若干名称字段摊平成候选名字列表"""
+    out = []
+    for o in objs:
+        for k in keys:
+            v = getattr(o, k, None) if not isinstance(o, dict) else o.get(k)
+            if v:
+                out.append(v)
+    return out
+
+
+def _attack_index_from_action(attacks, action: dict):
+    """招式动作 → 下标：优先 `attack` 数字，否则按**中文/英文招式名**解析
+
+    支持的中文指令示例：`{"verb":"attack","attack_name":"幻影俯冲"}`、
+    `{"verb":"attack","name":"Phantom Dive"}`、`{"verb":"attack","display":"幻影俯冲"}`。
+    """
+    if action.get("attack") is not None:
+        return int(action["attack"])
+    from .commands import best_match
+    labels = _candidates_from(attacks, ("name_zh", "name"))
+    q = _name_hint(action)
+    idx = best_match(labels, q)
+    return idx
+
+
+def _hand_index_from_action(hand, action: dict, want: str = "trainer"):
+    """手牌动作 → 手牌下标：优先 `hand`/`index` 数字，否则按**卡名**解析
+
+    want 指定候选范围：
+      `trainer`（默认，训练家卡）· `basic`（基础宝可梦，供 play）·
+      `stage`（可进化宝可梦，供 evolve）· `any`（任意卡）。
+    """
+    if action.get("hand") is not None:
+        return int(action["hand"])
+    if action.get("index") is not None:
+        return int(action["index"])
+    from .commands import best_match
+
+    def _ok(c) -> bool:
+        if want == "basic":
+            return isinstance(c, PokeRef) and c.pdef.stage == 0
+        if want == "stage":
+            return isinstance(c, PokeRef) and c.pdef.stage > 0
+        if want == "any":
+            return True
+        return isinstance(c, TrainerRef)
+
+    def _label(c) -> str:
+        if isinstance(c, TrainerRef):
+            return c.tdef.display
+        if isinstance(c, PokeRef):
+            return c.pdef.display
+        return getattr(getattr(c, "edef", None), "display", "") or "能量"
+
+    idxs = [i for i, c in enumerate(hand) if _ok(c)]
+    labels = [_label(hand[i]) for i in idxs]
+    pos = best_match(labels, _name_hint(action))
+    return None if pos is None else idxs[pos]
+
+
 def _evolves_from_zh(name):
     """进化前卡的中文展示名（未登记则空串）"""
     from .cards import pokemon_def

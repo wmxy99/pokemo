@@ -32,7 +32,16 @@ class BattleCreateReq(BaseModel):
 
 
 class ActionReq(BaseModel):
-    action: Dict[str, Any]                   # 引擎 legal 动作 dict
+    """动作请求：`action`（引擎 legal 动作 dict）与 `command`（自由指令）二选一
+
+    - `action`：与 `GET /battles/{id}` 的 `view.legal` 严格 1:1（PRD F5）；
+    - `command`：中文自然指令，如 `"幻影俯冲"` / `"高级球"` / `"附能量到后备1"` /
+      `"结束回合"`，由引擎 `engine.commands` 解析为合法动作后执行。
+    """
+
+    action: Optional[Dict[str, Any]] = None
+    command: Optional[str] = None            # 自由文本（中文别名优先）
+    verb: Optional[str] = None               # 可选：限定动作类型（attack/trainer/…）
 
 
 class BatchJobReq(BaseModel):

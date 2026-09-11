@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { api, DECKS } from '../api.js'
 import { t } from '../i18n.js'
 import { verbLabel } from '../verbs.js'
-import { Zone, ActionPanel, TurnLog, SeedBar } from '../components/battle.jsx'
+import { Zone, ActionPanel, CommandBar, TurnLog, SeedBar } from '../components/battle.jsx'
 import { actionContext } from '../names.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
@@ -20,6 +20,9 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [busy, setBusy] = useState(false)
   const [slow, setSlow] = useState(false)
   const [err, setErr] = useState(null)
+  const [commands, setCommands] = useState([])     // 引擎指令清单（中文）
+  const [lastMatched, setLastMatched] = useState(null)
+  const [cmdErr, setCmdErr] = useState(null)       // 指令解析失败（含歧义候选）
   const slowTimer = useRef(null)
 
   useEffect(() => {
@@ -37,7 +40,9 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       if (String(deckBVal).startsWith('deck_')) payload.deck_b_id = deckBVal
       else payload.deck_b = deckBVal
       const r = await api.createBattle(payload)
-      setState(r); setLog([]); onMsg(`对局已创建 seed=${r.seed}`, 'ok')
+      setState(r); setLog([]); setCommands(r.commands || [])
+      setLastMatched(null); setCmdErr(null)
+      onMsg(`对局已创建 seed=${r.seed}`, 'ok')
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
     finally { setBusy(false) }
   }
@@ -50,6 +55,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     try {
       const r = await api.act(state.id, a)
       setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
+      setCommands(r.commands || [])
       const ctx = actionContext(state.view)          // 提交前的局面（含中文名）
       const zh = (x) => verbLabel(x, ctx)
       setLog((l) => [...l,
@@ -59,6 +65,37 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       ].filter(Boolean))
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
     finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false) }
+  }
+
+  // 自由文本指令：中文招式名 / 卡名 / 位置（如「幻影俯冲」「附能量到后备1」）
+  async function submitCommand(text) {
+    if (!state || busy) return
+    setBusy(true); setErr(null); setCmdErr(null)
+    setSlow(false)
+    slowTimer.current = setTimeout(() => setSlow(true), K3_MS)
+    try {
+      const before = state.view
+      const r = await api.actCommand(state.id, text)
+      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
+      setCommands(r.commands || [])
+      setLastMatched(r.matched || text)
+      const ctx = actionContext(before)
+      setLog((l) => [...l,
+        `> 我方（指令「${text}」→ ${r.matched || '已执行'}）：${verbLabel(r.used_action || {}, ctx)}`,
+        ...(r.ai_actions || []).map((x) => `< AI：${x.verb === 'attack' ? '攻击' : verbLabel(x)}`),
+        r.winner != null ? `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==` : null,
+      ].filter(Boolean))
+    } catch (e) {
+      // 歧义/无法识别 → 展示候选（引擎结构化 detail）
+      const d = e.detail
+      if (d && typeof d === 'object') {
+        setCmdErr({ message: d.error || e.message, candidates: d.candidates || [] })
+        if (d.candidates?.length) setCommands((c) => (c.length ? c : d.candidates))
+      } else {
+        setCmdErr({ message: e.message, candidates: [] })
+      }
+      setLog((l) => [...l, `! 指令「${text}」未执行：${(d && d.error) || e.message}`])
+    } finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false) }
   }
 
   const view = state?.view
@@ -144,6 +181,8 @@ export default function BattlePage({ onMsg, onGoDecks }) {
             <Zone title="对手（AI）" st={view.opp_state} side="opp" />
             <Zone title="我方" st={view.me_state} side="me" showHand />
           </div>
+          <CommandBar commands={commands} disabled={finished} busy={busy}
+            onSubmit={submitCommand} lastMatched={lastMatched} error={cmdErr} />
           <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
             ctx={actionContext(view)}
             onAct={act}

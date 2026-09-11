@@ -29,6 +29,7 @@ async function req(path, { method = 'GET', body, raw = false } = {}) {
     try { detail = JSON.parse(text).detail ?? text } catch { /* 纯文本 */ }
     const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
     err.status = res.status
+    err.detail = detail          // 结构化 detail（如指令歧义时含 candidates/ambiguous）
     throw err
   }
   if (raw) return text
@@ -43,6 +44,10 @@ export const api = {
   createBattle: (payload) => req('/battles', { method: 'POST', body: payload }),
   battleState: (id) => req(`/battles/${id}`),
   act: (id, action) => req(`/battles/${id}/actions`, { method: 'POST', body: { action } }),
+  // 自由文本指令（中文招式名/卡名/位置），如「幻影俯冲」「附能量到后备1」
+  actCommand: (id, command, verb) => req(`/battles/${id}/actions`,
+    { method: 'POST', body: verb ? { command, verb } : { command } }),
+  battleCommands: (id) => req(`/battles/${id}/commands`),
   // F6 批量
   submitBatch: (payload) => req('/batch/jobs', { method: 'POST', body: payload }),
   listBatch: () => req('/batch/jobs'),

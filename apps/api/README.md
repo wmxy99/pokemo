@@ -112,6 +112,27 @@ POST /batch/pool-jobs
   —— **统计页胜率矩阵直接消费**（`GET /stats/summary` 的 `matrix` 会展开并聚合多任务 cells）；
 - 报告：`/batch/jobs/{id}/report?format=md|csv|json`（md 含对位明细表格；csv 每行一个对位）。
 
+### 自由指令（中文招式名 / 卡名）
+
+`POST /battles/{id}/actions` 的 body 支持三种写法（**三选一**）：
+
+| 写法 | 说明 |
+|---|---|
+| `{"action": {...}}` | 引擎 legal 动作（与 `view.legal` 严格 1:1，PRD F5） |
+| `{"action": {"verb":"attack","attack_name":"幻影俯冲"}}` | 只给名称/部分字段 → 引擎补全为 legal 动作后执行 |
+| `{"command": "幻影俯冲"}` | **中文自然指令**：招式名 / 卡名 / `附能量到后备1` / `结束回合` |
+
+- 响应新增 `matched`（命中的指令文案）与 `used_action`（实际执行的引擎动作）；
+- 指令无法解析或存在歧义 → **422**，`detail` 为结构化对象：
+  `{error, matched, ambiguous, candidates[], legal[]}`（前端据此展示候选项）；
+- `GET /battles/{id}/commands`：当前可用指令清单（中文 label + 对应动作）；
+  创建对局与每次动作的响应里也带 `commands`。
+
+```bash
+curl -X POST localhost:8000/battles/$BID/actions -H "Authorization: Bearer $TK" \
+  -H 'Content-Type: application/json' -d '{"command":"幻影俯冲"}'
+```
+
 ### 实时进度（SSE，替代轮询 · 心跳 + 断线续传）
 | 方法 | 路径 | 说明 |
 |---|---|---|

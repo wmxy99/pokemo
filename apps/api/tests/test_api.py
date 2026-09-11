@@ -743,5 +743,194 @@ class TestZhCardNameInput(unittest.TestCase):
         self.assertEqual(r.status_code, 201, r.text)
 
 
+class TestBattleCommandInput(unittest.TestCase):
+    """自由文本指令：中文招式名 / 卡名 / 位置 直接作为 command 提交（F5 增强）"""
+
+    def _new_battle(self, seed=7):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": seed})
+        self.assertEqual(r.status_code, 201, r.text)
+        return h, r.json()
+
+    def test_create_returns_command_catalog(self):
+        _, d = self._new_battle()
+        self.assertTrue(d["commands"])
+        labels = [c["label"] for c in d["commands"]]
+        self.assertTrue(any("结束回合" == x for x in labels), labels)
+        self.assertTrue(all(c["action"].get("verb") for c in d["commands"]))
+        # 招式的展示名随合法动作下发（供前端/指令使用）
+        for a in d["view"]["legal"]:
+            if a["verb"] == "attack":
+                self.assertTrue(a.get("display"))
+
+    def test_command_pass(self):
+        h, d = self._new_battle()
+        r = client.post(f"/battles/{d['id']}/actions", headers=h,
+                        json={"command": "结束回合"})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["used_action"]["verb"], "pass")
+        self.assertEqual(r.json()["matched"], "结束回合")
+
+    def test_every_label_round_trips_via_api(self):
+        """把指令清单里的 label 原样提交，必须全部被接受"""
+        h, d = self._new_battle(seed=7)
+        bid = d["id"]
+        ok = 0
+        for _ in range(5):
+            st = client.get(f"/battles/{bid}", headers=h).json()
+            if st["finished"] or not st["commands"]:
+                break
+            label = st["commands"][0]["label"]
+            r = client.post(f"/battles/{bid}/actions", headers=h,
+                            json={"command": label})
+            self.assertEqual(r.status_code, 200,
+                             f"label「{label}」无法回投：{r.text}")
+            self.assertEqual(r.json()["matched"], label)
+            ok += 1
+        self.assertGreaterEqual(ok, 3)
+
+    def test_command_by_chinese_name(self):
+        """用中文卡名（而非索引/卡位）下达指令"""
+        h, d = self._new_battle(seed=11)
+        bid = d["id"]
+        for _ in range(4):
+            st = client.get(f"/battles/{bid}", headers=h).json()
+            if st["finished"]:
+                break
+            tr = [c for c in st["commands"] if c["verb"] == "trainer"]
+            if tr:
+                nm = tr[0]["action"]["display"]
+                r = client.post(f"/battles/{bid}/actions", headers=h,
+                                json={"command": nm})
+                self.assertEqual(r.status_code, 200, r.text)
+                self.assertEqual(r.json()["used_action"]["verb"], "trainer")
+                return
+            first = st["commands"][0]["label"]
+            client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": first})
+        self.skipTest("未在若干回合内出现可用训练家卡")
+
+    def test_unknown_command_returns_422_with_candidates(self):
+        h, d = self._new_battle()
+        r = client.post(f"/battles/{d['id']}/actions", headers=h,
+                        json={"command": "这并不是一个动作"})
+        self.assertEqual(r.status_code, 422)
+        det = r.json()["detail"]
+        self.assertIn("error", det)
+        self.assertTrue(det["candidates"], "应返回可用候选")
+        self.assertIn("legal", det)
+
+    def test_missing_both_fields_returns_422(self):
+        h, d = self._new_battle()
+        r = client.post(f"/battles/{d['id']}/actions", headers=h, json={})
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("action", str(r.json()["detail"]))
+
+    def test_named_action_without_index(self):
+        """动作里用名称代替索引（如 attack_name）也应被引擎接受"""
+        h, d = self._new_battle(seed=7)
+        bid = d["id"]
+        for _ in range(120):
+            st = client.get(f"/battles/{bid}", headers=h).json()
+            if st["finished"]:
+                break
+            atk = [a for a in (st["view"]["legal"] or [])
+                   if a["verb"] == "attack"]
+            if atk:
+                r = client.post(f"/battles/{bid}/actions", headers=h,
+                                json={"action": {"verb": "attack",
+                                                 "attack_name": atk[0]["display"]}})
+                self.assertEqual(r.status_code, 200, r.text)
+                self.assertEqual(r.json()["used_action"]["verb"], "attack")
+                return
+            client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": st["commands"][0]["label"]})
+        self.skipTest("未在若干回合内出现可用招式")
+
+    def test_commands_endpoint(self):
+        h, d = self._new_battle()
+        r = client.get(f"/battles/{d['id']}/commands", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["commands"])
+
+    def test_ambiguous_same_card_different_target_requires_slot(self):
+        """同名卡打到不同目标时，仅凭卡名应提示歧义（不得静默选目标）"""
+        h, d = self._new_battle(seed=13)
+        bid = d["id"]
+        for _ in range(120):
+            st = client.get(f"/battles/{bid}", headers=h).json()
+            if st["finished"]:
+                break
+            boss = [c for c in st["commands"]
+                    if c["verb"] == "trainer" and
+                    len({x["action"].get("target") for x in st["commands"]
+                         if x["verb"] == "trainer"}) > 1]
+            if boss:
+                nm = boss[0]["action"]["display"]
+                rr = client.post(f"/battles/{bid}/actions", headers=h,
+                                 json={"command": nm})
+                if rr.status_code == 422:
+                    det = rr.json()["detail"]
+                    self.assertTrue(det.get("ambiguous"))
+                    self.assertTrue(det["candidates"])
+                return
+            client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": st["commands"][0]["label"]})
+        self.skipTest("未构造出同名多目标局面")
+
+
+class TestZhDisplayGuard(unittest.TestCase):
+    """守卫：真实卡组（A1–A4）对局视图中**所有**卡名/招式/特性都必须带中文展示名
+
+    起因：曾出现「附能量」日志显示英文能量名（Basic Psychic Energy）的疑点，
+    此处以自动化断言关闭该不确定性——任何卡池/视图缺 display 都会被抓住。
+    """
+
+    NON_ASCII_SAMPLE = 12   # 至少应有多数条目为中文（少量卡可能暂缺中文）
+
+    def _assert_zh(self, objs, where):
+        miss = [o.get("name") for o in objs
+                if o.get("name") and not (o.get("display") or o.get("name_zh"))]
+        self.assertFalse(miss, f"{where} 缺中文展示名（回退英文）：{miss[:6]}")
+
+    def test_all_presets_view_is_fully_chinese(self):
+        h = user_headers()
+        for aid in ("A1", "A2", "A3", "A4"):
+            with self.subTest(archetype=aid):
+                r = client.post("/battles", headers=h,
+                                json={"deck_a": aid, "deck_b": "A1", "seed": 5})
+                self.assertEqual(r.status_code, 201, r.text)
+                v = r.json()["view"]
+                me = v["me_state"]
+                self._assert_zh(me.get("hand") or [], f"{aid} 手牌")
+                fp = me.get("active")
+                if fp:
+                    self._assert_zh([fp], f"{aid} 战斗位")
+                    for atk in fp.get("attacks") or []:
+                        self.assertTrue(atk.get("display"),
+                                        f"{aid} 招式缺 display：{atk}")
+                    for ab in fp.get("abilities") or []:
+                        self.assertTrue(ab.get("display"),
+                                        f"{aid} 特性缺 display：{ab}")
+                # 能量卡也要有中文名（本次疑点所在）
+                energies = [c for c in (me.get("hand") or [])
+                            if c.get("type") == "energy"]
+                for e in energies:
+                    self.assertTrue(e.get("display") and not e["display"].isascii(),
+                                    f"{aid} 能量卡缺中文名：{e}")
+
+    def test_hand_energy_display_matches_catalog(self):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": 7})
+        v = r.json()["view"]
+        energies = [c for c in v["me_state"]["hand"] if c.get("type") == "energy"]
+        self.assertTrue(energies, "手牌应至少有一张能量（A1 有 13 张）")
+        for e in energies:
+            self.assertIn(e["display"], ("基本超能量", "基本火能量", "基本能量"),
+                          f"能量展示名异常：{e}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

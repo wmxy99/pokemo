@@ -37,11 +37,6 @@ _ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶"
               "water": "水", "lightning": "雷", "fighting": "斗",
               "metal": "钢", "colorless": ""}
 
-# 基本能量中文名（占位替换时也用中文展示）
-_ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",
-              "water": "水", "lightning": "雷", "fighting": "斗",
-              "metal": "钢", "colorless": ""}
-
 
 # ---------------- 数据加载 ----------------
 def _read(path: Path) -> dict:
@@ -195,14 +190,16 @@ def build_deck(arch_id: str) -> list:
     a = _arch_raw(arch_id)
     cat = catalog()
     fb_type = a.get("fallback_energy", "colorless")
+    # 占位能量同样带中文展示名（否则前端/日志会回退显示英文名）
     fb = EnergyDef(fb_type, name=f"Basic {fb_type.title()} Energy",
-                   name_zh=f"基本{_ENERGY_ZH[fb_type]}能量")
+                   name_zh=f"基本{_ENERGY_ZH.get(fb_type, '')}能量")
     out: list = []
     for entry in decklist(arch_id):
         item = cat.get(entry["name"])
         n = int(entry["count"])
         if item is None or item["unsupported"]:
-            out.extend(EnergyRef(EnergyDef(fb.type, name=fb.name)) for _ in range(n))
+            # 复用同一个冻结的 EnergyDef（此前重建时漏掉 name_zh → 显示英文）
+            out.extend(EnergyRef(fb) for _ in range(n))
             continue
         out.extend(_ref(item["def"]) for _ in range(n))
     return out

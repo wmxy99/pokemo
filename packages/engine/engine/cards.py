@@ -196,11 +196,25 @@ class FieldPokemon:
         self.energy[t] = self.energy.get(t, 0) + n
 
     def can_pay(self, cost: EnergyCost) -> bool:
-        """能否支付招式能量需求（不消耗能量——攻击不弃能）"""
+        """能否支付招式能量需求（不消耗能量——攻击不弃能）
+
+        规则：**彩色需求须同色满足**；**无色需求可由任意能量支付**
+        （先按同色占用扣除彩色需求，再看剩余总能量是否够无色部分）。
+        例：`[('psychic',1),('colorless',1)]` 可由「超 + 火」支付。
+        """
+        need: dict = {}
+        colorless = 0
         for t, n in cost:
+            if t == COLORLESS:
+                colorless += n
+            else:
+                need[t] = need.get(t, 0) + n
+        used = 0
+        for t, n in need.items():
             if self.energy_of(t) < n:
                 return False
-        return True
+            used += n
+        return (self.total_energy() - used) >= colorless
 
     def remove_any(self, n: int) -> bool:
         """移除 n 点能量（撤退/干扰用）：无色优先，其次任意颜色"""

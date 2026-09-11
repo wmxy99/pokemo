@@ -90,6 +90,31 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | 确定性 | `random.Random(seed)` 全驱动：同 seed → 同事件序列（有单测） |
 | 事件日志 | 结构化 dict 序列 → `matches.events_log` JSONL 可直接落库 |
 
+## 自由文本指令（中文招式名 / 卡名 → 动作）
+
+`engine.commands` 把「人话」解析为 `legal_actions` 成员，让招式名/卡名本身可执行
+（数据键仍是英文；中文既是展示名也是输入别名）。
+
+| API | 作用 |
+|---|---|
+| `Battle.resolve_command(text, verb=None)` | 文本 → 合法动作（返回 `{ok, action, matched, candidates, ambiguous}`） |
+| `Battle.step_command(text, verb=None)` | 直接按名称执行（解析失败返回 `ok=False`，不抛异常） |
+| `Battle.command_catalog()` | 当前可用指令清单（中文 label + 对应动作），供 UI 提示/自动补全 |
+| `commands.find_action(legal, text)` / `resolve_action(legal, action)` | 纯函数版本；后者用于把「带名称缺索引」的动作**补全**为合法动作 |
+
+支持的写法（忽略大小写/空格/标点）：
+
+| 输入 | 解析结果 |
+|---|---|
+| `幻影俯冲` · `Phantom Dive` | `{"verb":"attack","attack":1}` |
+| `攻击 幻影俯冲` · `高级球` | 招式 / 训练家卡（中文或英文名） |
+| `附能量到后备1` · `附能量 → 战斗位` | `{"verb":"attach","target":n}` |
+| `撤退到后备1` · `结束回合` · `过` | `{"verb":"retreat"/"pass", ...}` |
+| `{"verb":"attack","attack_name":"幻影俯冲"}` | 直接 `step()` 也可（无需索引） |
+
+**不变量**：`find_action(legal, command_label(a))` 必须能还原 `a`（有单测守卫）；
+同名卡的多张副本可互换（不报歧义），但**同名不同目标**必须报错要求指明，绝不静默改目标。
+
 ## i18n · 中文展示层（英文为数据键）
 
 | 层 | 字段 | 说明 |

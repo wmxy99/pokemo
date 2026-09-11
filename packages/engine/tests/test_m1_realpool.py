@@ -256,5 +256,59 @@ class TestZhNameResolution(unittest.TestCase):
         self.assertEqual(len(dl.make_deck("A3 · N的索罗亚克ex")), 60)
 
 
+class TestColorlessCostPayment(unittest.TestCase):
+    """能量支付规则：彩色需求同色满足；**无色需求可由任意能量支付**
+
+    回归守卫：曾因 can_pay 仅比对同名能量，导致真实卡组（彩色能量）
+    的「2 无色」招式永远不可用（演示卡组用无色能量掩盖了该缺陷）。
+    """
+
+    def _fp(self, name):
+        from engine.cards import make_pokemon
+        from engine import reallib
+        return make_pokemon(reallib.catalog()[name]["def"])
+
+    def test_colorless_payable_by_any_color(self):
+        fp = self._fp("Meowth ex")            # 乱抓：2 无色
+        cost = fp.pdef.attacks[0].cost
+        fp.add_energy("psychic")
+        self.assertFalse(fp.can_pay(cost), "1 点能量不足以支付 2 无色")
+        fp.add_energy("fire")
+        self.assertTrue(fp.can_pay(cost), "2 无色应可由「超+火」支付")
+
+    def test_colorless_payable_by_colorless_too(self):
+        fp = self._fp("Meowth ex")
+        fp.add_energy("colorless", 2)
+        self.assertTrue(fp.can_pay(fp.pdef.attacks[0].cost))
+
+    def test_colored_demand_not_substitutable(self):
+        fp = self._fp("Dragapult ex")         # 幻影俯冲：火 + 超
+        cost = fp.pdef.attacks[1].cost
+        fp.add_energy("fire", 2)
+        self.assertFalse(fp.can_pay(cost), "双火不可支付「火+超」")
+        fp.add_energy("psychic")
+        self.assertTrue(fp.can_pay(cost))
+
+    def test_mixed_colored_plus_colorless(self):
+        """彩色+无色：彩色须同色占用，无色吃剩余任意能量"""
+        fp = self._fp("Dreepy")               # 龙之头击：超 + 无色
+        cost = fp.pdef.attacks[1].cost
+        fp.add_energy("psychic")
+        self.assertFalse(fp.can_pay(cost))
+        fp.add_energy("fire")
+        self.assertTrue(fp.can_pay(cost), "剩余火能量应可支付无色部分")
+
+    def test_real_deck_active_can_attack_after_two_energy(self):
+        """真实卡组实战口径：附着 2 点彩色能量后应能出招（旧 bug 下恒为 False）"""
+        b = Battle(dl.make_deck("A1"), dl.make_deck("A3"), seed=7)
+        p0 = b.players[0]
+        self.assertIsNotNone(p0.active)
+        for t in ("psychic", "fire"):
+            p0.active.add_energy(t)
+        payable = [a for a in p0.active.pdef.attacks
+                   if p0.active.can_pay(a.cost)]
+        self.assertTrue(payable, "2 点彩色能量后应至少有一个可支付招式")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

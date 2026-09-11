@@ -131,28 +131,12 @@ def act(bid: str, req: schemas.ActionReq,
     if battle.current != s["player_side"]:
         raise HTTPException(409, "当前不是你的回合")
     legal = battle.view().get("legal") or []
+    side = s["player_side"]
 
-    matched = None
-    if req.action is None:
-        # 自由文本指令（中文别名）：招式名 / 卡名 / 附能量到后备1 / 结束回合 …
-        if not (req.command or "").strip():
-            raise HTTPException(422, "需提供 action（引擎动作）或 command（自由指令）")
-        r = battle.resolve_command(req.command, verb=req.verb)
-        if not r.get("ok"):
-            raise HTTPException(422, {
-                "error": r.get("error", "指令无法解析"),
-                "matched": r.get("matched"),
-                "ambiguous": bool(r.get("ambiguous")),
-                "candidates": [c for c in (r.get("candidates") or [])][:12],
-                "legal": legal,
-            })
-        action = r["action"]
-        matched = r.get("matched")
-    else:
+    # ---- 情况 A：直接给引擎动作（保持 F5 严格 1:1，支持名称补全） ----
+    if req.action is not None:
         action = req.action
         if action not in legal:
-            # 友好写法：动作只给名称/部分字段（如 {"verb":"attack",
-            # "attack_name":"幻影俯冲"}）→ 补全为 legal 成员（仍是 1:1 动作）
             from engine.commands import resolve_action
             fixed = resolve_action(legal, action)
             if fixed is None or fixed not in legal:
@@ -161,19 +145,67 @@ def act(bid: str, req: schemas.ActionReq,
                          "（不一致即 bug，PRD F5）；"
                          "也可改用 command 传入中文指令")
             action = fixed
+        res = battle.step(copy.deepcopy(action))
+        if not res["ok"]:
+            raise HTTPException(422, f"引擎拒绝动作：{res}")
+        matched = None
+        seq = {"steps": [{"input": str(action.get("verb")), "ok": True,
+                          "matched": None, "used_action": action}],
+               "executed": 1, "planned": 1, "remaining": [], "stopped": None}
+    else:
+        # ---- 情况 B：自由文本指令（可组合多步） ----
+        raw = req.commands if req.commands else req.command
+        from engine.commands import split_sequence, sequence_hint
+        parts = split_sequence(raw)
+        if not parts:
+            raise HTTPException(422, "需提供 action（引擎动作）、"
+                                     "command（自由指令）或 commands（步骤数组）")
+        # 首步先解析：失败则整单不执行（避免"半执行 + 422"的歧义）
+        first = battle.resolve_command(parts[0], verb=req.verb)
+        if not first.get("ok"):
+            raise HTTPException(422, {
+                "error": first.get("error", "指令无法解析"),
+                "matched": first.get("matched"),
+                "ambiguous": bool(first.get("ambiguous")),
+                "candidates": list(first.get("candidates") or [])[:12],
+                "steps": parts,
+                "hint": sequence_hint(),
+                "legal": legal,
+            })
+        seq = battle.step_sequence(parts, actor=side)
+        if seq.get("executed", 0) == 0:
+            # 理论上首步已校验通过；兜底（引擎拒绝等）
+            bad = next((x for x in seq["steps"] if not x.get("ok")), {})
+            raise HTTPException(422, {
+                "error": bad.get("error", "指令未被执行"),
+                "ambiguous": bool(bad.get("ambiguous")),
+                "candidates": list(bad.get("candidates") or [])[:12],
+                "steps": seq.get("steps") or parts,
+                "legal": legal,
+            })
+        matched = " 然后 ".join(
+            (x.get("matched") or x.get("input")) for x in seq["steps"]
+            if x.get("ok")) or None
 
-    res = battle.step(copy.deepcopy(action))
-    if not res["ok"]:
-        raise HTTPException(422, f"引擎拒绝动作：{res}")
-    # AI 回应
+    # AI 回应（玩家回合结束/移交后才会有 AI 动作）
     ai_actions = _run_ai_until_human(bid)
     view = battle.view()
     store.update_battle(bid, status="finished" if battle.finished else "open",
                         payload={"winner": battle.winner})
-    my_turn = (not battle.finished
-               and battle.current == s["player_side"])
-    return {"ok": True, "winner": battle.winner, "matched": matched,
-            "used_action": action, "ai_actions": ai_actions,
+    my_turn = (not battle.finished and battle.current == side)
+    from engine.commands import sequence_hint
+    return {"ok": True, "winner": battle.winner,
+            "matched": matched,
+            "used_action": (seq["steps"][-1].get("used_action")
+                            if seq.get("steps") else None),
+            # 组合指令详情（单步时 steps 长度为 1，字段形状一致）
+            "steps": seq.get("steps", []),
+            "executed": seq.get("executed", 0),
+            "planned": seq.get("planned", 0),
+            "remaining": seq.get("remaining", []),
+            "stopped": seq.get("stopped"),
+            "sequence_hint": sequence_hint(),
+            "ai_actions": ai_actions,
             "commands": battle.command_catalog() if my_turn else [],
             "view": view}
 

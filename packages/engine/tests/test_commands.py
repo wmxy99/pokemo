@@ -359,5 +359,125 @@ class TestNamedActionsWithoutIndex(unittest.TestCase):
                             for e in b.events[n0:]) or True)
 
 
+class TestSplitSequence(unittest.TestCase):
+    """组合指令切分：强分隔词优先；内联箭头（动词 → 目标）不得误切"""
+
+    def test_split_on_strong_separators(self):
+        self.assertEqual(commands.split_sequence("附能量到后备1 然后结束回合"),
+                         ["附能量到后备1", "结束回合"])
+        self.assertEqual(commands.split_sequence("附能量到后备1; 结束回合"),
+                         ["附能量到后备1", "结束回合"])
+        self.assertEqual(commands.split_sequence("结束回合；过"),
+                         ["结束回合", "过"])
+        self.assertEqual(commands.split_sequence("附能量到后备1\n结束回合"),
+                         ["附能量到后备1", "结束回合"])
+
+    def test_split_list_input(self):
+        self.assertEqual(commands.split_sequence(["A", " B ", ""]), ["A", "B"])
+
+    def test_inline_arrow_not_split(self):
+        """「附能量 → 战斗位」是指令 label 本身，不是两步"""
+        self.assertEqual(commands.split_sequence("附能量 → 战斗位"),
+                         ["附能量 → 战斗位"])
+
+    def test_arrow_between_verb_steps_is_split(self):
+        """箭头两侧都是动词起点 → 视为多步"""
+        got = commands.split_sequence("附能量到战斗位 → 结束回合")
+        self.assertEqual(len(got), 2, got)
+        self.assertIn("结束回合", got[-1])
+
+    def test_three_step_chain_with_mixed_separators(self):
+        got = commands.split_sequence("附能量到战斗位 然后 进化：多龙梅西亚 → 多龙奇 然后 结束回合")
+        self.assertEqual(len(got), 3, got)
+        self.assertTrue(got[0].startswith("附能量"))
+        self.assertTrue(got[1].startswith("进化"))
+        self.assertEqual(got[2], "结束回合")
+
+    def test_leading_zai_stripped_after_first_step(self):
+        got = commands.split_sequence("附能量到战斗位 然后 再 结束回合")
+        self.assertEqual(got, ["附能量到战斗位", "结束回合"])
+
+    def test_empty(self):
+        self.assertEqual(commands.split_sequence(""), [])
+        self.assertEqual(commands.split_sequence(None), [])
+        self.assertEqual(commands.split_sequence("   "), [])
+
+
+class TestStepSequence(unittest.TestCase):
+    """组合指令执行语义：逐步重解析、回合移交即停、部分失败保留已执行"""
+
+    def _fresh(self, seed=7):
+        return Battle(decklib.make_deck("A1"), decklib.make_deck("A3"), seed=seed)
+
+    def test_two_step_attach_then_pass(self):
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        r = b.step_sequence("附能量到战斗位 然后 结束回合", actor=actor)
+        self.assertEqual(r["planned"], 2)
+        self.assertEqual(r["executed"], 2)
+        self.assertEqual(r["remaining"], [])
+        self.assertTrue(all(x["ok"] for x in r["steps"]))
+        self.assertEqual([x["input"] for x in r["steps"]],
+                         ["附能量到战斗位", "结束回合"])
+        self.assertNotEqual(b.current, actor, "结束回合后应移交对手")
+
+    def test_stops_at_turn_handover_and_reports_remaining(self):
+        """结束回合后的步骤属于对手，不得代为执行"""
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        r = b.step_sequence(["结束回合", "附能量到战斗位"], actor=actor)
+        self.assertEqual(r["executed"], 1)
+        self.assertEqual(r["remaining"], ["附能量到战斗位"])
+        self.assertIn("回合", r["stopped"] or "")
+
+    def test_later_step_failure_keeps_earlier_steps(self):
+        """后续步骤失败 → 部分执行（已执行动作不回滚）"""
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        n0 = len(b.events)
+        r = b.step_sequence("附能量到战斗位 然后 并不存在的动作", actor=actor)
+        self.assertEqual(r["executed"], 1)
+        self.assertFalse(r["steps"][1]["ok"])
+        self.assertGreater(len(b.events), n0, "第一步应已生效")
+        self.assertEqual(r["remaining"], ["并不存在的动作"])
+
+    def test_zero_executed_when_first_step_bad(self):
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        r = b.step_sequence("毫不相关的句子 然后 结束回合", actor=b.current)
+        self.assertEqual(r["executed"], 0)
+        self.assertTrue(r["remaining"])
+
+    def test_max_steps_guard(self):
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        many = ["结束回合"] * (commands.MAX_SEQUENCE_STEPS + 3)
+        r = b.step_sequence(many, actor=actor)
+        self.assertLessEqual(r["executed"], commands.MAX_SEQUENCE_STEPS)
+        self.assertTrue(r["stopped"])
+
+    def test_empty_sequence(self):
+        b = self._fresh()
+        r = b.step_sequence("")
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["steps"], [])
+
+    def test_does_not_play_for_opponent(self):
+        """actor 限定：序列不会替对手走棋"""
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        r = b.step_sequence("结束回合", actor=actor)
+        self.assertEqual(r["executed"], 1)
+        self.assertNotEqual(b.current, actor)
+        # 再喂一条序列：此时行动方是对手，不应执行
+        r2 = b.step_sequence("结束回合", actor=actor)
+        self.assertEqual(r2["executed"], 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

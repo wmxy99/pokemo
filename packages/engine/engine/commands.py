@@ -375,3 +375,86 @@ def command_catalog(legal: list) -> list:
     """当前可用指令清单（供 UI 自动补全 / API 自描述）"""
     return [{"label": command_label(a), "verb": a.get("verb"),
              "action": dict(a)} for a in (legal or [])]
+
+
+# ---------------- 组合指令（序列批量提交） ----------------
+
+# 强分隔词：出现即视为步骤边界
+SEQ_SEPARATORS = ("然后", "接著", "接着", "之后", "之後", "而后",
+                  "再到", "然后", "then", ";", "；", "\n")
+# 「再」单独成词时也是分隔（如「… 再结束回合」），但可能出现在卡名中，
+# 故仅在切分后逐段校验（无法解析的段落会整体失败，误差可控）。
+
+
+def split_sequence(text) -> list:
+    """把组合指令切成有序步骤（保持顺序、去空白与空段）
+
+    例：`附能量到后备1 然后结束回合` → ['附能量到后备1', '结束回合']
+        `进化：多龙梅西亚 → 多龙奇; 攻击：幻影俯冲` → 两段
+
+    注意：`→` 既出现在指令 label 内部（「附能量 → 战斗位」），也可作步骤分隔。
+    因此先按强分隔词切分；**仅当强分隔词没切开**时才用箭头兜底，
+    且要求箭头之后每段都以动词别名开头（`_looks_like_step_chain`），
+    避免把「附能量 → 战斗位」误切成两步。
+    """
+    if text is None:
+        return []
+    if isinstance(text, (list, tuple)):
+        return [str(x).strip() for x in text if str(x).strip()]
+    s = str(text).strip()
+    if not s:
+        return []
+
+    parts = [s]
+    for sep in SEQ_SEPARATORS:
+        nxt = []
+        for p in parts:
+            nxt.extend(p.split(sep))
+        parts = nxt
+    parts = [p.strip() for p in parts if p and p.strip()]
+
+    if len(parts) == 1 and ("→" in s or "->" in s):
+        cand = [p.strip() for p in s.replace("->", "→").split("→")]
+        if _looks_like_step_chain(cand):
+            parts = [p for p in cand if p]
+
+    # 段首单独的「再」→ 去掉（如「… 再 结束回合」）
+    out = []
+    for p in parts:
+        if len(p) > 1 and p.startswith("再") and out:
+            rest = p[1:].strip()
+            if rest:
+                out.append(rest)
+                continue
+        out.append(p)
+    return [x for x in out if x]
+
+
+def _looks_like_step_chain(parts: list) -> bool:
+    """箭头切出的分段是否像「多步指令」而非「动词 → 目标」
+
+    要求：≥2 段非空，且**第 2 段起**每段都以动词别名开头
+    （如「结束回合」「攻击：X」）；否则视为内联箭头，不切。
+    """
+    segs = [p for p in parts if p]
+    if len(segs) < 2:
+        return False
+    for seg in segs[1:]:
+        q = norm(seg)
+        if not q:
+            return False
+        if not any(any(q.startswith(norm(a)) for a in names)
+                   for names in VERB_ALIASES.values()):
+            return False
+    return True
+
+
+def sequence_hint() -> str:
+    """组合指令用法提示（供 UI / 文档复用）"""
+    return ("可用「然后 / 接着 / 再 / ;」串联多步，如"
+            "「附能量到后备1 然后结束回合」；回合移交对手或某步失败即停止，"
+            "并回报已执行步骤与剩余步骤")
+
+
+# 单次组合指令的最大步数（防滥用；UI 与 API 共用）
+MAX_SEQUENCE_STEPS = 8

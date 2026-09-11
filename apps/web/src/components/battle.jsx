@@ -1,6 +1,7 @@
 import React from 'react'
 import { VERBS, verbLabel } from '../verbs.js'
 import { disp } from '../names.js'
+import { splitSequence, sequenceTip } from '../sequences.js'
 import { t } from '../i18n.js'
 
 function VerbIcon({ verb, size = 16 }) {
@@ -155,6 +156,9 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
   }
   const cands = error && typeof error === 'object'
     ? (error.candidates || []).map((c) => c.label || c).filter(Boolean) : []
+  // 组合指令预览（真实解析以引擎为准）
+  const steps = splitSequence(text)
+  const isSeq = steps.length > 1
   return (
     <div className="cmdbar">
       <form className="row" onSubmit={(e) => { e.preventDefault(); submit() }}>
@@ -173,7 +177,19 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
       <p id="cmd-hint" className="sm muted" style={{ margin: '4px 0 0' }}>
         可直接输入中文指令；也可从下方候选点选（与合法动作一一对应）
         {lastMatched ? ` · 上次：${lastMatched}` : ''}
+        <br />{sequenceTip()}
       </p>
+      {isSeq && (
+        <p className="sm" style={{ margin: '4px 6px 0' }} aria-live="polite">
+          将按顺序执行 <b className="mono">{steps.length}</b> 步：
+          {steps.map((x, i) => (
+            <span key={i} className="seq-step">{i > 0 ? ' → ' : ''}{x}</span>
+          ))}
+          <span className="sm muted">
+            （回合移交对手或某步失败即停止；实际解析以引擎为准）
+          </span>
+        </p>
+      )}
       <div className="cmd-chips" role="group" aria-label="可用指令">
         {commands.slice(0, 10).map((c, i) => (
           <button key={i} type="button" className="chip-btn"

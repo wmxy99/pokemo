@@ -932,5 +932,121 @@ class TestZhDisplayGuard(unittest.TestCase):
                           f"能量展示名异常：{e}")
 
 
+class TestSequenceCommands(unittest.TestCase):
+    """组合指令（多步批量提交）：然后/接着/; 组合串 与 commands 数组"""
+
+    def _battle(self, seed=7):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "A1", "deck_b": "A3", "seed": seed})
+        self.assertEqual(r.status_code, 201, r.text)
+        return h, r.json()["id"]
+
+    def _first(self, h, bid, pred=lambda lbl: True):
+        st = client.get(f"/battles/{bid}", headers=h).json()
+        for c in st.get("commands") or []:
+            if pred(c["label"]):
+                return st, c["label"]
+        return st, None
+
+    def test_two_step_command_string(self):
+        h, bid = self._battle()
+        st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+        self.assertIsNotNone(lbl, f"应可用附能量：{st.get('commands')}")
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": f"{lbl} 然后 结束回合"})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertEqual(j["planned"], 2)
+        self.assertEqual(j["executed"], 2)
+        self.assertEqual(len(j["steps"]), 2)
+        self.assertTrue(all(x["ok"] for x in j["steps"]))
+        self.assertEqual(j["steps"][1]["input"], "结束回合")
+        self.assertIn("然后", j["matched"])
+        self.assertTrue(j["sequence_hint"])
+
+    def test_two_step_commands_array(self):
+        h, bid = self._battle()
+        st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"commands": [lbl, "结束回合"]})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertEqual([x["input"] for x in j["steps"]], [lbl, "结束回合"])
+        self.assertEqual(j["executed"], 2)
+
+    def test_handover_stops_and_reports_remaining(self):
+        """结束回合在前 → 后续步骤属于对手，不执行且如实回报"""
+        h, bid = self._battle()
+        st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"commands": ["结束回合", lbl]})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertEqual(j["executed"], 1)
+        self.assertEqual(j["remaining"], [lbl])
+        self.assertIn("回合", j["stopped"] or "")
+
+    def test_first_step_invalid_returns_422_without_side_effect(self):
+        """首步非法 → 422 且整单不执行（不留半执行状态）"""
+        h, bid = self._battle()
+        st = client.get(f"/battles/{bid}", headers=h).json()
+        before = st["turn"]
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": "这不是一个动作 然后 结束回合"})
+        self.assertEqual(r.status_code, 422, r.text)
+        det = r.json()["detail"]
+        self.assertIn("error", det)
+        self.assertEqual(det["steps"], ["这不是一个动作", "结束回合"])
+        self.assertTrue(det.get("hint"))
+        after = client.get(f"/battles/{bid}", headers=h).json()
+        self.assertEqual(after["turn"], before, "422 不应推进对局")
+
+    def test_later_step_failure_returns_200_partial(self):
+        """后续步骤失败 → 200 + 部分执行（已执行动作保留）"""
+        h, bid = self._battle()
+        st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": f"{lbl} 然后 毫不相关的句子"})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertEqual(j["executed"], 1)
+        self.assertFalse(j["steps"][1]["ok"])
+        self.assertEqual(j["remaining"], ["毫不相关的句子"])
+
+    def test_single_command_response_shape_is_uniform(self):
+        """单步也应返回 steps 数组（前后端形状一致）"""
+        h, bid = self._battle()
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": "结束回合"})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertEqual(j["planned"], 1)
+        self.assertEqual(len(j["steps"]), 1)
+        self.assertEqual(j["steps"][0]["input"], "结束回合")
+
+    def test_separators_variants(self):
+        """「;」「接着」「再」等分隔词同样生效"""
+        for sep in (";", "接着", "然后"):
+            h, bid = self._battle(seed=11)
+            st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+            if not lbl:
+                self.skipTest("该种子无附能量指令")
+            r = client.post(f"/battles/{bid}/actions", headers=h,
+                            json={"command": f"{lbl}{sep}结束回合"})
+            self.assertEqual(r.status_code, 200, f"{sep}: {r.text}")
+            self.assertEqual(r.json()["planned"], 2, sep)
+
+    def test_max_steps_guard_via_api(self):
+        h, bid = self._battle()
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"commands": ["结束回合"] * 12})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertLessEqual(j["planned"] or 12, 8 + 12)   # planned 可为原始步数
+        self.assertLessEqual(j["executed"], 8)
+        self.assertTrue(j["stopped"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -296,6 +296,73 @@ class Battle:
         out["action"] = res["action"]
         return out
 
+    def step_sequence(self, text, actor: Optional[int] = None,
+                      max_steps: Optional[int] = None) -> dict:
+        """执行**组合指令**（多步序列），每步按最新 legal_actions 重新解析
+
+        语义（与前端/API 约定一致）：
+          - 依次执行；某步解析失败或引擎拒绝 → **停止**并回报 `steps`（已执行的保留）；
+          - `结束回合`（或任何使回合移交的动作）后 → 停止，剩余步骤计入 `remaining`；
+          - 对局结束 / 非主阶段 / 超过步数上限 → 停止并说明原因；
+          - 不会替对方走棋（`actor` 默认为当前行动方，回合移交即停）。
+
+        返回 `{ok, steps[], executed, remaining, stopped, view}`
+        """
+        from .commands import split_sequence, MAX_SEQUENCE_STEPS
+        parts = split_sequence(text)
+        if not parts:
+            return {"ok": False, "error": "空指令", "steps": [],
+                    "executed": 0, "remaining": []}
+        if actor is None:
+            actor = self.current
+        limit = min(int(max_steps or MAX_SEQUENCE_STEPS), MAX_SEQUENCE_STEPS)
+
+        steps: list = []
+        stopped = None
+        for i, part in enumerate(parts):
+            if i >= limit:
+                stopped = f"超过单次最多 {limit} 步（剩余未执行）"
+                break
+            if self.finished:
+                stopped = "对局已结束"
+                break
+            if self.phase != "main":
+                stopped = f"当前阶段为 {self.phase}，无法继续执行"
+                break
+            if self.current != actor:
+                stopped = "回合已移交对手"
+                break
+            res = self.resolve_command(part)
+            if not res.get("ok"):
+                steps.append({"input": part, "ok": False,
+                              "error": res.get("error"),
+                              "ambiguous": bool(res.get("ambiguous")),
+                              "candidates": res.get("candidates") or []})
+                stopped = res.get("error")
+                break
+            out = self.step(res["action"])
+            if not out.get("ok"):
+                steps.append({"input": part, "ok": False,
+                              "role": None, "error": out.get("error")})
+                stopped = out.get("error")
+                break
+            steps.append({"input": part, "ok": True,
+                          "matched": res.get("matched"),
+                          "used_action": res["action"]})
+            if self.finished:
+                stopped = "对局已结束"
+                break
+            if self.current != actor:
+                stopped = "回合已移交对手"
+                break
+
+        executed = sum(1 for s in steps if s.get("ok"))
+        remaining = parts[executed:] if stopped and executed < len(parts) else []
+        return {"ok": executed > 0 or (len(parts) > 0 and not stopped),
+                "steps": steps, "executed": executed,
+                "planned": len(parts), "remaining": remaining,
+                "stopped": stopped, "view": self.view()}
+
     # ---------- 动作执行 ----------
     def step(self, action: dict) -> dict:
         if self.finished:

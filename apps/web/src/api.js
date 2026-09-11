@@ -47,6 +47,9 @@ export const api = {
   // 自由文本指令（中文招式名/卡名/位置），如「幻影俯冲」「附能量到后备1」
   actCommand: (id, command, verb) => req(`/battles/${id}/actions`,
     { method: 'POST', body: verb ? { command, verb } : { command } }),
+  // 组合指令：显式步骤数组（等价于用「然后」串联的 command）
+  actCommands: (id, commands) => req(`/battles/${id}/actions`,
+    { method: 'POST', body: { commands } }),
   battleCommands: (id) => req(`/battles/${id}/commands`),
   // F6 批量
   submitBatch: (payload) => req('/batch/jobs', { method: 'POST', body: payload }),

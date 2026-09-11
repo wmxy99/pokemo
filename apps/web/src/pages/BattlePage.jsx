@@ -80,8 +80,16 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       setCommands(r.commands || [])
       setLastMatched(r.matched || text)
       const ctx = actionContext(before)
+      // 组合指令：逐步记录（单步时 steps 长度为 1，展示一致）
+      const steps = r.steps || []
+      const multi = steps.length > 1
       setLog((l) => [...l,
-        `> 我方（指令「${text}」→ ${r.matched || '已执行'}）：${verbLabel(r.used_action || {}, ctx)}`,
+        ...steps.map((st, i) => (st.ok
+          ? `> 我方${multi ? ` [${i + 1}/${steps.length}]` : ''}（指令「${st.input}」→ ${st.matched || '已执行'}）：${verbLabel(st.used_action || {}, ctx)}`
+          : `! 我方${multi ? ` [${i + 1}/${steps.length}]` : ''} 指令「${st.input}」未执行：${st.error || '解析失败'}`)),
+        (r.remaining || []).length
+          ? `… 停止：${r.stopped || '已停止'}（剩余 ${r.remaining.length} 步：${r.remaining.join(' / ')}）`
+          : null,
         ...(r.ai_actions || []).map((x) => `< AI：${x.verb === 'attack' ? '攻击' : verbLabel(x)}`),
         r.winner != null ? `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==` : null,
       ].filter(Boolean))

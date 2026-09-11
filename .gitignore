@@ -9,6 +9,9 @@ data/
 # 例外：引擎自有的**卡池与卡表定义**（项目自撰，仅卡名/数值映射，无官方图像）需入库
 !packages/engine/engine/data/
 !packages/engine/engine/data/*.json
+# 例外：K2 效果解析黄金集（手工标注真值，项目自撰）需入库
+!packages/agent/data/
+!packages/agent/data/*.json
 
 # python
 __pycache__/
@@ -53,3 +56,5 @@ apps/web/dist8/
 apps/web/dist9/
 apps/web/dist10/
 apps/web/dist11/
+apps/web/dist12/
+apps/web/dist13/

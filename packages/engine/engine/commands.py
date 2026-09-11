@@ -258,10 +258,14 @@ def find_action(legal: list, text: str, verb: Optional[str] = None) -> dict:
                 seen.add(k)
                 choices.append(t)
         if len(choices) > 1:
+            cands = [{**dict(t[2]), "label": command_label(t[2])}
+                     for t in choices]
             return {"ok": False, "action": None, "matched": top[3],
-                    "ambiguous": True,
-                    "candidates": [dict(t[2]) for t in choices],
-                    "error": f"「{top[3]}」有多个可选目标，请指明（如「{top[3]} 后备1」）"}
+                    "ambiguous": True, "candidates": cands,
+                    # 附 label 版候选（前端可直接展示/点选）
+                    "options": [c["label"] for c in cands],
+                    "error": (f"「{top[3]}」有多个可选目标，请指明其中之一"
+                              f"（如「{cands[0]['label']}」）")}
         return {"ok": True, "action": dict(top[2]), "matched": top[3],
                 "candidates": []}
 
@@ -278,7 +282,9 @@ def find_action(legal: list, text: str, verb: Optional[str] = None) -> dict:
 
     return {"ok": False, "action": None,
             "error": f"无法从指令「{text}」匹配到当前可用动作",
-            "candidates": [command_label(a) for a in pool][:12]}
+            "candidates": [{**dict(a), "label": command_label(a)}
+                           for a in pool][:12],
+            "options": [command_label(a) for a in pool][:12]}
 
 
 def resolve_action(legal: list, action: dict) -> Optional[dict]:
@@ -368,6 +374,10 @@ def command_label(action: dict) -> str:
             return f"{verb_zh}：{onto} → {name}"
         return (f"{verb_zh}（卡位{action.get('hand', 0)} → "
                 f"目标{action.get('target', 0)}）")
+    if verb in ("trainer", "ability") and action.get("target") is not None:
+        # 同名卡打到不同目标时必须区分（否则用户无从选择，见多目标 bos 场景）
+        return (f"{verb_zh}：{name} → {_slot_name(action['target'])}"
+                if name else f"{verb_zh} → {_slot_name(action['target'])}")
     return f"{verb_zh}：{name}" if name else verb_zh
 
 

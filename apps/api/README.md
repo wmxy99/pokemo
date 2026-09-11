@@ -208,6 +208,16 @@ POST /train/jobs
 
 实现见 `apps/api/app/labels.py`（`deck_label_zh` / `card_display`；未识别的用户自建卡组名原样保留）。
 
+## 4.8 M6 看门狗数据源
+
+| KPI | 数据源 |
+|---|---|
+| K1 | `artifacts/curve.json`（训练曲线最近一次评估） |
+| **K2** | **`packages/agent/artifacts/k2_report.json`**（`examples/run_k2.py` 产出；含 strict / seen / holdout / 卡池 tag 映射率） |
+| K3 / K4 | 引擎内建基准与批量任务实测 |
+
+K2 未评测时看门狗显示「尚未评测」并给出运行命令，不显示臆测数字。
+
 ## 5. 存储与数据目录
 
 **数据目录自动探测**（首个可写者胜，避免协同/沙箱写保护导致 `readonly database`）：

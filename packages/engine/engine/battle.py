@@ -187,7 +187,9 @@ class Battle:
                                      "name_zh": atk.name_zh,
                                      "display": atk.name_zh or atk.name,
                                      "damage": atk.damage,
-                                     "cost_map": list(atk.cost)})
+                                     "cost_map": list(atk.cost),
+                                     "desc_zh": atk.desc_zh,
+                                     "display_desc": atk.display_desc})
                 if p.active.total_energy() >= p.active.pdef.retreat \
                         and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
@@ -833,13 +835,17 @@ class Battle:
             d["display"] = fp.pdef.display
             d["abilities"] = [{"name": a.name, "name_zh": a.name_zh,
                                "display": a.name_zh or a.name,
-                               "tag": a.tag, "location": a.location}
+                               "tag": a.tag, "location": a.location,
+                               "desc": a.desc, "desc_zh": a.desc_zh,
+                               "display_desc": a.display_desc}
                               for a in fp.pdef.abilities]
             d["attacks"] = [{"name": a.name, "name_zh": a.name_zh,
                              "display": a.name_zh or a.name,
                              "cost": a.cost_total,
                              "cost_map": list(a.cost), "damage": a.damage,
-                             "tags": list(a.effects), "desc": a.desc}
+                             "tags": list(a.effects),
+                             "desc": a.desc, "desc_zh": a.desc_zh,
+                             "display_desc": a.display_desc}
                             for a in fp.pdef.attacks]
             return d
 
@@ -856,7 +862,9 @@ class Battle:
                              "abilities": [{"name": a.name, "name_zh": a.name_zh,
                                             "display": a.name_zh or a.name,
                                             "tag": a.tag,
-                                            "location": a.location}
+                                            "location": a.location,
+                                            "desc": a.desc, "desc_zh": a.desc_zh,
+                                            "display_desc": a.display_desc}
                                            for a in c.pdef.abilities]})
             elif isinstance(c, EnergyRef):
                 hand.append({"type": "energy", "name": c.edef.name,

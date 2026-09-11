@@ -90,6 +90,20 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | 确定性 | `random.Random(seed)` 全驱动：同 seed → 同事件序列（有单测） |
 | 事件日志 | 结构化 dict 序列 → `matches.events_log` JSONL 可直接落库 |
 
+## 招式/特性效果文本（中文，desc_zh）
+
+`cards_real.json` v1.2 起为**全部 26 个招式**与 **8 个特性**补 `desc_zh`（中文自述转写，
+严禁逐字复制官方文案），基本能量亦补「提供 N 点X能量」。
+
+| 层 | 字段 |
+|---|---|
+| 数据 | `attacks[].desc_zh` · `abilities[].desc_zh`（`desc` 为英文/旧字段兼容保留） |
+| 卡定义 | `AttackDef.desc_zh` / `.display_desc`（中文优先回退） · `AbilityDef` 同 |
+| 视图 | `view()` 的招式/特性条目带 `desc_zh` + `display_desc`；合法攻击动作亦带（供按钮提示） |
+
+前端把 `display_desc` 接入招式按钮与指令候选的 `title`，玩家悬停即见中文效果；
+同一份文本也是 **K2 解析语料**（见 `packages/agent` 的 `effects.py`）。
+
 ## 自由文本指令（中文招式名 / 卡名 → 动作）
 
 `engine.commands` 把「人话」解析为 `legal_actions` 成员，让招式名/卡名本身可执行

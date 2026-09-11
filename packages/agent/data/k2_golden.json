@@ -1,0 +1,1021 @@
+{
+ "meta": {
+  "version": "1.0",
+  "date": "2026-09-11",
+  "milestone": "K2 卡牌效果解析 · 黄金集（中文语料）",
+  "note": "**手工标注真值**，不由解析器生成；`expect` 只声明关心的字段，未声明字段不计入准确率。指示物 1 个 = 10 点 HP。",
+  "kpi": "K2 目标：严格准确率 ≥85%（PRD）；本集为工程基线集，扩充至 200+ 条属 P1",
+  "text_source": "真实卡池来自 package_engine/engine/data/cards_real.json 的 desc_zh（自述转写，非官方文案）；synthetic 用例为典型句式覆盖",
+  "holdout_note": "留出集（holdout）：句式与开发期不同，**未**针对性适配，用于观察泛化；报告分 seen / holdout 两组统计",
+  "name_fix_note": "英文名已与 cards_real.json 对齐（由不变量用例test_non_synthetic_texts_match_card_pool 守卫）"
+ },
+ "cases": [
+  {
+   "id": "atk_bite",
+   "kind": "attack",
+   "name": "Bite",
+   "text": "造成 10 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 10,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_dragon_headbutt",
+   "kind": "attack",
+   "name": "Dragon Headbutt",
+   "text": "造成 30 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 30,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_dragon_tail",
+   "kind": "attack",
+   "name": "Dragon Tail",
+   "text": "造成 50 点伤害。对手将战斗宝可梦与后备宝可梦互换。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 50,
+      "target": "active_opponent"
+     },
+     {
+      "type": "switch",
+      "amount": null,
+      "target": "active_opponent_bench"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_jet_headbutt",
+   "kind": "attack",
+   "name": "Jet Headbutt",
+   "text": "造成 70 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 70,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_phantom_dive",
+   "kind": "attack",
+   "name": "Phantom Dive",
+   "text": "造成 200 点伤害；随后在对手后备宝可梦上以任意方式放置 6 个伤害指示物（合计 60 点）。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 200,
+      "target": "active_opponent"
+     },
+     {
+      "type": "spread",
+      "amount": 60,
+      "target": "active_opponent_bench",
+      "extra": {
+       "free_distribute": true,
+       "counters": 6
+      }
+     }
+    ]
+   },
+   "note": "指示物 6 个 = 60 点；任意分配"
+  },
+  {
+   "id": "atk_astonish",
+   "kind": "attack",
+   "name": "Astonish",
+   "text": "造成 10 点伤害。对手从手牌随机弃 1 张。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 10,
+      "target": "active_opponent"
+     },
+     {
+      "type": "discard",
+      "amount": 1,
+      "target": "opponent_hand"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_nightmare",
+   "kind": "attack",
+   "name": "Nightmare",
+   "text": "造成 60 点伤害。对手的战斗宝可梦陷入睡眠。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 60,
+      "target": "active_opponent"
+     },
+     {
+      "type": "status",
+      "amount": null,
+      "target": "active_opponent",
+      "extra": {
+       "status": "sleep"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_mind_bend",
+   "kind": "attack",
+   "name": "Mind Bend",
+   "text": "造成 60 点伤害。对手的战斗宝可梦陷入混乱。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 60,
+      "target": "active_opponent"
+     },
+     {
+      "type": "status",
+      "amount": null,
+      "target": "active_opponent",
+      "extra": {
+       "status": "confuse"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_itchy_pollen",
+   "kind": "attack",
+   "name": "Itchy Pollen",
+   "text": "造成 10 点伤害。对手的战斗宝可梦陷入中毒。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 10,
+      "target": "active_opponent"
+     },
+     {
+      "type": "status",
+      "amount": null,
+      "target": "active_opponent",
+      "extra": {
+       "status": "poison"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_tantrum",
+   "kind": "attack",
+   "name": "Tantrum",
+   "text": "造成 30 点伤害。此宝可梦随后陷入混乱。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 30,
+      "target": "active_opponent"
+     },
+     {
+      "type": "status",
+      "amount": null,
+      "target": "self",
+      "extra": {
+       "status": "confuse"
+      }
+     }
+    ]
+   },
+   "note": "自身陷入混乱 → target=self"
+  },
+  {
+   "id": "atk_fury_swipes",
+   "kind": "attack",
+   "name": "Fury Swipes",
+   "text": "抛 3 次硬币，正面次数 ×10 点伤害；本引擎按期望值固定造成 50 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 50,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_corner",
+   "kind": "attack",
+   "name": "Corner",
+   "text": "造成 30 点伤害。对手的战斗宝可梦下回合无法撤退。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 30,
+      "target": "active_opponent"
+     },
+     {
+      "type": "rule",
+      "amount": null,
+      "target": "any"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_blood_moon",
+   "kind": "attack",
+   "name": "Blood Moon",
+   "text": "造成 240 点伤害。此后弃掉此宝可梦身上的 2 个能量。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 240,
+      "target": "active_opponent"
+     },
+     {
+      "type": "discard",
+      "amount": 2,
+      "target": "self"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_night_daze",
+   "kind": "attack",
+   "name": "Night Daze",
+   "text": "造成 200 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 200,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_blaze_kick",
+   "kind": "attack",
+   "name": "Blaze Kick",
+   "text": "造成 180 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 180,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "atk_wondrous_moon",
+   "kind": "attack",
+   "name": "Wondrous Moon",
+   "text": "造成 120 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 120,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ab_recon_scout",
+   "kind": "ability",
+   "name": "Recon Directive",
+   "text": "每回合一次：检视牌库顶 2 张取 1 入手",
+   "expect": {
+    "kind": "ability",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 1,
+      "target": "deck",
+      "extra": {
+       "look_top": 2
+      }
+     }
+    ],
+    "limit": "once_per_turn"
+   }
+  },
+  {
+   "id": "ab_run_draw",
+   "kind": "ability",
+   "name": "Run Away Draw",
+   "text": "每回合一次：抽至手牌 5 张（引擎近似检索）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "draw",
+      "amount": null,
+      "target": "hand",
+      "extra": {
+       "to_hand_size": 5
+      }
+     }
+    ],
+    "limit": "once_per_turn"
+   },
+   "note": "「抽至手牌 N」→ to_hand_size"
+  },
+  {
+   "id": "ab_cursed_blast",
+   "kind": "ability",
+   "name": "Cursed Blast",
+   "text": "手牌弃此卡 → 对手 1 只宝可梦放 13 个指示物",
+   "expect": {
+    "kind": "ability",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": 1,
+      "target": "hand",
+      "extra": {
+       "card": "self"
+      }
+     },
+     {
+      "type": "spread",
+      "amount": 130,
+      "target": "active_opponent_bench",
+      "extra": {
+       "counters": 13
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "ab_adrenaline",
+   "kind": "ability",
+   "name": "Adrena-Brain",
+   "text": "每回合一次：移动至多 3 个伤害指示物（引擎待实现）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "move_damage",
+      "amount": 3,
+      "target": "active_opponent"
+     }
+    ],
+    "limit": "once_per_turn"
+   },
+   "note": "移动指示物两侧皆可，本表按对手侧标注"
+  },
+  {
+   "id": "ab_verdant_dance",
+   "kind": "ability",
+   "name": "Teal Dance",
+   "text": "每回合一次：从手牌/牌库附 1 草能量（引擎待实现）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "attach",
+      "amount": 1,
+      "target": "self",
+      "extra": {
+       "energy_type": "grass"
+      }
+     }
+    ],
+    "limit": "once_per_turn"
+   }
+  },
+  {
+   "id": "ab_flame_dance",
+   "kind": "ability",
+   "name": "Blaze Dance",
+   "text": "进化时从弃牌堆加速能量（引擎待实现）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "on_evolve",
+    "actions": [
+     {
+      "type": "attach",
+      "amount": null,
+      "target": "self"
+     }
+    ]
+   },
+   "note": "「进化时」是触发时机，不产出 evolve 动作"
+  },
+  {
+   "id": "ab_reversal",
+   "kind": "ability",
+   "name": "Flip the Script",
+   "text": "己方宝可梦被击倒时抽 3（引擎待实现）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "on_knockout",
+    "actions": [
+     {
+      "type": "draw",
+      "amount": 3,
+      "target": "deck"
+     }
+    ]
+   },
+   "note": "「被击倒」是触发时机，不产出 knockout 动作"
+  },
+  {
+   "id": "ab_fairy_domain",
+   "kind": "ability",
+   "name": "Fairy Zone",
+   "text": "对手龙系宝可梦弱点变为超（引擎待实现）",
+   "expect": {
+    "kind": "ability",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "rule",
+      "amount": null,
+      "target": "any"
+     }
+    ]
+   }
+  },
+  {
+   "id": "en_psychic",
+   "kind": "energy",
+   "name": "Basic Psychic Energy",
+   "text": "提供 1 点超能量。",
+   "expect": {
+    "kind": "energy",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "attach",
+      "amount": 1,
+      "target": "self",
+      "extra": {
+       "energy_type": "psychic"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "en_grass",
+   "kind": "energy",
+   "name": "Basic Grass Energy",
+   "text": "提供 1 点草能量。",
+   "expect": {
+    "kind": "energy",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "attach",
+      "amount": 1,
+      "target": "self",
+      "extra": {
+       "energy_type": "grass"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "it_poffin",
+   "kind": "item",
+   "name": "Buddy-Buddy Poffin",
+   "text": "从牌库选择至多 2 张基础宝可梦放至后备。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 2,
+      "target": "deck"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_ultra_ball",
+   "kind": "item",
+   "name": "Ultra Ball",
+   "text": "弃 2 张手牌，从牌库检索 1 张宝可梦。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": 2,
+      "target": "hand"
+     },
+     {
+      "type": "search",
+      "amount": 1,
+      "target": "deck"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_nest_ball",
+   "kind": "item",
+   "name": "Nest Ball",
+   "text": "从牌库检索 1 张基础宝可梦放至后备。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 1,
+      "target": "deck"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_hammer",
+   "kind": "item",
+   "name": "Crushing Hammer",
+   "text": "抛硬币，正面则弃掉对手战斗宝可梦身上 1 个能量。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": 1,
+      "target": "active_opponent",
+      "extra": {
+       "card_type": "energy"
+      }
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_switch",
+   "kind": "item",
+   "name": "Switch",
+   "text": "将自己的战斗宝可梦与后备宝可梦互换。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "switch",
+      "amount": null,
+      "target": "self"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_night_stretcher",
+   "kind": "item",
+   "name": "Night Stretcher",
+   "text": "从弃牌堆取 1 张宝可梦或基础能量放回手牌。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 1,
+      "target": "discard"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "it_rare_candy",
+   "kind": "item",
+   "name": "Rare Candy",
+   "text": "选择手牌 1 张 2 阶进化卡，直接进化自己的基础宝可梦。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "evolve",
+      "amount": null,
+      "target": "self"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "sp_research",
+   "kind": "supporter",
+   "name": "Professor's Research",
+   "text": "弃掉手牌，然后抽 7 张。",
+   "expect": {
+    "kind": "supporter",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": null,
+      "target": "hand",
+      "extra": {
+       "all": true
+      }
+     },
+     {
+      "type": "draw",
+      "amount": 7,
+      "target": "deck"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "sp_boss",
+   "kind": "supporter",
+   "name": "Boss's Orders",
+   "text": "对手将战斗宝可梦与后备宝可梦互换，由你选择。",
+   "expect": {
+    "kind": "supporter",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "switch",
+      "amount": null,
+      "target": "active_opponent_bench"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "sp_crispin",
+   "kind": "supporter",
+   "name": "Crispin",
+   "text": "从牌库检索至多 2 张基础能量，附着到自己的宝可梦上。",
+   "expect": {
+    "kind": "supporter",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 2,
+      "target": "deck"
+     },
+     {
+      "type": "attach",
+      "amount": null,
+      "target": "self"
+     }
+    ]
+   },
+   "synthetic": true,
+   "note": "检索 + 附着 两个动作"
+  },
+  {
+   "id": "sp_iono",
+   "kind": "supporter",
+   "name": "Iono",
+   "text": "双方将手牌洗回牌库，然后各抽 6 张。",
+   "expect": {
+    "kind": "supporter",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "draw",
+      "amount": 6,
+      "target": "deck"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "ru_energy_once",
+   "kind": "rule",
+   "name": "Energy Limit",
+   "text": "每回合只能附着 1 次能量。",
+   "expect": {
+    "kind": "rule",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "attach",
+      "amount": null,
+      "target": "self"
+     }
+    ],
+    "limit": "once_per_turn"
+   },
+   "synthetic": true,
+   "note": "限制由 limit 条件承载"
+  },
+  {
+   "id": "ru_prize",
+   "kind": "rule",
+   "name": "Prize Rule",
+   "text": "对手宝可梦被击倒时，你获得 1 张奖赏卡。",
+   "expect": {
+    "kind": "rule",
+    "trigger": "on_knockout",
+    "actions": [
+     {
+      "type": "rule",
+      "amount": null,
+      "target": "any"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "ru_first_turn",
+   "kind": "rule",
+   "name": "First Turn Rule",
+   "text": "先手玩家的第一个回合不能使用招式。",
+   "expect": {
+    "kind": "rule",
+    "trigger": "static",
+    "actions": [
+     {
+      "type": "rule",
+      "amount": null,
+      "target": "any"
+     }
+    ]
+   },
+   "synthetic": true
+  },
+  {
+   "id": "ho_damage_variant",
+   "kind": "attack",
+   "holdout": true,
+   "name": "Damage Variant",
+   "text": "对对手的战斗宝可梦造成 80 点伤害。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "damage",
+      "amount": 80,
+      "target": "active_opponent"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_status_phrase",
+   "kind": "attack",
+   "holdout": true,
+   "name": "Status Variant",
+   "text": "使对手的战斗宝可梦陷入灼伤。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "status",
+      "amount": null,
+      "target": "active_opponent",
+      "extra": {
+       "status": "burn"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_search_phrase",
+   "kind": "item",
+   "holdout": true,
+   "name": "Search Variant",
+   "text": "从牌库中搜寻 2 张物品卡加入手牌。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 2,
+      "target": "deck"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_remove_energy",
+   "kind": "item",
+   "holdout": true,
+   "name": "Remove Energy",
+   "text": "移除对手战斗宝可梦身上的 1 个能量。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": 1,
+      "target": "active_opponent",
+      "extra": {
+       "card_type": "energy"
+      }
+     }
+    ]
+   },
+   "note": "「移除…能量」句式（引擎/基线未覆盖，预期失败 → 待补）"
+  },
+  {
+   "id": "ho_swap",
+   "kind": "item",
+   "holdout": true,
+   "name": "Swap Variant",
+   "text": "将自己的后备宝可梦与战斗宝可梦交换。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "switch",
+      "amount": null,
+      "target": "self"
+     }
+    ]
+   },
+   "note": "「交换」同义于「互换」（基线未覆盖 → 待补）"
+  },
+  {
+   "id": "ho_heal_hp",
+   "kind": "attack",
+   "holdout": true,
+   "name": "Heal Variant",
+   "text": "回复自己宝可梦 30 点 HP。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "heal",
+      "amount": 30,
+      "target": "self"
+     }
+    ]
+   },
+   "note": "「回复X宝可梦 N 点 HP」句式（基线未覆盖 → 待补）"
+  },
+  {
+   "id": "ho_draw_cards",
+   "kind": "item",
+   "holdout": true,
+   "name": "Draw Cards",
+   "text": "抽 3 张牌。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "draw",
+      "amount": 3,
+      "target": "deck"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_discard_from_deck",
+   "kind": "item",
+   "holdout": true,
+   "name": "Recover From Discard",
+   "text": "从弃牌堆选择 1 张基础宝可梦放到后备。",
+   "expect": {
+    "kind": "item",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "search",
+      "amount": 1,
+      "target": "discard"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_opponent_discard",
+   "kind": "attack",
+   "holdout": true,
+   "name": "Opponent Discard",
+   "text": "对手弃 2 张手牌。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "discard",
+      "amount": 2,
+      "target": "opponent_hand"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ho_sleep_phrase",
+   "kind": "attack",
+   "holdout": true,
+   "name": "Sleep Variant",
+   "text": "使对手的战斗宝可梦陷入睡眠。",
+   "expect": {
+    "kind": "attack",
+    "trigger": "on_use",
+    "actions": [
+     {
+      "type": "status",
+      "amount": null,
+      "target": "active_opponent",
+      "extra": {
+       "status": "sleep"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

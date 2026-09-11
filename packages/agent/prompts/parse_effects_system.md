@@ -6,6 +6,8 @@
 2. 字段必须严格符合下方 Schema，**不得发明字段、不得漏字段、不得修改字段名**。
 3. 涉及规则语义不确定时，以「规则知识库检索片段」为准；片段未覆盖时输出 actions 为空并在 `citations` 注明"unknown"。
 4. 效果文本为**自述转写**，严禁逐字复制官方文案；保持意思一致。
+   文本中形如「（引擎待实现）」「（合计 60 点）」的括号注解**不是**卡面效果，解析时忽略。
+   注意区分**触发时机**与**动作**：「进化时 / 被击倒时」属 trigger，不得写成 actions。
 5. 嵌套条件（conditions）与多动作（actions）需完整展开；"每回合一次"类限制写入 condition `field="limit", op="eq", value="once_per_turn"`。
 
 # 输出 Schema
@@ -16,9 +18,13 @@
     "trigger": "on_use | on_knockout | static | on_attach | on_evolve",
     "conditions": [{"field": "…", "op": "eq|gt|gte|lt|lte|in|contains", "value": …}],
     "actions": [
-      {"type": "damage|draw|attach|heal|discard|switch|search|evolve|spread|move_damage|knockout",
-       "amount": 数值, "target": "active_opponent|self|bench|active_opponent_bench|deck|hand",
+      {"type": "damage|draw|attach|heal|discard|switch|search|evolve|spread|move_damage|knockout|status|rule",
+       "amount": 数值, "target": "active_opponent|self|bench|active_opponent_bench|deck|hand|discard|opponent_hand|any",
        "extra": {…}}
+      说明：status 用 extra.status（poison|burn|sleep|paralyze|confuse）；
+            rule 表示静态规则修改（弱点/抗性/免疫/禁止撤退等，extra.note 简述）；
+            spread 的 amount 以 HP 计（1 个伤害指示物 = 10 点），
+            任意分配时 extra.free_distribute=true 且 extra.counters=指示物个数。
     ],
     "source_text": "自述转写（勿抄原文）",
     "citations": ["rulebook:…|compendium:…"]

@@ -18,6 +18,19 @@ from .auth import Principal, current_user
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
+def _k2_text(k2: dict) -> str:
+    """K2 现状文案（有报告 → 实测数字；无 → 提示先跑评测）"""
+    if not k2:
+        return ("尚未评测——运行 `cd packages/agent && python examples/run_k2.py`"
+                "（rule 离线基线 / llm 需配 Key）")
+    pct = lambda x: "—" if x is None else f"{x * 100:.1f}%"
+    return (f"{k2.get('backend')} 后端：严格 {pct(k2.get('strict_acc'))}"
+            f"（已知句式 {pct(k2.get('seen_strict_acc'))}"
+            f" / 留出句式 {pct(k2.get('holdout_strict_acc'))}）"
+            f"· n={k2.get('n')}"
+            f"· 真实卡池可映射 tag {pct(k2.get('pool_support_rate'))}")
+
+
 def _ci_half(p: float, n: int) -> float:
     if not n:
         return 0.0
@@ -102,14 +115,27 @@ def watchdog(p: Principal = Depends(current_user)):
                       "note": "来自最近一次训练曲线（artifacts/curve.json）"}
         except Exception:
             pass
+    # K2：读取 packages/agent/artifacts/k2_report.json（examples/run_k2.py 产出）
+    k2 = None
+    try:
+        k2_file = (Path(__file__).resolve().parents[3] / "packages" / "agent"
+                   / "artifacts" / "k2_report.json")
+        if k2_file.exists():
+            k2 = json.loads(k2_file.read_text(encoding="utf-8"))
+    except Exception:
+        k2 = None
+
     rows = [
         {"id": "K1", "name": "vs 规则基线胜率", "threshold": "≥70%（200 局协议）",
          "current": (f"{k1['value']:.3f}（n={k1['n']}）" if k1 else "无训练记录"),
          "status": ("pass" if k1 and k1["value"] and k1["value"] >= 0.70
                     else "warn" if k1 else "unknown")},
-        {"id": "K2", "name": "卡牌效果解析准确率", "threshold": "≥85%（黄金集 200+）",
-         "current": "解析模板结构回归 0/3 错误（dry-run）；准确率待模型实测",
-         "status": "warn"},
+        {"id": "K2", "name": "卡牌效果解析准确率",
+         "threshold": (f"≥{int((k2 or {}).get('target', 0.85) * 100)}%"
+                       f"（黄金集 200+）"),
+         "current": (self_k2_text(k2) if False else _k2_text(k2)),
+         "status": ("pass" if k2 and k2.get("strict_acc", 0) >= k2.get("target", 0.85)
+                    else "warn" if k2 else "unknown")},
         {"id": "K3", "name": "单步决策 P95", "threshold": "≤2s（argmax 兜底）",
          "current": "argmax ~0.3ms · MCTS12 ~137ms（eval_matrix 实测）",
          "status": "pass"},

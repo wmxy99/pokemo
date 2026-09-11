@@ -34,11 +34,17 @@ class AttackDef:
     cost: object = 1                # int=无色数；或 [(type,n),...] 彩色需求
     damage: int = 0
     effects: tuple = ()
-    desc: str = ""
+    desc: str = ""                  # 英文/旧字段（兼容保留）
     name_zh: str = ""               # 中文展示名（i18n：英文为数据键，中文用于前端/日志）
+    desc_zh: str = ""               # 中文效果文本（自述转写；前端/报告优先展示）
 
     def __post_init__(self):
         object.__setattr__(self, "cost", _norm_cost(self.cost))
+
+    @property
+    def display_desc(self) -> str:
+        """效果文本展示：中文优先，缺省回退英文"""
+        return self.desc_zh or self.desc
 
     @property
     def cost_total(self) -> int:
@@ -59,8 +65,14 @@ class AbilityDef:
     name: str
     tag: str = "recon:2"
     location: str = "field"       # field | hand
-    desc: str = ""
+    desc: str = ""                # 兼容保留（历史数据此字段为中文）
     name_zh: str = ""             # 中文展示名
+    desc_zh: str = ""             # 中文效果文本（自述转写）
+
+    @property
+    def display_desc(self) -> str:
+        """效果文本展示：中文优先（desc_zh → desc）"""
+        return self.desc_zh or self.desc
 
 
 # 卡定义注册表（名称 → PokemonDef）：用于按名取中文展示名（如进化链来源）

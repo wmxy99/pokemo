@@ -70,13 +70,15 @@ def _build_card(entry: dict):
                       damage=int(a.get("damage", 0)),
                       effects=tuple(a.get("effects", ())),
                       desc=a.get("desc", ""),
-                      name_zh=a.get("name_zh", ""))
+                      name_zh=a.get("name_zh", ""),
+                      desc_zh=a.get("desc_zh", ""))
             for a in entry.get("attacks", []))
         abilities = tuple(
             AbilityDef(ab["name"], tag=ab.get("tag", ""),
                        location=ab.get("location", "field"),
                        desc=ab.get("desc", ""),
-                       name_zh=ab.get("name_zh", ""))
+                       name_zh=ab.get("name_zh", ""),
+                       desc_zh=ab.get("desc_zh", ""))
             for ab in entry.get("abilities", []))
         return PokemonDef(
             entry["name"], hp=int(entry["hp"]),

@@ -171,6 +171,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
       if (i % 10 === 0) trace.push({ i, ...s2 })
       if (s2.finished && !s2.attack) break
       if (s2.attack) {
+        // 守卫：招式按钮/候选的 title 应带**中文效果文本**（desc_zh）
+        const descOk = await page.evaluate(() => {
+          const els = [...document.querySelectorAll('.acts button, .cmdbar .chip-btn')]
+          const t = els.map((b) => b.getAttribute('title') || '').find((x) => /点伤害|指示物|抽|弃|能量/.test(x))
+          return { title: t || null }
+        })
+        log('⑦ 招式效果中文提示（title）', !!descOk.title, descOk)
         const move = s2.attack.replace(/^攻击[：:]\s*/, '').trim()
         await setCmd(move)
         await sleep(200)

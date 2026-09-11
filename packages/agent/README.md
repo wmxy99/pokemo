@@ -25,6 +25,37 @@
 → 阶段3 **MCTS 教练蒸馏**（`--stage3-mcts-iters`，expert-iteration 式；可用 BC 同款 masked-CE 学习）。
 特征域对比（bad-case 迭代）：`--features full`（59 维，含 hand/meta），训练与评估须同配置。
 
+## K2 · 卡牌效果解析（中文语料 → 结构化 spec → 引擎 tag）
+
+把卡面中文效果文本（`desc_zh`，自述转写）转写为结构化 JSON 并映射到引擎可执行 tag。
+
+| 模块 | 作用 |
+|---|---|
+| `agent/effects.py` · `parse_rule()` | **离线规则基线**：零依赖、确定性，覆盖伤害/指示物分配/抽牌/弃牌（含手牌·能量）/检索（牌库·弃牌堆）/回复/附能量/状态/互换/进化/静态规则 + 「每回合一次」限制 |
+| `agent/effects.py` · `parse_llm()` | **LLM 后端**：OpenAI 兼容 `/chat/completions`，复用 `prompts/parse_effects_*.md`；输出经 `extract_json` 容错（围栏/前后缀/thinking 残留） |
+| `parse_effects(text, backend=rule\|llm\|auto)` | 统一入口；`auto` 有 `POKELAB_LLM_BASE` 走 LLM，否则回退规则 |
+| `validate_specs()` | Schema 校验（枚举/字段/数值为整数，伤害以 HP 计） |
+| `to_engine_tags()` | spec → 引擎 tag；**引擎未建模的动作如实列入 `unsupported`**（不假装支持） |
+| `data/k2_golden.json` | **手工标注**黄金集（50 条 = 26 真实卡池 + 14 合成 + 10 留出）；`expect` 只声明关心的字段 |
+| `evaluate(backend)` | 逐字段准确率 + **seen / holdout 分组**（留出句式才是泛化估计） |
+
+### 评测（K2 主指标：严格准确率）
+
+```bash
+cd packages/agent
+python examples/run_k2.py                       # 规则基线 + 真实卡池解析
+python examples/run_k2.py --no-pool --strict     # 只跑黄金集，未达 85% 退出码 1
+# LLM 后端（任选其一：DeepSeek / 本地 OpenAI 兼容服务）
+POKELAB_LLM_BASE=https://api.deepseek.com/v1 POKELAB_LLM_KEY=sk-xxx \
+POKELAB_LLM_MODEL=deepseek-chat python examples/run_k2.py --backend llm
+```
+
+产物：`artifacts/k2_report.md`（人读：指标表 / 逐例 ✓✗ / 失败用例=待补句式 / 真实卡池 tag 映射 / 诚实标注）
++ `artifacts/k2_report.json`（机读，**M6 看门狗 K2 直接读取**）。
+
+> 指标口径见报告 §1；`seen` 高只说明回归稳定，请以 **holdout** 作为泛化参考。
+> 当前规则基线：严格 94%（seen 100% / holdout 70%，n=50）；**LLM 数字需配 Key 实测**，报告不臆测。
+
 ## 运行
 
 ```bash

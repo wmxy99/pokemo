@@ -479,5 +479,59 @@ class TestStepSequence(unittest.TestCase):
         self.assertEqual(r2["executed"], 0)
 
 
+class TestMultiTargetLabels(unittest.TestCase):
+    """同名卡打到不同目标时必须可区分（否则玩家无从选择）——seed 1 稳定复现"""
+
+    def _state(self):
+        b = Battle(decklib.make_deck("A1"), decklib.make_deck("A3"), seed=1)
+        ai = [BaselineAI("x"), BaselineAI("y")]
+        for _ in range(300):
+            if b.finished:
+                break
+            if b.current == 0:
+                tg = [a for a in b.legal_actions()
+                      if a.get("target") is not None
+                      and a["verb"] in ("trainer", "ability")]
+                if len(tg) >= 2:
+                    return b, tg
+            b.step(ai[b.current].decide(b.view()))
+        return None, None
+
+    def test_labels_distinct_and_roundtrip(self):
+        b, tg = self._state()
+        if b is None:
+            self.skipTest("未构造出多目标局面")
+        labels = [commands.command_label(a) for a in tg]
+        self.assertEqual(len(set(labels)), len(labels),
+                         f"同名多目标 label 重复：{labels}")
+        for a, lab in zip(tg, labels):
+            r = b.resolve_command(lab)
+            self.assertTrue(r["ok"], f"{lab} 无法回投：{r.get('error')}")
+            self.assertEqual(r["action"].get("target"), a.get("target"),
+                             f"{lab} 解析到错误目标")
+
+    def test_bare_name_is_ambiguous_with_readable_options(self):
+        b, tg = self._state()
+        if b is None:
+            self.skipTest("未构造出多目标局面")
+        r = b.resolve_command(tg[0]["display"])
+        self.assertFalse(r["ok"])
+        self.assertTrue(r.get("ambiguous"))
+        self.assertTrue(r.get("options"), "应给出可读候选")
+        for c in r["candidates"]:
+            self.assertIn("label", c, "候选应附 label 供 UI 直接渲染")
+            self.assertIsInstance(c["label"], str)
+
+    def test_catalog_has_no_semantic_label_collision(self):
+        b, tg = self._state()
+        if b is None:
+            self.skipTest("未构造出多目标局面")
+        seen = {}
+        for c in b.command_catalog():
+            seen.setdefault(c["label"], set()).add(commands._choice_key(c["action"]))
+        dup = {k: len(v) for k, v in seen.items() if len(v) > 1}
+        self.assertFalse(dup, f"目录内语义不同却同文案：{dup}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

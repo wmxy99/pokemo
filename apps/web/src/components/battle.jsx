@@ -104,7 +104,10 @@ export function ActionPanel({ legal, disabled, busy, onAct, hint, ctx }) {
         {(legal || []).length === 0 && <span className="sm muted">{hint || '（无可用动作）'}</span>}
         {(legal || []).map((a, i) => (
           <button key={i} className="act" disabled={disabled}
-            aria-label={verbLabel(a, ctx)} title={verbLabel(a, ctx)}
+            aria-label={verbLabel(a, ctx)}
+            title={[verbLabel(a, ctx),
+                    a.verb === 'attack' && ctx && ctx.attackDescs
+                      ? ctx.attackDescs[a.attack] : ''].filter(Boolean).join(' · ')}
             onClick={() => onAct(a)}>
             <VerbIcon verb={a.verb} />
             <span>{verbLabel(a, ctx)}</span>
@@ -154,8 +157,14 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
     onSubmit(v)
     setText('')
   }
+  // 候选可能是「字符串」或「动作对象」——统一取可读文案，避免把对象当 React child
+  const labelOf = (c) => (typeof c === 'string'
+    ? c
+    : (c && (c.label || c.display || c.name_zh || c.name)) || '')
   const cands = error && typeof error === 'object'
-    ? (error.candidates || []).map((c) => c.label || c).filter(Boolean) : []
+    ? (error.options && error.options.length
+        ? error.options
+        : (error.candidates || []).map(labelOf)).filter(Boolean) : []
   // 组合指令预览（真实解析以引擎为准）
   const steps = splitSequence(text)
   const isSeq = steps.length > 1
@@ -193,7 +202,9 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
       <div className="cmd-chips" role="group" aria-label="可用指令">
         {commands.slice(0, 10).map((c, i) => (
           <button key={i} type="button" className="chip-btn"
-            disabled={disabled || busy} title={`点击执行：${c.label}`}
+            disabled={disabled || busy}
+            title={`点击执行：${c.label}`
+              + ((c.action?.display_desc) ? ` · ${c.action.display_desc}` : '')}
             onClick={() => submit(c.label)}>{c.label}</button>
         ))}
       </div>

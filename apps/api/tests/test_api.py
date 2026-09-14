@@ -16,6 +16,14 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
+
+# ---- 测试隔离：把 API 的 SQLite 指向**临时目录**（必须在 import app 之前设置）----
+# 为什么必须做：本套件会真实注册用户/建对局/建任务，此前直接写在开发库里——
+# 单轮即可产生上百个 u_*/adm_*/d_* 残留账号（且多为弱口令），既污染开发环境
+# 又带来安全隐患。store._pick_data_dir() 已支持 POKELAB_DATA_DIR 覆盖，这里利用它。
+_TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="pokelab_api_test_"))
+os.environ["POKELAB_DATA_DIR"] = str(_TEST_DATA_DIR)
+
 # engine/agent 由 apps.api.app.main 自行注入 path
 from fastapi.testclient import TestClient  # noqa: E402
 from apps.api.app.main import app  # noqa: E402

@@ -1847,33 +1847,48 @@ class TestSecureDelete(unittest.TestCase):
 
 
 class TestDataDirProbe(unittest.TestCase):
-    """可写性探测必须自己收拾干净
+    """可写性探测不得在数据目录留下任何文件
 
-    背景：`_writable_dir()` 用「建一个 `_wprobe.db` 写一行再删」来探测目录，
-    但此前**只删一次且异常被吞**——Windows 上 SQLite 关闭连接后释放句柄有延迟，
-    unlink 抛 PermissionError 就被静默忽略，于是每次探测都在数据目录留下一个
-    8 KB 垃圾文件（本机 `~/.pokelab/_wprobe.db` 即由此产生）。
+    背景：旧实现「建 `_wprobe.db` 写一行再删」，但删除这一步不可控——
+      · Windows 上 SQLite 释放句柄有延迟，unlink 抛 PermissionError，
+        而异常被 `except: pass` 吞掉 → 每次探测都留下 8 KB 垃圾文件；
+      · 本项目沙箱更狠：unlink 被安全层拦截后**先把文件截断为 0** 再 fail-closed
+        抛错 → 留下 0 字节的 `_wprobe.db`（实测复现，日志
+        `SAFE_DELETE_FAIL_CLOSED / windows-sandbox-recycle-bin-unavailable`）。
+    结论：「探测的副作用必须能 100% 撤销」在有拦截的环境不成立，
+    故改为**完全不创建文件**（只 mkdir + 权限检查），真正的落库探测交给
+    `_open_db()` 对真实数据库做。
     """
 
-    def test_probe_leaves_no_residue(self):
+    def test_probe_leaves_no_file_at_all(self):
         d = Path(tempfile.mkdtemp(prefix="pokelab_probe_"))
         self.assertTrue(store._writable_dir(d))
-        leftover = [p.name for p in d.iterdir()]
-        self.assertEqual(leftover, [], f"探测留下了残留：{leftover}")
+        self.assertEqual(list(d.iterdir()), [],
+                         "探测产生了文件（应完全不创建文件）")
+
+    def test_probe_specific_no_wprobe_leftover(self):
+        """回归守卫：`_wprobe.db` 这个名字不该再出现"""
+        d = Path(tempfile.mkdtemp(prefix="pokelab_probe_"))
+        store._writable_dir(d)
+        self.assertFalse((d / "_wprobe.db").exists(),
+                         "_wprobe.db 又被留下了")
 
     def test_probe_reports_unwritable_dir(self):
         """不可写目录应返回 False 而不是抛异常"""
         d = Path(tempfile.mkdtemp(prefix="pokelab_probe_")) / "sub"
-        # 用一个「文件」占住目录名，使 mkdir 失败
-        d.parent.joinpath("sub").write_text("x")
+        d.parent.joinpath("sub").write_text("x")     # 用文件占住目录名
         self.assertFalse(store._writable_dir(d))
 
     def test_probe_repeated_calls_stay_clean(self):
         d = Path(tempfile.mkdtemp(prefix="pokelab_probe_"))
         for _ in range(5):
             self.assertTrue(store._writable_dir(d))
-        self.assertEqual([p.name for p in d.iterdir()], [],
-                         "重复探测累积了残留文件")
+        self.assertEqual(list(d.iterdir()), [], "重复探测累积了残留")
+
+    def test_real_data_dir_has_no_probe_leftover(self):
+        """当前实际数据目录里不应有探测残留"""
+        self.assertFalse((Path(store.DATA_DIR) / "_wprobe.db").exists(),
+                         f"{store.DATA_DIR} 里仍有 _wprobe.db 残留")
 
 
 if __name__ == "__main__":

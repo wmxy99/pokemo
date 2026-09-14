@@ -156,7 +156,8 @@ curl -X POST localhost:8000/battles/$BID/actions -H "Authorization: Bearer $TK" 
 | GET | `/decks/presets/{id}` | 预设逐卡清单：每卡 `mapped / approximated / replaced` 三态 + 覆盖率（C5 差异透明）|
 | GET | `/decks` · `GET /decks/{id}` · `POST /decks/{id}/opening` · `GET /decks/{id}/export` | 我的卡组 / 起手模拟 / 导出往返 |
 
-> 预设卡表来自 `packages/engine/engine/data/{cards_real,decklists}.json`（M1 卡池补齐）；
+> 预设卡表来自 `packages/engine/engine/data/{cards_real,pool_ext,decklists}.json`
+> （M1 卡池补齐 + v1.4 扩容）；
 > 引擎未实现的卡在对战时以基础能量占位并在响应/报告中逐卡标注。
 
 ### 卡库浏览（F2 · M1 清洗入库 1267 张卡）
@@ -165,18 +166,24 @@ curl -X POST localhost:8000/battles/$BID/actions -H "Authorization: Bearer $TK" 
 |---|---|---|
 | GET | `/cards` | 分页列表：`q`（中/英/日，忽略标点）、`supertype`、`type`、`subtype`、`series`、`engine_ready`、`sort`(id/name/hp/series)、`page`/`page_size`(≤200) |
 | GET | `/cards/{id}` | 卡详情：招式（费用/伤害/效果）+ 特性 + 卡面元数据 + `rules_text` |
-| GET | `/cards/stats` | 卡库总览：构成 / 系列分布 / 招式特性数 / **引擎覆盖率** |
+| GET | `/cards/stats` | 卡库总览：构成 / 系列分布 / 招式特性数 / **引擎覆盖率**（含 `engine_by_status`） |
 
 ```bash
 curl "localhost:8000/cards?q=dragapult"                      # 英文
 curl "localhost:8000/cards?q=%E5%A4%9A%E9%BE%99"             # 中文「多龙」
 curl "localhost:8000/cards?supertype=Trainer&series=TWM"
-curl "localhost:8000/cards?engine_ready=true"                # 仅引擎可对战（36 张）
+curl "localhost:8000/cards?engine_ready=true"                # 仅引擎可对战（426 张）
 curl "localhost:8000/cards/stats"
 ```
 
-> - **`engine_ready` 如实暴露**：卡库 1267 张中仅 36 张引擎已建模，其余**可浏览/可组卡
+> - **`engine_ready` 如实暴露**：卡库 1267 张中 **426 张**引擎已建模，其余**可浏览/可组卡
 >   但不可对战**（UI 与导入校验据此显示灰名单，PRD C5 差异透明）；
+> - **426 内部还要再分三态**（`/cards/stats` 的 `engine_by_status`）：
+>   `mapped` **36**（人工池，逐卡校对）· `approximated` **390**（扩展池，解析链推导
+>   **未逐卡校对**）· `unmatched` **841**。**近似 ≠ 等价**，展示时不可混为一谈；
+> - **中文覆盖同样如实暴露**：`with_zh` = **36**（全库仅 36 张有中文名）。源数据集为
+>   英文，**不把英文塞进中文字段**冒充翻译；列表/详情的展示名按「中文优先、回退英文」
+>   处理，因此绝大多数卡片显示英文原名，属**已知且有意为之**的状态，非缺陷；
 > - 数据源为 `packages/card-db/data/db/pokelab.db`，**只读** + mtime 缓存；
 >   更新走 ETL 脚本（见 `packages/card-db/README.md`）；
 > - 卡池匹配（`/decks/import`）已接入该卡库并按 `name_key`/别名归一，

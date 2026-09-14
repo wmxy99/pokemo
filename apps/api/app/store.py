@@ -409,3 +409,33 @@ def list_settings(prefix: str = "") -> list:
         else:
             rows = _conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
     return [dict(r) for r in rows]
+
+
+def delete_user(name: str) -> bool:
+    """删除账号（含其卡组/对局/任务归属记录保留但不再可登录）
+
+    返回是否删除了记录。**引导脚本**用它清理测试残留；API 侧不暴露删除
+    （避免误删有数据的账号）。
+    """
+    with _lock:
+        cur = _conn.execute("DELETE FROM users WHERE name=?", (name,))
+        _conn.commit()
+        return cur.rowcount > 0
+
+
+def set_user_password(name: str, password_hash: str) -> bool:
+    """重设口令哈希（由引导脚本调用；API 侧不暴露——改密应走认证流程）"""
+    with _lock:
+        cur = _conn.execute("UPDATE users SET password_hash=? WHERE name=?",
+                            (password_hash, name))
+        _conn.commit()
+        return cur.rowcount > 0
+
+
+def set_user_password(name: str, password_hash: str) -> bool:
+    """重设口令哈希（由引导脚本调用；API 侧不暴露——改密应走认证流程）"""
+    with _lock:
+        cur = _conn.execute("UPDATE users SET password_hash=? WHERE name=?",
+                            (password_hash, name))
+        _conn.commit()
+        return cur.rowcount > 0

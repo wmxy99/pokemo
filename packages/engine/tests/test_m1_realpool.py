@@ -68,6 +68,20 @@ class TestRealPoolData(unittest.TestCase):
             for r in cov["replaced"]:
                 self.assertTrue(r["reason"])
 
+    def test_b1_no_card_left_unmodeled(self):
+        """B1 批次验收（v1.3）：A1–A4 **无任何被替换的卡**，可执行率 100%
+
+        这是「按未建模动作清单分批建模高频卡」第一轮的硬验收：
+        预设真实卡表中的卡（= 真实高频）必须全部可执行，不允许占位替换。
+        """
+        for aid in reallib.archetype_ids():
+            cov = reallib.coverage(aid)
+            self.assertEqual(cov["replaced"], [],
+                             f"{aid} 仍有被替换的卡：{cov['replaced']}")
+            self.assertEqual(cov["executable_rate"], 1.0,
+                             f"{aid} 可执行率应为 1.0"
+                             f"（实际 {cov['executable_rate']}）")
+
     def test_make_deck_supports_archetype_ids(self):
         for aid in reallib.archetype_ids():
             self.assertEqual(len(dl.make_deck(aid)), 60)

@@ -76,6 +76,73 @@ class BaselineAI(Agent):
         return {"verb": "pass"}
 
 
+class SupportAI(BaselineAI):
+    """规则基线 AI · **会用训练家与特性**的版本（v1.3 新增）
+
+    存在的理由：``BaselineAI`` 是 **K1 的冻结参照对手**（只做 攻击/附能/上场/撤退），
+    行为一旦改动会使历史 K1 胜率口径不可比。而 v1.3 把 A1–A4 的可执行率提到 100%
+    后，卡组里约 1/3 的是训练家与特性卡——若没有会使用它们的 AI，「可对战」就只是
+    形式上的。故新增本类，**继承** BaselineAI 并在其之后追加：
+
+      1) field 特性（无代价收益：抽牌 / 附能 / 移动伤害指示物）优先发动
+      2) 训练家：跳阶进化 → 检索/附能 → 铺场 → 拉人 → 回收 → 换位 → 抽弃 → 干扰
+      3) 之后完全沿用原基线优先级（附能 / 上场 / 撤退 / 过）
+
+    默认**不**用于 K1 评测；评测口径仍以 ``BaselineAI`` 为准（口径冻结）。
+    """
+    name = "support_ai"
+
+    def __init__(self, name: str = "support_ai", aggressiveness: float = 1.0):
+        super().__init__(name=name, aggressiveness=aggressiveness)
+
+    def decide(self, view: dict) -> dict:
+        legal = view.get("legal") or [{"verb": "pass"}]
+        me = view["me_state"]
+        act = me.get("active")
+        hand_n = me.get("hand_count", len(me.get("hand") or []))
+        bench_n = len(me.get("bench") or [])
+
+        # 0) 能攻击仍然最高优先（与基线一致）
+        attacks = [a for a in legal if a["verb"] == "attack"]
+        if attacks and act:
+            return super().decide(view)
+
+        # 1) field 特性：无能量代价的收益，直接发动
+        for verb_name in ("recon", "draw", "attach_energy", "move_damage"):
+            cand = [a for a in legal if a["verb"] == "ability"
+                    and str(a.get("tag", "")).startswith(verb_name + ":")]
+            if cand:
+                return dict(cand[0])
+
+        # 2) 训练家 / 支援者（按收益排序）
+        trainers = [a for a in legal if a["verb"] == "trainer"]
+        if trainers:
+            def _rank(a):
+                tag = str(a.get("tag") or "")
+                key = (tag or str(a.get("name") or "")).lower()
+                order = ("candy", "search_energy", "discard_search_energy",
+                         "poffin", "ultra_ball", "boss", "recover",
+                         "switch_self", "shuffle_draw", "research", "hammer")
+                score = 100
+                for i, pref in enumerate(order):
+                    if pref in key:
+                        score = i
+                        break
+                # 手牌很少时不再弃手牌（research 类自伤）
+                if "research" in key and hand_n <= 4:
+                    score += 50
+                # 后备已满则不铺场
+                if ("poffin" in key or "ultra_ball" in key) and bench_n >= 5:
+                    score += 50
+                return score
+            best = min(trainers, key=_rank)
+            if _rank(best) < 50:
+                return dict(best)
+
+        # 3) 其余沿用基线
+        return super().decide(view)
+
+
 class HumanAgent(Agent):
     """交互式 Agent：由上层（CLI/Web）提供动作回调"""
     def __init__(self, name: str = "human", chooser=None):

@@ -30,7 +30,12 @@ DECKS_FILE = _DATA_DIR / "decklists.json"
 
 # 引擎 v1 支持的训练家 tag 前缀（与 battle._trainer_legals/_do_trainer 对齐）
 _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
-                           "research", "shuffle_draw")
+                           "research", "shuffle_draw",
+                           # v1.3（B1 预设卡组关键卡批次）
+                           "switch_self", "recover", "discard_search_energy",
+                           "search_energy", "candy",
+                           # v1.3（B2 通用检索批次）
+                           "search_pokemon", "search_trainer", "search_any")
 
 # 基本能量中文名（占位替换时也用中文展示）
 _ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",

@@ -1,0 +1,1045 @@
+{
+ "snapshot": "before",
+ "generated_at": "2026-09-14 09:59:18",
+ "source": {
+  "db": "packages/card-db/data/db/pokelab.db",
+  "decklists": "packages/engine/engine/data/decklists.json",
+  "parse_backend": "rule（离线确定性基线）"
+ },
+ "parse_totals": {
+  "cards": 1267,
+  "cards_parsed": 1119,
+  "items": 1481,
+  "specs": 1481,
+  "engine_tags": 241,
+  "unsupported": 1144,
+  "cards_with_unsupported": 883,
+  "cards_fully_mapped": 236,
+  "cards_with_supported_tag": 231
+ },
+ "deck_baseline": [
+  {
+   "id": "A1",
+   "label": "多龙巴鲁托ex / 黑夜魔灵",
+   "label_en": "Dragapult ex / Dusknoir",
+   "total": 60,
+   "playable": 55,
+   "executable_rate": 0.9167,
+   "battle_ready": true,
+   "replaced_n": 3,
+   "approximated_n": 2
+  },
+  {
+   "id": "A2",
+   "label": "多龙巴鲁托ex / 火焰鸡ex",
+   "label_en": "Dragapult ex / Blaziken ex",
+   "total": 60,
+   "playable": 55,
+   "executable_rate": 0.9167,
+   "battle_ready": true,
+   "replaced_n": 3,
+   "approximated_n": 2
+  },
+  {
+   "id": "A3",
+   "label": "N的索罗亚克ex",
+   "label_en": "N's Zoroark ex",
+   "total": 60,
+   "playable": 58,
+   "executable_rate": 0.9667,
+   "battle_ready": true,
+   "replaced_n": 2,
+   "approximated_n": 2
+  },
+  {
+   "id": "A4",
+   "label": "基础盒（厄诡椪ex / 皮皮ex）",
+   "label_en": "Basic Box（Ogerpon ex / Clefairy ex）",
+   "total": 60,
+   "playable": 55,
+   "executable_rate": 0.9167,
+   "battle_ready": true,
+   "replaced_n": 2,
+   "approximated_n": 4
+  }
+ ],
+ "batches": [
+  {
+   "id": "B1",
+   "name": "预设卡组关键卡",
+   "goal": "A1–A4 预设真实卡表中不可执行/仅灰名单的卡逐卡建模",
+   "fix": "为每张卡补引擎原生 tag（训练家 tag / 特性 tag），并补引擎派发",
+   "priority": 1,
+   "groups": 0,
+   "entries": 10,
+   "cards": 10,
+   "share": 0.0087
+  },
+  {
+   "id": "B2",
+   "name": "tag 家族扩展",
+   "goal": "把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发",
+   "fix": "agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支",
+   "priority": 2,
+   "groups": 8,
+   "entries": 268,
+   "cards": 267,
+   "share": 0.2343
+  },
+  {
+   "id": "B3",
+   "name": "解析召回补齐（英文卡面）",
+   "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
+   "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索）",
+   "priority": 3,
+   "groups": 10,
+   "entries": 214,
+   "cards": 214,
+   "share": 0.1871
+  },
+  {
+   "id": "B4",
+   "name": "需新引擎机制（P1 登记）",
+   "goal": "需要条件表达式 / RNG 钩子 / 静态修正层等新机制，不属本轮",
+   "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
+   "priority": 4,
+   "groups": 3,
+   "entries": 215,
+   "cards": 212,
+   "share": 0.1879
+  },
+  {
+   "id": "B5",
+   "name": "不建模登记",
+   "goal": "真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）",
+   "fix": "永久登记在差异透明清单（C5），不做实现",
+   "priority": 5,
+   "groups": 1,
+   "entries": 447,
+   "cards": 403,
+   "share": 0.3907
+  }
+ ],
+ "items": [
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "训练家检索仅支持预设 tag",
+   "entries": 133,
+   "cards": 133,
+   "samples": [
+    {
+     "card": "Telepath Psychic Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {P} Energy.\nWhen you attach this card from your hand to a {P} Pokémon, search your deck for up to 2 Basic {P} Pokémon and put them onto your "
+    },
+    {
+     "card": "Scrafty",
+     "name_zh": "",
+     "text": "Search your deck for a number of cards up to the number of your Benched Pokémon and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Froakie",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Froakie and put them onto your Bench. Then, shuffle your deck."
+    },
+    {
+     "card": "Greninja ex",
+     "name_zh": "",
+     "text": "You may search your deck for a card and put it into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Applin",
+     "name_zh": "",
+     "text": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "evolve_skip",
+   "desc": "跳阶进化（Rare Candy 类）",
+   "action_type": "evolve",
+   "reason": "引擎未建模该动作类型",
+   "entries": 34,
+   "cards": 34,
+   "samples": [
+    {
+     "card": "Eevee",
+     "name_zh": "",
+     "text": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
+    },
+    {
+     "card": "Noctowl",
+     "name_zh": "",
+     "text": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to 2 Trainer cards, reveal them, and"
+    },
+    {
+     "card": "Exeggcute",
+     "name_zh": "",
+     "text": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
+    },
+    {
+     "card": "Archaludon ex",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Basic {M} Energy cards from your discard pile to your {M} Pokémon in any way you like."
+    },
+    {
+     "card": "Whimsicott",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any damage in this way, discard all Energy f"
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "attack_switch",
+   "desc": "招式/效果换位（switch_self / gust）",
+   "action_type": "switch",
+   "reason": "引擎未建模该动作类型",
+   "entries": 33,
+   "cards": 33,
+   "samples": [
+    {
+     "card": "Hippopotas",
+     "name_zh": "",
+     "text": "Switch out your opponent’s Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
+    },
+    {
+     "card": "Croconaw",
+     "name_zh": "",
+     "text": "Switch this Pokémon with 1 of your Benched Pokémon."
+    },
+    {
+     "card": "Iron Leaves ex",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may switch it with your Active Pokémon. If you do, you may move any amount of Energy from your other Pokémon to this Pok"
+    },
+    {
+     "card": "Palafin",
+     "name_zh": "",
+     "text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Spec"
+    },
+    {
+     "card": "Flygon ex",
+     "name_zh": "",
+     "text": "You may switch this Pokémon with 1 of your Benched Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "attack_discard",
+   "desc": "招式/特性弃牌（discard:N）",
+   "action_type": "discard",
+   "reason": "引擎未建模该动作类型",
+   "entries": 30,
+   "cards": 29,
+   "samples": [
+    {
+     "card": "Greninja ex",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Raging Bolt ex",
+     "name_zh": "",
+     "text": "Discard your hand and draw 6 cards."
+    },
+    {
+     "card": "Pikachu ex",
+     "name_zh": "",
+     "text": "Discard 3 Energy from this Pokémon."
+    },
+    {
+     "card": "Bouffalant",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon."
+    },
+    {
+     "card": "Salamence ex",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "spread_per",
+   "desc": "非任意分配的多目标放置（spread:N:per）",
+   "action_type": "spread",
+   "reason": "仅支持任意分配的自由式（spread_free:N）",
+   "entries": 20,
+   "cards": 20,
+   "samples": [
+    {
+     "card": "Spiky Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if "
+    },
+    {
+     "card": "Sinistcha ex",
+     "name_zh": "",
+     "text": "Put 2 damage counters on 1 of your opponent’s Pokémon for each Basic {G} Energy card in your discard pile. Then, shuffle those Energy cards into your deck."
+    },
+    {
+     "card": "Glaceon",
+     "name_zh": "",
+     "text": "At the end of your opponent’s next turn, put 9 damage counters on the Defending Pokémon."
+    },
+    {
+     "card": "Feraligatr",
+     "name_zh": "",
+     "text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying We"
+    },
+    {
+     "card": "Froslass",
+     "name_zh": "",
+     "text": "During Pokémon Checkup, put 1 damage counter on each Pokémon that has an Ability (both yours and your opponent’s), except any Froslass."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "ability_draw",
+   "desc": "特性抽牌（draw:N on ability）",
+   "action_type": "draw",
+   "reason": "特性抽牌未建 tag（可用 recon:N 近似）",
+   "entries": 13,
+   "cards": 13,
+   "samples": [
+    {
+     "card": "Dudunsparce",
+     "name_zh": "土龙节节",
+     "text": "Once during your turn, you may draw 3 cards. If you drew any cards in this way, shuffle this Pokémon and all attached cards into your deck."
+    },
+    {
+     "card": "Teal Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to this Pokémon. If you attached Energy to a Pokémon in this way, draw a card."
+    },
+    {
+     "card": "Chandelure",
+     "name_zh": "",
+     "text": "Once during your turn, you may have each player draw a card."
+    },
+    {
+     "card": "Fezandipiti ex",
+     "name_zh": "吉雉鸡ex",
+     "text": "Once during your turn, if any of your Pokémon were Knocked Out during your opponent’s last turn, you may draw 3 cards. You can’t use more than 1 Flip the Script Ability each turn."
+    },
+    {
+     "card": "N’s Zoroark ex",
+     "name_zh": "N的索罗亚克ex",
+     "text": "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 2 cards."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "attack_attach",
+   "desc": "招式/特性附能（attach:N:type）",
+   "action_type": "attach",
+   "reason": "引擎未建模该动作类型",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Morpeko",
+     "name_zh": "",
+     "text": "Attach up to 2 Basic Energy cards from your discard pile to your Pokémon in any way you like."
+    },
+    {
+     "card": "Magneton",
+     "name_zh": "",
+     "text": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out."
+    },
+    {
+     "card": "Rosa's Encouragement",
+     "name_zh": "",
+     "text": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "attack_move_damage",
+   "desc": "移动伤害指示物（move_damage:N）",
+   "action_type": "move_damage",
+   "reason": "引擎未建模该动作类型",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Munkidori",
+     "name_zh": "愿增猿",
+     "text": "Once during your turn, if this Pokémon has any {D} Energy attached, you may move up to 3 damage counters from 1 of your Pokémon to 1 of your opponent’s Pokémon."
+    },
+    {
+     "card": "Team Rocket's Orbeetle",
+     "name_zh": "",
+     "text": "As often as you like during your turn, you may move 1 damage counter from 1 of your Team Rocket’s Pokémon to another of your Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 64,
+   "cards": 64,
+   "samples": [
+    {
+     "card": "Leafeon",
+     "name_zh": "",
+     "text": "Attach a Basic {G} Energy card from your hand to 1 of your Benched Pokémon. If you do, heal all damage from that Pokémon."
+    },
+    {
+     "card": "Shiftry",
+     "name_zh": "",
+     "text": "Put an Energy attached to this Pokémon into your hand."
+    },
+    {
+     "card": "Wellspring Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched "
+    },
+    {
+     "card": "Okidogi",
+     "name_zh": "",
+     "text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+    },
+    {
+     "card": "Chansey",
+     "name_zh": "",
+     "text": "Attach a Basic Energy card from your hand to 1 of your Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "discard_energy_self",
+   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 42,
+   "cards": 42,
+   "samples": [
+    {
+     "card": "Pinsir",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon. At the end of your opponent’s next turn, the Defending Pokémon will be Knocked Out."
+    },
+    {
+     "card": "Greninja ex",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Deerling",
+     "name_zh": "",
+     "text": "Discard a {G} Energy from this Pokémon."
+    },
+    {
+     "card": "Hearthflame Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "If your opponent’s Active Pokémon is an Evolution Pokémon, this attack does 140 more damage, and discard all Energy from this Pokémon."
+    },
+    {
+     "card": "Kyurem",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon. This attack does 110 damage to 3 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "knockout_condition",
+   "desc": "击倒条件误判（需解析修正）",
+   "action_type": "knockout",
+   "reason": "引擎未建模该动作类型",
+   "entries": 38,
+   "cards": 38,
+   "samples": [
+    {
+     "card": "Legacy Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides every type of Energy but provides only 1 Energy at a time.\n\nIf the Pokémon this card is attached to is Knocked Out by damage from an attack f"
+    },
+    {
+     "card": "Iron Leaves",
+     "name_zh": "",
+     "text": "If any of your Pokémon were Knocked Out by damage from an attack during your opponent’s last turn, this attack does 60 more damage."
+    },
+    {
+     "card": "Dusclops",
+     "name_zh": "彷徨夜灵",
+     "text": "Once during your turn, you may put 5 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out."
+    },
+    {
+     "card": "Dusknoir",
+     "name_zh": "黑夜魔灵",
+     "text": "Once during your turn, you may put 13 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out."
+    },
+    {
+     "card": "Fezandipiti ex",
+     "name_zh": "吉雉鸡ex",
+     "text": "Once during your turn, if any of your Pokémon were Knocked Out during your opponent’s last turn, you may draw 3 cards. You can’t use more than 1 Flip the Script Ability each turn."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "discard_self",
+   "desc": "弃自身/弃手牌（含对手）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 30,
+   "cards": 30,
+   "samples": [
+    {
+     "card": "Team Rocket's Energy",
+     "name_zh": "",
+     "text": "This card can only be attached to a Team Rocket’s Pokémon. If this card is attached to anything other than a Team Rocket’s Pokémon, discard this card.\n\nAs long as this card is attached to a Pokémon, i"
+    },
+    {
+     "card": "Wugtrio ex",
+     "name_zh": "",
+     "text": "Discard up to 3 Energy cards from your hand. This attack does 60 damage to 1 of your opponent’s Pokémon for each Energy card you discarded in this way. (Don’t apply Weakness and Resistance for Benched"
+    },
+    {
+     "card": "Great Tusk",
+     "name_zh": "",
+     "text": "Discard the top card of your opponent’s deck. If you played an Ancient Supporter card from your hand during this turn, discard 3 more cards in this way."
+    },
+    {
+     "card": "Slowking",
+     "name_zh": "",
+     "text": "Discard the top card of your deck, and if that card is a Pokémon that doesn’t have a Rule Box, choose 1 of its attacks and use it as this attack. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+    },
+    {
+     "card": "Durant ex",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent’s deck."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "draw",
+   "desc": "抽牌（draw … card）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 12,
+   "cards": 12,
+   "samples": [
+    {
+     "card": "Blissey ex",
+     "name_zh": "",
+     "text": "You may draw cards until you have 6 cards in your hand."
+    },
+    {
+     "card": "Decidueye",
+     "name_zh": "",
+     "text": "Draw cards until you have 7 cards in your hand."
+    },
+    {
+     "card": "Quaquaval",
+     "name_zh": "",
+     "text": "You must put a card from your hand on the bottom of your deck in order to use this Ability. Once during your turn, you may draw cards until you have 5 cards in your hand."
+    },
+    {
+     "card": "Cynthia's Garchomp ex",
+     "name_zh": "",
+     "text": "You may draw cards until you have 6 cards in your hand."
+    },
+    {
+     "card": "Audino",
+     "name_zh": "",
+     "text": "You may draw cards until you have 6 cards in your hand."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "recover_from_discard",
+   "desc": "弃牌堆回收入手（Put … from your discard pile into your hand）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 10,
+   "cards": 10,
+   "samples": [
+    {
+     "card": "Iron Leaves",
+     "name_zh": "",
+     "text": "Put up to 2 Pokémon from your discard pile into your hand."
+    },
+    {
+     "card": "Slowpoke",
+     "name_zh": "",
+     "text": "Put a Pokémon from your discard pile into your hand."
+    },
+    {
+     "card": "Dedenne",
+     "name_zh": "",
+     "text": "Put a Trainer card from your discard pile into your hand."
+    },
+    {
+     "card": "Stoutland",
+     "name_zh": "",
+     "text": "Flip 3 coins. Put a number of cards up to the number of heads from your discard pile into your hand."
+    },
+    {
+     "card": "Night Stretcher",
+     "name_zh": "夜之担架",
+     "text": "Put a Pokémon or a Basic Energy card from your discard pile into your hand."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "switch",
+   "desc": "换位（switch / into the Active Spot）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 9,
+   "cards": 9,
+   "samples": [
+    {
+     "card": "Meowstic",
+     "name_zh": "",
+     "text": "You must discard a Chill Teaser Toy card from your hand in order to use this Ability. Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+    },
+    {
+     "card": "Arven's Toedscruel",
+     "name_zh": "",
+     "text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+    },
+    {
+     "card": "Gumshoos",
+     "name_zh": "",
+     "text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck."
+    },
+    {
+     "card": "Linoone",
+     "name_zh": "",
+     "text": "Once during your turn, if this Pokémon is on your Bench, and if you have any Mega Evolution Pokémon {ex} in play, you may use this Ability. Switch this Pokémon with your Active Pokémon."
+    },
+    {
+     "card": "Clefairy",
+     "name_zh": "",
+     "text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "search",
+   "desc": "检索（search / look at）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 6,
+   "cards": 6,
+   "samples": [
+    {
+     "card": "Morpeko",
+     "name_zh": "",
+     "text": "Once during your turn, you may look at the top card of your deck. You may discard that card."
+    },
+    {
+     "card": "Rockruff",
+     "name_zh": "",
+     "text": "Look at the top card of your deck. You may discard that card."
+    },
+    {
+     "card": "Litwick",
+     "name_zh": "",
+     "text": "Look at the top card of your deck. You may discard that card."
+    },
+    {
+     "card": "Fletchling",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Pokémon with {F} Resistance, reveal them, and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Spikemuth Gym",
+     "name_zh": "",
+     "text": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "move_damage",
+   "desc": "移动伤害指示物",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Team Rocket's Wobbuffet",
+     "name_zh": "",
+     "text": "Move all damage counters from 1 of your Benched Team Rocket’s Pokémon to your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Cofagrigus",
+     "name_zh": "",
+     "text": "Move all damage counters from 1 of your Benched Pokémon to 1 of your opponent’s Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "spread",
+   "desc": "放置伤害指示物",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Feraligatr",
+     "name_zh": "",
+     "text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying We"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "static_lock",
+   "desc": "静态锁/免疫/伤害减免",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 90,
+   "cards": 87,
+   "samples": [
+    {
+     "card": "Poltchageist",
+     "name_zh": "",
+     "text": "As long as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent’s Pokémon done to this Pokémon."
+    },
+    {
+     "card": "Magcargo ex",
+     "name_zh": "",
+     "text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
+    },
+    {
+     "card": "Iron Thorns ex",
+     "name_zh": "",
+     "text": "As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule"
+    },
+    {
+     "card": "Greninja ex",
+     "name_zh": "",
+     "text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
+    },
+    {
+     "card": "Wugtrio ex",
+     "name_zh": "",
+     "text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "coin_flip",
+   "desc": "抛币判定（Flip a coin）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 70,
+   "cards": 70,
+   "samples": [
+    {
+     "card": "Eevee",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, this attack does 20 more damage."
+    },
+    {
+     "card": "Gastly",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, discard an Energy from your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Dunsparce",
+     "name_zh": "土龙弟弟",
+     "text": "Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon."
+    },
+    {
+     "card": "Applin",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, this attack does 20 more damage."
+    },
+    {
+     "card": "Goldeen",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, discard an Energy from your opponent’s Active Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "scaling_damage",
+   "desc": "条件伤害缩放（for each …）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 55,
+   "cards": 55,
+   "samples": [
+    {
+     "card": "Magcargo ex",
+     "name_zh": "",
+     "text": "Discard the top card of each player’s deck. This attack does 140 more damage for each Energy card discarded in this way."
+    },
+    {
+     "card": "Roaring Moon",
+     "name_zh": "",
+     "text": "This attack does 10 more damage for each Ancient card in your discard pile."
+    },
+    {
+     "card": "Rabsca",
+     "name_zh": "",
+     "text": "This attack does 30 more damage for each Energy attached to your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Teal Mask Ogerpon",
+     "name_zh": "",
+     "text": "This attack does 20 more damage for each of your opponent’s Benched Pokémon."
+    },
+    {
+     "card": "Teal Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "This attack does 30 more damage for each Energy attached to both Active Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "unclassified",
+   "desc": "未分类（需人工判定）",
+   "action_type": "rule",
+   "reason": "引擎未建模该动作类型",
+   "entries": 447,
+   "cards": 403,
+   "samples": [
+    {
+     "card": "Boomerang Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your dis"
+    },
+    {
+     "card": "Neo Upper Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time."
+    },
+    {
+     "card": "Mist Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nPrevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this card is attached to. (Existing effects a"
+    },
+    {
+     "card": "Prism Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to a Basic Pokémon, this card provides every type of Energy but provides only 1 Energy at a time."
+    },
+    {
+     "card": "Ignition Energy",
+     "name_zh": "",
+     "text": "If this card is attached to 1 of your Pokémon, discard it at the end of your turn.\n\nAs long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to an Evolution Pok"
+    }
+   ]
+  }
+ ],
+ "b1_cards": [
+  {
+   "name": "Earthen Vessel",
+   "copies": 7,
+   "decks": [
+    {
+     "arch": "A1",
+     "count": 2,
+     "status": "replaced"
+    },
+    {
+     "arch": "A2",
+     "count": 2,
+     "status": "replaced"
+    },
+    {
+     "arch": "A3",
+     "count": 1,
+     "status": "replaced"
+    },
+    {
+     "arch": "A4",
+     "count": 2,
+     "status": "replaced"
+    }
+   ],
+   "status": "replaced",
+   "reason": "弃 1 张 → 检索 2 能量（需目标选择）→ 替换占位"
+  },
+  {
+   "name": "Munkidori",
+   "copies": 6,
+   "decks": [
+    {
+     "arch": "A1",
+     "count": 2,
+     "status": "approximated"
+    },
+    {
+     "arch": "A3",
+     "count": 2,
+     "status": "approximated"
+    },
+    {
+     "arch": "A4",
+     "count": 2,
+     "status": "approximated"
+    }
+   ],
+   "status": "approximated",
+   "reason": "特性「肾上腺素脑」（移动伤害指示物）引擎 v1 未实现 → 灰名单，保留招式"
+  },
+  {
+   "name": "Fezandipiti ex",
+   "copies": 5,
+   "decks": [
+    {
+     "arch": "A1",
+     "count": 1,
+     "status": "approximated"
+    },
+    {
+     "arch": "A2",
+     "count": 1,
+     "status": "approximated"
+    },
+    {
+     "arch": "A3",
+     "count": 1,
+     "status": "approximated"
+    },
+    {
+     "arch": "A4",
+     "count": 2,
+     "status": "approximated"
+    }
+   ],
+   "status": "approximated",
+   "reason": "特性「逆转局势」（被击倒时抽 3）引擎未实现 → 灰名单，保留招式"
+  },
+  {
+   "name": "Ogerpon ex",
+   "copies": 4,
+   "decks": [
+    {
+     "arch": "A4",
+     "count": 4,
+     "status": "approximated"
+    }
+   ],
+   "status": "approximated",
+   "reason": "特性「碧绿之舞」（附草能量）引擎未实现 → 灰名单，保留招式"
+  },
+  {
+   "name": "Clefairy ex",
+   "copies": 3,
+   "decks": [
+    {
+     "arch": "A4",
+     "count": 3,
+     "status": "approximated"
+    }
+   ],
+   "status": "approximated",
+   "reason": "特性「妖精领域」（改对手弱点）引擎未实现 → 灰名单，保留招式"
+  },
+  {
+   "name": "Night Stretcher",
+   "copies": 3,
+   "decks": [
+    {
+     "arch": "A1",
+     "count": 1,
+     "status": "replaced"
+    },
+    {
+     "arch": "A2",
+     "count": 1,
+     "status": "replaced"
+    },
+    {
+     "arch": "A3",
+     "count": 1,
+     "status": "replaced"
+    }
+   ],
+   "status": "replaced",
+   "reason": "弃牌堆回收（需目标选择）→ 替换占位"
+  },
+  {
+   "name": "Switch",
+   "copies": 3,
+   "decks": [
+    {
+     "arch": "A4",
+     "count": 3,
+     "status": "replaced"
+    }
+   ],
+   "status": "replaced",
+   "reason": "自换位（引擎撤退动作已覆盖，卡面动作未实现）→ 替换占位"
+  },
+  {
+   "name": "Blaziken ex",
+   "copies": 2,
+   "decks": [
+    {
+     "arch": "A2",
+     "count": 2,
+     "status": "approximated"
+    }
+   ],
+   "status": "approximated",
+   "reason": "特性「火焰之舞」（弃牌堆附能加速）引擎未实现 → 灰名单，保留招式"
+  },
+  {
+   "name": "Crispin",
+   "copies": 2,
+   "decks": [
+    {
+     "arch": "A2",
+     "count": 2,
+     "status": "replaced"
+    }
+   ],
+   "status": "replaced",
+   "reason": "检索 2 张不同类型能量（需目标选择）→ 替换占位"
+  },
+  {
+   "name": "Rare Candy",
+   "copies": 2,
+   "decks": [
+    {
+     "arch": "A1",
+     "count": 2,
+     "status": "replaced"
+    }
+   ],
+   "status": "replaced",
+   "reason": "跳阶进化：引擎 v1 无「基础直进化二阶」动作 → 替换占位"
+  }
+ ],
+ "notes": [
+  "「未建模条目」= effects_json.parse.unsupported 的条目数（一条效果可含多条动作）。",
+  "B1 的「高频」锚点 = 出现在 A1–A4 预设真实卡表（2026 Worlds meta）中的卡；副本数越多 = 在真实对战中越常出现。",
+  "B3/B4/B5 的 rule 桶归属由英文卡面关键词启发式判定（确定性，可复跑），故为**排期估算**而非精确实现清单。",
+  "诚实标注（C5）：未被映射的条目一律保留在 unsupported 中，不静默降级。"
+ ]
+}

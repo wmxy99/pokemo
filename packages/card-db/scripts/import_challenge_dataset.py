@@ -298,21 +298,7 @@ def build_card(rows: list[dict], jp_rows: list[dict], KE: list[str],
                       or None),
     }
     # 匹配引擎自撰卡池：先用归一匹配键，再用别名（基础能量命名差异）
-    card["aliases"] = aliases_for(card)
-    eng = engine_index.get(card["name_key"])
-    matched_by = "name_key" if eng else None
-    if not eng:
-        for al in card["aliases"]:
-            eng = engine_index.get(norm_key(al))
-            if eng:
-                matched_by = f"alias:{al}"
-                break
-    if eng:
-        card["engine_ready"] = True
-        card["name_zh"] = eng.get("name_zh") or ""
-        card["engine_match"] = matched_by
-    issues["zh_backfill" if eng else "engine_unmatched"] += 1
-    return card
+    return apply_engine_match(card, engine_index, issues)
 
 
 def _load_effects_module():
@@ -430,19 +416,70 @@ def load_image_map() -> dict:
 
 
 def load_engine_index() -> dict:
-    """引擎自撰卡池（40 张）→ 按**归一匹配键**索引，供回填中文名与可对战标记"""
+    """引擎自撰卡池 → 按**归一匹配键**索引，供回填中文名与**可对战状态**判定
+
+    返回每项含：``name`` / ``name_zh`` / ``supertype`` / ``tag`` /
+    ``status``（``mapped`` | ``approximated`` | ``unsupported``）/ ``reason``。
+
+    诚实口径（C5）：训练家 ``tag=unsupported``（引擎无对应派发）的卡**不算可对战**，
+    即使卡名命中卡池也必须标为不可执行——否则「可浏览 ≠ 可对战」会被静默掩盖。
+    """
     idx: dict = {}
     try:
         j = json.loads(ENGINE_CARDS.read_text(encoding="utf-8"))
         for c in j.get("cards", []):
+            st, reason = "mapped", ""
+            if c.get("supertype") == "Trainer":
+                if (c.get("tag") or "").strip() in ("", "unsupported"):
+                    st, reason = "unsupported", (c.get("note") or "训练家 tag 未实现")
+            elif c.get("supertype") == "Pokemon":
+                bad = [ab for ab in (c.get("abilities") or [])
+                       if (ab.get("tag") or "").strip() == "unsupported"]
+                if bad:
+                    st = "approximated"
+                    reason = c.get("note") or "特性未实现（保留招式，灰名单近似）"
             idx[norm_key(c.get("name"))] = {
                 "name": c.get("name"),
                 "name_zh": c.get("name_zh") or "",
                 "supertype": c.get("supertype"),
+                "tag": c.get("tag") or "",
+                "status": st,
+                "reason": reason,
             }
     except Exception as e:                            # noqa: BLE001
         print(f"[warn] 引擎卡池读取失败（中文名回填跳过）：{e}")
     return idx
+
+
+def apply_engine_match(card: dict, engine_index: dict, issues: dict) -> dict:
+    """回填引擎映射（中文名 / 可对战状态）；幂等，可脱离原始 CSV 重跑"""
+    card["aliases"] = aliases_for(card)
+    eng = engine_index.get(card["name_key"])
+    matched_by = "name_key" if eng else None
+    if not eng:
+        for al in card["aliases"]:
+            eng = engine_index.get(norm_key(al))
+            if eng:
+                matched_by = f"alias:{al}"
+                break
+    card["engine_ready"] = False
+    card["engine_status"] = "unmatched"
+    card["engine_note"] = "引擎卡池未收录"
+    card.pop("engine_match", None)
+    if eng:
+        st = eng.get("status", "mapped")
+        card["engine_match"] = matched_by
+        card["engine_status"] = st
+        card["engine_note"] = eng.get("reason") or ""
+        card["name_zh"] = eng.get("name_zh") or ""
+        # 只有 mapped/approximated 才算「可进引擎对战」；unsupported 一律不可
+        card["engine_ready"] = st in ("mapped", "approximated")
+    issues["zh_backfill" if eng else "engine_unmatched"] += 1
+    if card["engine_status"] == "unsupported":
+        issues["engine_unsupported"] = issues.get("engine_unsupported", 0) + 1
+    elif card["engine_status"] == "approximated":
+        issues["engine_approximated"] = issues.get("engine_approximated", 0) + 1
+    return card
 
 
 def read_rows(zip_path: Path | None, csv_dir: Path | None) -> tuple[list, list]:
@@ -615,24 +652,33 @@ def write_report(cards: list[dict], stats: dict, path: Path) -> None:
           "## 3. 质量问题清单（已如实记录，未静默丢弃）",
           "",
           ]
-    qa = stats["qa"]
+    qa = stats.get("qa")
+    if qa:
+        L += [
+            f"- 宝可梦缺 HP：{len(qa['missing_hp'])}"
+            + (f" —— {', '.join(qa['missing_hp'][:6])}…" if qa["missing_hp"] else ""),
+            f"- 宝可梦缺属性：{len(qa['missing_type'])}"
+            + (f" —— {', '.join(qa['missing_type'][:6])}…" if qa["missing_type"] else ""),
+            f"- 缺日文名：{len(qa['missing_ja'])}"
+            + (f" —— {', '.join(qa['missing_ja'][:6])}…" if qa["missing_ja"] else ""),
+            f"- 无招式且无效果文本：{len(qa['no_effect_no_move'])}"
+            + (f" —— {', '.join(qa['no_effect_no_move'][:6])}…"
+               if qa["no_effect_no_move"] else ""),
+            f"- 未知能量符号：{qa['unknown_energy'] or '无'}",
+            f"- (卡名,系列,编号) 重复：{len(qa['dup_key'])}"
+            + (f" —— {', '.join(qa['dup_key'][:6])}…" if qa["dup_key"] else ""),
+            f"- 进化卡缺「进化前」：{stats['issues'].get('evolve_missing_from', 0)}",
+            f"- 引擎自撰卡池中**不在本数据集**的卡："
+            f"{len(qa['engine_pool_not_in_dataset'])}"
+            + (f" —— {', '.join(qa['engine_pool_not_in_dataset'])}"
+               if qa["engine_pool_not_in_dataset"] else ""),
+            "",
+        ]
+    else:
+        # --reparse-only 路径：输入 JSON 不含 qa（写盘时已剔除），跳过该节
+        L += ["- （本次为 `--reparse-only` 增量重跑；质量问题清单见上一次全量清洗报告）",
+              ""]
     L += [
-        f"- 宝可梦缺 HP：{len(qa['missing_hp'])}"
-        + (f" —— {', '.join(qa['missing_hp'][:6])}…" if qa["missing_hp"] else ""),
-        f"- 宝可梦缺属性：{len(qa['missing_type'])}"
-        + (f" —— {', '.join(qa['missing_type'][:6])}…" if qa["missing_type"] else ""),
-        f"- 缺日文名：{len(qa['missing_ja'])}"
-        + (f" —— {', '.join(qa['missing_ja'][:6])}…" if qa["missing_ja"] else ""),
-        f"- 无招式且无效果文本：{len(qa['no_effect_no_move'])}"
-        + (f" —— {', '.join(qa['no_effect_no_move'][:6])}…" if qa["no_effect_no_move"] else ""),
-        f"- 未知能量符号：{qa['unknown_energy'] or '无'}",
-        f"- (卡名,系列,编号) 重复：{len(qa['dup_key'])}"
-        + (f" —— {', '.join(qa['dup_key'][:6])}…" if qa["dup_key"] else ""),
-        f"- 进化卡缺「进化前」：{stats['issues'].get('evolve_missing_from', 0)}",
-        f"- 引擎自撰卡池中**不在本数据集**的卡：{len(qa['engine_pool_not_in_dataset'])}"
-        + (f" —— {', '.join(qa['engine_pool_not_in_dataset'])}"
-           if qa["engine_pool_not_in_dataset"] else ""),
-        "",
         "## 4. K2 效果解析覆盖（机器生成 · 合规 6.1 已标识）",
         "",
         ]
@@ -711,6 +757,9 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
                     "weakness": c["weakness"], "resistance": c["resistance"],
                     "retreat": c["retreat"], "name_ja": c["name_ja"],
                     "name_zh": c["name_zh"], "engine_ready": c["engine_ready"],
+                    # 诚实口径（C5）：mapped | approximated | unsupported | unmatched
+                    "engine_status": c.get("engine_status", "unmatched"),
+                    "engine_note": c.get("engine_note", ""),
                     # 匹配辅助（网站卡池/导入校验复用，避免撇号与能量命名差异导致漏匹配）
                     "name_key": c["name_key"],
                     "aliases": c.get("aliases") or [],
@@ -750,6 +799,56 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
     return {"new": n_new, "updated": n_upd, "removed_demo": n_demo}
 
 
+def _reparse_only(args) -> int:
+    """仅重跑 K2 效果解析并回写（幂等；无需原始 CSV）
+
+    用途：解析链（规则基线 / tag 映射 / 引擎 tag 家族）升级后，刷新
+    已入库卡表的 `parse` 产物与覆盖率统计，避免重新清洗数据集。
+    """
+    src = Path(args.in_json)
+    if not src.exists():
+        raise SystemExit(f"--in-json 不存在：{src}")
+    payload = json.loads(src.read_text(encoding="utf-8"))
+    cards = payload.get("cards") or []
+    stats = dict(payload.get("stats") or {})
+    # 1) 刷新引擎映射（可对战状态口径随卡池变化；无需原始 CSV）
+    if "issues" not in stats or not isinstance(stats.get("issues"), dict):
+        stats["issues"] = {}
+    eng_idx = load_engine_index()
+    for c in cards:
+        apply_engine_match(c, eng_idx, stats["issues"])
+    stats["engine_ready"] = sum(1 for c in cards if c.get("engine_ready"))
+    stats["engine_unsupported"] = sum(
+        1 for c in cards if c.get("engine_status") == "unsupported")
+    stats["engine_approximated"] = sum(
+        1 for c in cards if c.get("engine_status") == "approximated")
+    # 2) 清除旧解析产物（幂等）后重跑 K2 解析
+    for c in cards:
+        c.pop("parse", None)
+    stats["parse"] = parse_effects_pass(cards, backend=args.parse_backend)
+    payload["stats"] = stats
+    payload.setdefault("meta", {})["parse_backend"] = \
+        stats["parse"].get("backend")
+    payload["meta"]["reparsed_at"] = _now()
+    args.out_json.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    write_report(cards, stats, args.out_report)
+    res = load_sqlite(cards, args.db)
+    ps = stats["parse"]
+    print(f"[reparse] 卡 {len(cards)} · 解析卡 {ps['cards_parsed']} · "
+          f"条目 {ps['items']} · 引擎 tag {ps['engine_tags']} · "
+          f"未建模 {ps['unsupported']}（AI 生成，已标识）")
+    print(f"[db]      cards 表：新增 {res['new']} · 更新 {res['updated']}")
+    print(f"[out]     {args.out_json}")
+    print(f"[out]     {args.out_report}")
+    return 0
+
+
+def _now() -> str:
+    import datetime as _dt
+    return _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="清洗并导入卡牌数据集")
     ap.add_argument("--zip", type=Path, help="数据集 zip 路径")
@@ -762,7 +861,15 @@ def main() -> int:
                     help="跑 K2 效果解析（规则基线），产物带 AI 标识（合规 6.1）")
     ap.add_argument("--parse-backend", default="rule",
                     choices=["rule", "llm", "auto"], help="解析后端（默认 rule）")
+    ap.add_argument("--reparse-only", action="store_true",
+                    help="**仅重跑解析**：从 --in-json 读取已清洗卡表，重跑 K2 解析后"
+                         "回写 JSON/报告/DB（无需原始 CSV，供解析链升级后刷新产物）")
+    ap.add_argument("--in-json", type=Path, default=OUT_JSON,
+                    help="--reparse-only 时的输入（已清洗 JSON）")
     args = ap.parse_args()
+
+    if args.reparse_only:
+        return _reparse_only(args)
 
     if not args.zip and not args.csv_dir:
         raise SystemExit("需提供 --zip 或 --csv-dir")

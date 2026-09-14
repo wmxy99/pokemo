@@ -101,6 +101,10 @@ def _load() -> list[dict]:
             d["name_ja"] = lib.get("name_ja") or ""
             d["subtype"] = lib.get("subtype") or ""
             d["engine_ready"] = bool(lib.get("engine_ready"))
+            # 诚实口径（C5）：mapped | approximated | unsupported | unmatched
+            d["engine_status"] = lib.get("engine_status") or (
+                "mapped" if d["engine_ready"] else "unmatched")
+            d["engine_note"] = lib.get("engine_note") or ""
             d["is_basic"] = bool(lib.get("is_basic"))
             d["is_basic_energy"] = bool(lib.get("is_basic_energy"))
             d["attacks_count"] = len(d["attacks"])
@@ -123,6 +127,8 @@ def _brief(c: dict) -> dict:
         "attacks_count": c["attacks_count"],
         "abilities_count": c["abilities_count"],
         "engine_ready": c["engine_ready"],
+        "engine_status": c.get("engine_status", "unmatched"),
+        "engine_note": c.get("engine_note", ""),
         "image_url": c.get("image_url"),
         "ai_generated": c["ai_generated"],
     }
@@ -241,6 +247,10 @@ def library_stats(p: Principal = Depends(current_user)):
         return dict(sorted(out.items(), key=lambda x: -x[1]))
 
     ready = sum(1 for c in cards if c["engine_ready"])
+    by_status: dict = {}
+    for c in cards:
+        k = c.get("engine_status") or "unmatched"
+        by_status[k] = by_status.get(k, 0) + 1
     return {
         "total": len(cards),
         "by_supertype": _count("supertype"),
@@ -252,6 +262,8 @@ def library_stats(p: Principal = Depends(current_user)):
         "engine_ready": ready,
         "engine_pending": len(cards) - ready,
         "engine_coverage": round(ready / len(cards), 4),
+        # 细分口径（C5）：mapped=完整可对战 / approximated=灰名单近似 / unsupported / unmatched
+        "engine_by_status": by_status,
         "with_zh": sum(1 for c in cards if c["name_zh"]),
         "note": ("engine_ready=false 的卡可浏览/可组卡但**不可对战**"
                  "（引擎未建模，PRD C5 差异透明）"),

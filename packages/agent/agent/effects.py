@@ -41,7 +41,7 @@ KINDS = ("attack", "ability", "item", "supporter", "energy", "rule")
 TRIGGERS = ("on_use", "on_knockout", "static", "on_attach", "on_evolve")
 ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 "search", "evolve", "spread", "move_damage", "knockout",
-                "status", "rule")
+                "status", "rule", "recover")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -113,7 +113,21 @@ _PROVIDE_RE = re.compile(r"提供\s*(\d+)\s*点?\s*(火|超|草|恶|水|雷|斗|
 _ACCEL_RE = re.compile(r"加速\s*(\d+)?\s*个?\s*能量")
 _DISCARD_ENERGY_RE = re.compile(r"弃(?:掉)?[^。；]*?(\d+)\s*个能量")
 _HEAL_RE = re.compile(r"回(?:复|收)\s*(\d+)\s*点")
-_ATTACH_RE = re.compile(r"附\s*(\d+)?\s*个?\s*(火|超|草|恶|水|雷|斗|钢)?能量")
+_ATTACH_RE = re.compile(r"附(?:着)?\s*(\d+)?\s*[张枚个]?\s*(?:基本)?\s*"
+                        r"(火|超|草|恶|水|雷|斗|钢)?\s*能量")
+# v1.3：「从弃牌堆/牌库取 N 张（基本X）能量」（能量词在动词之后）
+_DISCARD_ATTACH_RE = re.compile(
+    r"从(?:弃牌堆|牌库|手牌)[^。；]{0,16}?(\d+)\s*[张枚个]?\s*"
+    r"(?:基本)?\s*(火|超|草|恶|水|雷|斗|钢)?\s*能量")
+# v1.3：弃牌堆回收（Put … from your discard pile into your hand）
+_RECOVER_RE = re.compile(r"(?:取|回收|放入?)[^。；]{0,12}?(\d+)?\s*[张枚个]?\s*"
+                         r"(?:宝可梦|能量)?[^。；]{0,8}?"
+                         r"(?:弃牌堆)[^。；]{0,12}?(?:入手|手牌)")
+_RECOVER_RE2 = re.compile(r"从[^。；，,]{0,8}?弃牌堆[^。；]{0,14}?(?:至多|最多)?\s*"
+                          r"(\d+)\s*[张枚个]?"
+                          r"[^。；]{0,12}?(?:入手|加入手牌|加入自己的手牌|拿)")
+# v1.3：弱点改写（对手X系宝可梦弱点变为Y）
+_WEAK_CHANGE_RE = re.compile(r"弱点(?:变|改)为\s*([火超草恶水雷斗钢无])")
 _PLACE_RE = re.compile(r"放(?:置)?\s*(\d+)\s*个?\s*(?:伤害)?指示物")
 
 
@@ -124,24 +138,50 @@ _EN_STATUS = (("asleep", "sleep"), ("burned", "burn"), ("confused", "confuse"),
               ("paralyzed", "paralyze"), ("poisoned", "poison"))
 _EN_DAMAGE_RE = re.compile(r"does\s+(\d+)\s+damage", re.I)
 _EN_SPREAD_RE = re.compile(r"put\s+(\d+)\s+damage\s+counters?", re.I)
+# v1.3：指示物放在**自身**（Self-spread，需新引擎机制 → 如实标注不支持）
+_EN_SELF_SPREAD_RE = re.compile(
+    r"(?:put|place)\s+\d+\s+damage\s+counters?\s+(?:on|onto)\s+"
+    r"(?:this|your active)\s+pok", re.I)
 _EN_DRAW_RE = re.compile(r"draw\s+(?:up to\s+)?(\d+)\s+cards?", re.I)
+# v1.3：抽到指定手牌数（Draw cards until you have N cards in your hand）
+_EN_DRAW_TO_RE = re.compile(r"draw cards until you have (\d+) cards?", re.I)
 _EN_DISCARD_ENERGY_RE = re.compile(r"discard\s+(\d+)\s+(?:\w+\s+)?energ", re.I)
+# v1.3：升级版能量弃置句式（up to / all / from your hand）
+_EN_DISCARD_UPTO_ENERGY_RE = re.compile(
+    r"discard\s+(?:up to\s+)?(\d+)\s+(?:basic\s+)?energy", re.I)
+_EN_DISCARD_ALL_ENERGY_RE = re.compile(r"discard all energy", re.I)
 _EN_DISCARD_RE = re.compile(r"discard\s+(?:up to\s+)?(\d+)\s+cards?", re.I)
 _EN_DISCARD_ALL_RE = re.compile(r"discard your (?:whole )?hand", re.I)
 _EN_SEARCH_TOP_RE = re.compile(r"(?:look at|search)\s+the top\s+(\d+)\s+cards",
                                re.I)
+# v1.3：单数形式（Look at the top card of your deck）
+_EN_LOOK_TOP_ONE_RE = re.compile(r"look at the top card\b", re.I)
 _EN_SEARCH_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?", re.I)
 _EN_SEARCH_ANY_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?"
                                r"[^.]*", re.I)
 _EN_HEAL_RE = re.compile(r"heal\s+(\d+)\s+damage", re.I)
-_EN_ATTACH_RE = re.compile(r"attach\s+(?:up to\s+)?(\d+)?\s*"
-                           r"(?:\{[A-Za-z]+\}\s*)?(?:basic\s+)?"
-                           r"(grass|fire|water|lightning|psychic|fighting|"
-                           r"darkness|metal|dragon|colorless)?\s*energy", re.I)
+# v1.3：附着句式（含 "Attach a Basic {G} Energy" / "attach up to 2 Energy"）
+_EN_ATTACH_RE = re.compile(
+    r"attach\s+(?:up to\s+)?(?:\d+\s+)?(?:a\s+|an\s+)?(?:basic\s*)?"
+    r"(?:\{\s*([A-Za-z])\s*\}|"
+    r"\b(grass|fire|water|lightning|psychic|fighting|darkness|metal|dragon|"
+    r"colorless)\b)?\s*energ", re.I)
+_EN_ATTACH_AMT_RE = re.compile(r"attach\s+(?:up to\s+)?(\d+)", re.I)
+# v1.3：弃牌堆回收（Put up to N … from your discard pile into your hand）
+_EN_RECOVER_RE = re.compile(
+    r"put\s+(?:up to\s+)?(\d+)?\s*(?:basic\s+)?"
+    r"(?:pok[eé]mon|energy|card)[^.]{0,40}?discard pile[^.]{0,24}?"
+    r"(?:into|to)\s+your\s+hand", re.I)
 _EN_MOVE_RE = re.compile(r"move\s+(?:up to\s+)?(\d+)\s+damage\s+counters?",
                          re.I)
+# v1.3：移动全部指示物（Move all damage counters …）
+_EN_MOVE_ALL_RE = re.compile(r"move all damage counters", re.I)
 _EN_SWITCH_RE = re.compile(r"switch\s+(?:your|out|it)|with\s+(?:your|1 of your)\s+"
                            r"benched|switch your active", re.I)
+# v1.3：把对手后备拉上前台（Switch in 1 of your opponent's Benched Pokémon）
+_EN_GUST_RE = re.compile(
+    r"switch in\s+(?:1 of\s+)?(?:your\s+)?opponent|"
+    r"switch (?:1 of\s+)?your opponent'?s bench", re.I)
 _EN_KNOCKOUT_RE = re.compile(r"(?:is|are|was|were)\s+knocked out|knocked out by",
                              re.I)
 _EN_EVOLVE_RE = re.compile(r"\bevolve[sd]?\b|evolution", re.I)
@@ -151,6 +191,23 @@ _EN_MODIFY_RE = re.compile(r"weakness|resistance|prevents? all damage|"
 _EN_BENCH_RE = re.compile(r"bench(?:ed)?\s+pok|onto your bench", re.I)
 _EN_HAND_RE = re.compile(r"(?:into|to)\s+your\s+hand", re.I)
 _EN_OPP_RE = re.compile(r"opponent[\u2019']?s?\b", re.I)
+
+# 能量符号单字母 → 引擎色（数据集的 {G}/{P}… 记号）
+_EN_ENERGY_LETTER = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
+                     "P": "psychic", "F": "fighting", "D": "darkness",
+                     "M": "metal", "C": "colorless", "N": "dragon",
+                     "Y": "psychic"}
+
+
+def _en_search_what(lower: str) -> str:
+    """英文检索目标归类（供训练家检索 tag 选择）"""
+    if "pokémon" in lower or "pokemon" in lower:
+        return "pokemon"
+    if "trainer" in lower:
+        return "trainer"
+    if "energy" in lower:
+        return "energy"
+    return "any"
 
 
 def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
@@ -168,52 +225,108 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     m = _EN_SPREAD_RE.search(t)
     if m:
         n = int(m.group(1))
-        tgt = "active_opponent_bench" if _EN_BENCH_RE.search(t) else "active_opponent"
-        extra = {"counters": n}
-        if re.search(r"in any way you like|as you like|anyway you like", t, re.I):
-            extra["free_distribute"] = True
-        actions.append(act("spread", n * 10, tgt, extra))
+        if _EN_SELF_SPREAD_RE.search(t):
+            # 指示物放在自身 → 需新引擎机制（B4），如实标注而非误判为对手
+            actions.append(act("rule", None, "self",
+                               {"note": "自身放置伤害指示物（需引擎新机制 · "
+                                        "未建模动作清单 B4）"}))
+        else:
+            tgt = "active_opponent_bench" if _EN_BENCH_RE.search(t) \
+                else "active_opponent"
+            extra = {"counters": n}
+            if re.search(r"in any way you like|as you like|anyway you like", t,
+                         re.I):
+                extra["free_distribute"] = True
+            actions.append(act("spread", n * 10, tgt, extra))
 
     m = _EN_MOVE_RE.search(t)
     if m:
-        tgt = "self" if re.search(r"your (?:own )?pok", t, re.I) else "active_opponent"
+        tgt = "self" if re.search(r"your (?:own )?pok", t, re.I) \
+            else "active_opponent"
         actions.append(act("move_damage", int(m.group(1)), tgt))
+    elif _EN_MOVE_ALL_RE.search(t):
+        # 移动全部指示物 → 引擎全量移动（move_damage:all）
+        actions.append(act("move_damage", None, "active_opponent",
+                           {"all": True}))
 
     m = _EN_HEAL_RE.search(t)
     if m:
         actions.append(act("heal", int(m.group(1)), "self"))
+    elif re.search(r"heal all damage", t, re.I):
+        actions.append(act("rule", None, "self",
+                           {"note": "全量回复（需引擎新机制 · B4）"}))
 
     m = _EN_DRAW_RE.search(t)
     if m:
         actions.append(act("draw", int(m.group(1)), "deck"))
+    elif _EN_DRAW_TO_RE.search(t):
+        actions.append(act("draw", None, "hand",
+                           {"to_hand_size": int(_EN_DRAW_TO_RE.search(t).group(1))}))
     elif re.search(r"draw (?:a|1) card", t, re.I):
         actions.append(act("draw", 1, "deck"))
 
+    # 弃牌堆回收（Put up to N … from your discard pile into your hand）
+    mr = _EN_RECOVER_RE.search(t)
+    if mr:
+        n = int(mr.group(1)) if mr.group(1) else 1
+        low = t.lower()
+        kind = "any"
+        if "pokémon" in low or "pokemon" in low:
+            kind = "pokemon"
+        elif "energy" in low:
+            kind = "energy"
+        actions.append(act("recover", n, "discard", {"kind": kind}))
+
     if _EN_DISCARD_ALL_RE.search(t):
         actions.append(act("discard", None, "hand", {"all": True}))
+    elif _EN_DISCARD_ALL_ENERGY_RE.search(t):
+        actions.append(act("discard", None, "self", {"card_type": "energy",
+                                                     "all": True}))
+    elif _EN_DISCARD_UPTO_ENERGY_RE.search(t):
+        n = int(_EN_DISCARD_UPTO_ENERGY_RE.search(t).group(1))
+        # 「from your hand」→ 弃手牌能量；否则弃自身 / 对手身上的能量
+        if "from your hand" in t.lower():
+            actions.append(act("discard", n, "hand", {"card_type": "energy"}))
+        else:
+            tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
+            actions.append(act("discard", n, tgt, {"card_type": "energy"}))
     elif _EN_DISCARD_ENERGY_RE.search(t):
         n = int(_EN_DISCARD_ENERGY_RE.search(t).group(1))
         tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
         actions.append(act("discard", n, tgt, {"card_type": "energy"}))
     elif _EN_DISCARD_RE.search(t):
         n = int(_EN_DISCARD_RE.search(t).group(1))
-        tgt = "opponent_hand" if ("opponent" in lower and "hand" in lower) else "hand"
+        tgt = "opponent_hand" if ("opponent" in lower and "hand" in lower) \
+            else "hand"
         actions.append(act("discard", n, tgt))
 
     m = _EN_SEARCH_TOP_RE.search(t)
     if m:
         actions.append(act("search", 1, "deck", {"look_top": int(m.group(1))}))
+    elif _EN_LOOK_TOP_ONE_RE.search(t):
+        actions.append(act("search", 1, "deck", {"look_top": 1}))
     elif _EN_SEARCH_RE.search(t):
         g = _EN_SEARCH_RE.search(t).group(1)
         tgt = "discard" if "discard pile" in lower else "deck"
-        actions.append(act("search", int(g) if g else 1, tgt))
+        actions.append(act("search", int(g) if g else 1, tgt,
+                           {"what": _en_search_what(lower)}))
 
     m = _EN_ATTACH_RE.search(t)
-    if m and "energy" in lower:
-        amt = int(m.group(1)) if m.group(1) else 1
-        et = (m.group(2) or "").lower() or None
-        actions.append(act("attach", amt, "self",
-                           {"energy_type": et} if et else None))
+    if m and "energ" in lower:
+        amt_m = _EN_ATTACH_AMT_RE.search(t)
+        amt = int(amt_m.group(1)) if amt_m else 1
+        letter, word = m.group(1), m.group(2)
+        et = _EN_ENERGY_LETTER.get((letter or "").upper()) or \
+            ((word or "").lower() or None)
+        zone = ("hand" if "from your hand" in lower
+                else "discard" if "discard pile" in lower
+                else "deck" if "your deck" in lower else None)
+        extra = {}
+        if et:
+            extra["energy_type"] = et
+        if zone:
+            extra["zone"] = zone
+        actions.append(act("attach", amt, "self", extra or None))
 
     for word, tag in _EN_STATUS:
         if word in lower:
@@ -221,7 +334,10 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             actions.append(act("status", None, tgt, {"status": tag}))
             break
 
-    if _EN_SWITCH_RE.search(t):
+    if _EN_GUST_RE.search(t):
+        # 把对手后备拉上前台（gust）
+        actions.append(act("switch", None, "active_opponent_bench"))
+    elif _EN_SWITCH_RE.search(t):
         mine = bool(re.search(r"your|switch out", t, re.I)) and \
             not _EN_OPP_RE.search(t)
         actions.append(act("switch", None,
@@ -270,9 +386,11 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
 def _trigger_of(text: str, kind: str) -> str:
     """触发时机判定顺序：被击倒/进化时 → 使用类卡 → 招式 → 静态规则 → 默认"""
-    if "被击倒" in text or "气绝" in text:
+    # 「被击倒」允许中间插入限定语（如「被招式击倒时」）——此前仅匹配字面
+    # 「被击倒」，漏掉真实卡面最常见的「被招式击倒」写法。
+    if re.search(r"被[^。；，,]{0,6}击倒", text) or "气绝" in text:
         return "on_knockout"
-    if "进化时" in text:
+    if re.search(r"进化[^。；，,]{0,8}时", text) or "进化时" in text:
         return "on_evolve"
     if kind in ("item", "supporter", "energy"):
         return "on_use"
@@ -351,9 +469,27 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     if not has_attach:
         m = _PROVIDE_RE.search(t_norm) or _ACCEL_RE.search(t_norm)
         has_attach = bool(m)
+    # v1.3：「从弃牌堆/牌库取 N 张（基本X）能量」（Blaze Dance 等）——
+    # 能量词在动词之后，_ATTACH_RE 命不中，此前会误落到 search 分支
+    m_zone_attach = _DISCARD_ATTACH_RE.search(t_norm)
+    if not has_attach and m_zone_attach:
+        has_attach = True
+
+    # 弃牌堆回收（v1.3）：取 N 张…从弃牌堆…入手（Night Stretcher / 招式回收）
+    has_recover = False
+    mr = _RECOVER_RE2.search(t_norm) or _RECOVER_RE.search(t_norm)
+    if mr and "弃牌堆" in t_norm and not has_attach:
+        n = _num(mr.group(1)) if (mr.groups() and mr.group(1)) else 1
+        kind = "any"
+        if "能量" in t_norm and "宝可梦" not in t_norm:
+            kind = "energy"
+        elif "宝可梦" in t_norm and "能量" not in t_norm:
+            kind = "pokemon"
+        actions.append(act("recover", n, "discard", {"kind": kind}))
+        has_recover = True
 
     # 检索（牌库顶检视 / 通用检索；从弃牌堆 → target=discard）
-    if not has_attach:
+    if not has_attach and not has_recover:
         m = _SEARCH_RE.search(t_norm)
         if m:
             actions.append(act("search", int(m.group(2)), "deck",
@@ -389,15 +525,22 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     if m:
         actions.append(act("heal", int(m.group(1)), "self"))
 
-    # 附能量（附 N 个X能量 / 提供 N 点X能量 / 加速 N 个能量）
+    # 附能量（附 N 个X能量 / 提供 N 点X能量 / 加速 N 个能量 / 从弃牌堆取 N 张X能量）
     if has_attach and not any(a["type"] == "attach" and a.get("extra", {}).get(
             "energy_type") for a in actions):
         mm = _ATTACH_RE.search(t_norm)
         amt = None
         etype = None
+        zone = None
         if mm:
             amt = int(mm.group(1)) if mm.group(1) else 1
             etype = _ENERGY_ZH.get(mm.group(2) or "", None)
+        elif m_zone_attach:
+            # 「从弃牌堆/牌库/手牌取 N 张（基本X）能量」
+            amt = int(m_zone_attach.group(1))
+            etype = _ENERGY_ZH.get(m_zone_attach.group(2) or "", None)
+            zone = ("discard" if "弃牌堆" in t_norm
+                    else "hand" if "手牌" in t_norm else "deck")
         else:
             mp = _PROVIDE_RE.search(t_norm)
             if mp:
@@ -406,8 +549,12 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             else:
                 ma = _ACCEL_RE.search(t_norm)
                 amt = int(ma.group(1)) if (ma and ma.group(1)) else None
-        extra = {"energy_type": etype} if etype else None
-        actions.append(act("attach", amt, "self", extra))
+        extra = {}
+        if etype:
+            extra["energy_type"] = etype
+        if zone:
+            extra["zone"] = zone
+        actions.append(act("attach", amt, "self", extra or None))
 
     # 状态
     for word, tag in _STATUS_WORDS:
@@ -441,13 +588,23 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
         actions.append(act("attach", None, "self"))
 
     # 静态规则修改（弱点/抗性/免疫/禁止撤退）
-    if _MODIFY_RE.search(t_norm):
+    mw = _WEAK_CHANGE_RE.search(t_norm)
+    if mw:
+        # v1.3：弱点改写可映射到引擎 weak_change:<type>[:<filter>]
+        to_t = _ENERGY_ZH.get(mw.group(1), None)
+        filt = "all"
+        if "龙" in t_norm:
+            filt = "dragon"
+        actions.append(act("rule", None, "any",
+                           {"note": "弱点改写", "weak_change": to_t,
+                            "filter": filt}))
+    elif _MODIFY_RE.search(t_norm):
         actions.append(act("rule", None, "any",
                            {"note": "静态规则修改（弱点/抗性/限制）"}))
 
     # 击倒（主动造成；「被击倒」属触发时机，不产出动作）
-    if "被击倒" not in t_norm and (re.search(r"(?:造成|使其|将其|直接)击倒", t_norm)
-                                   or "气绝" in t_norm):
+    if not re.search(r"被[^。；，,]{0,6}击倒", t_norm) and \
+            (re.search(r"(?:造成|使其|将其|直接)击倒", t_norm) or "气绝" in t_norm):
         actions.append(act("knockout", None, "active_opponent"))
 
     # 每回合一次
@@ -667,15 +824,37 @@ def validate_specs(specs: list) -> list:
 def to_engine_tags(specs: list) -> dict:
     """把 spec 映射为引擎可执行 tag；返回 {tags[], unsupported[], notes[]}
 
-    引擎支持（见 cards_real.json meta.engine_tags）：
-      attack: 状态 tag（poison/burn/sleep/paralyze/confuse）· spread_free:N
-      ability: recon:N · cursed:N
+    引擎支持（见 `engine/data/cards_real.json` meta.engine_tags，v1.3 全集）：
+
+    招式效果（`kind=attack`）
+      ``poison``/``burn``/``sleep``/``paralyze``/``confuse`` · ``spread_free:N`` ·
+      ``spread:N:per`` · ``heal:N`` · ``self:N`` · ``draw:N`` ·
+      ``discard:N`` · ``discard_energy:N`` · ``switch_self`` · ``gust`` ·
+      ``attach:N[:type]`` · ``move_damage:N``
+
+    特性（`kind=ability`）
+      ``recon:N``（检视牌库顶）· ``draw:N``（每回合一次抽牌）·
+      ``ko_draw:N``（被击倒时抽牌，trigger=on_knockout）·
+      ``move_damage:N`` · ``attach_energy:N[:type]``（每回合一次附能）·
+      ``evolve_attach:N[:type]:discard``（进化时从弃牌堆附能）·
+      ``weak_change:<type>[:<filter>]``（改写对手弱点）
+      （``cursed:N`` 为手牌特性，由卡级 tag 指定，不由此映射产出）
+
+    训练家（`kind=item`/`supporter`）
+      ``candy``（跳阶进化）· 其余训练家语义需卡级 tag（poffin/ultra_ball/
+      hammer/boss/research:N/shuffle_draw:N/switch_self/recover:N/
+      discard_search_energy:N/search_energy:N）——**解析链不臆造**，
+      统一列入 unsupported 并给出理由（诚实标注，C5）。
+
+    未建模（P1/P2 批次）：``knockout``（击倒效果）· 条件伤害缩放 · 抛币 ·
+    伤害减免/免疫等静态修正——一律如实列入 ``unsupported``。
     """
     tags: list = []
     unsupported: list = []
     notes: list = []
     for s in specs or []:
         kind = s.get("kind")
+        trigger = s.get("trigger")
         for a in s.get("actions") or []:
             t = a.get("type")
             tgt = a.get("target")
@@ -690,23 +869,111 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     unsupported.append({"type": t, "reason": f"未知状态 {st}"})
             elif t == "spread":
+                counters = extra.get("counters")
                 if extra.get("free_distribute") and amt is not None:
                     tags.append(f"spread_free:{int(amt)}")
+                elif counters and amt is not None:
+                    per = int(amt) // max(1, int(counters))
+                    tags.append(f"spread:{int(counters)}:{per}")
                 else:
                     unsupported.append(
-                        {"type": t, "reason": "仅支持任意分配的自由式（spread_free:N）"})
+                        {"type": t,
+                         "reason": "放置指示物缺少份数（需 counters 元数据）"})
             elif t == "draw":
-                if kind == "ability":
-                    unsupported.append({"type": t, "reason": "特性抽牌未建 tag（可用 recon:N 近似）"})
+                if extra.get("to_hand_size"):
+                    unsupported.append(
+                        {"type": t, "reason": "抽到指定手牌数需引擎新机制"
+                                              "（未建模动作清单 B3/B4）"})
+                elif amt is None:
+                    unsupported.append({"type": t, "reason": "抽牌量未识别"})
+                elif kind == "ability":
+                    if trigger == "on_knockout":
+                        tags.append(f"ko_draw:{int(amt)}")
+                    else:
+                        tags.append(f"draw:{int(amt)}")
                 else:
-                    tags.append(f"draw:{amt if amt is not None else 1}")
-            elif t == "heal" and amt is not None:
-                tags.append(f"heal:{int(amt)}")
+                    tags.append(f"draw:{int(amt)}")
+            elif t == "heal":
+                if amt is None:
+                    unsupported.append({"type": t, "reason": "回复量未识别"})
+                else:
+                    tags.append(f"heal:{int(amt)}")
+            elif t == "attach":
+                n = int(amt) if amt is not None else 1
+                et = extra.get("energy_type")
+                zone = extra.get("zone")
+                suffix = f":{et}" if et else ""
+                zsuffix = f":{zone}" if zone else ""
+                if kind == "ability":
+                    if trigger == "on_evolve":
+                        tags.append(f"evolve_attach:{n}{suffix}"
+                                    f"{zsuffix or ':discard'}")
+                    else:
+                        tags.append(f"attach_energy:{n}{suffix}{zsuffix}")
+                else:
+                    tags.append(f"attach:{n}{suffix}{zsuffix}")
+            elif t == "discard":
+                n = int(amt) if amt is not None else 1
+                is_energy = extra.get("card_type") == "energy"
+                if extra.get("all"):
+                    tags.append("discard_energy:all" if is_energy
+                                else "discard:all")
+                elif is_energy:
+                    tags.append(f"discard_energy:{n}")
+                else:
+                    tags.append(f"discard:{n}")
+            elif t == "move_damage":
+                if extra.get("all"):
+                    tags.append("move_damage:all")
+                elif amt is None:
+                    unsupported.append({"type": t, "reason": "移动份数未识别"})
+                else:
+                    tags.append(f"move_damage:{int(amt)}")
+            elif t == "switch":
+                tags.append("switch_self" if tgt == "self" else "gust")
+            elif t == "evolve":
+                if kind in ("item", "supporter"):
+                    tags.append("candy")
+                else:
+                    unsupported.append(
+                        {"type": t, "reason": "招式/特性驱动的进化需卡级 tag"})
             elif t == "search":
                 if kind == "ability":
                     tags.append(f"recon:{amt if amt is not None else 1}")
                 else:
-                    unsupported.append({"type": t, "reason": "训练家检索仅支持预设 tag"})
+                    # 训练家检索：按检索目标选 tag（pokemon/trainer/energy/any）
+                    what = extra.get("what") or "any"
+                    n = amt if amt is not None else 1
+                    if tgt == "discard":
+                        unsupported.append(
+                            {"type": t, "reason": "从弃牌堆检索（非回收）需引擎"
+                                                  "新机制（B4）"})
+                    elif what == "energy":
+                        tags.append(f"search_energy:{n}")
+                    elif what == "pokemon":
+                        tags.append(f"search_pokemon:{n}")
+                    elif what == "trainer":
+                        tags.append(f"search_trainer:{n}")
+                    else:
+                        tags.append(f"search_any:{n}")
+            elif t == "recover":
+                n = int(amt) if amt is not None else 1
+                kd = extra.get("kind") or "any"
+                tags.append(f"recover:{n}:{kd}")
+            elif t == "rule":
+                if extra.get("weak_change"):
+                    f = extra.get("filter")
+                    tags.append("weak_change:" + str(extra["weak_change"])
+                                + (f":{f}" if f else ""))
+                else:
+                    unsupported.append(
+                        {"type": t,
+                         "reason": (str(extra.get("note"))
+                                    or "静态规则/元游戏效果（P1–P2 批次）")})
+            elif t == "knockout":
+                unsupported.append(
+                    {"type": t,
+                     "reason": "击倒效果需引擎新机制（未建模动作清单 B4）"})
             else:
                 unsupported.append({"type": t, "reason": "引擎未建模该动作类型"})
     # 按出现顺序去重

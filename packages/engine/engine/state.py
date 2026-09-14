@@ -27,6 +27,10 @@ class PlayerState:
     deck: list = field(default_factory=list)          # 牌库（-1 为顶）
     hand: list = field(default_factory=list)          # 手牌（CardRef）
     discard: list = field(default_factory=list)       # 弃牌堆（str 描述即可）
+    discard_refs: list = field(default_factory=list)  # 弃牌堆**类型化**副本（CardRef）
+    #   为何需要两份：`discard` 是历史展示层（str，前端/report 直接读），
+    #   `discard_refs` 供「弃牌堆回收」类效果（Night Stretcher / 从弃牌堆检索）
+    #   重建真实卡对象。两者由 Battle._to_discard() 保证同步推进。
     active: Optional[FieldPokemon] = None
     bench: list = field(default_factory=list)         # list[FieldPokemon]
     prizes_left: int = 0                              # 剩余奖赏数（0 → 胜）

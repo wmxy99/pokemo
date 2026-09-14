@@ -88,14 +88,7 @@
 
 ## 3. 质量问题清单（已如实记录，未静默丢弃）
 
-- 宝可梦缺 HP：0
-- 宝可梦缺属性：0
-- 缺日文名：0
-- 无招式且无效果文本：8 —— Basic {G} Energy, Basic {R} Energy, Basic {W} Energy, Basic {L} Energy, Basic {P} Energy, Basic {F} Energy…
-- 未知能量符号：无
-- (卡名,系列,编号) 重复：0
-- 进化卡缺「进化前」：0
-- 引擎自撰卡池中**不在本数据集**的卡：7 —— Clefairy ex, Counter Catcher, Earthen Vessel, Iono, Nest Ball, Ogerpon ex, Professor's Research
+- （本次为 `--reparse-only` 增量重跑；质量问题清单见上一次全量清洗报告）
 
 ## 4. K2 效果解析覆盖（机器生成 · 合规 6.1 已标识）
 
@@ -105,9 +98,9 @@
 | 已解析卡数 | 1119 |
 | 解析条目（招式/特性/整卡） | 1481 |
 | 产出 spec 总数 | 1481 |
-| Schema 校验错误 | 0 |
-| 可映射引擎 tag | 241 |
-| **未建模（待补）动作** | **1144** |
+| Schema 校验错误 | 1 |
+| 可映射引擎 tag | 555 |
+| **未建模（待补）动作** | **854** |
 
 > AI 标识：本表全部数字来自 `rule` 后端自动解析，结果带 `ai_generated=true` 与免责提示，**仅供研究参考**。
 

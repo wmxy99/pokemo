@@ -10,11 +10,18 @@ from __future__ import annotations
 from .cards import FieldPokemon
 
 
-def compute_damage(attacker: FieldPokemon, defender: FieldPokemon, base: int) -> int:
-    """结算一次基础伤害（含弱点 ×2 / 抗性 −30）"""
+def compute_damage(attacker: FieldPokemon, defender: FieldPokemon, base: int,
+                   weakness_override: str | None = None) -> int:
+    """结算一次基础伤害（含弱点 ×2 / 抗性 −30）
+
+    ``weakness_override``：场上静态效果改写守方弱点时的生效弱点
+    （由 ``weak_change:<type>[:<filter>]`` 特性提供，见 battle._weakness_override）。
+    传 ``""``（空串）表示**弱点被移除**（无弱点）。
+    """
     dmg = base
     at = attacker.pdef.ptype
-    if defender.pdef.weakness == at:
+    weak = defender.pdef.weakness if weakness_override is None else weakness_override
+    if weak and weak == at:
         dmg *= 2
     if defender.pdef.resistance == at:
         dmg = max(0, dmg - 30)

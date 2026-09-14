@@ -420,7 +420,7 @@
    "id": "ab_adrenaline",
    "kind": "ability",
    "name": "Adrena-Brain",
-   "text": "每回合一次：移动至多 3 个伤害指示物（引擎待实现）",
+   "text": "每回合一次：从自身移动至多 3 个伤害指示物到对手的战斗宝可梦。",
    "expect": {
     "kind": "ability",
     "trigger": "static",
@@ -439,7 +439,7 @@
    "id": "ab_verdant_dance",
    "kind": "ability",
    "name": "Teal Dance",
-   "text": "每回合一次：从手牌/牌库附 1 草能量（引擎待实现）",
+   "text": "每回合一次：从手牌附 1 张基本草能量到此宝可梦（引擎子集：附带抽 1 未建模）。",
    "expect": {
     "kind": "ability",
     "trigger": "static",
@@ -460,15 +460,19 @@
    "id": "ab_flame_dance",
    "kind": "ability",
    "name": "Blaze Dance",
-   "text": "进化时从弃牌堆加速能量（引擎待实现）",
+   "text": "被动：由手牌进化此宝可梦时，可从弃牌堆至多取 2 张基本火能量附到后备宝可梦（引擎子集：附到自身）。",
    "expect": {
     "kind": "ability",
     "trigger": "on_evolve",
     "actions": [
      {
       "type": "attach",
-      "amount": null,
-      "target": "self"
+      "amount": 2,
+      "target": "self",
+      "extra": {
+       "energy_type": "fire",
+       "zone": "discard"
+      }
      }
     ]
    },
@@ -478,7 +482,7 @@
    "id": "ab_reversal",
    "kind": "ability",
    "name": "Flip the Script",
-   "text": "己方宝可梦被击倒时抽 3（引擎待实现）",
+   "text": "被动：己方宝可梦被招式击倒时，抽 3 张牌。",
    "expect": {
     "kind": "ability",
     "trigger": "on_knockout",
@@ -496,7 +500,7 @@
    "id": "ab_fairy_domain",
    "kind": "ability",
    "name": "Fairy Zone",
-   "text": "对手龙系宝可梦弱点变为超（引擎待实现）",
+   "text": "被动：在场时，对手龙系宝可梦的弱点变为超。",
    "expect": {
     "kind": "ability",
     "trigger": "static",

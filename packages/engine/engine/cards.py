@@ -58,9 +58,15 @@ class AbilityDef:
     location:
       field —— 场上发动、每只每回合一次（ability_used 标记，回合开始重置）
       hand  —— 手牌发动（如 Dusknoir 弃自身），用后弃掉该牌，天然每张一次
-    tag（引擎原生派发，v0.3 首批）：
-      "recon:<n>"       检视牌库顶 n 取 1 入手，其余放回牌库底
-      "cursed:<hp>"     弃自身 → 对指定 1 只对手宝可梦放 <hp>/10 个伤害指示物
+    tag（引擎原生派发，v1.3 全集）：
+      "recon:<n>"             检视牌库顶 n 取 1 入手，其余放回牌库底
+      "cursed:<hp>"           弃自身 → 对指定 1 只对手宝可梦放 <hp>/10 个伤害指示物
+      "draw:<n>"              每回合一次抽 n（field）
+      "move_damage:<n>"       每回合一次移动至多 n 个伤害指示物（自身 → 对手 active）
+      "attach_energy:<n>[:<type>]"  每回合一次从弃牌堆/牌库附 n 个（指定色）能量
+      "ko_draw:<n>"           己方宝可梦被击倒时抽 n（**被动**，不进合法动作表）
+      "weak_change:<type>[:<filter>]"  在场时改写对手弱点（**被动**）
+      "unsupported"           引擎未建模（灰名单；招式仍可用）
     """
     name: str
     tag: str = "recon:2"
@@ -129,7 +135,22 @@ class EnergyDef:
 
 @dataclass(frozen=True)
 class TrainerDef:
-    """训练家牌定义（E4 最小集，行为由 tag 派发）"""
+    """训练家牌定义（E4 最小集 + v1.3 扩展，行为由 tag 派发）
+
+    v1.3 tag 全集（与 battle._trainer_legals/_do_trainer 对齐）：
+      "poffin"                     检索牌库 2 张基础宝可梦铺后备
+      "ultra_ball"                 弃手牌 2 张 → 检索任意宝可梦入手
+      "hammer"                     抛币正面 → 弃对手 active 1 能量
+      "boss"                       将对手 1 只后备拉为 active（需 target）
+      "research:<n>"               弃全部手牌 → 抽 n
+      "shuffle_draw:<n>"           手牌洗回牌库 → 抽 n
+      "switch_self"                自换位（不耗撤退能量、无视睡眠/麻痹；需 target）
+      "recover:<n>[:<kind>]"       弃牌堆回收 <n> 张（kind=pokemon|energy|any）
+      "discard_search_energy:<n>"  弃 1 张手牌 → 检索 n 张能量入手
+      "search_energy:<n>"          检索 n 张能量入手
+      "candy"                      跳阶进化（手牌二阶 → 链根基础）
+      "unsupported"                引擎未建模（替换占位，如实标注）
+    """
     tag: str                          # poffin / ultra_ball / hammer / boss ...
     kind: str = "item"                # item | supporter
     name: str = ""                    # 数据键

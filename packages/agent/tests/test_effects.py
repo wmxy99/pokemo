@@ -192,14 +192,68 @@ class TestValidateAndMap(unittest.TestCase):
         self.assertEqual(r["unsupported"], [], "damage 不需 tag，不应报未支持")
 
     def test_to_engine_tags_unsupported_is_honest(self):
-        """引擎未建模的动作必须如实列入 unsupported，不假装支持"""
-        specs = [E.spec("item", "X", "on_use",
-                        [E.act("search", 2, "deck"),
-                         E.act("move_damage", 3, "self")])]
+        """仍未建模的动作必须如实列入 unsupported，不假装支持
+
+        v1.3 起 ``move_damage`` / ``draw``（特性）已建模为引擎 tag，故本用例改用
+        **确实尚未建模**的动作（击倒效果 · 真静态规则）守护同一不变量。
+        """
+        specs = [E.spec("attack", "X", "on_use",
+                        [E.act("knockout", None, "active_opponent"),
+                         E.act("rule", None, "any",
+                               {"note": "静态规则修改（弱点/抗性/限制）"})])]
         r = E.to_engine_tags(specs)
         kinds = {u["type"] for u in r["unsupported"]}
-        self.assertIn("move_damage", kinds)
-        self.assertTrue(all(u.get("reason") for u in r["unsupported"]))
+        self.assertIn("knockout", kinds)
+        self.assertIn("rule", kinds)
+        self.assertTrue(all(u.get("reason") for u in r["unsupported"]),
+                        "每条未建模都必须给出理由")
+        self.assertEqual(r["tags"], [], "未建模动作不得产出任何 tag")
+
+    def test_new_tag_families_are_mapped(self):
+        """v1.3 招式侧 tag 家族：discard / switch / attach / move_damage / spread:N:per"""
+        specs = [E.spec("attack", "X", "on_use", [
+            E.act("damage", 60, "active_opponent"),
+            E.act("discard", 2, "hand"),
+            E.act("discard", 1, "self", {"card_type": "energy"}),
+            E.act("switch", None, "self"),
+            E.act("switch", None, "active_opponent_bench"),
+            E.act("attach", 1, "self", {"energy_type": "fire"}),
+            E.act("move_damage", 3, "active_opponent"),
+            E.act("spread", 40, "active_opponent_bench", {"counters": 4}),
+            E.act("draw", 2, "deck"),
+        ])]
+        r = E.to_engine_tags(specs)
+        for want in ("discard:2", "discard_energy:1", "switch_self", "gust",
+                     "attach:1:fire", "move_damage:3", "spread:4:10", "draw:2"):
+            self.assertIn(want, r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_ability_tags_follow_trigger(self):
+        """特性 tag 随触发时机分流：on_knockout→ko_draw · on_evolve→evolve_attach"""
+        ko = E.to_engine_tags([E.spec(
+            "ability", "Flip the Script", "on_knockout",
+            [E.act("draw", 3, "deck")])])
+        self.assertIn("ko_draw:3", ko["tags"])
+        ev = E.to_engine_tags([E.spec(
+            "ability", "Blaze Dance", "on_evolve",
+            [E.act("attach", 2, "self",
+                   {"energy_type": "fire", "zone": "discard"})])])
+        self.assertIn("evolve_attach:2:fire:discard", ev["tags"])
+        md = E.to_engine_tags([E.spec(
+            "ability", "Adrena-Brain", "static",
+            [E.act("move_damage", 3, "active_opponent")])])
+        self.assertIn("move_damage:3", md["tags"])
+        wc = E.to_engine_tags([E.spec(
+            "ability", "Fairy Zone", "static",
+            [E.act("rule", None, "any",
+                   {"weak_change": "psychic", "filter": "dragon"})])])
+        self.assertIn("weak_change:psychic:dragon", wc["tags"])
+
+    def test_recover_tag(self):
+        r = E.to_engine_tags([E.spec(
+            "item", "Night Stretcher", "on_use",
+            [E.act("recover", 1, "discard", {"kind": "any"})])])
+        self.assertIn("recover:1:any", r["tags"])
 
     def test_ability_search_maps_to_recon(self):
         specs = [E.spec("ability", "侦察指令", "static",

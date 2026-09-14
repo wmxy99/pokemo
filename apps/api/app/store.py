@@ -5,6 +5,7 @@
 - jobs / battles 元数据 / 训练日志曲线：SQLite 持久化（重启可见完成态，进度字段周期性落库）
 """
 from __future__ import annotations
+import gc
 import json
 import sqlite3
 import threading
@@ -16,22 +17,43 @@ REPO = Path(__file__).resolve().parents[3]          # pokelab-ai
 
 
 def _writable_dir(d: Path) -> bool:
-    """探测目录能否容纳可写 SQLite（新建+写入+清理）"""
+    """探测目录能否容纳可写 SQLite（新建+写入+清理）
+
+    **清理必须可靠**：此前只做一次 `probe.unlink()` 且异常被 `except: pass` 吞掉，
+    而 Windows 上 SQLite 关闭连接后释放文件句柄有延迟，unlink 会抛
+    `PermissionError` —— 结果每次探测都在数据目录留下一个 8 KB 的 `_wprobe.db`
+    垃圾文件（实测本机 `~/.pokelab/_wprobe.db` 就是这么来的）。
+    改为：显式关闭游标 → `gc` → 带重试地删除，并连带清掉 `-journal`/`-wal`；
+    仍失败则**截断为 0**，至少不留内容。
+    """
+    probe = d / "_wprobe.db"
     try:
         d.mkdir(parents=True, exist_ok=True)
-        probe = d / "_wprobe.db"
         con = sqlite3.connect(str(probe))
-        con.execute("CREATE TABLE IF NOT EXISTS t(x)")
-        con.execute("INSERT INTO t VALUES (1)")
-        con.commit()
-        con.close()
         try:
-            probe.unlink()
-        except Exception:
-            pass
-        return True
+            con.execute("CREATE TABLE IF NOT EXISTS t(x)")
+            con.execute("INSERT INTO t VALUES (1)")
+            con.commit()
+        finally:
+            con.close()
     except Exception:
         return False
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        p = Path(str(probe) + suffix)
+        for attempt in range(3):
+            try:
+                p.unlink(missing_ok=True)
+                break
+            except Exception:
+                gc.collect()
+                time.sleep(0.05 * (attempt + 1))
+                if attempt == 2:                # 兜底：不清内容也要清空间
+                    try:
+                        with open(p, "wb"):
+                            pass
+                    except Exception:
+                        pass
+    return True
 
 
 def _pick_data_dir() -> Path:

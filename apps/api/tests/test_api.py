@@ -1846,5 +1846,35 @@ class TestSecureDelete(unittest.TestCase):
             store._conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
 
+class TestDataDirProbe(unittest.TestCase):
+    """可写性探测必须自己收拾干净
+
+    背景：`_writable_dir()` 用「建一个 `_wprobe.db` 写一行再删」来探测目录，
+    但此前**只删一次且异常被吞**——Windows 上 SQLite 关闭连接后释放句柄有延迟，
+    unlink 抛 PermissionError 就被静默忽略，于是每次探测都在数据目录留下一个
+    8 KB 垃圾文件（本机 `~/.pokelab/_wprobe.db` 即由此产生）。
+    """
+
+    def test_probe_leaves_no_residue(self):
+        d = Path(tempfile.mkdtemp(prefix="pokelab_probe_"))
+        self.assertTrue(store._writable_dir(d))
+        leftover = [p.name for p in d.iterdir()]
+        self.assertEqual(leftover, [], f"探测留下了残留：{leftover}")
+
+    def test_probe_reports_unwritable_dir(self):
+        """不可写目录应返回 False 而不是抛异常"""
+        d = Path(tempfile.mkdtemp(prefix="pokelab_probe_")) / "sub"
+        # 用一个「文件」占住目录名，使 mkdir 失败
+        d.parent.joinpath("sub").write_text("x")
+        self.assertFalse(store._writable_dir(d))
+
+    def test_probe_repeated_calls_stay_clean(self):
+        d = Path(tempfile.mkdtemp(prefix="pokelab_probe_"))
+        for _ in range(5):
+            self.assertTrue(store._writable_dir(d))
+        self.assertEqual([p.name for p in d.iterdir()], [],
+                         "重复探测累积了残留文件")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

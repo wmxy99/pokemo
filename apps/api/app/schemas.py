@@ -87,3 +87,16 @@ class TrainOut(BaseModel):
     status: str
     progress: Optional[Dict[str, Any]] = None
     log_tail: Optional[List[str]] = None
+
+
+class CommentaryReq(BaseModel):
+    """对战解说请求（F5 内 · 纯展示可降级）
+
+    - ``backend``：``auto``（有配置走云端、失败回退离线，默认）· ``llm``（强制
+      云端）· ``rule``（强制离线模板，便于演示与本地模式）；
+    - ``n_events``：取最近多少条事件作为上下文（默认 8）。
+    """
+
+    backend: str = Field("auto", pattern="^(auto|llm|rule)$")
+    n_events: int = Field(8, ge=1, le=40)
+    opponent_hint: str = ""

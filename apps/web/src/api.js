@@ -100,6 +100,13 @@ export const api = {
   // 管理（M5）
   adminUsers: () => req('/admin/users'),
   adminSetRole: (name, role) => req(`/admin/users/${name}?role=${role}`, { method: 'PATCH' }),
+  // 后台「云端模型」配置（admin）：OpenAI 兼容端点 + 密钥加密存储 + 连通性测试
+  llmConfig: () => req('/admin/llm/config'),
+  llmSave: (payload) => req('/admin/llm/config', { method: 'PUT', body: payload }),
+  llmClear: () => req('/admin/llm/config', { method: 'DELETE' }),
+  llmTest: (prompt) => req('/admin/llm/test', { method: 'POST', body: { prompt } }),
+  // 对战解说（F5 内）：纯展示可降级；返回值带 C4 AI 标识
+  commentary: (id, payload = {}) => req(`/battles/${id}/commentary`, { method: 'POST', body: payload }),
 }
 
 // 卡组字典（中文展示；id 为数据键，保持英文）

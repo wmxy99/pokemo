@@ -3,6 +3,7 @@ import { api, DECKS } from '../api.js'
 import { t } from '../i18n.js'
 import { verbLabel } from '../verbs.js'
 import { Zone, ActionPanel, CommandBar, TurnLog, SeedBar } from '../components/battle.jsx'
+import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
@@ -195,6 +196,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
             ctx={actionContext(view)}
             onAct={act}
             hint={finished ? '对局已结束' : '（等待对手 / 无可用动作）'} />
+          <CommentaryPanel battleId={state.id} turn={view.turn} onMsg={onMsg} />
           <TurnLog lines={log} />
         </>)}
       </div>

@@ -153,6 +153,20 @@ def _privacy_impl() -> dict:
             "audit_enabled": status.get("audit_enabled"),
             "audit_log": status.get("audit_log"),
             "audit_content": "仅端点/模型/字符数/脱敏计数，不记录原文",
+            # v1.2：云端模型端点可由**后台可视化配置**（admin）
+            "endpoint_config": {
+                "supported": True,
+                "where": "后台 → 模型配置（GET/PUT /admin/llm/config，仅 admin）",
+                "priority": "后台配置 > 环境变量 POKELAB_LLM_BASE/KEY/MODEL",
+                "key_storage": ("API Key **无条件 Fernet 加密**入库（不受 "
+                                "POKELAB_FIELD_ENC 开关影响）；页面仅回显尾 4 位；"
+                                "加密不可用时拒绝落库而非写明文"),
+                "local_only_hard_block": True,
+                "local_only_note": ("POKELAB_LOCAL_ONLY=1 时后台**拒绝保存外部端点**"
+                                    "（403），仅允许本机/内网端点（自建 vLLM/Ollama）"),
+                "test_endpoint": "POST /admin/llm/test（真实调用一次，同样脱敏 + 审计）",
+                "scope": ["K2 卡牌效果解析", "对战解说（带 AI 生成标识 C4）"],
+            },
         },
         "no_secondary_use": {
             "statement": "用户数据仅用于本服务运行（对战/训练/统计），不用于其它用途、"

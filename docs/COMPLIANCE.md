@@ -75,6 +75,26 @@
 | 不使用于服务以外用途 | 本地模式可完全离线；外发仅发送脱敏文本；全量调用可审计 | `GET /compliance/audit`（admin） |
 | 不向第三方提供 | 默认无任何第三方上报；外部 LLM 仅在显式配置且非本地模式时可用 | `POKELAB_LLM_BASE` + `POKELAB_LOCAL_ONLY=0` |
 
+### 云端模型端点配置（v1.2 新增）
+
+云端大模型的端点/模型名/密钥可由管理员在**后台可视化配置**（无需改环境变量）。
+本节如实披露其与 6.2 的关系：
+
+| 事项 | 实现 | 验证方式 |
+|---|---|---|
+| 配置入口 | 后台 → 「模型配置」页（仅 `admin`） | `GET/PUT/DELETE /admin/llm/config` |
+| 生效优先级 | **后台配置 > 环境变量**（`POKELAB_LLM_BASE/KEY/MODEL`）；保存即时生效，无需重启 | `agent.llmclient.source()` 返回 `runtime`/`env`/`none` |
+| 密钥存储 | API Key **无条件 Fernet 加密**入库；页面仅回显尾 4 位；**加密不可用时拒绝落库**（不写明文） | `apps/api/app/crypto.py` `encrypt_secret()` · `settings` 表 `encrypted=1` |
+| **本地模式硬禁** | `POKELAB_LOCAL_ONLY=1` 时**拒绝保存外部端点**（403），仅允许本机/内网端点（自建 vLLM / Ollama）；连通性测试同样被拒 | `PUT /admin/llm/config` · `POST /admin/llm/test` |
+| 连通性测试 | 真实调用一次，同样经脱敏与审计 | `POST /admin/llm/test`（返回 `elapsed_ms` / 脱敏计数） |
+| 生效范围 | K2 卡牌效果解析 · **对战解说**（返回值带 AI 生成标识，见 C4） | `POST /battles/{id}/commentary` |
+| 降级行为 | 未配置 / 调用失败 / 被本地模式拦截 → 回退离线规则基线并**如实标注**（`rule(fallback)` / `rule(privacy-blocked)`），不阻断功能 | `/cards/{id}` 的 `effects_parsed.backend` · 解说的 `generated_by` |
+
+> **不变量**：无论配置从哪里来（后台或环境变量），**所有**外发都经过
+> `agent.llmclient.chat()` 的「端点校验 → 脱敏 → 调用 → 审计」四步；
+> 绕过该入口直接 `urllib` 调用外部端点属违规实现（评审应拒绝）。
+
+
 ### 脱敏规则
 
 邮箱 · 中国手机号 · 证件号 · 银行卡号 · API 密钥（`sk-…`）· `Authorization` 头 ·

@@ -11,6 +11,7 @@ import DecksPage from './pages/DecksPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
 import CompliancePage from './pages/CompliancePage.jsx'
 import { DashboardPage, TrainingPage, UsersPage } from './pages/admin.jsx'
+import ModelConfigPage from './pages/ModelConfig.jsx'
 
 const FRONT = [
   { key: 'battle', label: t('nav.battle') },
@@ -23,6 +24,7 @@ const FRONT = [
 const ADMIN = [
   { key: 'dash', label: '仪表盘 M6' },
   { key: 'training', label: 'RL 训练' },
+  { key: 'model', label: '模型配置' },
   { key: 'users', label: '用户管理 M5' },
 ]
 
@@ -107,6 +109,7 @@ function App() {
         {zone === 'admin' && (<>
           {page === 'dash' && <DashboardPage onMsg={onMsg} />}
           {page === 'training' && <TrainingPage onMsg={onMsg} authed={!!user} />}
+          {page === 'model' && <ModelConfigPage onMsg={onMsg} authed={!!user} />}
           {page === 'users' && <UsersPage />}
         </>)}
       </main>

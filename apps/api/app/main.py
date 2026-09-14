@@ -86,6 +86,8 @@ from .decks import router as decks_router      # noqa: E402
 from .stats import router as stats_router      # noqa: E402
 from .library import router as library_router  # noqa: E402
 from .compliance import router as compliance_router  # noqa: E402
+from .llm_admin import router as llm_admin_router  # noqa: E402
+from .llm_admin import install_provider  # noqa: E402
 app.include_router(battles_router)
 app.include_router(batch_router)
 app.include_router(train_router)
@@ -93,6 +95,12 @@ app.include_router(decks_router)
 app.include_router(stats_router)
 app.include_router(library_router)
 app.include_router(compliance_router)
+app.include_router(llm_admin_router)
+
+# 把「后台保存的云端模型配置」注入 agent 的 LLM 客户端（优先级：后台 → 环境变量）。
+# 启动时执行一次即可：此后所有 LLM 调用（K2 效果解析 / 对战解说）自动使用后台配置，
+# 且后台 PUT 保存后立即重新注入 → 无需重启、无需改环境变量。
+install_provider()
 
 
 @app.get("/", tags=["meta"])

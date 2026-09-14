@@ -20,11 +20,8 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
@@ -979,24 +976,28 @@ _ENERGY_ZH = {"火": "fire", "超": "psychic", "草": "grass", "恶": "darkness"
 
 
 # ---------------- LLM 后端（OpenAI 兼容） ----------------
-class LLMConfigError(RuntimeError):
-    pass
+# 配置与调用统一收在 `agent.llmclient`（含**运行时注入点**：后台配置的云端模型
+# 由 apps/api 注入，优先于环境变量）。此处仅做**向后兼容再导出**，避免既有
+# 调用方（apps/api、测试）因搬迁而破坏。
+from .llmclient import LLMConfigError, chat as _llm_chat  # noqa: E402
 
 
 def llm_config() -> dict:
-    """从环境变量读 LLM 配置（未配置 → 抛错，由 auto 回退 rule）
+    """取生效的 LLM 配置（后台配置优先 → 环境变量兜底）
 
     POKELAB_LLM_BASE 例：https://api.deepseek.com/v1  或  http://127.0.0.1:9997/v1
     POKELAB_LLM_KEY  API Key（本地服务可留空）
     POKELAB_LLM_MODEL 模型名（默认 deepseek-chat）
+    POKELAB_LLM_TIMEOUT 超时秒数（默认 60）
     """
-    base = os.environ.get("POKELAB_LLM_BASE", "").rstrip("/")
-    if not base:
-        raise LLMConfigError("未配置 POKELAB_LLM_BASE（LLM 后端不可用）")
-    return {"base": base,
-            "key": os.environ.get("POKELAB_LLM_KEY", ""),
-            "model": os.environ.get("POKELAB_LLM_MODEL", "deepseek-chat"),
-            "timeout": float(os.environ.get("POKELAB_LLM_TIMEOUT", "60"))}
+    from . import llmclient as _c
+    return _c.config()
+
+
+def llm_config_source() -> str:
+    """配置来源：``runtime``（后台）/ ``env`` / ``none``"""
+    from . import llmclient as _c
+    return _c.source()
 
 
 def extract_json(text: str) -> Optional[list]:
@@ -1028,49 +1029,20 @@ def parse_llm(text: str, kind: str = "attack", name: str = "",
     ``meta_out``：可选 dict，原地回填 ``{endpoint, model, privacy, audit}``。
     """
     from . import prompts as _prompts
-    from . import privacy as _privacy
-    cfg = llm_config()
-    # 1) 端点校验（本地模式下外部端点直接拒绝）
-    ep = _privacy.check_endpoint(cfg["base"])
-    # 2) 渲染提示词 → 脱敏后再外发
+    # 渲染提示词后交给统一客户端（客户端内部完成：端点校验 → 脱敏 → 调用 → 审计）
     sys_t = _prompts.render("parse_effects_system",
                             retrieved_rules=retrieved_rules or "（无）")
     usr_t = _prompts.render("parse_effects_user", card_name=name or "(未命名)",
                             card_kind=kind, rules_text=text)
-    usr_clean, rep = _privacy.desensitize(usr_t, extra=extra_sensitive)
-    sys_clean, rep2 = _privacy.desensitize(sys_t)
-    rep["total"] += rep2["total"]
-    body = json.dumps({
-        "model": cfg["model"],
-        "messages": [{"role": "system", "content": sys_clean},
-                     {"role": "user", "content": usr_clean}],
-        "temperature": 0,
-        "stream": False,
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        cfg["base"] + "/chat/completions", data=body,
-        headers={"Content-Type": "application/json",
-                 **({"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {})})
-    t0 = time.time()
-    try:
-        with urllib.request.urlopen(req, timeout=cfg["timeout"]) as r:
-            payload = json.loads(r.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError) as e:
-        _privacy.audit("llm_call", host=ep["host"], model=cfg["model"], ok=False,
-                       error=type(e).__name__,
-                       elapsed_ms=int((time.time() - t0) * 1000))
-        raise LLMConfigError(f"LLM 请求失败：{e}") from e
-    content = (payload.get("choices") or [{}])[0].get("message", {}).get("content", "")
-    # 3) 审计（不记录原文）
-    _privacy.audit("llm_call", host=ep["host"], external=ep["external"],
-                   model=cfg["model"], ok=True,
-                   prompt_chars=rep["chars_in"], sent_chars=rep["chars_out"],
-                   desensitized=rep["total"], response_chars=len(content or ""),
-                   elapsed_ms=int((time.time() - t0) * 1000))
+    res = _llm_chat([{"role": "system", "content": sys_t},
+                     {"role": "user", "content": usr_t}],
+                    temperature=0, purpose="llm_call")
     if meta_out is not None:
-        meta_out.update({"endpoint": ep, "model": cfg["model"],
-                         "privacy": rep, "audit": True})
-    return extract_json(content) or []
+        meta_out.update({"endpoint": res["endpoint"], "model": res["model"],
+                         "privacy": res["privacy"], "audit": True,
+                         "elapsed_ms": res["elapsed_ms"],
+                         "config_source": res.get("source")})
+    return extract_json(res["content"]) or []
 
 
 def parse_effects(text: str, kind: str = "attack", name: str = "",

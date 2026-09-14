@@ -7,7 +7,9 @@
 注意：train 用例会真实启动子进程跑最小课程（约 15–40s）。
 """
 from __future__ import annotations
+import os
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -17,6 +19,7 @@ sys.path.insert(0, str(REPO))
 # engine/agent 由 apps.api.app.main 自行注入 path
 from fastapi.testclient import TestClient  # noqa: E402
 from apps.api.app.main import app  # noqa: E402
+from apps.api.app import store  # noqa: E402
 
 client = TestClient(app)
 _TOKEN = {"v": None}
@@ -1345,6 +1348,332 @@ class TestCardLibrary(unittest.TestCase):
             self.assertTrue(hit and hit[0]["matched"], f"{nm} 未命中：{j['parsed']}")
             meta = hit[0]["meta"] or {}
             self.assertTrue(meta.get("is_basic_energy"), f"{nm} 未标记为基本能量")
+
+
+class TestLLMAdminConfig(unittest.TestCase):
+    """后台「云端模型」配置（admin）：权限 / 本地模式硬禁 / 密钥加密与脱敏 /
+    连通性失败提示 / 清除回退环境变量 / 后台优先于环境变量
+
+    说明：既有 `user_headers()` 依赖「首个注册者即 admin」的历史状态，不稳定；
+    这里直接建一个确定的 admin 账号（store.create_user + auth.create_token）。
+    """
+
+    ENV_KEYS = ("POKELAB_LLM_BASE", "POKELAB_LLM_KEY", "POKELAB_LLM_MODEL",
+                "POKELAB_LOCAL_ONLY")
+
+    @classmethod
+    def setUpClass(cls):
+        import uuid
+        from apps.api.app import auth, llm_admin
+        cls.llm_admin = llm_admin
+        cls._save_env = {k: os.environ.get(k) for k in cls.ENV_KEYS}
+        name = "adm_" + uuid.uuid4().hex[:8]
+        store.create_user(name, auth.hash_password("pw123456"), "admin")
+        cls.admin = {"Authorization": "Bearer " + auth.create_token(name, "admin")}
+        cls._clear_saved()
+        for k in cls.ENV_KEYS:
+            os.environ.pop(k, None)
+
+    @classmethod
+    def _clear_saved(cls):
+        from apps.api.app import llm_admin
+        for k in (llm_admin.K_BASE, llm_admin.K_MODEL, llm_admin.K_KEY,
+                  llm_admin.K_TIMEOUT):
+            store.delete_setting(k)
+        llm_admin.install_provider()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._clear_saved()
+        for k, v in cls._save_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        cls.llm_admin.install_provider()
+
+    def setUp(self):
+        for k in self.ENV_KEYS:
+            os.environ.pop(k, None)
+        self._clear_saved()
+
+    def test_requires_admin(self):
+        """无令牌 → guest 身份被 require_roles 拒（403）；普通用户同样 403
+
+        注：默认 ``POKELAB_REQUIRE_AUTH=0`` 时无令牌会被解析为 ``guest``，
+        因此是 403（已认证但无权限）而非 401（未认证）——两者都属正确拒绝。
+        """
+        self.assertIn(client.get("/admin/llm/config").status_code, (401, 403))
+        u = user_headers()
+        if _TOKEN.get("role") != "admin":
+            self.assertEqual(
+                client.get("/admin/llm/config", headers=u).status_code, 403)
+
+    def test_config_shape(self):
+        d = client.get("/admin/llm/config", headers=self.admin).json()
+        self.assertIn(d["source"], ("runtime", "env", "none"))
+        self.assertGreaterEqual(len(d["presets"]), 5)
+        self.assertIn("compliance", d)
+        self.assertIn("local_only", d["compliance"])
+        self.assertTrue(all({"id", "label", "base", "model"} <= set(x)
+                            for x in d["presets"]))
+
+    def test_put_encrypts_key_and_masks_on_read(self):
+        r = client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
+            "key": "sk-abcdef123456", "timeout": 30})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["source"], "runtime")
+        # 库里必须是密文（无条件加密，不依赖 POKELAB_FIELD_ENC 开关）
+        row = store.get_setting("llm.key")
+        self.assertEqual(row["encrypted"], 1)
+        self.assertTrue(row["value"].startswith("enc:v1:"))
+        self.assertNotIn("sk-abcdef123456", row["value"])
+        # 接口只回显尾 4 位，且不回显中间段
+        d = client.get("/admin/llm/config", headers=self.admin).json()
+        self.assertTrue(d["effective"]["has_key"])
+        self.assertTrue(d["effective"]["key_hint"].endswith("3456"))
+        self.assertNotIn("abcdef", d["effective"]["key_hint"])
+        self.assertTrue(d["effective"]["external"])
+
+    def test_put_keeps_key_when_blank(self):
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
+            "key": "sk-keep9999", "timeout": 30})
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "deepseek-reasoner",
+            "key": "", "timeout": 30})
+        d = client.get("/admin/llm/config", headers=self.admin).json()
+        self.assertEqual(d["effective"]["model"], "deepseek-reasoner")
+        self.assertTrue(d["effective"]["key_hint"].endswith("9999"),
+                        "留空 key 应沿用已存密钥")
+
+    def test_local_only_blocks_external_endpoint(self):
+        """6.2：本地化部署 → 硬禁外部云端端点，且提示明确"""
+        os.environ["POKELAB_LOCAL_ONLY"] = "1"
+        r = client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
+            "key": "sk-x", "timeout": 30})
+        self.assertEqual(r.status_code, 403, r.text)
+        self.assertIn("本地化部署", r.json()["detail"])
+        # 本机/内网端点仍允许（自建 vLLM / Ollama，数据不出本地）
+        r2 = client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "http://127.0.0.1:9997/v1", "model": "local", "key": "",
+            "timeout": 30})
+        self.assertEqual(r2.status_code, 200, r2.text)
+        self.assertFalse(r2.json()["external"])
+
+    def test_put_validates_base_and_model(self):
+        r = client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "api.deepseek.com", "model": "m", "timeout": 30})
+        self.assertEqual(r.status_code, 422)
+        r2 = client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "  ", "timeout": 30})
+        self.assertEqual(r2.status_code, 422)
+
+    def test_test_endpoint_reports_failure_with_hint(self):
+        """连通性测试：不可达端点 → 200 + ok=false + 可读提示（不抛 500）"""
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "http://127.0.0.1:9/v1", "model": "x", "key": "",
+            "timeout": 10})
+        r = client.post("/admin/llm/test", headers=self.admin,
+                        json={"prompt": "ping"})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertFalse(j["ok"])
+        self.assertTrue(j["error"])
+        self.assertTrue(j["hint"])
+
+    def test_test_endpoint_blocked_in_local_mode_for_external(self):
+        """本地模式 + 外部端点：连通性测试同样被隐私策略拒绝（403）"""
+        os.environ["POKELAB_LLM_BASE"] = "https://api.deepseek.com/v1"
+        os.environ["POKELAB_LOCAL_ONLY"] = "1"
+        self.llm_admin.install_provider()
+        r = client.post("/admin/llm/test", headers=self.admin,
+                        json={"prompt": "p"})
+        self.assertEqual(r.status_code, 403, r.text)
+        self.assertIn("隐私策略", r.json()["detail"])
+
+    def test_delete_falls_back_to_env(self):
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "https://api.deepseek.com/v1", "model": "m", "key": "k",
+            "timeout": 30})
+        r = client.delete("/admin/llm/config", headers=self.admin)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["source"], "none")
+        d = client.get("/admin/llm/config", headers=self.admin).json()
+        self.assertFalse(d["configured"])
+        # 环境变量存在时回退使用
+        os.environ["POKELAB_LLM_BASE"] = "http://127.0.0.1:9/v1"
+        os.environ["POKELAB_LLM_MODEL"] = "env-model"
+        self.llm_admin.install_provider()
+        d2 = client.get("/admin/llm/config", headers=self.admin).json()
+        self.assertEqual(d2["source"], "env")
+        self.assertEqual(d2["effective"]["model"], "env-model")
+
+    def test_backend_priority_runtime_over_env(self):
+        """优先级：后台配置 > 环境变量（两者同时存在）"""
+        os.environ["POKELAB_LLM_BASE"] = "http://127.0.0.1:9/v1"
+        os.environ["POKELAB_LLM_MODEL"] = "env-model"
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "http://127.0.0.1:8/v1", "model": "runtime-model",
+            "key": "", "timeout": 30})
+        from agent import llmclient
+        self.assertEqual(llmclient.source(), "runtime")
+        self.assertEqual(llmclient.config()["model"], "runtime-model")
+
+    def test_agent_effects_llm_config_uses_runtime(self):
+        """K2 效果解析走的也是后台配置（不是只改 UI 展示）"""
+        client.put("/admin/llm/config", headers=self.admin, json={
+            "base": "http://127.0.0.1:9/v1", "model": "runtime-model",
+            "key": "", "timeout": 10})
+        from agent import effects
+        self.assertEqual(effects.llm_config()["model"], "runtime-model")
+        # llm 后端会去调用不可达端点 → 如实回退规则基线并报告错误
+        r = effects.parse_effects("造成 30 点伤害。", kind="attack",
+                                  backend="llm")
+        self.assertIn("fallback", r["backend"])
+        self.assertTrue(r["specs"])
+
+
+class TestCloudSuccessPath(unittest.TestCase):
+    """云端**成功路径**端到端：mock OpenAI 兼容服务（127.0.0.1，不依赖公网）
+
+    前面 `TestLLMAdminConfig` 只覆盖了失败/拦截路径；本用例证明配置真的能被
+    K2 解析与对战解说用起来（否则「加了接口」只是表面功夫）。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import threading
+        import uuid
+        import importlib.util
+        from apps.api.app import auth, llm_admin
+        cls._env = {k: os.environ.get(k)
+                    for k in ("POKELAB_LOCAL_ONLY", "POKELAB_LLM_BASE")}
+        for k in cls._env:
+            os.environ.pop(k, None)
+        # 起 mock 服务（复用 scripts/mock_openai.py，避免两套实现漂移）
+        spec = importlib.util.spec_from_file_location(
+            "mock_openai", REPO / "apps" / "api" / "scripts" / "mock_openai.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        from http.server import HTTPServer
+        cls.srv = HTTPServer(("127.0.0.1", 0), mod.Handler)   # 0=自动选端口
+        cls.port = cls.srv.server_address[1]
+        cls.th = threading.Thread(target=cls.srv.serve_forever, daemon=True)
+        cls.th.start()
+        name = "cld_" + uuid.uuid4().hex[:8]
+        store.create_user(name, auth.hash_password("pw123456"), "admin")
+        cls.h = {"Authorization": "Bearer " + auth.create_token(name, "admin")}
+        for k in (llm_admin.K_BASE, llm_admin.K_MODEL, llm_admin.K_KEY,
+                  llm_admin.K_TIMEOUT):
+            store.delete_setting(k)
+        llm_admin.install_provider()
+
+    @classmethod
+    def tearDownClass(cls):
+        from apps.api.app import llm_admin
+        cls.srv.shutdown()
+        cls.srv.server_close()      # 显式关闭监听 socket（避免 ResourceWarning）
+        for k in (llm_admin.K_BASE, llm_admin.K_MODEL, llm_admin.K_KEY,
+                  llm_admin.K_TIMEOUT):
+            store.delete_setting(k)
+        llm_admin.install_provider()
+        for k, v in cls._env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def setUp(self):
+        r = client.put("/admin/llm/config", headers=self.h, json={
+            "base": f"http://127.0.0.1:{self.port}/v1", "model": "mock-model",
+            "key": "sk-mock-9", "timeout": 15})
+        assert r.status_code == 200, r.text
+
+    def test_connectivity_test_succeeds(self):
+        j = client.post("/admin/llm/test", headers=self.h,
+                        json={"prompt": "请只回复四个字：连通正常"}).json()
+        self.assertTrue(j["ok"], j)
+        self.assertEqual(j["model"], "mock-model")
+        self.assertFalse(j["external"], "本机端点不应标记为外部")
+        self.assertIn("连通", j["reply_preview"])
+        self.assertTrue(j["audited"])
+
+    def test_k2_parsing_uses_cloud(self):
+        """后台配置的云端模型必须真的被 K2 效果解析用上"""
+        from agent import effects, llmclient
+        self.assertEqual(llmclient.source(), "runtime")
+        r = effects.parse_effects("This attack does 42 damage.",
+                                  kind="attack", name="Mock Card",
+                                  backend="llm")
+        self.assertEqual(r["backend"], "llm", r.get("errors"))
+        self.assertEqual(r["model"], "mock-model")
+        acts = (r["specs"] or [{}])[0].get("actions") or []
+        self.assertTrue(any(a.get("type") == "damage" for a in acts), acts)
+
+    def test_commentary_uses_cloud(self):
+        b = client.post("/battles", headers=self.h,
+                        json={"deck_a": "lightning", "deck_b": "fire",
+                              "ai_iters": 0})
+        bid = b.json()["id"]
+        j = client.post(f"/battles/{bid}/commentary", headers=self.h,
+                        json={"backend": "llm"}).json()
+        self.assertEqual(j["generated_by"], "llm", j.get("errors"))
+        self.assertEqual(j["model"], "mock-model")
+        self.assertTrue(j["text"])
+        self.assertTrue(j["ai_generated"], "C4 标识不可缺")
+
+    def test_audit_written_without_plaintext(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.environ["POKELAB_AUDIT_LOG"] = str(Path(d) / "audit.jsonl")
+            try:
+                client.post("/admin/llm/test", headers=self.h,
+                            json={"prompt": "秘密邮箱 leak@example.com"})
+                p = Path(d) / "audit.jsonl"
+                self.assertTrue(p.exists(), "外部调用必须写审计")
+                body = p.read_text(encoding="utf-8")
+                self.assertNotIn("leak@example.com", body, "审计不得含原文")
+                self.assertIn("llm_test", body)
+            finally:
+                os.environ.pop("POKELAB_AUDIT_LOG", None)
+
+
+class TestCommentary(unittest.TestCase):
+    """对战解说（F5 内）：离线降级可用 + C4 标识齐备 + 不泄露隐藏信息"""
+
+    def _battle(self):
+        h = user_headers()
+        r = client.post("/battles", headers=h,
+                        json={"deck_a": "lightning", "deck_b": "fire",
+                              "ai_iters": 0})
+        assert r.status_code in (200, 201), r.text
+        return h, r.json()["id"]
+
+    def test_commentary_offline_fallback(self):
+        h, bid = self._battle()
+        c = client.post(f"/battles/{bid}/commentary", headers=h,
+                        json={"backend": "rule"})
+        self.assertEqual(c.status_code, 200, c.text)
+        j = c.json()
+        self.assertTrue(j["text"])
+        self.assertTrue(j["ai_generated"], "C4：必须带 AI 生成标识")
+        self.assertEqual(j["generated_by"], "rule(offline)")
+        self.assertTrue(j["ai_notice"])
+
+    def test_commentary_hides_opponent_hand(self):
+        h, bid = self._battle()
+        j = client.post(f"/battles/{bid}/commentary", headers=h,
+                        json={"backend": "rule"}).json()
+        self.assertIn("手牌 ? 张", j["board_summary"])
+        for card in ("Ember", "Flarex"):
+            self.assertNotIn(card, j["board_summary"])
+
+    def test_commentary_unknown_battle_404(self):
+        h = user_headers()
+        r = client.post("/battles/nope/commentary", headers=h, json={})
+        self.assertEqual(r.status_code, 404)
 
 
 if __name__ == "__main__":

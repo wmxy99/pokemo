@@ -151,3 +151,43 @@ def status() -> dict:
         "note": ("启用后新写入的敏感字段加密存储；历史明文仍可读（混合状态安全）。"
                  "口令使用 PBKDF2 单向哈希，不在此列。"),
     }
+
+
+def encrypt_secret(text) -> Optional[str]:
+    """**无条件**加密凭据（如云端模型 API Key）
+
+    与 ``encrypt()`` 的差别：后者受 ``POKELAB_FIELD_ENC`` 开关控制（用户内容字段，
+    默认关以兼容历史明文）；而**凭据类**必须始终加密——开关忘记打开就把 API Key
+    明文写进数据库，属不可接受的失误。依赖不可用时返回 None（调用方应拒绝落库）。
+    """
+    if text is None or text == "":
+        return None
+    if is_encrypted(text):
+        return text
+    f = _fernet()
+    if f is None:
+        return None
+    try:
+        return PREFIX + f.encrypt(str(text).encode("utf-8")).decode()
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def encrypt_secret(text) -> Optional[str]:
+    """**无条件**加密凭据（如云端模型 API Key）
+
+    与 ``encrypt()`` 的差别：后者受 ``POKELAB_FIELD_ENC`` 开关控制（用户内容字段，
+    默认关以兼容历史明文）；而**凭据类**必须始终加密——开关忘记打开就把 API Key
+    明文写进数据库，属不可接受的失误。依赖不可用时返回 None（调用方应拒绝落库）。
+    """
+    if text is None or text == "":
+        return None
+    if is_encrypted(text):
+        return text
+    f = _fernet()
+    if f is None:
+        return None
+    try:
+        return PREFIX + f.encrypt(str(text).encode("utf-8")).decode()
+    except Exception:                                        # noqa: BLE001
+        return None

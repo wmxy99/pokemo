@@ -243,3 +243,35 @@ def get_state(bid: str, p: Principal = Depends(current_user)):
             # 可用指令清单（中文可读）——可直接作为 command 提交
             "commands": battle.command_catalog() if my_turn else [],
             "view": view}
+
+
+@router.post("/{bid}/commentary")
+def commentary(bid: str, req: schemas.CommentaryReq,
+               p: Principal = Depends(current_user)):
+    """对战解说（F5 内 · 模块 3）
+
+    用最近的事件流 + 公开局面生成一段中文解说。**纯展示，可降级**：
+    未配置云端模型（或本地模式拦截外发）时自动回退离线模板，不阻断对局。
+
+    合规：
+      · 6.2 —— 外发前脱敏、调用后写审计（不含原文）；本地模式禁止外部端点；
+      · C4  —— 返回值始终带 ``ai_generated`` / ``generated_by`` / ``ai_notice``，
+               前端必须显式展示「AI 生成」徽标。
+    """
+    from agent import commentary as _comm
+    s = store.battle_sessions.get(bid)
+    if not s:
+        raise HTTPException(404, "对局不存在或已过期（服务重启后需重开）")
+    ensure_owner(s.get("owner", "guest"), p)
+    battle = s["battle"]
+    view = battle.view(s["player_side"])
+    res = _comm.explain_turn(view, battle.events,
+                             backend=req.backend,
+                             opponent_hint=req.opponent_hint,
+                             current_side=battle.current)
+    return {"id": bid, "turn": view["turn"],
+            "winner": battle.winner, "finished": battle.finished,
+            "board_summary": _comm.board_summary(view),
+            "recent_events": _comm.recent_events(battle.events, req.n_events,
+                                                 view.get("me")),
+            **res}

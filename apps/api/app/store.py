@@ -94,6 +94,9 @@ _conn.executescript(
     CREATE TABLE IF NOT EXISTS decks(
       id TEXT PRIMARY KEY, owner TEXT, name TEXT, text TEXT, valid INTEGER,
       cards TEXT, summary TEXT, created REAL);
+    CREATE TABLE IF NOT EXISTS settings(
+      key TEXT PRIMARY KEY, value TEXT, encrypted INTEGER DEFAULT 0,
+      updated REAL, updated_by TEXT);
     """
 )
 # 迁移：真 JWT 需要口令哈希与创建时间列（幂等）
@@ -328,3 +331,81 @@ def set_user_role(name: str, role: str) -> None:
     with _lock:
         _conn.execute("UPDATE users SET role=? WHERE name=?", (role, name))
         _conn.commit()
+
+
+# ---------------- 键值设置（后台可视化配置用） ----------------
+# 用途：由后台「模型配置」页保存云端模型端点/模型名/密钥。
+# 约定：**含密值一律加密后再入库**（列 encrypted=1），读取时由调用方解密；
+#       本模块不做加解密（保持 store 只负责存取，避免各处各写一遍）。
+def get_setting(key: str) -> Optional[dict]:
+    """读取一条设置 → {"key","value","encrypted","updated","updated_by"}"""
+    with _lock:
+        row = _conn.execute("SELECT * FROM settings WHERE key=?",
+                            (key,)).fetchone()
+    return dict(row) if row else None
+
+
+def set_setting(key: str, value: str, *, encrypted: bool = False,
+                updated_by: str = "system") -> None:
+    with _lock:
+        _conn.execute(
+            "INSERT OR REPLACE INTO settings(key,value,encrypted,updated,"
+            "updated_by) VALUES(?,?,?,?,?)",
+            (key, value, 1 if encrypted else 0, now(), updated_by))
+        _conn.commit()
+
+
+def delete_setting(key: str) -> None:
+    with _lock:
+        _conn.execute("DELETE FROM settings WHERE key=?", (key,))
+        _conn.commit()
+
+
+def list_settings(prefix: str = "") -> list:
+    with _lock:
+        if prefix:
+            rows = _conn.execute(
+                "SELECT * FROM settings WHERE key LIKE ? ORDER BY key",
+                (prefix + "%",)).fetchall()
+        else:
+            rows = _conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
+    return [dict(r) for r in rows]
+
+
+# ---------------- 键值设置（后台可视化配置用） ----------------
+# 用途：由后台「模型配置」页保存云端模型端点/模型名/密钥。
+# 约定：**含密值一律加密后再入库**（列 encrypted=1），读取时由调用方解密；
+#       本模块不做加解密（保持 store 只负责存取，避免各处各写一遍）。
+def get_setting(key: str) -> Optional[dict]:
+    """读取一条设置 → {"key","value","encrypted","updated","updated_by"}"""
+    with _lock:
+        row = _conn.execute("SELECT * FROM settings WHERE key=?",
+                            (key,)).fetchone()
+    return dict(row) if row else None
+
+
+def set_setting(key: str, value: str, *, encrypted: bool = False,
+                updated_by: str = "system") -> None:
+    with _lock:
+        _conn.execute(
+            "INSERT OR REPLACE INTO settings(key,value,encrypted,updated,"
+            "updated_by) VALUES(?,?,?,?,?)",
+            (key, value, 1 if encrypted else 0, now(), updated_by))
+        _conn.commit()
+
+
+def delete_setting(key: str) -> None:
+    with _lock:
+        _conn.execute("DELETE FROM settings WHERE key=?", (key,))
+        _conn.commit()
+
+
+def list_settings(prefix: str = "") -> list:
+    with _lock:
+        if prefix:
+            rows = _conn.execute(
+                "SELECT * FROM settings WHERE key LIKE ? ORDER BY key",
+                (prefix + "%",)).fetchall()
+        else:
+            rows = _conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
+    return [dict(r) for r in rows]

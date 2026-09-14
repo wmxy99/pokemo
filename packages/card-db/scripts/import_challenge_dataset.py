@@ -416,36 +416,55 @@ def load_image_map() -> dict:
 
 
 def load_engine_index() -> dict:
-    """引擎自撰卡池 → 按**归一匹配键**索引，供回填中文名与**可对战状态**判定
+    """引擎卡池（人工 + 扩展）→ 按**归一匹配键**索引，供回填中文名与可对战状态
 
     返回每项含：``name`` / ``name_zh`` / ``supertype`` / ``tag`` /
     ``status``（``mapped`` | ``approximated`` | ``unsupported``）/ ``reason``。
 
-    诚实口径（C5）：训练家 ``tag=unsupported``（引擎无对应派发）的卡**不算可对战**，
-    即使卡名命中卡池也必须标为不可执行——否则「可浏览 ≠ 可对战」会被静默掩盖。
+    诚实口径（C5）：
+      · 训练家 ``tag=unsupported``（引擎无对应派发）的卡**不算可对战**，
+        即使卡名命中卡池也必须标为不可执行——否则「可浏览 ≠ 可对战」会被静默掩盖；
+      · 卡池扩容（v1.4）的**自动生成条目**（``provenance=dataset-derived``，
+        解析链推导、非人工逐卡校对）标记为 ``approximated``。
     """
     idx: dict = {}
+    pool_files = [ENGINE_CARDS]
+    _ext = ENGINE_CARDS.parent / "cards_pool_ext.json"
+    if _ext.exists():
+        pool_files.append(_ext)
     try:
-        j = json.loads(ENGINE_CARDS.read_text(encoding="utf-8"))
-        for c in j.get("cards", []):
-            st, reason = "mapped", ""
-            if c.get("supertype") == "Trainer":
-                if (c.get("tag") or "").strip() in ("", "unsupported"):
-                    st, reason = "unsupported", (c.get("note") or "训练家 tag 未实现")
-            elif c.get("supertype") == "Pokemon":
-                bad = [ab for ab in (c.get("abilities") or [])
-                       if (ab.get("tag") or "").strip() == "unsupported"]
-                if bad:
-                    st = "approximated"
-                    reason = c.get("note") or "特性未实现（保留招式，灰名单近似）"
-            idx[norm_key(c.get("name"))] = {
-                "name": c.get("name"),
-                "name_zh": c.get("name_zh") or "",
-                "supertype": c.get("supertype"),
-                "tag": c.get("tag") or "",
-                "status": st,
-                "reason": reason,
-            }
+        for _pf in pool_files:
+            j = json.loads(_pf.read_text(encoding="utf-8"))
+            derived = (j.get("meta") or {}).get("provenance") == "dataset-derived"
+            for c in j.get("cards", []):
+                st, reason = "mapped", ""
+                if c.get("supertype") == "Trainer":
+                    if (c.get("tag") or "").strip() in ("", "unsupported"):
+                        st, reason = "unsupported", (c.get("note")
+                                                     or "训练家 tag 未实现")
+                elif c.get("supertype") == "Pokemon":
+                    bad = [ab for ab in (c.get("abilities") or [])
+                           if (ab.get("tag") or "").strip() == "unsupported"]
+                    if bad:
+                        st = "approximated"
+                        reason = (c.get("note")
+                                  or "特性未实现（保留招式，灰名单近似）")
+                if derived:
+                    if st == "mapped":
+                        st = "approximated"
+                    reason = reason or "由解析链自动生成（非人工逐卡校对）"
+                key = norm_key(c.get("name"))
+                # 人工卡池优先：同名时人工条目胜出，且不被扩展池降级
+                if key in idx and derived and idx[key]["status"] != "unsupported":
+                    continue
+                idx[key] = {
+                    "name": c.get("name"),
+                    "name_zh": c.get("name_zh") or "",
+                    "supertype": c.get("supertype"),
+                    "tag": c.get("tag") or "",
+                    "status": st,
+                    "reason": reason,
+                }
     except Exception as e:                            # noqa: BLE001
         print(f"[warn] 引擎卡池读取失败（中文名回填跳过）：{e}")
     return idx

@@ -1,6 +1,6 @@
 # PokéLab AI · 未建模动作清单（backlog）
 
-- 快照：`after` · 生成时间：2026-09-14 10:16:56
+- 快照：`after` · 生成时间：2026-09-14 14:38:12
 - 数据源：`packages/card-db/data/db/pokelab.db`（K2 解析后端：rule（离线确定性基线））
 
 ## 0. 总量
@@ -11,21 +11,21 @@
 | 已跑解析卡数 | 1119 |
 | 解析条目（item） | 1481 |
 | 解析动作条目（spec.actions） | 1481 |
-| 已映射引擎 tag 条目 | 555 |
-| **未建模动作条目** | **854** |
-| 含未建模条目的卡数 | 693 |
-| 全效果可映射卡数 | 426 |
-| 至少 1 条引擎 tag 的卡数 | 499 |
+| 已映射引擎 tag 条目 | 812 |
+| **未建模动作条目** | **695** |
+| 含未建模条目的卡数 | 589 |
+| 全效果可映射卡数 | 530 |
+| 至少 1 条引擎 tag 的卡数 | 684 |
 
 ## 1. 批次总览（按优先级）
 
 | 批次 | 主题 | 条目 | 影响卡数 | 占比 | 建模动作 |
 |---|---|---:|---:|---:|---|
 | **B1** | 预设卡组关键卡 | 0 | 0 | 0.0% | 为每张卡补引擎原生 tag（训练家 tag / 特性 tag），并补引擎派发 |
-| **B2** | tag 家族扩展 | 42 | 42 | 4.9% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
-| **B3** | 解析召回补齐（英文卡面） | 151 | 151 | 17.7% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索） |
-| **B4** | 需新引擎机制（P1 登记） | 212 | 209 | 24.8% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
-| **B5** | 不建模登记 | 449 | 419 | 52.6% | 永久登记在差异透明清单（C5），不做实现 |
+| **B2** | tag 家族扩展 | 25 | 25 | 3.6% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
+| **B3** | 解析召回补齐（英文卡面） | 128 | 128 | 18.4% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索） |
+| **B4** | 需新引擎机制（P1 登记） | 54 | 54 | 7.8% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
+| **B5** | 不建模登记 | 488 | 456 | 70.2% | 永久登记在差异透明清单（C5），不做实现 |
 
 ## 2. B1 · 预设卡组关键卡（最高优先，逐卡建模）
 
@@ -36,43 +36,34 @@
 
 ## 3. B2–B5 · 分组明细
 
-### B2 · tag 家族扩展（42 条 / 42 卡）
+### B2 · tag 家族扩展（25 条 / 25 卡）
 
 - 目标：把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发
 - 动作：agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| evolve_skip | evolve | 30 | 30 | 招式/特性驱动的进化需卡级 tag |
-| ability_draw | draw | 12 | 12 | 抽到指定手牌数需引擎新机制（未建模动作清单 B3/B4） |
+| evolve_skip | evolve | 25 | 25 | 招式/特性驱动的进化需卡级 tag |
 
 <details><summary>样例 · evolve_skip</summary>
 
-- **Eevee**：`Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.`
 - **Noctowl**：`Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to 2 Trainer cards, reveal them, and`
-- **Exeggcute**：`If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.`
+- **Archaludon ex**：`When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Basic {M} Energy cards from your discard pile to your {M} Pokémon in any way you like.`
+- **Whimsicott**：`When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any damage in this way, discard all Energy f`
 
 </details>
 
-<details><summary>样例 · ability_draw</summary>
-
-- **Blissey ex**：`You may draw cards until you have 6 cards in your hand.`
-- **Decidueye**：`Draw cards until you have 7 cards in your hand.`
-- **Quaquaval**：`You must put a card from your hand on the bottom of your deck in order to use this Ability. Once during your turn, you may draw cards until you have 5 cards in your hand.`
-
-</details>
-
-### B3 · 解析召回补齐（英文卡面）（151 条 / 151 卡）
+### B3 · 解析召回补齐（英文卡面）（128 条 / 128 卡）
 
 - 目标：英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底
 - 动作：agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索）
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| knockout_condition | knockout | 38 | 38 | 击倒效果需引擎新机制（未建模动作清单 B4） |
 | attach | rule | 31 | 31 | 静态/未建模（英文） |
 | discard_self | rule | 29 | 29 | 静态/未建模（英文） |
 | discard_energy_self | rule | 13 | 13 | 静态/未建模（英文） |
+| knockout_condition | knockout | 13 | 13 | 击倒效果需引擎新机制（未建模动作清单 B4） |
 | discard_energy_self | rule | 11 | 11 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | recover_from_discard | rule | 8 | 8 | 静态/未建模（英文） |
 | attach | rule | 6 | 6 | 静态规则修改（弱点/抗性/伤害减免/限制） |
@@ -83,18 +74,10 @@
 | spread | rule | 1 | 1 | 自身放置伤害指示物（需引擎新机制 · 未建模动作清单 B4） |
 | spread | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | discard_self | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| discard_self | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Misty's Pokémon that you disca） |
+| discard_self | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card that you） |
 | search | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | switch | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-
-<details><summary>样例 · knockout_condition</summary>
-
-- **Legacy Energy**：`As long as this card is attached to a Pokémon, it provides every type of Energy but provides only 1 Energy at a time.
-
-If the Pokémon this card is attached to is Knocked Out by damage from an attack f`
-- **Iron Leaves**：`If any of your Pokémon were Knocked Out by damage from an attack during your opponent’s last turn, this attack does 60 more damage.`
-- **Dusclops**（彷徨夜灵）：`Once during your turn, you may put 5 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out.`
-
-</details>
 
 <details><summary>样例 · attach</summary>
 
@@ -122,63 +105,93 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-### B4 · 需新引擎机制（P1 登记）（212 条 / 209 卡）
+<details><summary>样例 · knockout_condition</summary>
+
+- **Togekiss**：`When your opponent’s Active Pokémon is Knocked Out, flip a coin. If heads, take 1 more Prize card. The effect of Wonder Kiss doesn’t stack.`
+- **Annihilape**：`Both Active Pokémon are Knocked Out.`
+- **Maractus**：`If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent’s Pokémon, put 6 damage counters on the Attacking Pokémon.`
+
+</details>
+
+### B4 · 需新引擎机制（P1 登记）（54 条 / 54 卡）
 
 - 目标：需要条件表达式 / RNG 钩子 / 静态修正层等新机制，不属本轮
 - 动作：登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| static_lock | rule | 86 | 83 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| coin_flip | rule | 54 | 54 | 静态/未建模（英文） |
-| scaling_damage | rule | 49 | 49 | 静态/未建模（英文） |
-| coin_flip | rule | 15 | 15 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| static_lock | rule | 27 | 27 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| coin_flip | rule | 14 | 14 | 静态/未建模（英文） |
 | static_lock | rule | 4 | 4 | 静态/未建模（英文） |
-| scaling_damage | rule | 3 | 3 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| coin_flip | rule | 1 | 1 | 自身放置伤害指示物（需引擎新机制 · 未建模动作清单 B4） |
+| scaling_damage | rule | 4 | 4 | 静态/未建模（英文） |
+| scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Ancient card in your discard p） |
+| scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Stage 2 Pokémon on your Bench） |
+| scaling_damage | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Evolution Pokémon in p） |
+| coin_flip | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 
 <details><summary>样例 · static_lock</summary>
 
-- **Poltchageist**：`As long as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent’s Pokémon done to this Pokémon.`
-- **Magcargo ex**：`As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).`
-- **Greninja ex**：`As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).`
+- **Rabsca**：`Prevent all damage from and effects of attacks from your opponent’s Pokémon done to your Benched Pokémon.`
+- **Farigiraf ex**：`Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.`
+- **Cornerstone Mask Ogerpon ex**：`Prevent all damage from attacks done to this Pokémon by your opponent’s Pokémon that have an Ability.`
 
 </details>
 
 <details><summary>样例 · coin_flip</summary>
 
-- **Eevee**：`Flip a coin. If heads, this attack does 20 more damage.`
-- **Gastly**：`Flip a coin. If heads, discard an Energy from your opponent’s Active Pokémon.`
-- **Applin**：`Flip a coin. If heads, this attack does 20 more damage.`
+- **Sylveon**：`Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.`
+- **Alolan Exeggutor ex**：`Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon.`
+- **LugiaEX**：`Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon.`
+
+</details>
+
+<details><summary>样例 · static_lock</summary>
+
+- **Iron Thorns ex**：`As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule`
+- **Flutter Mane**：`As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.`
+- **Gastrodon**：`As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.`
 
 </details>
 
 <details><summary>样例 · scaling_damage</summary>
 
-- **Magcargo ex**：`Discard the top card of each player’s deck. This attack does 140 more damage for each Energy card discarded in this way.`
-- **Roaring Moon**：`This attack does 10 more damage for each Ancient card in your discard pile.`
-- **Rabsca**：`This attack does 30 more damage for each Energy attached to your opponent’s Active Pokémon.`
+- **Breloom**：`Flip a coin until you get tails. This attack does 50 more damage for each heads.`
+- **Tyrogue**：`Flip a coin until you get tails. This attack does 30 more damage for each heads.`
+- **Mega Kangaskhan ex**：`Flip a coin until you get tails. This attack does 50 more damage for each heads.`
 
 </details>
 
-<details><summary>样例 · coin_flip</summary>
-
-- **Dunsparce**（土龙弟弟）：`Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon.`
-- **Flittle**：`Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon.`
-- **Altaria**：`Flip a coin. If heads, during your opponent’s next turn, prevent all damage done to this Pokémon by attacks.`
-
-</details>
-
-### B5 · 不建模登记（449 条 / 419 卡）
+### B5 · 不建模登记（488 条 / 456 卡）
 
 - 目标：真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）
 - 动作：永久登记在差异透明清单（C5），不做实现
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| unclassified | rule | 357 | 330 | 静态/未建模（英文） |
+| unclassified | rule | 365 | 336 | 静态/未建模（英文） |
 | unclassified | rule | 87 | 84 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | unclassified | rule | 5 | 5 | 全量回复（需引擎新机制 · B4） |
+| unclassified | rule | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
+| unclassified | rule | 4 | 4 | 条件伤害缩放：计数源未识别（of your Pokémon in play that h） |
+| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
+| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
+| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
+| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in play that has “Koff） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
+| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
 
 <details><summary>样例 · unclassified</summary>
 
@@ -207,6 +220,14 @@ Prevent all effects of attacks used by your opponent’s Pokémon done to the Po
 - **Whimsicott**：`When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any damage in this way, discard all Energy f`
 - **Miltank**：`Flip 2 coins. If both of them are heads, heal all damage from 1 of your Pokémon.`
 - **Whimsicott**：`Heal all damage from 1 of your Benched Pokémon.`
+
+</details>
+
+<details><summary>样例 · unclassified</summary>
+
+- **Rotom**：`This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.`
+- **Mow Rotom**：`This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.`
+- **Heat Rotom**：`This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.`
 
 </details>
 

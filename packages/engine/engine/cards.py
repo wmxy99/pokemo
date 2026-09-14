@@ -193,6 +193,12 @@ class FieldPokemon:
     status: set = field(default_factory=set)
     just_played: bool = False                    # E2: 本回合刚放置/进化（禁再进化）
     ability_used: set = field(default_factory=set)  # E3: 本回合已发动的 field 特性名
+    # ---- v1.4 护盾（shields）----
+    # 「下个对手回合」类防护：由招式/特性施加，在该玩家**下个回合开始**时清除
+    # （见 battle._begin_turn）。注意与 `passive:*` 被动特性区分：被动写在卡面上、
+    # 常驻生效，不占这两个字段。
+    shield_reduce: int = 0                       # 受到的招式伤害减少 N（下限 0）
+    shield_prevent_all: bool = False             # 免疫招式伤害**与效果**
 
     # ---- 基本属性 ----
     @property

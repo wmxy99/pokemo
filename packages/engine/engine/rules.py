@@ -11,20 +11,37 @@ from .cards import FieldPokemon
 
 
 def compute_damage(attacker: FieldPokemon, defender: FieldPokemon, base: int,
-                   weakness_override: str | None = None) -> int:
+                   weakness_override: str | None = None,
+                   ignore_weakness: bool = False,
+                   ignore_resistance: bool = False) -> int:
     """结算一次基础伤害（含弱点 ×2 / 抗性 −30）
 
     ``weakness_override``：场上静态效果改写守方弱点时的生效弱点
     （由 ``weak_change:<type>[:<filter>]`` 特性提供，见 battle._weakness_override）。
     传 ``""``（空串）表示**弱点被移除**（无弱点）。
+    ``ignore_weakness`` / ``ignore_resistance``：卡面「this attack's damage isn't
+    affected by Weakness/Resistance」的显式忽略（v1.4）。
     """
     dmg = base
     at = attacker.pdef.ptype
     weak = defender.pdef.weakness if weakness_override is None else weakness_override
-    if weak and weak == at:
+    if not ignore_weakness and weak and weak == at:
         dmg *= 2
-    if defender.pdef.resistance == at:
+    if not ignore_resistance and defender.pdef.resistance == at:
         dmg = max(0, dmg - 30)
+    return dmg
+
+
+def apply_shield(defender: FieldPokemon, dmg: int) -> int:
+    """护盾结算：``shield_prevent_all`` 全额挡下；``shield_reduce`` 减伤（下限 0）
+
+    规则要点：减伤发生在**弱点/抗性之后**（卡面「after applying Weakness and
+    Resistance」）→ 必须在 ``compute_damage`` 之后调用。
+    """
+    if defender.shield_prevent_all:
+        return 0
+    if defender.shield_reduce:
+        return max(0, dmg - defender.shield_reduce)
     return dmg
 
 

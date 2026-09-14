@@ -449,6 +449,86 @@ def compare(a_path: str, b_path: str, report: str | None = None) -> None:
         print(f"[ok] 报告写入 {report}")
 
 
+def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
+    """生成「未建模动作**永久差异透明清单**」（C5）
+
+    与 backlog 的区别：backlog 是**内部排期**（分批、可推进）；registry 是**对外承诺**
+    —— 把「哪些卡面机制本引擎不做、为什么不做」长期固定下来，供玩家/贡献者/评审
+    逐条核对，避免「悄悄不支持」或「假装支持」。只登记指定批次（默认 B4 + B5）。
+    """
+    items = [x for x in rep.get("items") or [] if x["batch"] in batches]
+    items.sort(key=lambda x: (x["batch"], -x["entries"]))
+    t = rep["parse_totals"]
+    L = ["# PokéLab AI · 未建模动作差异透明清单（永久登记）", "",
+         "> **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），"
+         "不是待办列表。",
+         "> 凡列于此的卡面机制，本引擎**不实现**（或明确留待后续批次）；对应卡牌会被"
+         "如实标记为 `engine_ready=false` / `engine_status=approximated`，"
+         "**绝不静默降级或假装支持**。",
+         "",
+         f"- 生成时间：{rep['generated_at']}",
+         f"- 数据源：`{rep['source']['db']}`（解析后端 "
+         f"`{rep['source']['parse_backend']}`）",
+         f"- 全库 {t['cards']} 张 · 未建模动作条目 **{t['unsupported']}** 条 · "
+         f"已映射 tag {t['engine_tags']} 条 · 全效果可映射卡 "
+         f"{t['cards_fully_mapped']} 张",
+         "",
+         "## 批次图例",
+         "",
+         "| 批次 | 含义 | 处置 |",
+         "|---|---|---|",
+         "| **B4** | 需新增引擎机制（条件伤害修正 / 抛币 / 伤害减免与免疫 / 指示物与"
+         "计数 / 静态封锁） | **P1 批次**，按清单推进；当前不实现 |",
+         "| **B5** | 真静态规则 / 元游戏效果 / 依赖引擎外信息（对手手牌、特定子类检索、"
+         "场地与工具机制） | **本项目不做**（永久登记） |",
+         "",
+         "## 1. 明细（按条目数降序）",
+         "",
+         "| 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |",
+         "|---|---|---|---:|---:|---|",
+         ]
+    for x in items:
+        L.append(f"| {x['batch']} | {x['sub']} | `{x['action_type']}` | "
+                 f"{x['entries']} | {x['cards']} | {x['reason']} |")
+    L += ["", "## 2. 代表性卡面（逐子类抽样，便于核对）", ""]
+    for x in items:
+        if not x.get("samples"):
+            continue
+        L.append(f"**{x['batch']} · {x['sub']}**（{x['entries']} 条）")
+        L.append("")
+        for s in x["samples"][:3]:
+            txt = (s.get("text") or "").replace("\n", " ").strip()
+            zh = f"（{s['name_zh']}）" if s.get("name_zh") else ""
+            L.append(f"- `{s['card']}`{zh}：{txt[:160]}")
+        L.append("")
+    L += ["## 3. 与「已建模」的边界（避免误读）", "",
+          "- **已建模**：招式的伤害/费用/状态/放置指示物/抽弃/检索/回收/换位/附能/"
+          "移动指示物/抛币/条件与计数伤害修正/护盾与被动免疫；特性的检视牌库、"
+          "每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、后备免疫；训练家的"
+          "检索/回收/换位/跳阶进化等（完整清单见 "
+          "`packages/engine/engine/data/cards_real.json` → `meta.engine_tags`）。",
+          "- **未建模**：本清单 §1 全部条目。受影响卡牌**可浏览、可组卡、不可对战**"
+          "（标为 `approximated` 时以近似规则参战）。",
+          "- **近似（approximated）**：卡牌可对战但个别副作用未建模（例："
+          "「附能并抽 1」只实现了附能）。此类差异逐卡记录在卡池条目的 `note` 字段。",
+          "",
+          "## 4. 修订流程",
+          "",
+          "1. 实现/放弃某机制 → 先改 `packages/agent/agent/effects.py`（识别）与 "
+          "`packages/engine/engine/battle.py`（派发）；",
+          "2. 重新生成：`python scripts/coverage_backlog.py` 与 "
+          "`python scripts/coverage_backlog.py --registry`；",
+          "3. 清单变更随代码一起提交（保证披露与实现同步，不出现「清单说支持、"
+          "实现不支持」）。",
+          "",
+          "---",
+          "",
+          "*本清单纯声明「本引擎的边界」，不构成对官方规则的完整描述；"
+          "以官方规则与卡面原文为准（合规 6.1）。*",
+          ]
+    return "\n".join(L) + "\n"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="未建模动作清单生成器")
     ap.add_argument("--snapshot", default="current", help="快照名（写入文件名后缀）")
@@ -457,6 +537,9 @@ def main() -> int:
                     help="对比两个 JSON 快照并打印覆盖率增量")
     ap.add_argument("--report", default=None,
                     help="配合 --compare：把对比结果写成 Markdown 报告")
+    ap.add_argument("--registry", action="store_true",
+                    help="生成「未建模动作永久差异透明清单」（C5）"
+                         "→ unmodeled_registry.md")
     args = ap.parse_args()
 
     if args.compare:
@@ -470,6 +553,13 @@ def main() -> int:
 
     out = Path(args.out_dir) if args.out_dir else OUT_DIR
     out.mkdir(parents=True, exist_ok=True)
+    if args.registry:
+        rp = out / "unmodeled_registry.md"
+        rp.write_text(to_registry_markdown(rep), encoding="utf-8")
+        n = sum(x["entries"] for x in rep["items"]
+                if x["batch"] in ("B4", "B5"))
+        print(f"[ok] {rp.name}（B4+B5 共 {n} 条永久登记）")
+        return 0
     suffix = "" if args.snapshot in ("current", "") else f".{args.snapshot}"
     jp = out / f"unmodeled_backlog{suffix}.json"
     mp = out / f"unmodeled_backlog{suffix}.md"

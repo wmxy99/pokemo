@@ -19,22 +19,35 @@
         "heal:N",
         "self:N",
         "draw:N",
-        "discard:N",
-        "discard_energy:N",
+        "draw_to:N",
+        "discard:N|all",
+        "discard_energy:N|all",
         "switch_self",
         "gust",
-        "attach:N[:type]",
-        "move_damage:N"
+        "attach:N[:type][:zone]",
+        "move_damage:N|all",
+        "recover:N[:kind]",
+        "evolve_from_deck",
+        "dmg_plus:N[:per:<counter>][:if:<cond>]",
+        "dmg_zero",
+        "ignore_weakness",
+        "ignore_resistance",
+        "shield:reduce:N",
+        "shield:prevent_all",
+        "coin:heads:<tag>",
+        "coin:tails:<tag>",
+        "coin_each:N|<counter>:<side>:<tag>"
       ],
       "abilities": [
         "recon:N (field, 每回合一次)",
         "cursed:N (hand, 弃此卡发动)",
         "draw:N (field, 每回合一次)",
-        "move_damage:N (field, 每回合一次)",
+        "move_damage:N|all (field, 每回合一次)",
         "attach_energy:N[:type][:zone] (field, 每回合一次)",
         "ko_draw:N (被动 · 被击倒时)",
         "evolve_attach:N[:type][:zone] (被动 · 进化时)",
-        "weak_change:<type>[:<filter>] (被动 · 静态)"
+        "weak_change:<type>[:<filter>] (被动 · 静态)",
+        "passive:bench_immune (被动 · 后备时免疫招式伤害与效果)"
       ],
       "trainers": [
         "poffin",
@@ -47,7 +60,26 @@
         "recover:N[:kind]",
         "discard_search_energy:N",
         "search_energy:N",
+        "search_pokemon:N",
+        "search_trainer:N",
+        "search_any:N",
         "candy"
+      ],
+      "counters": [
+        "own_bench", "opp_bench", "both_bench",
+        "own_active_energy[_<color>]", "opp_active_energy[_<color>]",
+        "both_active_energy[_<color>]", "own_all_energy[_<color>]",
+        "opp_all_energy[_<color>]",
+        "own_bench_counters", "opp_bench_counters",
+        "own_active_counters", "opp_active_counters",
+        "own_discard_energy", "own_discard_count",
+        "own_discarded_this_turn", "own_discarded_energy_this_turn",
+        "own_hand", "own_field", "opp_field", "own_bench_stage2",
+        "own_prizes_left", "opp_prizes_left"
+      ],
+      "conditions": [
+        "opp_ko_last_turn", "own_ko_last_turn", "own_behind_prizes",
+        "own_prizes_full", "opp_has_bench", "own_has_bench"
       ]
     },
     "ip_note": "仅收录卡名与规则数值，不含官方图像/插画（C2）；数据与代码分离，再分发红线见 PRD C1/C5",

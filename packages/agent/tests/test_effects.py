@@ -263,6 +263,103 @@ class TestValidateAndMap(unittest.TestCase):
         self.assertIn("recon:2", r["tags"])
 
 
+class TestV14Modifiers(unittest.TestCase):
+    """v1.4 修正器识别：抛币 / 伤害缩放 / 护盾 / 被动（B4 批次主体）
+
+    真实卡池为**英文卡面且用弯撇号**（’）——这两个特性都曾让识别静默失配，
+    故用例统一使用带弯撇号的英文原文。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_coin_heads_plus_damage(self):
+        r = self._tags("Flip a coin. If heads, this attack does 20 more damage.")
+        self.assertIn("coin:heads:dmg_plus:20", r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_coin_tails_zero(self):
+        r = self._tags("Flip a coin. If tails, this attack does nothing.")
+        self.assertIn("coin:tails:dmg_zero", r["tags"])
+
+    def test_coin_heads_discard_energy(self):
+        r = self._tags("Flip a coin. If heads, discard an Energy from your "
+                       "opponent\u2019s Active Pok\u00e9mon.")
+        self.assertIn("coin:heads:discard_energy:1", r["tags"])
+
+    def test_coin_heads_shield_not_unconditional(self):
+        """护盾写在抛币分支内 → 只能有 coin:heads:…，不得再产出无条件 shield
+
+        否则护盾从「正面才生效」变成「必定生效」，是实质性加强（口径错误）。
+        """
+        r = self._tags("Flip a coin. If heads, during your opponent\u2019s next "
+                       "turn, prevent all damage from and effects of attacks "
+                       "done to this Pok\u00e9mon.")
+        self.assertIn("coin:heads:shield:prevent_all", r["tags"])
+        self.assertNotIn("shield:prevent_all", r["tags"])
+
+    def test_coin_each_tails(self):
+        r = self._tags("Your opponent flips a coin for each of their Benched "
+                       "Pok\u00e9mon. This attack does 80 damage to your "
+                       "opponent\u2019s Active Pok\u00e9mon for each tails.")
+        self.assertIn("coin_each:opp_bench:tails:dmg_plus:80", r["tags"])
+
+    def test_scaling_opp_bench(self):
+        r = self._tags("This attack does 20 more damage for each of your "
+                       "opponent\u2019s Benched Pok\u00e9mon.")
+        self.assertIn("dmg_plus:20:per:opp_bench", r["tags"])
+
+    def test_scaling_opp_active_energy(self):
+        r = self._tags("This attack does 30 more damage for each Energy "
+                       "attached to your opponent\u2019s Active Pok\u00e9mon.")
+        self.assertIn("dmg_plus:30:per:opp_active_energy", r["tags"])
+
+    def test_scaling_unrecognized_counter_is_honest(self):
+        """计数源无法识别 → 如实报 unsupported，不得猜一个计数源出来"""
+        r = self._tags("This attack does 10 more damage for each Ancient card "
+                       "in your discard pile.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(any("缩放" in u["reason"] or "未识别" in u["reason"]
+                            for u in r["unsupported"]), r["unsupported"])
+
+    def test_shield_reduce(self):
+        r = self._tags("During your opponent\u2019s next turn, this Pok\u00e9mon "
+                       "takes 30 less damage from attacks (after applying "
+                       "Weakness and Resistance).")
+        self.assertIn("shield:reduce:30", r["tags"])
+
+    def test_passive_bench_immune(self):
+        r = self._tags("As long as this Pok\u00e9mon is on your Bench, prevent "
+                       "all damage done to this Pok\u00e9mon by attacks (both "
+                       "yours and your opponent\u2019s).", kind="ability",
+                       name="BenchGuard")
+        self.assertIn("passive:bench_immune", r["tags"])
+
+    def test_ko_last_turn_condition(self):
+        r = self._tags("If any of your Pok\u00e9mon were Knocked Out by damage "
+                       "from an attack during your opponent\u2019s last turn, "
+                       "this attack does 60 more damage.")
+        self.assertIn("dmg_plus:60:if:opp_ko_last_turn", r["tags"])
+
+    def test_draw_to_hand_size(self):
+        r = self._tags("Draw cards until you have 7 cards in your hand.",
+                       kind="ability", name="Refill")
+        self.assertIn("draw_to:7", r["tags"])
+
+    def test_evolve_from_deck(self):
+        r = self._tags("Search your deck for a card that evolves from this "
+                       "Pok\u00e9mon and put it onto this Pok\u00e9mon to "
+                       "evolve it. Then, shuffle your deck.")
+        self.assertIn("evolve_from_deck", r["tags"])
+
+    def test_plain_text_unchanged(self):
+        """不涉修正器的普通卡面文本不应被后置识别污染（回归保护）"""
+        r = self._tags("This attack does 60 damage. Your opponent\u2019s "
+                       "Active Pok\u00e9mon is now Asleep.")
+        self.assertTrue(all("coin" not in t for t in r["tags"]), r["tags"])
+
+
 class TestExtractJson(unittest.TestCase):
     """LLM 输出容错：围栏 / 前后缀 / thinking 残留"""
 
@@ -307,16 +404,21 @@ class TestGoldenSetIntegrity(unittest.TestCase):
         """非合成、非留出用例的文本必须与卡池 desc_zh 一致（数据漂移守卫）
 
         合成用例与留出集是**手写句式**，不来自卡池，故跳过。
+
+        注意：卡池 = 人工池 + 自动生成的扩展池（卡池扩容）。黄金集是照**人工池**
+        写的，而不同卡的招式/特性**可能同名**（例：多个厄诡椪形态都有「Teal Dance」），
+        故按名称建表时必须**人工条目优先**，否则自动条目会覆盖人工中文转写。
         """
         from engine import reallib
         pool: dict = {}
         for name, item in reallib.catalog().items():
             d = item["def"]
+            derived = bool(item.get("derived"))
             for a in getattr(d, "attacks", ()) or ():
-                if a.display_desc:
+                if a.display_desc and (a.name not in pool or not derived):
                     pool[a.name] = a.display_desc
             for ab in getattr(d, "abilities", ()) or ():
-                if ab.display_desc:
+                if ab.display_desc and (ab.name not in pool or not derived):
                     pool[ab.name] = ab.display_desc
         for c in self.cases:
             if c.get("synthetic") or c.get("holdout"):

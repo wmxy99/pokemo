@@ -41,7 +41,9 @@ KINDS = ("attack", "ability", "item", "supporter", "energy", "rule")
 TRIGGERS = ("on_use", "on_knockout", "static", "on_attach", "on_evolve")
 ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 "search", "evolve", "spread", "move_damage", "knockout",
-                "status", "rule", "recover")
+                "status", "rule", "recover",
+                # v1.4 修正器类（B4 批次）
+                "coin_flip", "damage_mod", "shield", "passive")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -270,12 +272,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if mr:
         n = int(mr.group(1)) if mr.group(1) else 1
         low = t.lower()
-        kind = "any"
+        # 变量名用 rk（recover kind）：**不可**用 kind——那会遮蔽函数参数
+        # `kind`，使最后 spec(kind=…, …) 写进 "pokemon"/"energy"，触发 Schema
+        # 非法（真 bug：Recovery Net 一类卡曾因此报「kind 非法：pokemon」）。
+        rk = "any"
         if "pokémon" in low or "pokemon" in low:
-            kind = "pokemon"
+            rk = "pokemon"
         elif "energy" in low:
-            kind = "energy"
-        actions.append(act("recover", n, "discard", {"kind": kind}))
+            rk = "energy"
+        actions.append(act("recover", n, "discard", {"kind": rk}))
 
     if _EN_DISCARD_ALL_RE.search(t):
         actions.append(act("discard", None, "hand", {"all": True}))
@@ -343,7 +348,7 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         actions.append(act("switch", None,
                            "self" if mine else "active_opponent_bench"))
 
-    if _EN_KNOCKOUT_RE.search(t) and not re.search(r"if .{0,20}knocked out",
+    if _EN_KNOCKOUT_RE.search(t) and not re.search(r"if .{0,40}knocked out",
                                                    lower):
         actions.append(act("knockout", None, "active_opponent"))
 
@@ -410,18 +415,362 @@ def _trigger_of(text: str, kind: str) -> str:
 
 def parse_rule(text: str, kind: str = "attack", name: str = "",
                name_zh: str = "") -> dict:
-    """规则后端：从中文效果文本抽取 spec（确定性、可离线、零依赖）
+    """规则后端入口：语言分流 + **修正器后置识别**（v1.4）
+
+    「修正器」= 不产出独立动作、而是改写伤害或防护结果的句式：
+      抛币（coin_flip）· 条件/计数伤害缩放（damage_mod）·
+      护盾（shield）· 被动静态（passive）
+
+    这类句式原先统一落进 ``rule`` 而成为「未建模」，是 B4 批次（212 条）的主体。
+    单独做后置识别的好处：**不改动**既有抽取顺序（既有 555 条已映射 tag 的行为
+    保持逐字节可复现），只在末尾追加新动作。
+    """
+    spec = (_parse_rule_en(text, kind=kind, name=name)
+            if text and not _CJK_RE.search(str(text))
+            else _parse_rule_zh(text, kind=kind, name=name))
+    actions = spec.get("actions") or []
+    # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
+    mods = _detect_modifiers(str(text or ""), kind, name)
+    if mods:
+        # 修正器出现时，移除「静态未建模」兜底 rule（已被真正识别）
+        has_coin = any(m.get("type") == "coin_flip" for m in mods)
+        drop = list(_RULE_PLACEHOLDER_NOTES) + (
+            list(_COIN_COVERED_NOTES) if has_coin else [])
+        actions = [a for a in actions
+                   if not (a.get("type") == "rule"
+                           and _note_starts_with(a, drop))]
+        spec["actions"] = actions + mods
+    return spec
+
+
+def _note_starts_with(action: dict, prefixes: tuple) -> bool:
+    note = str((action.get("extra") or {}).get("note") or "")
+    return any(note.startswith(p) for p in prefixes)
+
+
+# 抛币分支已覆盖的兜底 note：这些 note 描述的正是抛币某分支里的子效果，
+# 若同时保留会重复计入未建模（污染覆盖率口径）。
+_COIN_COVERED_NOTES = ("自身放置伤害指示物",)
+
+
+# ---------- v1.4 修正器识别（抛币 / 伤害缩放 / 护盾 / 被动） ----------
+_RULE_PLACEHOLDER_NOTES = ("静态/未建模（英文）",
+                           "静态规则修改（弱点/抗性/伤害减免/限制）",
+                           "静态/未建模")
+
+# 抛币分支已覆盖的兜底 note：这些 note 描述的正是抛币某分支里的子效果，
+# 若同时保留会重复计入未建模（污染覆盖率口径）。
+_COIN_COVERED_NOTES = ("自身放置伤害指示物",)
+
+# 抛币
+# 注意：真实卡池用**弯撇号**（’）与复数形式（flips），两者都必须覆盖——
+# 归一化统一在 `_norm_apostrophe()` 完成，正则本身按直撇号书写。
+_COIN_RE = re.compile(r"flips?\s+(?:a\s+|\d+\s+)?coins?|抛硬币|掷硬币", re.I)
+_COIN_EACH_RE = re.compile(
+    r"flips?\s+a\s+coin\s+for\s+each|for\s+each[^.]{0,40}?flips?\s+a\s+coin",
+    re.I)
+# 「Flip a coin. If heads, ...」的四个具体子效果
+_COIN_HEADS_MORE_DMG_RE = re.compile(
+    r"flip\s+a\s+coin[^.]*?\.\s*if\s+heads[^.]*?does\s+(\d+)\s+more\s+damage",
+    re.I)
+_COIN_TAILS_NOTHING_RE = re.compile(
+    r"flip\s+a\s+coin[^.]*?\.\s*if\s+tails[^.]*?does\s+nothing", re.I)
+_COIN_HEADS_DISCARD_ENERGY_RE = re.compile(
+    r"if\s+heads[^.]*?discard\s+(?:an?\s+)?(?:energy|energy card)", re.I)
+_COIN_HEADS_PREVENT_RE = re.compile(
+    r"if\s+heads[^.]*?prevent\s+all\s+damage", re.I)
+_COIN_TAILS_PREVENT_RE = re.compile(
+    r"if\s+tails[^.]*?prevent\s+all\s+damage", re.I)
+_COIN_HEADS_COUNTERS_RE = re.compile(
+    r"if\s+heads[^.]*?put\s+(\d+)\s+damage\s+counters?\s+on\s+1\s+of\s+your\s+opponent",
+    re.I)
+_COIN_TAILS_SELF_COUNTERS_RE = re.compile(
+    r"if\s+tails[^.]*?put\s+(\d+)\s+damage\s+counters?\s+on\s+your\s+active",
+    re.I)
+# 「Flip N coins. This attack does M more damage for each heads.」（v1.4）
+# 语义 = 抛 N 枚、每个正面重复一次加伤 → coin_each:N:heads:dmg_plus:M
+# 注意：卡面在 "Flip N coins." 与 "This attack does…" 之间**有句号**，
+# 故必须允许跨句点匹配（用 [\s\S] 而非 [^.]）。
+_COIN_PER_SIDE_RE = re.compile(
+    r"flip\s+(\d+)?\s*coins?[\s\S]{0,80}?does\s+(\d+)\s+(?:more\s+)?damage"
+    r"[\s\S]{0,40}?for\s+each\s+(heads|tails)", re.I)
+# 伤害缩放
+_SCALING_MORE_RE = re.compile(
+    r"does\s+(\d+)\s+more\s+damage\s+for\s+each\s+([^.]{4,90})", re.I)
+_SCALING_BASE_RE = re.compile(
+    r"this\s+attack\s+does\s+(\d+)\s+damage\s+for\s+each\s+([^.]{4,90})", re.I)
+# 护盾 / 被动
+_SHIELD_REDUCE_RE = re.compile(r"takes\s+(\d+)\s+less\s+damage", re.I)
+_BENCH_IMMUNE_RE = re.compile(
+    r"as\s+long\s+as\s+this\s+pok[eé]mon\s+is\s+on\s+your\s+bench[^.]*?"
+    r"prevent\s+all\s+damage", re.I)
+_SHIELD_PREVENT_RE = re.compile(
+    r"prevent\s+all\s+damage(?:\s+from\s+and\s+effects\s+of\s+attacks)?"
+    r"[^.]*?(?:done\s+)?to\s+this\s+pok[eé]mon", re.I)
+# 条件：上回合被击倒
+_KO_LAST_TURN_RE = re.compile(
+    r"knocked\s+out[^.]*?opponent'?s?\s+last\s+turn", re.I)
+# 招式内进化
+_EVOLVE_FROM_DECK_RE = re.compile(
+    r"search\s+your\s+deck\s+for\s+a\s+card\s+that\s+evolves\s+from\s+this\s+"
+    r"pok[eé]mon", re.I)
+# 抽到指定手牌数
+_DRAW_UNTIL_RE = re.compile(r"draw cards until you have (\d+) cards?", re.I)
+
+# 缩放计数源：短语（小写）→ 引擎计数源；**按顺序**匹配，先具体后笼统
+_COUNTER_PHRASES = (
+    ("energy attached to this pok", "own_active_energy"),
+    ("energy attached to your opponent", "opp_active_energy"),
+    ("energy attached to both active", "both_active_energy"),
+    ("energy attached to your active", "own_active_energy"),
+    ("energy attached to all of your pok", "own_all_energy"),
+    ("energy attached to all pok", "both_active_energy"),
+    ("damage counter on this pok", "own_active_counters"),
+    ("damage counter on your opponent's active", "opp_active_counters"),
+    ("damage counter on all of your benched", "own_bench_counters"),
+    ("damage counter on all of your", "own_bench_counters"),
+    ("damage counter on your benched", "own_bench_counters"),
+    ("damage counter you placed", "own_discarded_this_turn"),
+    ("energy card you discarded in this way", "own_discarded_energy_this_turn"),
+    ("energy card discarded in this way", "own_discarded_energy_this_turn"),
+    ("card you discarded in this way", "own_discarded_this_turn"),
+    ("card discarded in this way", "own_discarded_this_turn"),
+    ("energy card in your discard pile", "own_discard_energy"),
+    ("energy in your discard pile", "own_discard_energy"),
+    ("card in your discard pile", "own_discard_count"),
+    ("card in your hand", "own_hand"),
+    ("stage 2 pok", "own_bench_stage2"),
+    ("benched pok", "opp_bench"),
+    ("of your pokémon in play", "own_field"),
+    ("of your pokemon in play", "own_field"),
+    ("prize card", "opp_prizes_left"),
+)
+
+# 「带限定词 = 只数某个子集」的短语特征：类别词 + 具名/条件修饰。
+# 这些**不可**笼统按总数映射（否则系统性多算），一律返回 None 登记为未建模。
+_FILTER_QUALIFIER_RE = re.compile(
+    r"\b(that has|that have|that is|with a|with an|named|“|”)", re.I)
+
+# 「每有 1 个能量」类颜色限定：{W} 等符号 → 引擎色代码
+_EN_SYMBOL_COLOR = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
+                    "P": "psychic", "F": "fighting", "D": "darkness",
+                    "M": "metal", "C": "colorless", "N": "dragon",
+                    "Y": "psychic"}
+
+
+def _counter_from_phrase(phrase: str) -> Optional[str]:
+    """英文短语 → 引擎计数源（未识别 → None，调用方如实标注不支持）
+
+    **反假映射守卫**：``card in your discard pile`` 这类笼统短语若前面带**类别限定词**
+    （Ancient / Pokémon / Trainer / Item / Supporter / Stadium / Tool / Stage n / Tera…），
+    语义是「弃牌堆中某一小类的数量」，与「弃牌堆总卡数」不等——若笼统映射会**系统性多算**
+    伤害（60 条以上卡面受影响）。这类一律返回 None，登记为未建模，绝不猜。
+    （``energy card in your discard pile`` 例外：限定词就是能量本身，等价于总能量数。）
+    """
+    raw = _norm_apostrophe(phrase)
+    low = raw.lower()
+    if _FILTERED_DISCARD_RE.search(low) and "energy" not in low:
+        return None
+    if _FILTER_QUALIFIER_RE.search(low):
+        return None           # 「…that has “X”」「…with a Rule Box」= 子集，不可按总数算
+    # 带能量颜色限定（{W} Energy attached to this Pokémon）→ <zone>_energy_<color>
+    mcolor = re.search(r"\{([A-Za-z])\}\s*energy", raw, re.I)
+    if "energy attached" in low or "energy card" in low:
+        zone = _energy_zone_from_phrase(low)
+        color = _EN_SYMBOL_COLOR.get((mcolor.group(1).upper() if mcolor else ""))
+        if zone == "own_discard":
+            # 弃牌堆能量：指定颜色 = 子集 → 不可按总能量数算
+            return None if color else "own_discard_energy"
+        if zone:
+            return f"{zone}_energy" + (f"_{color}" if color else "")
+    for needle, counter in _COUNTER_PHRASES:
+        if needle in low:
+            return counter
+    return None
+
+
+def _energy_zone_from_phrase(low: str) -> Optional[str]:
+    """能量计数短语 → 引擎能量 zone（未识别 → None）"""
+    if "attached to this pok" in low or "attached to your active" in low:
+        return "own_active"
+    if "attached to your opponent" in low:
+        return "opp_active"
+    if "attached to both active" in low:
+        return "both_active"
+    if "attached to all of your" in low:
+        return "own_all"
+    if "attached to all pok" in low:
+        return "both_active"
+    if "in your discard pile" in low:
+        return "own_discard"          # 走通用 discard 计数，非能量 zone
+    return None
+
+
+# 带类别限定词的计数短语 → 不可笼统按总数映射
+_FILTERED_DISCARD_RE = re.compile(
+    r"\b(ancient|future|pok[eé]mon|trainer|basic|item|supporter|stadium|tool|"
+    r"stage\s*\d|tera|rule\s*box)\b[^.]{0,24}?\b(cards?|pok[eé]mon)\b", re.I)
+
+
+def _norm_apostrophe(s: str) -> str:
+    """弯撇号 → 直撇号（真实卡池为 ``opponent’s``，正则按 ``opponent's`` 书写）
+
+    不做这步会让 ``opponent'?s?``、``opponent's benched`` 之类的模式**静默失配**，
+    表现为「明明写了识别规则却识别不出来」——这类问题在英文卡面语料上极易踩。
+    """
+    return str(s or "").replace("\u2019", "'").replace("\u2018", "'")
+
+
+def _detect_modifiers(text: str, kind: str, name: str) -> list:
+    """从卡面文本识别 v1.4 修正器 → 动作列表（未识别返回空表，不猜）"""
+    t = _norm_apostrophe(text)
+    low = t.lower()
+    out: list = []
+    if not t.strip():
+        return out
+
+    # 1) 条件/计数伤害缩放（先算，便于抛币分支复用同一伤害修正语义）
+    m = _SCALING_MORE_RE.search(t) or _SCALING_BASE_RE.search(t)
+    # 「for each heads/tails」不是静态计数源，而是抛币枚数 → 交给 coin 分支处理，
+    # 这里必须让位，否则会被误判成「计数源未识别」而丢掉一个可执行 tag
+    coin_per_side = _COIN_PER_SIDE_RE.search(t)
+    if m and re.fullmatch(r"\s*(heads|tails)\s*\.?\s*", m.group(2), re.I):
+        m = None
+    if m and coin_per_side:
+        m = None
+    if m:
+        n, phrase = int(m.group(1)), m.group(2)
+        counter = _counter_from_phrase(phrase)
+        if counter:
+            mode = "plus_per"
+            # 「does 10 damage for each …」= 基础伤害按计数源计算（非加成）
+            if _SCALING_BASE_RE.search(t) and not _SCALING_MORE_RE.search(t):
+                mode = "set_per"
+            out.append(act("damage_mod", n, "active_opponent",
+                           {"mode": mode, "per": counter,
+                            "phrase": phrase.strip()[:40]}))
+        else:
+            out.append(act("rule", None, "active_opponent",
+                           {"note": f"条件伤害缩放：计数源未识别（{phrase.strip()[:30]}）"}))
+    elif _KO_LAST_TURN_RE.search(t) or re.search(r"were\s+knocked\s+out", t, re.I):
+        add = re.search(r"does\s+(\d+)\s+more\s+damage", t, re.I)
+        if add and _KO_LAST_TURN_RE.search(t):
+            out.append(act("damage_mod", int(add.group(1)), "active_opponent",
+                           {"mode": "plus_if", "cond": "opp_ko_last_turn"}))
+
+    # 2) 抛币
+    if _COIN_RE.search(t):
+        out.extend(_detect_coin(t, low))
+
+    # 3) 护盾 / 被动
+    #    注意：若护盾写在抛币分支里（「if heads, … prevent all damage …」），它只在
+    #    正面生效 → 已由 coin_flip 动作承载，**不得**再产出无条件 shield（否则变成
+    #    必中，属实质性加强）。这里显式去重。
+    coin_covers_shield = any(
+        a.get("type") == "coin_flip"
+        and str((a.get("extra") or {}).get("sub", "")).startswith("shield")
+        for a in out)
+    bench_immune = bool(_BENCH_IMMUNE_RE.search(t))
+    mred = _SHIELD_REDUCE_RE.search(t)
+    mprev = _SHIELD_PREVENT_RE.search(t)
+    if bench_immune:
+        out.append(act("passive", None, "self", {"kind": "bench_immune"}))
+    elif coin_covers_shield:
+        pass
+    elif mred and _opp_next_turn(t):
+        out.append(act("shield", int(mred.group(1)), "self",
+                       {"kind": "reduce"}))
+    elif mprev and _opp_next_turn(t):
+        out.append(act("shield", None, "self", {"kind": "prevent_all"}))
+
+    # 4) 抽到指定手牌数
+    m = _DRAW_UNTIL_RE.search(t)
+    if m and kind == "ability":
+        out.append(act("draw", None, "hand",
+                       {"to_hand_size": int(m.group(1))}))
+
+    # 5) 招式内检索进化
+    if _EVOLVE_FROM_DECK_RE.search(t):
+        out.append(act("evolve", None, "self", {"from_deck": True}))
+
+    return out
+
+
+def _opp_next_turn(text: str) -> bool:
+    """是否限定「在对手的下个回合内」（护盾类语义的前提）"""
+    low = _norm_apostrophe(text).lower()
+    return bool(re.search(r"opponent'?s?\s+next\s+turn", low)
+                or re.search(r"opponent'?s?\s+turn", low))
+
+
+def _detect_coin(text: str, low: str) -> list:
+    """抛币分支识别 → coin_flip 动作（每枚币一个动作，含 side/sub）"""
+    out: list = []
+    # 「Flip N coins … for each heads/tails」优先（否则会被 each 分支吞掉）
+    mps = _COIN_PER_SIDE_RE.search(text)
+    if mps:
+        n = int(mps.group(1)) if mps.group(1) else 1
+        out.append(act("coin_flip", None, "active_opponent",
+                       {"side": mps.group(3).lower(), "mode": "each",
+                        "counter": str(n), "sub": "dmg_plus",
+                        "sub_amount": int(mps.group(2))}))
+        return out
+    each = _COIN_EACH_RE.search(text)
+    if each:
+        # 「对手为每只后备各抛 1 枚，每个反面 …」→ 计数源 + 反面枚数生效
+        m = re.search(r"does\s+(\d+)\s+damage[^.]*?for\s+each\s+tails", text,
+                      re.I)
+        if m and "for each tails" in low:
+            out.append(act("coin_flip", None, "active_opponent",
+                           {"side": "tails", "mode": "each",
+                            "counter": "opp_bench", "sub": "dmg_plus",
+                            "sub_amount": int(m.group(1))}))
+            return out
+        return out
+    m = _COIN_HEADS_MORE_DMG_RE.search(text)
+    if m:
+        out.append(act("coin_flip", None, "active_opponent",
+                       {"side": "heads", "mode": "single",
+                        "sub": "dmg_plus", "sub_amount": int(m.group(1))}))
+    if _COIN_TAILS_NOTHING_RE.search(text):
+        out.append(act("coin_flip", None, "active_opponent",
+                       {"side": "tails", "mode": "single", "sub": "dmg_zero"}))
+    if _COIN_HEADS_DISCARD_ENERGY_RE.search(text):
+        out.append(act("coin_flip", None, "active_opponent",
+                       {"side": "heads", "mode": "single",
+                        "sub": "discard_energy", "sub_amount": 1}))
+    if _COIN_HEADS_PREVENT_RE.search(text):
+        out.append(act("coin_flip", None, "self",
+                       {"side": "heads", "mode": "single",
+                        "sub": "shield_prevent_all"}))
+    elif _COIN_TAILS_PREVENT_RE.search(text):
+        out.append(act("coin_flip", None, "self",
+                       {"side": "tails", "mode": "single",
+                        "sub": "shield_prevent_all"}))
+    mh = _COIN_HEADS_COUNTERS_RE.search(text)
+    if mh:
+        out.append(act("coin_flip", None, "active_opponent_bench",
+                       {"side": "heads", "mode": "single", "sub": "spread_free",
+                        "sub_amount": int(mh.group(1)) * 10}))
+    mt = _COIN_TAILS_SELF_COUNTERS_RE.search(text)
+    if mt:
+        out.append(act("coin_flip", None, "self",
+                       {"side": "tails", "mode": "single", "sub": "self",
+                        "sub_amount": int(mt.group(1)) * 10}))
+    return out
+
+
+def _parse_rule_zh(text: str, kind: str = "attack", name: str = "",
+                   name_zh: str = "") -> dict:
+    """规则后端（中文卡面）：从中文效果文本抽取 spec（确定性、可离线、零依赖）
 
     覆盖「造成 N 点伤害 / 放置 N 个伤害指示物（可任意分配）/ 抽 N 张 /
     弃 N 张·弃 N 个能量 / 回复 N 点 / 附 N 个能量 / 检视牌库顶 N 取 M /
     检索·从弃牌堆取 N / 互换·换下 / 状态（中毒·灼伤·睡眠·麻痹·混乱）/
     击倒 / 每回合一次」等句式。
 
-    **语言分流**：文本不含中日韩字符时走英文卡面路径（``_parse_rule_en``），
-    因为真实卡池（challenge 数据集）为英文卡面。
+    注意：**语言分流与修正器识别在 ``parse_rule`` 完成**，本函数只处理中文抽取。
     """
-    if text and not _CJK_RE.search(str(text)):
-        return _parse_rule_en(text, kind=kind, name=name)
     t = str(text or "").strip()
     # 剔除括号内注解（如「（引擎待实现）」「（合计 60 点）」），它们不是卡面效果
     t_clean = re.sub(r"[（(][^）)]*[）)]", "", t)
@@ -480,12 +829,13 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     mr = _RECOVER_RE2.search(t_norm) or _RECOVER_RE.search(t_norm)
     if mr and "弃牌堆" in t_norm and not has_attach:
         n = _num(mr.group(1)) if (mr.groups() and mr.group(1)) else 1
-        kind = "any"
+        # 变量名用 rk：**不可**用 kind（会遮蔽函数参数 kind → spec.kind 非法）
+        rk = "any"
         if "能量" in t_norm and "宝可梦" not in t_norm:
-            kind = "energy"
+            rk = "energy"
         elif "宝可梦" in t_norm and "能量" not in t_norm:
-            kind = "pokemon"
-        actions.append(act("recover", n, "discard", {"kind": kind}))
+            rk = "pokemon"
+        actions.append(act("recover", n, "discard", {"kind": rk}))
         has_recover = True
 
     # 检索（牌库顶检视 / 通用检索；从弃牌堆 → target=discard）
@@ -821,6 +1171,29 @@ def validate_specs(specs: list) -> list:
 
 
 # ---------------- spec → 引擎 tag ----------------
+def _coin_sub_tag(sub: str, amount) -> str:
+    """抛币子效果 → 引擎子 tag
+
+    ``dmg_plus`` → ``dmg_plus:N``；``discard_energy`` → ``discard_energy:N``；
+    ``self``/``spread_free`` 带额；``shield_prevent_all`` → ``shield:prevent_all``；
+    ``dmg_zero`` 原样。
+    """
+    n = int(amount) if amount else 0
+    if sub == "dmg_plus":
+        return f"dmg_plus:{n}" if n else "dmg_plus"
+    if sub == "dmg_zero":
+        return "dmg_zero"
+    if sub == "discard_energy":
+        return f"discard_energy:{n or 1}"
+    if sub in ("self", "spread_free", "heal", "draw"):
+        return sub if not n else f"{sub}:{n}"
+    if sub == "shield_prevent_all":
+        return "shield:prevent_all"
+    if sub.startswith("shield:") or sub.startswith("dmg_plus:"):
+        return sub
+    return sub or ""
+
+
 def to_engine_tags(specs: list) -> dict:
     """把 spec 映射为引擎可执行 tag；返回 {tags[], unsupported[], notes[]}
 
@@ -852,6 +1225,11 @@ def to_engine_tags(specs: list) -> dict:
     tags: list = []
     unsupported: list = []
     notes: list = []
+    # 同一 spec 里多条 evolve 动作时，只要有一条是「从牌库检索进化」，
+    # 即按 evolve_from_deck 处理（避免同句另一条裸 evolve 误报「需卡级 tag」）
+    has_evolve_from_deck = any(
+        a.get("type") == "evolve" and (a.get("extra") or {}).get("from_deck")
+        for s0 in (specs or []) for a in (s0.get("actions") or []))
     for s in specs or []:
         kind = s.get("kind")
         trigger = s.get("trigger")
@@ -881,9 +1259,7 @@ def to_engine_tags(specs: list) -> dict:
                          "reason": "放置指示物缺少份数（需 counters 元数据）"})
             elif t == "draw":
                 if extra.get("to_hand_size"):
-                    unsupported.append(
-                        {"type": t, "reason": "抽到指定手牌数需引擎新机制"
-                                              "（未建模动作清单 B3/B4）"})
+                    tags.append(f"draw_to:{int(extra['to_hand_size'])}")
                 elif amt is None:
                     unsupported.append({"type": t, "reason": "抽牌量未识别"})
                 elif kind == "ability":
@@ -932,7 +1308,9 @@ def to_engine_tags(specs: list) -> dict:
             elif t == "switch":
                 tags.append("switch_self" if tgt == "self" else "gust")
             elif t == "evolve":
-                if kind in ("item", "supporter"):
+                if extra.get("from_deck") or has_evolve_from_deck:
+                    tags.append("evolve_from_deck")
+                elif kind in ("item", "supporter"):
                     tags.append("candy")
                 else:
                     unsupported.append(
@@ -970,6 +1348,60 @@ def to_engine_tags(specs: list) -> dict:
                         {"type": t,
                          "reason": (str(extra.get("note"))
                                     or "静态规则/元游戏效果（P1–P2 批次）")})
+            # ---- v1.4 修正器（抛币 / 伤害缩放 / 护盾 / 被动） ----
+            elif t == "coin_flip":
+                side = extra.get("side") or "heads"
+                sub = extra.get("sub") or ""
+                if extra.get("mode") == "each":
+                    counter = extra.get("counter") or "opp_bench"
+                    sub_tag = _coin_sub_tag(sub, extra.get("sub_amount"))
+                    tags.append(f"coin_each:{counter}:{side}:{sub_tag}")
+                elif sub:
+                    sub_tag = _coin_sub_tag(sub, extra.get("sub_amount"))
+                    tags.append(f"coin:{side}:{sub_tag}")
+                else:
+                    unsupported.append({"type": t, "reason": "抛币子效果未识别"})
+            elif t == "damage_mod":
+                mode = extra.get("mode") or "plus"
+                if mode == "plus_per":
+                    if not extra.get("per"):
+                        unsupported.append({"type": t,
+                                            "reason": "缩放计数源未识别"})
+                    else:
+                        tags.append(f"dmg_plus:{int(amt or 0)}:per:"
+                                    f"{extra['per']}")
+                elif mode == "set_per":
+                    if not extra.get("per"):
+                        unsupported.append({"type": t,
+                                            "reason": "缩放计数源未识别"})
+                    else:
+                        tags.append(f"dmg_plus:{int(amt or 0)}:per:"
+                                    f"{extra['per']}")
+                elif mode == "plus_if":
+                    if not extra.get("cond"):
+                        unsupported.append({"type": t, "reason": "条件未识别"})
+                    else:
+                        tags.append(f"dmg_plus:{int(amt or 0)}:if:"
+                                    f"{extra['cond']}")
+                else:
+                    tags.append(f"dmg_plus:{int(amt or 0)}")
+            elif t == "shield":
+                kind_ = extra.get("kind")
+                if kind_ == "reduce":
+                    tags.append(f"shield:reduce:{int(amt or 0)}")
+                elif kind_ == "prevent_all":
+                    tags.append("shield:prevent_all")
+                else:
+                    unsupported.append({"type": t, "reason": "护盾类型未识别"})
+            elif t == "passive":
+                kind_ = extra.get("kind")
+                if kind_ == "bench_immune":
+                    tags.append("passive:bench_immune")
+                else:
+                    unsupported.append(
+                        {"type": t,
+                         "reason": "静态封锁（无特性/禁用道具等）需引擎新机制"
+                                   "（未建模动作清单 B4）"})
             elif t == "knockout":
                 unsupported.append(
                     {"type": t,

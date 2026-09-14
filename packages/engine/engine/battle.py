@@ -11,12 +11,13 @@ v1 沿用：回合开始检查→抽卡→主阶段→攻击即结束回合；�
 """
 from __future__ import annotations
 import random
+import re
 from typing import Optional
 from .cards import (CardRef, PokeRef, EnergyRef, TrainerRef, FieldPokemon,
                     make_pokemon, COLORLESS)
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
-                    distribute_damage)
+                    distribute_damage, apply_shield)
 # 名称型字段的优先顺序（与 engine.commands 同源，避免两处漂移）
 from .commands import NAME_KEYS as _NAME_KEYS
 
@@ -24,9 +25,28 @@ WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
 
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 
+# 属于「伤害修正层」的 tag 前缀（由 _attack_mods 结算，不得在效果层重复执行）
+_DAMAGE_MOD_PREFIXES = ("dmg_plus:", "dmg_zero", "ignore_weakness",
+                        "ignore_resistance")
+
 
 class Battle:
     """对战裁判（自管理字段；seed 驱动的确定性）"""
+
+    # 类级默认值（v1.4）：测试与外部工具惯用 ``object.__new__(Battle)`` 手工装配
+    # 战场，绕过 ``__init__``；把这两个字段做成类级默认 + 惰性实例化，使两种构造
+    # 方式都安全（否则手工装配的实例会 AttributeError）。
+    # 注意：``_ko_by_attack`` 的类级值**必须是 None**，可变默认值会在实例间共享。
+    _ko_by_attack = None
+    _ko_from_attack = False
+
+    def _ko_flags(self) -> list:
+        """按宝可梦所属方计数的「被招式击倒」标记（惰性创建，实例隔离）"""
+        v = self._ko_by_attack
+        if v is None:
+            v = [0, 0]
+            self._ko_by_attack = v
+        return v
 
     def __init__(self, deck_a: list, deck_b: list, seed: int = 0,
                  cfg: Optional[GameConfig] = None,
@@ -46,6 +66,13 @@ class Battle:
         self.winner: Optional[int] = None
         self.win_reason: Optional[str] = None
         self.events: list = []
+        # v1.4：上个**对手回合**中「被招式击倒」的标记（条件加伤用，如
+        # 「if any of your Pokémon were Knocked Out ... during your opponent's
+        # last turn, this attack does N more damage」）。
+        # 语义：按**宝可梦所属方**计数；在该方回合开始时清零（见 _begin_turn）。
+        self._ko_by_attack: list = [0, 0]
+        # 结算上下文：当前这次击倒是否由「招式」造成（中毒/烧伤检查与混乱自伤不算）
+        self._ko_from_attack: bool = False
         self._setup_openings()
         # 先手：硬币
         self.current = 0 if self.rng.random() < 0.5 else 1
@@ -93,10 +120,14 @@ class Battle:
 
         返回入堆标签（英文数据键名）。所有弃牌都必须走这里，
         否则「弃牌堆回收」类效果（recover / 从弃牌堆检索）会取不到真实卡对象。
+        同时维护 v1.4 的「本回合弃置计数」（卡面「discarded in this way」用）。
         """
         label = _card_label(ref)
         p.discard.append(label)
         p.discard_refs.append(ref)
+        p.discarded_this_turn += 1
+        if isinstance(ref, EnergyRef):
+            p.discarded_energy_this_turn += 1
         return label
 
     @staticmethod
@@ -156,9 +187,21 @@ class Battle:
         self.phase = "main"
         p.attached_energy_this_turn = 0
         p.supporter_used = 0
+        p.discarded_this_turn = 0                 # v1.4「in this way」按回合重置
+        p.discarded_energy_this_turn = 0
         for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
             fp.just_played = False
             fp.ability_used.clear()
+        # v1.4 护盾：语义为「（在对手的）下个回合内有效」→ 该玩家**本回合开始**时失效。
+        # 若在 A 的回合给 A 上盾，则 B 回合期间盾仍在，A 再次开始时清除（正确）。
+        for fp in p.all_field():
+            if fp.shield_reduce or fp.shield_prevent_all:
+                self._log("shield_expire", {"player": self.current,
+                                            "target": fp.name})
+            fp.shield_reduce = 0
+            fp.shield_prevent_all = False
+        # v1.4「上回合被击倒」标记：该方回合开始即清零（卡面为「对手的上个回合」）
+        self._ko_flags()[self.current] = 0
         if not p.has_pokemon:
             self._finish(1 - self.current, "no_pokemon", {"loser": self.current})
             return
@@ -251,7 +294,8 @@ class Battle:
                 if ab.location != "field" or ab.name in fp.ability_used:
                     continue
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
-                if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:")):
+                if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
+                                      "passive:")):
                     continue
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
@@ -950,52 +994,288 @@ class Battle:
         if defender is None:
             self._finish(self.current, "no_pokemon", {"loser": 1 - self.current})
             return {"ok": True, "event": None}
-        if atk.damage > 0:
-            dmg = compute_damage(attacker, defender, atk.damage,
-                                 weakness_override=self._weakness_override(
-                                     attacker, defender))
-            defender.damage += dmg
-            self._log("damage", {"target": defender.name,
-                                 "player": 1 - self.current,
-                                 "dmg": dmg, "base": atk.damage})
-        self._apply_attack_effects(attacker, atk.effects,
-                                   plan=action.get("targets"), action=action)
-        if defender.is_ko:
-            self._resolve_ko(1 - self.current, defender)
+        # v1.4 伤害修正层：抛币（coin:）与条件/计数缩放（dmg_plus:）必须先于伤害结算，
+        # 因为它们会改写基础伤害；`dmg_zero` 则直接把本次伤害归零。
+        mods = self._attack_mods(attacker, atk.effects, action)
+        base = 0 if mods["zero"] else max(0, atk.damage + mods["plus"])
+        # 「被招式击倒」标记：仅本段内（含招式附加效果）的击倒计入
+        prev_ko_flag = self._ko_from_attack
+        self._ko_from_attack = True
+        try:
+            if base > 0:
+                dmg = compute_damage(attacker, defender, base,
+                                     weakness_override=self._weakness_override(
+                                         attacker, defender),
+                                     ignore_weakness=mods["ignore_weakness"],
+                                     ignore_resistance=mods["ignore_resistance"])
+                dmg = apply_shield(defender, dmg)          # 护盾在弱抗之后
+                if dmg:
+                    defender.damage += dmg
+                self._log("damage", {"target": defender.name,
+                                     "player": 1 - self.current,
+                                     "dmg": dmg, "base": atk.damage,
+                                     "bonus": mods["plus"],
+                                     "blocked": bool(atk.damage and dmg == 0)})
+            elif atk.damage > 0:
+                self._log("damage", {"target": defender.name,
+                                     "player": 1 - self.current,
+                                     "dmg": 0, "base": atk.damage,
+                                     "bonus": mods["plus"], "nullified": True})
+            self._apply_attack_effects(attacker, atk.effects,
+                                       plan=action.get("targets"), action=action,
+                                       pre_mods=mods)
+            if defender.is_ko:
+                self._resolve_ko(1 - self.current, defender)
+        finally:
+            self._ko_from_attack = prev_ko_flag
         if not self.finished:
             self._end_turn()
         return {"ok": True, "event": None}
 
+    # ---------- v1.4 伤害修正层（抛币 / 计数缩放 / 条件加伤） ----------
+    def _attack_mods(self, attacker: FieldPokemon, effects: tuple,
+                     action: Optional[dict]) -> dict:
+        """解析招式效果里的伤害修正，返回
+
+        ``{"plus": int, "zero": bool, "ignore_weakness": bool,
+           "ignore_resistance": bool, "coins": [dict]}``
+
+        支持的 tag
+          ``dmg_plus:N``                       固定加伤
+          ``dmg_plus:N:per:<counter>``          按计数源 ×N 加伤
+          ``dmg_plus:N:if:<cond>``              条件满足则加伤
+          ``dmg_zero``                          本次伤害归零（配合 ``coin:tails:``）
+          ``ignore_weakness`` / ``ignore_resistance``
+          ``coin:heads:<tag>`` / ``coin:tails:<tag>``  抛 1 枚，按结果决定是否生效
+          ``coin_each:N:tails:<tag>``           抛 N 枚，按反面枚数重复生效
+
+        设计要点：抛币与缩放在**同一次攻击内**只掷/算一次，结果写事件日志（可复现：
+        用 ``self.rng``，不引入额外随机源）。
+        """
+        out = {"plus": 0, "zero": False, "ignore_weakness": False,
+               "ignore_resistance": False, "coins": []}
+        for tag in effects or ():
+            if tag == "dmg_zero":
+                out["zero"] = True
+            elif tag == "ignore_weakness":
+                out["ignore_weakness"] = True
+            elif tag == "ignore_resistance":
+                out["ignore_resistance"] = True
+            elif tag.startswith("dmg_plus:"):
+                self._accum_dmg_plus(tag, out)
+            elif tag.startswith("coin:") or tag.startswith("coin_each:"):
+                self._resolve_coin_tag(attacker, tag, out)
+        return out
+
+    def _accum_dmg_plus(self, tag: str, out: dict) -> None:
+        parts = tag.split(":")
+        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+        kind = parts[2] if len(parts) > 2 else None
+        if kind is None:
+            out["plus"] += n
+        elif kind == "per":
+            counter = parts[3] if len(parts) > 3 else ""
+            if not counter:
+                raise ValueError(f"{tag}：缺少计数源（per:<counter>）")
+            out["plus"] += n * _eval_counter(self, counter)
+        elif kind == "if":
+            cond = parts[3] if len(parts) > 3 else ""
+            if not cond:
+                raise ValueError(f"{tag}：缺少条件（if:<cond>）")
+            if _eval_condition(self, cond):
+                out["plus"] += n
+        else:
+            raise ValueError(f"未知 dmg_plus 形式：{tag}")
+
+    def _resolve_coin_tag(self, attacker: FieldPokemon, tag: str,
+                          out: dict) -> None:
+        """抛币 tag 结算（``coin:<side>:<effect>`` / ``coin_each:<n>:<side>:<eff>``）
+
+        结果同时写入事件日志（``coin``）与 ``out['coins']``——后者供
+        ``_apply_coin_non_damage`` 执行**非伤害**子效果，**不重复抛币**。
+        """
+        if tag.startswith("coin_each:"):
+            _, raw_n, side, sub = tag.split(":", 3)
+            n = int(raw_n) if raw_n.isdigit() else _eval_counter(self, raw_n)
+            hits = 0
+            for _ in range(max(0, n)):
+                res = "heads" if self.rng.random() < 0.5 else "tails"
+                self._log("coin", {"player": self.current, "result": res,
+                                   "tag": tag, "each_of": n})
+                if res == side:
+                    hits += 1
+            out["coins"].append({"tag": tag, "side": side, "sub": sub,
+                                 "result": side if hits else "none",
+                                 "hits": hits})
+            if hits:
+                self._apply_coin_sub(attacker, sub, out, repeat=hits)
+            return
+        _, side, sub = tag.split(":", 2)
+        res = "heads" if self.rng.random() < 0.5 else "tails"
+        self._log("coin", {"player": self.current, "result": res, "tag": tag})
+        out["coins"].append({"tag": tag, "side": side, "sub": sub,
+                             "result": res, "hits": 1 if res == side else 0})
+        if res == side:
+            self._apply_coin_sub(attacker, sub, out, repeat=1)
+
+    def _apply_coin_sub(self, attacker: FieldPokemon, sub: str, out: dict,
+                        repeat: int = 1) -> None:
+        """抛币命中的子效果 → 归入伤害修正层（其余子效果留待 _apply_attack_effects）"""
+        for _ in range(max(1, repeat)):
+            if sub == "dmg_zero":
+                out["zero"] = True
+            elif sub.startswith("dmg_plus:"):
+                self._accum_dmg_plus(sub, out)
+            elif sub == "ignore_weakness":
+                out["ignore_weakness"] = True
+            elif sub == "ignore_resistance":
+                out["ignore_resistance"] = True
+            # 非伤害类子效果（discard_energy / shield: / status…）由
+            # _apply_attack_effects 的 coin 分支统一处理，这里不重复执行
+
+    def _apply_coin_non_damage(self, attacker: FieldPokemon, tag: str,
+                               pre_mods: Optional[dict],
+                               plan: Optional[list] = None,
+                               action: Optional[dict] = None) -> None:
+        """执行抛币命中的**非伤害**子效果
+
+        关键：**不得重新抛币**——否则同一 tag 会掷两次、结果不一致且不可复现。
+        这里只消费 ``_attack_mods`` 已记录在 ``pre_mods['coins']`` 里的结果。
+        """
+        flips = (pre_mods or {}).get("coins") or []
+        hit = [f for f in flips if f["tag"] == tag and f["result"] == f["side"]]
+        if not hit:
+            return
+        for f in hit:
+            sub = f["sub"]
+            if sub.startswith(_DAMAGE_MOD_PREFIXES):
+                continue                    # 伤害类已并入伤害结算，勿重复
+            for _ in range(max(1, f["hits"])):
+                # 递归深度恒为 1：sub 不含 coin: 前缀（构造时不生成嵌套抛币）
+                self._apply_attack_effects(attacker, (sub,), plan, action)
+
+    def _evolve_from_deck(self, p: PlayerState, fp: FieldPokemon) -> None:
+        """``evolve_from_deck``：从牌库检索「可进化此宝可梦的卡」直接进化
+
+        卡面原型：「Search your deck for a card that evolves from this Pokémon and
+        put it onto this Pokémon to evolve it.」——属**招式内进化**。
+        语义：「可以」→ 牌库无目标时**不算失败**（不抛错，仅记录无效果）。
+        """
+        if fp is None or p is None:
+            return
+        idx = None
+        for i in range(len(p.deck) - 1, -1, -1):
+            c = p.deck[i]
+            if isinstance(c, PokeRef) and c.pdef.stage > 0 \
+                    and c.pdef.evolves_from == fp.pdef.name \
+                    and fp.pdef.stage + 1 == c.pdef.stage:
+                idx = i
+                break
+        if idx is None:
+            self._log("evolve", {"player": self.current, "from": fp.name,
+                                 "to": None, "reason": "牌库无可进化卡"})
+            return
+        ref = p.deck.pop(idx)
+        old = fp.name
+        fp.evolve_to(ref.pdef)
+        self.rng.shuffle(p.deck)            # 检索后洗牌（引擎统一约定）
+        self._log("evolve", {"player": self.current, "from": old,
+                             "to": fp.name, "from_zone": "deck"})
+        self._trigger_evolve_attach(fp)
+
     def _apply_attack_effects(self, attacker: FieldPokemon, effects: tuple,
                               plan: Optional[list] = None,
-                              action: Optional[dict] = None) -> None:
+                              action: Optional[dict] = None,
+                              pre_mods: Optional[dict] = None) -> None:
         """结算招式附加效果
 
         ``plan``：E5 任意分配的目标计划 [{"pos": bench索引, "dmg": ...}, ...]
         ``action``：原始动作（读取 ``bench``/``target`` 等显式选择，缺省时取确定性默认值）
+        ``pre_mods``：``_attack_mods`` 的结果（含抛币结果），用于执行抛币命中的**非伤害**
+        子效果（弃能 / 护盾 / 状态等）——伤害类子效果已在那一步并入伤害。
 
-        tag 家族（v1.3 扩展，见 cards_real.json meta.engine_tags）：
+        tag 家族（v1.3 扩展 · v1.4 续扩，见 cards_real.json meta.engine_tags）：
           · 状态：poison / burn / sleep / paralyze / confuse
           · 放置：spread_free:N（任意分配）· spread:N:per（随机 n 只各 per 点）
           · 自伤 / 回复：self:N · heal:N
-          · 抽牌：draw:N
+          · 抽牌：draw:N · draw_to:N（抽到指定手牌数）
           · 弃牌：discard:N（弃自身手牌）· discard_energy:N（弃自身 active 能量）
           · 换位：switch_self（自己换下）· gust（把对手后备拉为 active）
-          · 附能：attach:N[:type]（从弃牌堆优先、无则牌库）
-          · 指示物：move_damage:N（自身 → 对手 active）
+          · 附能：attach:N[:type][:zone]（弃牌堆优先、无则牌库）
+          · 指示物：move_damage:N[:all]（自身 → 对手 active）
+          · 回收：recover:N[:kind]（弃牌堆取入手）
+          · 进化：evolve_from_deck（从牌库检索进化卡直接进化）
+          · 护盾：shield:reduce:N · shield:prevent_all（v1.4）
+          · 抛币：coin:heads:<tag> · coin:tails:<tag> · coin_each:N:tails:<tag>（v1.4）
+
+        **被动免疫**：``passive:bench_immune`` 的宝可梦位于后备时，免疫对其造成的
+        招式伤害（见 spread 分支）与效果。
         """
         p = self.players[self.current]
         opp = self.players[1 - self.current]
         action = action or {}
+        # 守方是否处于「免疫招式伤害与效果」状态（护盾或后备被动）
+        d_active = opp.active
+
+        def _opp_blocked(fp: Optional[FieldPokemon], on_bench: bool = False) -> bool:
+            """目标是否免疫指令效果（护盾 / 后备被动）"""
+            if fp is None:
+                return True
+            if fp.shield_prevent_all:
+                return True
+            if on_bench and _is_bench_immune(fp):
+                return True
+            return False
+
         for tag in effects:
-            if tag in ("poison", "burn", "sleep", "paralyze", "confuse"):
+            if tag.startswith("coin:") or tag.startswith("coin_each:"):
+                self._apply_coin_non_damage(attacker, tag, pre_mods, plan, action)
+            elif tag in ("poison", "burn", "sleep", "paralyze", "confuse"):
                 if opp.active is not None and not opp.active.is_ko:
+                    if _opp_blocked(opp.active):
+                        self._log("blocked", {"target": opp.active.name,
+                                              "by": "prevent_all"})
+                        continue
                     opp.active.status.add(tag)
                     self._log("status", {"player": 1 - self.current,
                                          "target": opp.active.name,
                                          "status": tag})
+            elif tag.startswith("shield:"):
+                # v1.4：护盾持续到该玩家下个回合开始（见 _begin_turn）
+                parts = tag.split(":")
+                if parts[1] == "reduce":
+                    n = int(parts[2]) if len(parts) > 2 else 0
+                    attacker.shield_reduce = n
+                    self._log("shield", {"player": self.current,
+                                         "target": attacker.name,
+                                         "kind": "reduce", "n": n})
+                elif parts[1] == "prevent_all":
+                    attacker.shield_prevent_all = True
+                    self._log("shield", {"player": self.current,
+                                         "target": attacker.name,
+                                         "kind": "prevent_all"})
+                else:
+                    raise ValueError(f"未知 shield 形式：{tag}")
+            elif tag.startswith("draw_to:"):
+                # v1.4：抽到指定手牌数（已达标则不再抽）
+                target_n = int(tag.split(":")[1])
+                need = target_n - len(p.hand)
+                got = self._safe_draw(self.current, need,
+                                      source="attack_effect") if need > 0 else 0
+                self._log("draw_to", {"player": self.current, "size": target_n,
+                                      "drew": got})
+            elif tag.startswith("evolve_from_deck"):
+                self._evolve_from_deck(p, attacker)
             elif tag.startswith("spread_free:"):
                 total = int(tag.split(":")[1])
+                # 真 bug 修复（v1.4）：对手**后备为空**时该效果无对象可放置，
+                # 属「无效果」而非错误。此前 distribute_damage(0, 60) 返回空表，
+                # 与 total 不符 → 直接抛错，使 Dragapult ex 幻影俯冲之类招式
+                # 在对手空场时无法使用（随机对局中可复现）。
+                if not opp.bench:
+                    self._log("no_effect", {"tag": tag,
+                                            "reason": "对手后备为空"})
+                    continue
                 plan = plan or [{"pos": i, "dmg": d} for i, d in enumerate(
                     distribute_damage(len(opp.bench), total))]
                 if sum(x["dmg"] for x in plan) != total:
@@ -1009,6 +1289,10 @@ class Battle:
                     if not (0 <= pos < len(opp.bench)):
                         raise ValueError("spread_free 目标越界")
                     fp = opp.bench[pos]
+                    if _is_bench_immune(fp):      # v1.4 被动：后备免疫
+                        self._log("blocked", {"target": fp.name,
+                                              "by": "bench_immune"})
+                        continue
                     fp.damage += dmg
                     self._log("damage", {"target": fp.name,
                                          "player": 1 - self.current,
@@ -1023,7 +1307,7 @@ class Battle:
             elif tag.startswith("spread:"):
                 _, n, per = tag.split(":")
                 n, per = int(n), int(per)
-                targets = list(opp.bench)
+                targets = [fp for fp in opp.bench if not _is_bench_immune(fp)]
                 self.rng.shuffle(targets)
                 killed = []
                 for fp in targets[:n]:
@@ -1183,6 +1467,10 @@ class Battle:
         p.discard_refs.append(PokeRef(fp.pdef))   # 供弃牌堆回收类效果重建
         self._log("knockout", {"player": 1 - owner, "victim_owner": owner,
                                "card": fp.name, "pos": pos})
+        # v1.4：记录「本次击倒是否来自招式」——供条件加伤
+        # （dmg_plus:N:if:opp_ko_last_turn）使用；在受害者回合开始清零。
+        if self._ko_from_attack:
+            self._ko_flags()[owner] += 1
         give = self.cfg.ex_prizes if fp.pdef.is_ex else 1
         opp.prizes_left = max(0, opp.prizes_left - give)
         self._log("prize", {"player": 1 - owner, "take": give,
@@ -1608,6 +1896,116 @@ def _candy_legals(p: PlayerState) -> list:
                 continue
             out.append((hi, tpos, c.pdef.name))
     return out
+
+
+# ---------------- v1.4 伤害修正：计数源与条件 ----------------
+# 设计原则：**只允许公开信息**（双方可见的场上/弃牌堆/手牌数量），
+# 且必须确定性可算；未知名称一律抛错——静默按 0 计算会让「条件加伤」变成
+# 永久 0 加伤，属于最难发现的口径漂移。
+_COUNTERS = {
+    "own_bench": lambda b, p, o: len(p.bench),
+    "opp_bench": lambda b, p, o: len(o.bench),
+    "both_bench": lambda b, p, o: len(p.bench) + len(o.bench),
+    "own_active_energy": lambda b, p, o: p.active.total_energy() if p.active else 0,
+    "opp_active_energy": lambda b, p, o: o.active.total_energy() if o.active else 0,
+    "both_active_energy": lambda b, p, o: ((p.active.total_energy() if p.active else 0)
+                                          + (o.active.total_energy() if o.active else 0)),
+    "own_all_energy": lambda b, p, o: sum(fp.total_energy() for fp in p.all_field()),
+    "opp_all_energy": lambda b, p, o: sum(fp.total_energy() for fp in o.all_field()),
+    "own_bench_counters": lambda b, p, o: sum(fp.damage // 10 for fp in p.bench),
+    "opp_bench_counters": lambda b, p, o: sum(fp.damage // 10 for fp in o.bench),
+    "own_active_counters": lambda b, p, o: (p.active.damage // 10) if p.active else 0,
+    "opp_active_counters": lambda b, p, o: (o.active.damage // 10) if o.active else 0,
+    "own_discard_energy": lambda b, p, o: sum(1 for c in p.discard_refs
+                                              if isinstance(c, EnergyRef)),
+    "own_discard_count": lambda b, p, o: len(p.discard_refs),
+    "own_hand": lambda b, p, o: len(p.hand),
+    "own_prizes_left": lambda b, p, o: p.prizes_left,
+    "opp_prizes_left": lambda b, p, o: o.prizes_left,
+    "own_field": lambda b, p, o: len(p.all_field()),
+    "opp_field": lambda b, p, o: len(o.all_field()),
+    "own_bench_stage2": lambda b, p, o: sum(1 for fp in p.bench if fp.pdef.stage == 2),
+    # 「in this way」类：本回合已弃置的牌数（含本次招式结算中弃的）
+    "own_discarded_this_turn": lambda b, p, o: p.discarded_this_turn,
+    "own_discarded_energy_this_turn":
+        lambda b, p, o: p.discarded_energy_this_turn,
+}
+
+# 能量计数源：``<zone>_energy[_<color>]`` —— 支持「附在此宝可梦上的水能量」这类
+# **带颜色筛选**的精确计数（笼统按总能量数会系统性多算伤害）
+_ENERGY_ZONES = {
+    "own_active": lambda b, p, o: ([p.active] if p.active else []),
+    "opp_active": lambda b, p, o: ([o.active] if o.active else []),
+    "both_active": lambda b, p, o: [x for x in (p.active, o.active) if x],
+    "own_all": lambda b, p, o: p.all_field(),
+    "opp_all": lambda b, p, o: o.all_field(),
+}
+_ENERGY_COUNTER_RE = re.compile(
+    r"^(own_active|opp_active|both_active|own_all|opp_all)_energy(?:_([a-z]+))?$")
+
+_CONDITIONS = {
+    # 「if any of your Pokémon were Knocked Out ... during your opponent's last turn」
+    "opp_ko_last_turn": lambda b, p, o: b._ko_flags()[1 - b.current] > 0,
+    "own_ko_last_turn": lambda b, p, o: b._ko_flags()[b.current] > 0,
+    # 奖励落后（对手已取得更多奖赏卡 = 我方落后）
+    "own_behind_prizes": lambda b, p, o: p.prizes_left > o.prizes_left,
+    "own_prizes_full": lambda b, p, o: p.prizes_left == b.cfg.prizes,
+    "opp_has_bench": lambda b, p, o: len(o.bench) > 0,
+    "own_has_bench": lambda b, p, o: len(p.bench) > 0,
+}
+
+
+def _eval_counter(battle, counter: str) -> int:
+    """计数源求值（未知 → 抛错，禁止静默 0）"""
+    if counter.isdigit():
+        return int(counter)
+    fn = _COUNTERS.get(counter)
+    if fn is not None:
+        p = battle.players[battle.current]
+        o = battle.players[1 - battle.current]
+        return int(fn(battle, p, o))
+    m = _ENERGY_COUNTER_RE.match(counter)
+    if m:
+        zone, color = m.group(1), m.group(2)
+        p = battle.players[battle.current]
+        o = battle.players[1 - battle.current]
+        fps = _ENERGY_ZONES[zone](battle, p, o)
+        return sum(fp.total_energy() if not color else fp.energy_of(color)
+                   for fp in fps)
+    raise ValueError(
+        f"未知计数源 {counter}（可用：{'、'.join(sorted(_COUNTERS))} 或 "
+        f"<zone>_energy[_<color>]，zone ∈ {'/'.join(_ENERGY_ZONES)}）")
+
+
+def _eval_condition(battle, cond: str) -> bool:
+    """条件求值（未知 → 抛错，禁止静默 False）"""
+    fn = _CONDITIONS.get(cond)
+    if fn is None:
+        raise ValueError(
+            f"未知条件 {cond}（可用：{'、'.join(sorted(_CONDITIONS))}）")
+    p = battle.players[battle.current]
+    o = battle.players[1 - battle.current]
+    return bool(fn(battle, p, o))
+
+
+def _is_bench_immune(fp: Optional[FieldPokemon]) -> bool:
+    """被动 ``passive:bench_immune``：在后备时免疫招式伤害与效果
+
+    卡面原型：「As long as this Pokémon is on your Bench, prevent all damage from
+    and effects of attacks ... done to this Pokémon」。位于战斗位时**不生效**。
+    """
+    if fp is None:
+        return False
+    for ab in fp.pdef.abilities:
+        if ab.tag == "passive:bench_immune":
+            return True
+    return False
+
+
+def _has_passive(fp: Optional[FieldPokemon], tag: str) -> bool:
+    if fp is None:
+        return False
+    return any(ab.tag == tag for ab in fp.pdef.abilities)
 
 
 def _card_label(c) -> str:

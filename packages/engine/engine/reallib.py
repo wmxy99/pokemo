@@ -26,6 +26,10 @@ from .cards import (AbilityDef, AttackDef, EnergyDef, EnergyRef, PokeRef,
 
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 CARDS_FILE = _DATA_DIR / "cards_real.json"
+# 卡池扩容（v1.4）：由清洗数据集 + K2 解析链生成的**扩展卡池**。
+# 人工卡池（CARDS_FILE）**永远优先**，同名自动条目被忽略；扩展池条目在
+# catalog() 中标记 engine_status="approximated"（保真度低于人工逐卡校对）。
+POOL_EXT_FILE = _DATA_DIR / "cards_pool_ext.json"
 DECKS_FILE = _DATA_DIR / "decklists.json"
 
 # 引擎 v1 支持的训练家 tag 前缀（与 battle._trainer_legals/_do_trainer 对齐）
@@ -51,7 +55,28 @@ def _read(path: Path) -> dict:
 
 @lru_cache(maxsize=1)
 def _catalog_raw() -> dict:
-    return _read(CARDS_FILE)
+    """人工卡池 + 扩展卡池合并（人工优先；扩展池缺失时静默降级为只用人工池）"""
+    base = _read(CARDS_FILE)
+    if not POOL_EXT_FILE.exists():
+        return base
+    try:
+        ext = _read(POOL_EXT_FILE)
+    except Exception:                                  # noqa: BLE001
+        return base
+    have = {c["name"] for c in base.get("cards") or []}
+    extra = [c for c in (ext.get("cards") or []) if c.get("name") not in have]
+    merged = dict(base)
+    merged["cards"] = list(base.get("cards") or []) + extra
+    meta = dict(base.get("meta") or {})
+    meta["pool_ext"] = {
+        "file": POOL_EXT_FILE.name,
+        "count": len(extra),
+        "provenance": (ext.get("meta") or {}).get("provenance"),
+        "fidelity": (ext.get("meta") or {}).get("fidelity"),
+        "admission": (ext.get("meta") or {}).get("admission"),
+    }
+    merged["meta"] = meta
+    return merged
 
 
 @lru_cache(maxsize=1)
@@ -114,12 +139,13 @@ def _ref(cdef):
 
 @lru_cache(maxsize=1)
 def catalog() -> dict:
-    """卡名 → {"def": 卡定义, "meta": 原始条目}（含 unsupported 标记）"""
+    """卡名 → {"def": 卡定义, "meta": 原始条目}（含 unsupported / 保真度标记）"""
     out = {}
     for entry in _catalog_raw()["cards"]:
         cdef = _build_card(entry)
         unsupported = False
         reason = ""
+        derived = entry.get("provenance") == "dataset-derived"
         if isinstance(cdef, TrainerDef) and cdef.tag == "unsupported":
             unsupported, reason = True, entry.get("note", "引擎未实现")
         elif isinstance(cdef, PokemonDef):
@@ -127,8 +153,11 @@ def catalog() -> dict:
             if bad:
                 # 特性未实现不算替换（招式仍可用），仅记为近似
                 reason = entry.get("note", "特性未实现（保留招式）")
+        if derived and not reason:
+            reason = "由解析链自动生成（非人工逐卡校对，保真度近似）"
         out[entry["name"]] = {"def": cdef, "meta": entry,
-                              "unsupported": unsupported, "reason": reason}
+                              "unsupported": unsupported, "reason": reason,
+                              "derived": derived}
     return out
 
 

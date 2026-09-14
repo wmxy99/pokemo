@@ -81,7 +81,7 @@ RED_LINES = [
      "statement": "项目为社区非商业开源项目，不代表权利方，不得声称关联或获其背书。",
      "status": "enforced"},
     {"id": "C2", "title": "素材使用与标注",
-     "statement": ("卡牌名称、规则文本与卡牌图像**可在遵守 6.1 的前提下使用**，"
+     "statement": ("卡牌名称、规则文本与卡牌图像可在遵守 6.1 的前提下使用，"
                    "但须标注权利方出处；不复制、不传播与本研究无关的官方美术素材。"),
      "status": "enforced", "revised_from": "不使用官方卡图/卡表原文（v1.0）"},
     {"id": "C3", "title": "数据来源透明",
@@ -152,7 +152,7 @@ def _privacy_impl() -> dict:
             "rules": status.get("desensitize_rules", []),
             "audit_enabled": status.get("audit_enabled"),
             "audit_log": status.get("audit_log"),
-            "audit_content": "仅端点/模型/字符数/脱敏计数，**不记录原文**",
+            "audit_content": "仅端点/模型/字符数/脱敏计数，不记录原文",
         },
         "no_secondary_use": {
             "statement": "用户数据仅用于本服务运行（对战/训练/统计），不用于其它用途、"
@@ -179,6 +179,13 @@ def compliance(p: Principal = Depends(current_user)):
                 "decklist_text": "permitted_with_attribution",
                 "official_artwork_bundling": "not_included",
             },
+            # 6.1 原文与 C2(v1.1) 的口径关系（避免「不复制、不传播」被误读为
+            # 「卡牌名称/规则文本/图像一律不可用」——那与 C2 v1.1 修订相冲突）
+            "usage_policy_note": (
+                "6.1 原文中的「不复制、不传播官方卡牌图像与卡表原文」按红线 C2(v1.1) "
+                "解释为：不打包、不传播与本研究无关的官方美术素材。"
+                "卡牌名称、规则文本与卡牌图像在本研究范围内可用，"
+                "但必须显著标注权利方，且不得声称与权利方存在关联或获其背书。"),
             "attribution_required": True,
             "attribution_template": (
                 "卡牌名称 / 规则文本 / 图像版权归 Nintendo · Creatures Inc. · "
@@ -192,8 +199,10 @@ def compliance(p: Principal = Depends(current_user)):
         },
         "data_privacy": {"id": "6.2", **_privacy_impl()},
         "red_lines": RED_LINES,
-        "declaration": "Unofficial community project · Non-commercial · "
-                       "Pokémon © Nintendo/Creatures/GAME FREAK/TPC",
+    "declaration": "Unofficial community project · Non-commercial · "
+                   "Pokémon © Nintendo/Creatures/GAME FREAK/TPC",
+    "summary": ("非商用社区研究项目；卡牌名称/规则文本/图像可用但须标注权利方且不得声称"
+                "关联；AI 生成内容显著标识；隐私数据加密传输存储并支持完全本地化部署。"),
         "doc": str(DOC.relative_to(_REPO)).replace("\\", "/"),
         "doc_exists": DOC.exists(),
     }

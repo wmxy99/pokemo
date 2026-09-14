@@ -9,6 +9,7 @@ import BatchPage from './pages/BatchPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
 import DecksPage from './pages/DecksPage.jsx'
 import LibraryPage from './pages/LibraryPage.jsx'
+import CompliancePage from './pages/CompliancePage.jsx'
 import { DashboardPage, TrainingPage, UsersPage } from './pages/admin.jsx'
 
 const FRONT = [
@@ -17,6 +18,7 @@ const FRONT = [
   { key: 'stats', label: t('nav.stats') },
   { key: 'decks', label: t('nav.decks') },
   { key: 'library', label: t('nav.library') },
+  { key: 'compliance', label: t('nav.compliance') },
 ]
 const ADMIN = [
   { key: 'dash', label: '仪表盘 M6' },
@@ -79,7 +81,7 @@ function App() {
           onClick={() => { setZone('front'); setPage('battle') }}>{t('zone.front')} · 玩家</button>
         <button role="tab" aria-selected={zone === 'admin'}
           onClick={() => { setZone('admin'); setPage('dash') }}>{t('zone.admin')} · 工程</button>
-        <span className="app-switch-note">非商用 · 无官方卡图 · 差异透明（C1/C2/C5）</span>
+        <span className="app-switch-note">非商用 · 素材标注权利方 · 差异透明（C1/C2 v1.1/C5）</span>
       </div>
 
       <header className="site">
@@ -100,6 +102,7 @@ function App() {
           {page === 'stats' && <StatsPage onMsg={onMsg} onGoBatch={() => setPage('batch')} />}
           {page === 'decks' && <DecksPage onMsg={onMsg} onGoBattle={() => setPage('battle')} />}
           {page === 'library' && <LibraryPage onMsg={onMsg} />}
+          {page === 'compliance' && <CompliancePage />}
         </>)}
         {zone === 'admin' && (<>
           {page === 'dash' && <DashboardPage onMsg={onMsg} />}
@@ -126,7 +129,12 @@ function App() {
         <p>
           <b>6.2 数据隐私</b>：支持 HTTPS 加密传输与数据库存储加密、支持本地化部署；
           调用大模型 API 前对敏感信息脱敏，不将用户数据用于服务以外用途或向第三方提供。
-          <a href="/compliance" target="_blank" rel="noreferrer">查看完整合规声明 /compliance</a>
+          {'  '}
+          <button className="linklike" onClick={() => { setZone('front'); setPage('compliance') }}>
+            站内查看完整合规声明（6.1 / 6.2 / C1–C5）
+          </button>
+          {' · '}
+          <a href="/compliance" target="_blank" rel="noreferrer">原始 JSON /compliance</a>
         </p>
       </footer>
 

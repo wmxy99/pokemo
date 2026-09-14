@@ -111,12 +111,19 @@ def root():
 # 自动挑选**最新构建**的 dist*（受限环境对已存在文件写保护 → 用
 # VITE_OUTDIR=dist2/dist3/dist4… 重建后无需改代码即可生效）
 def _pick_web_dist():
+    """挑选**最新构建**的 dist*（按 index.html 的 mtime，而非目录 mtime）
+
+    真 bug 修复：原先按目录 mtime 取最大，但 Windows 上**覆盖已存在的
+    index.html 不会更新父目录 mtime** → 重新 `vite build` 到同一个 dist 后，
+    服务仍会挑到更早的 dist{N}，表现为「改了前端没生效」（且不易察觉）。
+    改按 index.html 自身的 mtime 判定，行为与直觉一致。
+    """
     root = _REPO / "apps" / "web"
     cands = [d for d in root.glob("dist*")
              if (d / "index.html").is_file()]
     if not cands:
         return None
-    return max(cands, key=lambda d: d.stat().st_mtime)
+    return max(cands, key=lambda d: (d / "index.html").stat().st_mtime)
 
 
 _WEB_DIST = _pick_web_dist()

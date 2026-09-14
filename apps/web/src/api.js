@@ -80,6 +80,9 @@ export const api = {
   },
   libraryStats: () => req('/cards/stats'),
   cardDetail: (id) => req(`/cards/${id}`),
+  // F9 合规声明（6.1 内容合规 / 6.2 数据隐私 / 红线 C1–C5）
+  compliance: () => req('/compliance'),
+  complianceAudit: (limit = 100) => req(`/compliance/audit?limit=${limit}`),
   // SSE 事件流 URL（EventSource 无法带 header → token 走 query）
   streamUrl: (path, params = {}) => {
     const q = new URLSearchParams(params)

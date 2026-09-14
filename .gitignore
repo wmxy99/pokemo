@@ -67,3 +67,15 @@ packages/card-db/data/db/
 !packages/card-db/data/cleaned/*.json
 !packages/card-db/data/cleaned/*.md
 apps/web/dist15/
+
+# E2E 运行产物（真实 Chrome 截图 + 结果 JSON；可用 node *_e2e.cjs 重新生成）
+# 说明：脚本默认把产物写到 cwd（apps/web），故按前缀忽略，避免污染仓库。
+apps/web/*.png
+apps/web/cmd_*.json
+apps/web/comp_*.json
+apps/web/lib_*.json
+apps/web/seq_*.json
+apps/web/zh_*.json
+apps/web/zhin_*.json
+apps/web/focus_*.json
+apps/web/batch_*.json

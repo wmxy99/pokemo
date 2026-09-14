@@ -239,3 +239,19 @@ footer.site p{margin:4px 0;max-width:1100px}
 .spec-pre{background:#F8FAFC;border:1px solid var(--line);border-radius:8px;padding:8px;
   max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 footer.site a{color:var(--brand);text-decoration:underline}
+
+/* F9 合规详情页（内嵌 6.1/6.2 声明与实现状态） */
+.compliance-wrap{max-width:1180px}
+.compliance-wrap h2{font-size:20px}
+.compliance-wrap h4{font-weight:700;color:var(--ink)}
+.compliance-wrap .tight{margin:4px 0 0;padding-left:18px}
+.compliance-wrap .tight li{margin:2px 0}
+.compliance-wrap .tbl th[scope="row"]{font-weight:600;color:var(--ink);vertical-align:top}
+.compliance-wrap .tbl td{vertical-align:top}
+.attr-quote{margin:4px 0 0;padding:10px 12px;border-left:3px solid var(--brand);
+  border-radius:0 8px 8px 0;background:var(--brand-tint);line-height:1.7}
+button.linklike{background:none;border:0;padding:0;color:var(--brand);text-decoration:underline;
+  cursor:pointer;font:inherit;min-height:0}
+button.linklike:hover{color:var(--brand-deep)}
+.usage-note{margin:0 0 8px;padding:8px 10px;border:1px solid var(--line);border-left:3px solid #F59E0B;
+  border-radius:0 8px 8px 0;background:#FFFBEB;line-height:1.65}

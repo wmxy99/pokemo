@@ -62,6 +62,20 @@ def _ci_half(p: float, n: int) -> float:
 from .compliance import DATA_DECLARATION as DECLARATION  # 统一声明（合规 6.1）
 
 
+def _turns_of(battle) -> int:
+    """Battle → 回合数（容错读取）
+
+    `Battle` 的字段名是 `turn_number`；**不要**用 `getattr(b, 'turn', 0)`
+    之类的「静默兜底」——字段名打错时它会悄悄返回 0，使「平均回合」恒为 0
+    而没有任何报错。这里显式取 `turn_number`，缺失即抛错（快速失败）。
+    """
+    try:
+        return int(battle.turn_number)
+    except AttributeError as e:              # noqa: PERF203
+        raise AttributeError(
+            "Battle 缺少 turn_number（接口变更？请同步 batch._turns_of）") from e
+
+
 def _run_pairs(job_id: str, pairs: list, games_each: int, seed0: int,
                total_override: int | None = None) -> dict:
     """执行 (label_a, da, label_b, db) × games_each；返回 result（含 cells）"""
@@ -86,7 +100,10 @@ def _run_pairs(job_id: str, pairs: list, games_each: int, seed0: int,
                 dr += 1
             else:
                 l += 1
-            turns += b.turn if hasattr(b, "turn") else 0
+            # 真 bug 修复：Battle 的回合字段是 `turn_number`，此前写 `b.turn`
+            # （不存在）→ 受 hasattr 兜底「静默吞掉」，导致报告/统计里的
+            # 「平均回合」恒为 0.0，且不会报错（最难发现的一类缺陷）。
+            turns += _turns_of(b)
             done += 1
             _progress[job_id] = {"done": done, "n": total,
                                  "pair": f"{la} vs {lb}"}

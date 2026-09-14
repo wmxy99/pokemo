@@ -390,6 +390,35 @@ class TestPoolMatrix(unittest.TestCase):
         self.assertGreaterEqual(len(s["matrix"]), 2)
         self.assertGreaterEqual(s["kpi"]["pool_jobs"], 1)
 
+    def test_avg_turns_not_silently_zero(self):
+        """回归：报告「平均回合」曾恒为 0（b.turn 字段名写错 + hasattr 静默兜底）
+
+        守卫方式：跑一个**必然打到分胜负**的短局对位，断言 avg_turns > 0
+        且等于逐局 turn_number 的均值——字段名再被打错就会立刻失败。
+        """
+        h = user_headers()
+        r = client.post("/batch/pool-jobs", headers=h, json={
+            "decks_a": ["lightning"], "decks_b": ["fire"],
+            "games_each": 3, "seed_start": 21})
+        self.assertEqual(r.status_code, 202, r.text)
+        jid = r.json()["id"]
+        done = _wait_job(jid, headers=h, timeout=120)
+        res = done["result"]
+        self.assertGreater(res["avg_turns"], 0,
+                           f"平均回合不应为 0：{res.get('avg_turns')}")
+        self.assertGreater(res["cells"][0]["avg_turns"], 0,
+                           "逐对位 avg_turns 不应为 0")
+        # 与引擎直接跑同一对位的结果交叉校验（口径一致）
+        from engine.simulator import run_match
+        from engine.agents import BaselineAI
+        from engine import decklib
+        turns = []
+        for i in range(3):
+            b = run_match(decklib.make_deck("lightning"), decklib.make_deck("fire"),
+                          BaselineAI("a"), BaselineAI("b"), seed=21 + i)
+            turns.append(b.turn_number)
+        self.assertAlmostEqual(res["avg_turns"], sum(turns) / len(turns), places=2)
+
 
 class TestSSE(unittest.TestCase):
     """SSE：批量/训练进度流（替代轮询）"""

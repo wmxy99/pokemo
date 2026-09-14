@@ -144,14 +144,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     // 报告 md 预览
     const jid = sub.text.match(/"(batch_[^"]+)"/)?.[1]
     if (jid) {
-      const rep = await page.evaluate(async (id) => {
-        const tk = localStorage.getItem('pokelab_token')
-        const r = await fetch(`/batch/jobs/${id}/report?format=md`,
-          { headers: { Authorization: 'Bearer ' + tk } })
-        return (await r.text()).slice(0, 400)
-      }, jid)
+      // 报告含「头部摘要 + 对位明细表」两段：中文卡组名出现在**表格**里，
+      // 截 400 字符会停在摘要段 → 误判为「报告没有中文卡组名」。
+      // 这里改为：轮询等到任务 done，再读取全文（仅断言关键中文名出现）。
+      let rep = ''
+      for (let i = 0; i < 20; i += 1) {
+        rep = await page.evaluate(async (id) => {
+          const tk = localStorage.getItem('pokelab_token')
+          const r = await fetch(`/batch/jobs/${id}/report?format=md`,
+            { headers: { Authorization: 'Bearer ' + tk } })
+          return await r.text()
+        }, jid)
+        if (/多龙巴鲁托ex/.test(rep) && /N的索罗亚克ex/.test(rep)) break
+        await sleep(1500)
+      }
       log('③ 报告 md 中文卡组名', /多龙巴鲁托ex/.test(rep) && /N的索罗亚克ex/.test(rep),
         { head: rep.split('\n').slice(0, 6) })
+      log('③b 报告平均回合非 0（b.turn 字段名回归守卫）',
+        !/平均回合：0\.0/.test(rep), { line: (rep.match(/总胜率[^\n]*/) || [''])[0] })
     }
 
     // ---- ④ 统计页：矩阵表头中文 ----

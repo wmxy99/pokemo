@@ -42,9 +42,33 @@ def main() -> int:
     ap.add_argument("--set-password", action="store_true",
                     help="交互式重设口令（不回显）")
     ap.add_argument("--list-admins", action="store_true")
+    ap.add_argument("--audit", action="store_true",
+                    help="库体检：列出哈希格式非法（永远登录不了）的账号")
     ap.add_argument("--purge-prefix", help="删除名称以该前缀开头的账号（测试残留清理）")
     ap.add_argument("--yes", action="store_true", help="确认破坏性操作")
     a = ap.parse_args()
+
+    if a.audit:
+        # 为什么需要：`password_hash` 格式非法（明文/空串/残缺）时
+        # `auth.verify_password` 恒返回 False —— 账号**静默失效**，登录只会得到
+        # 「用户名或密码错误」，从现象完全看不出是数据坏了。这里直接点名。
+        users = store.list_users()
+        bad = [(u["name"], u["role"]) for u in users
+               if not store.is_valid_password_hash(
+                   (store.get_user(u["name"]) or {}).get("password_hash"))]
+        admins = [u["name"] for u in users if u["role"] == "admin"]
+        print(f"库体检：账号 {len(users)} 个（管理员 {len(admins)}："
+              f"{'、'.join(admins) or '（无）'}）")
+        if not bad:
+            print("  · 口令哈希全部合法 ✅")
+            return 0
+        print(f"  · **{len(bad)} 个账号哈希非法 → 永远无法登录**：")
+        for n, r in bad:
+            print(f"      {n}（{r}）  ← 用 --user {n} --set-password 修复")
+        if any(r == "admin" for _, r in bad):
+            print("  · ⚠️ 其中**含管理员**：请尽快用 --set-password 重设，"
+                  "否则该实例无法经 API 管理")
+        return 0
 
     if a.list_admins:
         admins = [u["name"] for u in store.list_users() if u["role"] == "admin"]

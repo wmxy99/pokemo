@@ -1684,5 +1684,87 @@ class TestCommentary(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
 
+class TestPasswordHashGuard(unittest.TestCase):
+    """口令哈希写前校验
+
+    背景：`auth.verify_password` 只认 `pbkdf2_sha256$…`，遇到明文/空串恒返回
+    False —— 也就是**传错不报错、只造出一个永远登录不了的账号**。实例里若再没有
+    别的管理员，就等于把自己锁在门外。`adm1` 曾以明文 `pw123456` 落库、静默失效
+    （登录一律「用户名或密码错误」，从现象看不出是数据坏了），改密时才发现。
+    故在 `store` 写入侧主动拒绝，并给引导脚本加 `--audit` 体检。
+    """
+
+    def test_reject_plaintext_hash(self):
+        for bad in ("pw123456", "ad123456"):
+            with self.assertRaises(ValueError):
+                store.create_user("zz_guard_" + bad, bad, "user")
+
+    def test_reject_empty_and_none_hash(self):
+        for bad in ("", None, "   "):
+            with self.assertRaises(ValueError):
+                store.create_user("zz_guard_empty", bad, "user")
+
+    def test_reject_malformed_pbkdf2(self):
+        # 前缀对但结构残缺：缺段 / 迭代数非数字 / 非十六进制 / 空段
+        for bad in ("pbkdf2_sha256$200000$abcd",
+                    "pbkdf2_sha256$abc$aa$bb",
+                    "pbkdf2_sha256$200000$zz$bb",
+                    "pbkdf2_sha256$200000$aa$",
+                    "pbkdf2_sha256$200000$$bb"):
+            with self.assertRaises(ValueError):
+                store.create_user("zz_guard_bad", bad, "user")
+
+    def test_accept_real_hash(self):
+        import uuid
+        from apps.api.app import auth as _auth
+        name = "zz_guard_ok_" + uuid.uuid4().hex[:6]
+        store.create_user(name, _auth.hash_password("ad123456"), "user")
+        u = store.get_user(name)
+        self.assertTrue(store.is_valid_password_hash(u["password_hash"]))
+        self.assertTrue(_auth.verify_password("ad123456", u["password_hash"]))
+        store.delete_user(name)
+
+    def test_set_user_password_also_guarded(self):
+        import uuid
+        from apps.api.app import auth as _auth
+        name = "zz_guard_set_" + uuid.uuid4().hex[:6]
+        store.create_user(name, _auth.hash_password("ad123456"), "user")
+        # 明文被拒 → 原口令仍可用（一次失败不会把账号改坏）
+        with self.assertRaises(ValueError):
+            store.set_user_password(name, "newpassword")
+        self.assertTrue(_auth.verify_password(
+            "ad123456", store.get_user(name)["password_hash"]))
+        # 合法哈希被接受
+        store.set_user_password(name, _auth.hash_password("newpassword"))
+        self.assertTrue(_auth.verify_password(
+            "newpassword", store.get_user(name)["password_hash"]))
+        store.delete_user(name)
+
+    def test_audit_cli_flags_locked_account(self):
+        """`set_role.py --audit` 必须点名哈希非法的账号（且对管理员给警示）"""
+        import subprocess
+        import uuid
+        name = "zz_locked_" + uuid.uuid4().hex[:6]
+        # 绕过守卫直接写坏数据，模拟历史遗留状态
+        store._conn.execute(
+            "INSERT INTO users(name,role,quota_day,password_hash,created) "
+            "VALUES(?,?,10,?,?)", (name, "admin", "pw123456", time.time()))
+        store._conn.commit()
+        try:
+            script = (Path(__file__).resolve().parents[1]
+                      / "scripts" / "set_role.py")
+            out = subprocess.run(
+                [sys.executable, str(script), "--audit"],
+                capture_output=True, text=True, encoding="utf-8",
+                env={**os.environ, "POKELAB_DATA_DIR": str(_TEST_DATA_DIR)},
+                cwd=str(REPO))
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertIn(name, out.stdout, "体检未点名失效账号")
+            self.assertIn("永远无法登录", out.stdout)
+            self.assertIn("含管理员", out.stdout, "未对管理员失效给出警示")
+        finally:
+            store.delete_user(name)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

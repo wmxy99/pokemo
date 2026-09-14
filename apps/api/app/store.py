@@ -300,7 +300,38 @@ def list_decks(owner: str, limit: int = 100) -> list:
 
 
 # ---------- users ----------
+# 口令哈希的**唯一合法形态**（`auth.hash_password()` 的产物）。
+# 为什么要在这里校验：`auth.verify_password()` 只认这个格式，遇到明文/空串会直接
+# 返回 False——也就是说**传错不会报错，只会造出一个永远登录不了的账号**。
+# 实例里再没有别的管理员时就等于把自己锁在门外（`adm1` 曾以明文 `pw123456`
+# 落库，静默失效，直到改密时才被发现）。故此处**主动拒绝**，不依赖调用方自觉。
+_PW_HASH_PREFIX = "pbkdf2_sha256$"
+
+
+def is_valid_password_hash(value) -> bool:
+    """是否为 `auth.hash_password()` 产出的合法哈希（用于写前校验与库体检）"""
+    if not isinstance(value, str) or not value.startswith(_PW_HASH_PREFIX):
+        return False
+    parts = value.split("$")
+    if len(parts) != 4:
+        return False
+    _, iters, salt_hex, hash_hex = parts
+    try:
+        int(iters)
+        bytes.fromhex(salt_hex)
+        bytes.fromhex(hash_hex)
+    except (ValueError, TypeError):
+        return False
+    return bool(salt_hex) and bool(hash_hex)
+
+
 def create_user(name: str, password_hash: str, role: str = "user") -> None:
+    """新建账号（``password_hash`` 必须是 ``auth.hash_password()`` 的结果）"""
+    if not is_valid_password_hash(password_hash):
+        raise ValueError(
+            "password_hash 非法：必须用 auth.hash_password() 生成"
+            "（形如 pbkdf2_sha256$…）。传明文或空串会创建出**永远无法登录**的"
+            "账号，故此处直接拒绝。")
     with _lock:
         _conn.execute(
             "INSERT INTO users(name,role,quota_day,password_hash,created) "
@@ -372,45 +403,6 @@ def list_settings(prefix: str = "") -> list:
     return [dict(r) for r in rows]
 
 
-# ---------------- 键值设置（后台可视化配置用） ----------------
-# 用途：由后台「模型配置」页保存云端模型端点/模型名/密钥。
-# 约定：**含密值一律加密后再入库**（列 encrypted=1），读取时由调用方解密；
-#       本模块不做加解密（保持 store 只负责存取，避免各处各写一遍）。
-def get_setting(key: str) -> Optional[dict]:
-    """读取一条设置 → {"key","value","encrypted","updated","updated_by"}"""
-    with _lock:
-        row = _conn.execute("SELECT * FROM settings WHERE key=?",
-                            (key,)).fetchone()
-    return dict(row) if row else None
-
-
-def set_setting(key: str, value: str, *, encrypted: bool = False,
-                updated_by: str = "system") -> None:
-    with _lock:
-        _conn.execute(
-            "INSERT OR REPLACE INTO settings(key,value,encrypted,updated,"
-            "updated_by) VALUES(?,?,?,?,?)",
-            (key, value, 1 if encrypted else 0, now(), updated_by))
-        _conn.commit()
-
-
-def delete_setting(key: str) -> None:
-    with _lock:
-        _conn.execute("DELETE FROM settings WHERE key=?", (key,))
-        _conn.commit()
-
-
-def list_settings(prefix: str = "") -> list:
-    with _lock:
-        if prefix:
-            rows = _conn.execute(
-                "SELECT * FROM settings WHERE key LIKE ? ORDER BY key",
-                (prefix + "%",)).fetchall()
-        else:
-            rows = _conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
-    return [dict(r) for r in rows]
-
-
 def delete_user(name: str) -> bool:
     """删除账号（含其卡组/对局/任务归属记录保留但不再可登录）
 
@@ -424,16 +416,14 @@ def delete_user(name: str) -> bool:
 
 
 def set_user_password(name: str, password_hash: str) -> bool:
-    """重设口令哈希（由引导脚本调用；API 侧不暴露——改密应走认证流程）"""
-    with _lock:
-        cur = _conn.execute("UPDATE users SET password_hash=? WHERE name=?",
-                            (password_hash, name))
-        _conn.commit()
-        return cur.rowcount > 0
+    """重设口令哈希（由引导脚本调用；API 侧不暴露——改密应走认证流程）
 
-
-def set_user_password(name: str, password_hash: str) -> bool:
-    """重设口令哈希（由引导脚本调用；API 侧不暴露——改密应走认证流程）"""
+    与 ``create_user`` 同样做格式校验：一次手误就会把账号改成**永远登录不了**。
+    """
+    if not is_valid_password_hash(password_hash):
+        raise ValueError(
+            "password_hash 非法：必须用 auth.hash_password() 生成"
+            "（形如 pbkdf2_sha256$…）")
     with _lock:
         cur = _conn.execute("UPDATE users SET password_hash=? WHERE name=?",
                             (password_hash, name))

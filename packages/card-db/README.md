@@ -62,6 +62,10 @@ python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
 | `data/cleaned/cards_challenge.json` | **规范化卡库**（入库源，可版本管理） |
 | `data/cleaned/clean_report.md` | **清洗质量报告**（汇总 / 归一化项 / 问题清单 / 诚实标注） |
 | `data/db/pokelab.db` · `cards` 表 | upsert（幂等，按 name+series+number）；同时清理骨架期占位行 |
+| `data/cleaned/unmodeled_backlog.json` | **未建模动作清单**（机读快照，`coverage_backlog.py` 生成） |
+| `data/cleaned/unmodeled_registry.md` | **C5 永久差异登记**（B4/B5 逐条：子类/条目数/影响卡数/原因） |
+| `data/cleaned/coverage_report_*.md` | 覆盖率对比报告（`--compare before after` 产出增量） |
+| `engine/data/cards_pool_ext.json` | 扩展卡池（`gen_engine_pool.py` 生成，见上节） |
 
 **实测规模**：2022 行 → **1267 张卡**（宝可梦 1056 · 训练家 191 · 能量 20）·
 招式 1559 · 特性 223。
@@ -77,7 +81,31 @@ python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
 - **名称匹配键 `name_key`**：数据集内撇号混用（`N’s` 53 张 vs `N's` 142 张），
   归一键让匹配不受标点影响；基础能量按属性生成 `aliases`（`Basic {P} Energy`
   ↔ `Basic Psychic Energy`）；
-- 引擎自撰卡池按 `name_key`/别名回填 `name_zh` 与 `engine_ready`（36 张，其中 7 张靠别名）。
+- 引擎卡池（人工池 + 扩展池）按 `name_key`/别名回填 `name_zh` 与 `engine_status`：
+  **人工池** 40 张 → `mapped`（逐卡校对，其中 7 张靠别名命中）；
+  **扩展池** 328 张 → `approximated`（见下节）。库内 `engine_ready` 合计
+  **426 / 1267**（`mapped` 36 + `approximated` 390）。
+
+### 扩展卡池生成（`scripts/gen_engine_pool.py`）
+
+由清洗数据集 + K2 解析链自动生成 `engine/data/cards_pool_ext.json`，用于把
+「可浏览」扩到「可对战」：
+
+```bash
+cd packages/card-db && python scripts/gen_engine_pool.py            # 生成
+cd packages/card-db && python scripts/gen_engine_pool.py --dry-run  # 只统计不落盘
+```
+
+**准入与诚实口径**（比数量更重要）：
+
+- **严格准入**：仅收录「全部效果条目均已映射到引擎 tag」的卡——任一处未建模即
+  **整卡不收**（宁可少收，不留半可执行的卡）；
+- **排除 Mega ex**：被击倒取 3 张奖赏，引擎只建模 1/2 张，收进来会算错；
+- **`desc_zh` 留空**：源数据集为英文，**不把英文塞进中文字段**冒充翻译；
+- **`provenance=dataset-derived`**：装载侧据此把状态标为 `approximated`，
+  **不冒充**人工逐卡校对（人工池永远优先，同名时覆盖扩展池）；
+- 产物逐卡实证：390 个招式 + 全部特性/训练家穷举可执行，含池内卡的随机对局零
+  step 错误（见 `packages/engine/tests/test_v14_pool_ext.py`）。
 
 ## 数据与合规（红线）
 

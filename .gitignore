@@ -40,25 +40,15 @@ match_*.jsonl
 
 # web
 node_modules/
-apps/web/dist/
-apps/web/dist2/
-apps/web/dist3/
+# 构建产物：dist 与受限环境回退用的 dist2/dist3/…（见 apps/api/app/main.py
+# `_pick_web_dist()`——Windows 上 dist 被占用时改构建到 distN，服务自动挑最新）。
+# 用一条通配覆盖全部，避免每新建一个 distN 就要加一行（历史上漏过 dist15）。
+apps/web/dist*/
 apps/web/shots.json
 apps/web/shots.err
 apps/web/_write_memory.py
 apps/api/tests/_append_tests.py
 apps/api/data/
-apps/web/dist4/
-apps/web/dist5/
-apps/web/dist6/
-apps/web/dist7/
-apps/web/dist8/
-apps/web/dist9/
-apps/web/dist10/
-apps/web/dist11/
-apps/web/dist12/
-apps/web/dist13/
-apps/web/dist14/
 # 例外：M1 卡牌数据集清洗产物（项目自撰规范化数据 + 质量报告）
 # 注意：必须先解禁父目录 data/（git 不会进入被排除的目录），再单独排除 db/
 !packages/card-db/data/

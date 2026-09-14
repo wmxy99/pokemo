@@ -110,8 +110,9 @@ _EVOLVE_RE = re.compile(r"进化")
 _MODIFY_RE = re.compile(r"弱点|抗性|免疫|不能撤退|无法撤退")
 _PROVIDE_RE = re.compile(r"提供\s*(\d+)\s*点?\s*(火|超|草|恶|水|雷|斗|钢)?能量")
 _ACCEL_RE = re.compile(r"加速\s*(\d+)?\s*个?\s*能量")
-_DISCARD_ENERGY_RE = re.compile(r"弃(?:掉)?[^。；]*?(\d+)\s*个能量")
-_HEAL_RE = re.compile(r"回(?:复|收)\s*(\d+)\s*点")
+_DISCARD_ENERGY_RE = re.compile(
+    r"(?:弃(?:掉)?|移除|去掉|拿掉)[^。；]*?(\d+)\s*个能量")
+_HEAL_RE = re.compile(r"回(?:复|收)[^。；]{0,12}?(\d+)\s*点")
 _ATTACH_RE = re.compile(r"附(?:着)?\s*(\d+)?\s*[张枚个]?\s*(?:基本)?\s*"
                         r"(火|超|草|恶|水|雷|斗|钢)?\s*能量")
 # v1.3：「从弃牌堆/牌库取 N 张（基本X）能量」（能量词在动词之后）
@@ -868,9 +869,14 @@ def _parse_rule_zh(text: str, kind: str = "attack", name: str = "",
             actions.append(act("discard", int(m.group(1)), tgt))
 
     # 回复
+    # target：出现「对手」→ 回复对手宝可梦（active_opponent）；否则自身。
+    # （此前一律 self，对「回复对手…」类卡面是错的；K2 待补句式 ho_heal_hp 暴露了
+    #   这一分支的另一个问题：数字须允许与「回复」之间隔着受事对象，
+    #   如「回复自己宝可梦 30 点 HP」——见 _HEAL_RE。）
     m = _HEAL_RE.search(t_norm)
     if m:
-        actions.append(act("heal", int(m.group(1)), "self"))
+        tgt = "active_opponent" if "对手" in t_norm else "self"
+        actions.append(act("heal", int(m.group(1)), tgt))
 
     # 附能量（附 N 个X能量 / 提供 N 点X能量 / 加速 N 个能量 / 从弃牌堆取 N 张X能量）
     if has_attach and not any(a["type"] == "attach" and a.get("extra", {}).get(
@@ -911,8 +917,9 @@ def _parse_rule_zh(text: str, kind: str = "attack", name: str = "",
                              or "自己" in t_norm) else "active_opponent"
             actions.append(act("status", None, tgt, {"status": tag}))
 
-    # 互换 / 换下（自己 → self；对手/未指明 → active_opponent_bench）
-    if "互换" in t_norm or "换下" in t_norm or "交替" in t_norm:
+    # 互换 / 换下 / 交换（自己 → self；对手/未指明 → active_opponent_bench）
+    # 「交换」是「互换」的常见同义写法（K2 待补句式 ho_swap 即因只认「互换」而失配）。
+    if any(k in t_norm for k in ("互换", "换下", "交替", "交换")):
         mine = any(k in t_norm for k in ("自己", "己方", "我方", "自身的"))
         actions.append(act("switch", None,
                            "self" if mine else "active_opponent_bench"))

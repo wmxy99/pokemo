@@ -435,6 +435,62 @@ class TestGoldenSetIntegrity(unittest.TestCase):
             "应保留留出集以观测泛化")
 
 
+class TestZhSynonymPatterns(unittest.TestCase):
+    """中文同义句式回归（K2 报告「失败用例明细」登记的待补项）
+
+    这三条原为 K2 留出集（holdout）的失败用例，期望值由 `artifacts/k2_report.md`
+    明确给出。根因都是**只认一种措辞**：
+      · 「移除…N 个能量」——`_DISCARD_ENERGY_RE` 只认动词「弃/弃掉」；
+      · 「回复自己宝可梦 N 点 HP」——`_HEAL_RE` 要求数字**紧贴**「回复」，
+        中间隔着受事对象就失配；
+      · 「与…交换」——switch 分支只认「互换/换下/交替」，不认同义的「交换」。
+    修好后 holdout 准确率 70% → 100%。此处逐条固化，防止再退化。
+    """
+
+    def _spec(self, text):
+        res = E.parse_effects(text, kind="attack", name="T", backend="rule")
+        return (res["specs"] or [None])[0], res["errors"]
+
+    def _acts(self, spec):
+        """{action_type: [amount, ...]} 与 {action_type: [target, ...]}"""
+        amt, tgt = {}, {}
+        for a in (spec or {}).get("actions", []):
+            amt.setdefault(a["type"], []).append(a.get("amount"))
+            if a.get("target"):
+                tgt.setdefault(a["type"], []).append(a["target"])
+        return amt, tgt
+
+    def test_remove_energy_synonym(self):
+        """「移除…N 个能量」= 弃能量（同义动词不可漏）"""
+        spec, errs = self._spec("移除对手战斗宝可梦身上的 1 个能量。")
+        self.assertEqual(errs, [])
+        amt, tgt = self._acts(spec)
+        self.assertEqual(amt.get("discard"), [1])
+        self.assertEqual(tgt.get("discard"), ["active_opponent"])
+
+    def test_swap_synonym(self):
+        """「交换」同义于「互换」"""
+        spec, errs = self._spec("将自己的后备宝可梦与战斗宝可梦交换。")
+        self.assertEqual(errs, [])
+        amt, tgt = self._acts(spec)
+        self.assertIn("switch", amt)
+        self.assertEqual(tgt.get("switch"), ["self"])
+
+    def test_heal_phrase_with_intervening_target(self):
+        """「回复 <受事对象> N 点 HP」——数字与动词之间允许有间隔"""
+        spec, errs = self._spec("回复自己宝可梦 30 点 HP。")
+        self.assertEqual(errs, [])
+        amt, tgt = self._acts(spec)
+        self.assertEqual(amt.get("heal"), [30])
+        self.assertEqual(tgt.get("heal"), ["self"])
+
+    def test_heal_target_follows_opponent_word(self):
+        """「回复对手…」应指向对手（此前一律 self，是错的）"""
+        spec, _ = self._spec("回复对手战斗宝可梦 30 点。")
+        _, tgt = self._acts(spec)
+        self.assertEqual(tgt.get("heal"), ["active_opponent"])
+
+
 class TestEvaluation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -453,6 +509,16 @@ class TestEvaluation(unittest.TestCase):
         self.assertGreater(self.ev["holdout_n"], 0)
         self.assertIsNotNone(self.ev["seen_strict_acc"])
         self.assertIsNotNone(self.ev["holdout_strict_acc"])
+
+    def test_holdout_acc_floor(self):
+        """留出集准确率下限
+
+        留出集是**未做针对性适配**的表述，比 seen 更能反映泛化。补句式的修复
+        应让它上升而不是靠 seen 掩盖——设下限防止回归（当前 100%）。
+        """
+        self.assertGreaterEqual(
+            self.ev["holdout_strict_acc"], 0.9,
+            f"留出集准确率退化：{self.ev['holdout_strict_acc']}")
 
     def test_failures_are_traceable(self):
         """失败用例必须给出可读 diff（便于补句式）"""

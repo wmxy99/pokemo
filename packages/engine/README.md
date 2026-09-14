@@ -36,15 +36,30 @@ python run_demo.py batch 200
 python run_demo.py dump 20260908
 ```
 
-## M1 · 真实卡池（X 版）与预设对手池 A1–A4
+## M1 · 真实卡池（v1.4 扩容）与预设对手池 A1–A4
 
-真实卡名 + 60 卡真实卡表以 **数据文件**形式随引擎分发（数据与代码分离）：
+真实卡名 + 60 卡真实卡表以 **数据文件**形式随引擎分发（数据与代码分离）。
+卡池分两层——**人工池**（逐卡校对）与**扩展池**（解析链自动生成）：
 
 | 文件 | 内容 |
 |---|---|
-| `engine/data/cards_real.json` | 真实卡池（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注）|
+| `engine/data/cards_real.json` | **人工池**：40 张（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注，逐卡人工校对）|
+| `engine/data/cards_pool_ext.json` | **扩展池**：328 张，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）|
 | `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta）|
 | `engine/reallib.py` | 加载器与组装：`catalog()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
+
+**规模与口径**（`reallib.catalog()`）：
+
+| 项 | 数值 |
+|---|---|
+| `catalog()` 可加载卡 | **346 张**（人工 40 + 扩展 306；两层有 22 个同名，**人工池优先**）|
+| 数据文件条目合计 | 368（40 + 328）|
+| 库内「引擎可对战」 | **426 / 1267**（`mapped` 36 + `approximated` 390，见 `GET /cards/stats`）|
+
+> **近似 ≠ 等价**：扩展池条目标为 `approximated`（解析链推导、未逐卡校对），
+> 与人工池的 `mapped` 在 C5 差异透明口径下**必须区分**，不可混为一谈。
+> 生成器：`packages/card-db/scripts/gen_engine_pool.py`（严格准入——任一效果未建模
+> 即整卡不收；排除 Mega ex；`desc_zh` 留空而非塞英文）。
 
 ```python
 from engine import decklib, reallib
@@ -72,28 +87,46 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 
 > 受限环境（既有文件写保护）会自动回退到用户目录并打印实际库路径。
 
-## 规则引擎能力（v0.2 · E1/E2/E4 已并入）
+## 规则引擎能力（v1.4 · E1–E5 + B4 机制）
 
 | 机制 | 实现 |
 |------|------|
 | 回合状态机 | 开始（状态检查→抽卡）→ 主阶段 → 结束换边；攻击即结束回合（简化） |
-| 动作 | 上基础/附能量(每回合1)/撤退/攻击/**进化(E2)**/**特性(E3)**/**训练家(E4)**/结束；统一 `legal_actions` 合法性校验 |
-| 伤害结算 | 基础伤害 → 弱点 ×2 → 抗性 −30（下限 0） |
+| 动作 | 上基础/附能量(每回合1)/撤退/攻击/**进化(E2)**/**特性(E3)**/**训练家(E4)**/**目标选择(E5)**/结束；统一 `legal_actions` 合法性校验 |
+| 伤害结算 | 基础伤害 → 弱点 ×2 → 抗性 −30（下限 0）→ **护盾减免**（见下） |
 | **彩色能量(E1)** | 场上能量按 `{type:count}` 存储；招式 cost 支持 `[(fire,1),(psychic,1)]`；无色 cost 可被任意彩色能支付；攻击不弃能、撤退扣能无色优先 |
 | **进化(E2)** | stage 0/1/2 + evolves_from 链；本回合刚放置/进化不可再进化；进化保留能量与伤害、清除特殊状态 |
 | **特性(E3)** | `AbilityDef(location=field/hand)`：field 每回合一次（ability_used，回合重置）；hand 弃卡发动。首批 tag：`recon:n`(检视顶n取1放底) · `cursed:hp`(弃自身→指定对手宝可梦 hp 指示物伤) |
 | **训练家(E4)** | `poffin`(检索2基础铺后备) · `ultra_ball`(弃2检索) · `hammer`(抛币弃对手能) · `boss`(拉后备，supporter)；**supporter 每回合一次，item 不限次** |
+| **抛币(B4)** | `coin:heads:<tag>` / `coin:tails:<tag>` / `coin_each:N\|<counter>:<side>:<tag>`；**一枚币只掷一次**并把结果复用于全部子效果（避免多次随机的语义偏差） |
+| **伤害修正(B4)** | `dmg_plus:N[:per:<counter>][:if:<cond>]` · `dmg_zero` · `ignore_weakness` · `ignore_resistance`；在**伤害结算之前**统一求值 |
+| **护盾(B4)** | `shield:reduce:N` · `shield:prevent_all`（在弱抗**之后**结算；持续到该玩家下个回合开始自动失效） |
+| **被动静态(B4)** | `passive:bench_immune`（仅在后备时免疫招式伤害与效果） |
+| **其他(B4)** | `draw_to:N`(抽到指定手牌数) · `discard:N\|all` · `move_damage:N\|all` · `attach:N[:type][:zone]` · `evolve_from_deck`(招式内检索进化) |
+| **计数源/条件(B4)** | 计数源 22 个 + 条件 6 个（**只取公开信息**）；未知计数源**抛错**而非静默按 0 |
 | 特殊状态 | 中毒(−10/回合) · 烧伤(−20/回合) · 睡眠(抛币醒) · 麻痹(检查阶段恢复) · 混乱(攻击抛币，反面自伤 30 攻击失败；正面攻击后解除)；睡/麻禁攻禁撤 |
-| 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负） |
+| 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负）；**被招式击倒**的标记按方计数，供下回合条件加伤使用 |
 | 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库；超 `max_turns` 判平 |
-| 招式效果 tag | poison/burn/sleep/paralyze/confuse · spread:n:per(散布) · heal · self(反伤) · draw |
+| 招式效果 tag | 状态 5 种 · `spread_free:N`(任意分配) · `spread:N:per`(随机散布) · `heal:N` · `self:N`(反伤) · `draw:N` · `discard/…` · `switch_self` · `gust` · `attach:N[:type]` · `move_damage:N` · 以及上列 B4 各家族 |
 | 确定性 | `random.Random(seed)` 全驱动：同 seed → 同事件序列（有单测） |
 | 事件日志 | 结构化 dict 序列 → `matches.events_log` JSONL 可直接落库 |
+
+> tag 全集以 `engine/data/cards_real.json` 的 `meta.engine_tags` 为准（该文件随代码
+> 更新，是 tag 的**权威清单**）。覆盖面：未建模条目 1144 → 695（−39.2%），
+> B4 批次 212 → 54；余量（特性封锁/场地/依赖引擎外信息的缩放）语义逐卡不同，
+> 逐条登记在 `packages/card-db/data/cleaned/unmodeled_registry.md`。
 
 ## 招式/特性效果文本（中文，desc_zh）
 
 `cards_real.json` v1.2 起为**全部 26 个招式**与 **8 个特性**补 `desc_zh`（中文自述转写，
 严禁逐字复制官方文案），基本能量亦补「提供 N 点X能量」。
+
+> **中文覆盖的诚实口径（重要）**：中文名/中文效果**只有人工池有**。
+> 扩展池 328 张的 `name_zh` / `desc_zh` 为**空**——源数据集
+> （`pokemon-tcg-ai-battle-challenge-strategy`）本身是英文，我们没有第二份中文语料，
+> 因此**不把英文塞进中文字段**冒充翻译。展示层按「中文优先、回退英文原文」处理
+> （`display` / `display_desc`），卡库页对扩展池卡会显示英文原名与英文效果。
+> 全库中文名覆盖：**36 / 1267**（即人工池命中的部分）。
 
 | 层 | 字段 |
 |---|---|

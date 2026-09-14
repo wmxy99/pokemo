@@ -159,6 +159,29 @@ curl -X POST localhost:8000/battles/$BID/actions -H "Authorization: Bearer $TK" 
 > 预设卡表来自 `packages/engine/engine/data/{cards_real,decklists}.json`（M1 卡池补齐）；
 > 引擎未实现的卡在对战时以基础能量占位并在响应/报告中逐卡标注。
 
+### 卡库浏览（F2 · M1 清洗入库 1267 张卡）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/cards` | 分页列表：`q`（中/英/日，忽略标点）、`supertype`、`type`、`subtype`、`series`、`engine_ready`、`sort`(id/name/hp/series)、`page`/`page_size`(≤200) |
+| GET | `/cards/{id}` | 卡详情：招式（费用/伤害/效果）+ 特性 + 卡面元数据 + `rules_text` |
+| GET | `/cards/stats` | 卡库总览：构成 / 系列分布 / 招式特性数 / **引擎覆盖率** |
+
+```bash
+curl "localhost:8000/cards?q=dragapult"                      # 英文
+curl "localhost:8000/cards?q=%E5%A4%9A%E9%BE%99"             # 中文「多龙」
+curl "localhost:8000/cards?supertype=Trainer&series=TWM"
+curl "localhost:8000/cards?engine_ready=true"                # 仅引擎可对战（36 张）
+curl "localhost:8000/cards/stats"
+```
+
+> - **`engine_ready` 如实暴露**：卡库 1267 张中仅 36 张引擎已建模，其余**可浏览/可组卡
+>   但不可对战**（UI 与导入校验据此显示灰名单，PRD C5 差异透明）；
+> - 数据源为 `packages/card-db/data/db/pokelab.db`，**只读** + mtime 缓存；
+>   更新走 ETL 脚本（见 `packages/card-db/README.md`）；
+> - 卡池匹配（`/decks/import`）已接入该卡库并按 `name_key`/别名归一，
+>   F3 可识别卡名从 40 张提升到 1267 张。
+
 ## 4. 训练任务管理（M2/M6）
 
 > 训练在**独立子进程**执行仓库内 `examples/run_k1_longtrain.py`（BC→PPO vs 基线→冻结快照→MCTS 蒸馏 课程），API 仅做编排/监控/取消，训练产物隔离到数据目录 `train_jobs/`（见 §5）。

@@ -1048,5 +1048,122 @@ class TestSequenceCommands(unittest.TestCase):
         self.assertTrue(j["stopped"])
 
 
+class TestCardLibrary(unittest.TestCase):
+    """卡库浏览（F2/M1）：清洗入库的 1267 张卡 —— 列表/搜索/筛选/详情/统计"""
+
+    def test_list_pagination(self):
+        h = user_headers()
+        r = client.get("/cards?page_size=10", headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        self.assertGreater(j["total"], 1000)
+        self.assertEqual(len(j["items"]), 10)
+        self.assertEqual(j["page"], 1)
+        self.assertGreaterEqual(j["pages"], 100)
+        self.assertIn("Unofficial", j["declaration"])
+        item = j["items"][0]
+        for k in ("id", "name", "supertype", "types", "engine_ready"):
+            self.assertIn(k, item)
+
+    def test_page_2_differs(self):
+        h = user_headers()
+        p1 = client.get("/cards?page_size=10&page=1", headers=h).json()
+        p2 = client.get("/cards?page_size=10&page=2", headers=h).json()
+        self.assertNotEqual([x["id"] for x in p1["items"]],
+                            [x["id"] for x in p2["items"]])
+
+    def test_search_en_zh_and_normalized(self):
+        h = user_headers()
+        en = client.get("/cards?q=dragapult", headers=h).json()
+        self.assertEqual(en["total"], 1)
+        self.assertEqual(en["items"][0]["name"], "Dragapult ex")
+        zh = client.get("/cards?q=多龙", headers=h).json()
+        self.assertGreaterEqual(zh["total"], 3)
+        # 归一匹配：撇号/空格差异不影响（N’s → nszoroarkex）
+        nm = client.get("/cards?q=nszoroarkex", headers=h).json()
+        self.assertEqual(nm["total"], 1)
+        self.assertIn("Zoroark", nm["items"][0]["name"])
+
+    def test_filters(self):
+        h = user_headers()
+        tr = client.get("/cards?supertype=Trainer&page_size=5", headers=h).json()
+        self.assertTrue(all(x["supertype"] == "Trainer" for x in tr["items"]))
+        self.assertGreater(tr["total"], 100)
+        ps = client.get("/cards?type=psychic&supertype=Pokemon&page_size=5",
+                        headers=h).json()
+        self.assertTrue(all("psychic" in x["types"] for x in ps["items"]))
+        ready = client.get("/cards?engine_ready=true&page_size=5",
+                           headers=h).json()
+        self.assertTrue(all(x["engine_ready"] for x in ready["items"]))
+        self.assertGreater(ready["total"], 10)
+        pend = client.get("/cards?engine_ready=false", headers=h).json()
+        self.assertEqual(ready["total"] + pend["total"],
+                         client.get("/cards", headers=h).json()["total"])
+
+    def test_sort_and_invalid_page(self):
+        h = user_headers()
+        by_name = client.get("/cards?sort=name&page_size=5", headers=h).json()
+        names = [x["name"].lower() for x in by_name["items"]]
+        self.assertEqual(names, sorted(names))
+        bad = client.get("/cards?page=0", headers=h)
+        self.assertEqual(bad.status_code, 422)          # 分页参数校验
+
+    def test_detail_and_404(self):
+        h = user_headers()
+        lst = client.get("/cards?q=dragapult", headers=h).json()["items"][0]
+        d = client.get(f"/cards/{lst['id']}", headers=h).json()
+        self.assertEqual(d["name"], "Dragapult ex")
+        self.assertEqual(d["hp"], 320)
+        self.assertEqual(len(d["attacks"]), 2)
+        atk = next(a for a in d["attacks"] if a["name"] == "Phantom Dive")
+        self.assertEqual(sorted(atk["cost"]), ["fire", "psychic"])
+        self.assertEqual(atk["damage"], 200)
+        self.assertEqual(client.get("/cards/99999999", headers=h).status_code, 404)
+
+    def test_stats(self):
+        h = user_headers()
+        s = client.get("/cards/stats", headers=h).json()
+        self.assertGreater(s["total"], 1000)
+        self.assertEqual(s["total"], sum(s["by_supertype"].values()))
+        self.assertGreater(s["attacks_total"], 1000)
+        self.assertGreater(s["abilities_total"], 100)
+        self.assertLess(s["engine_coverage"], 1.0)
+        self.assertIn("不可对战", s["note"])
+
+    def test_deck_import_matches_library_only_card(self):
+        """仅卡库收录（引擎未建模）的卡应被**识别**并如实标注为灰名单"""
+        h = user_headers()
+        text = "\n".join([
+            "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",
+            "4 Unfair Stamp", "4 Hyper Aroma", "8 Basic {P} Energy",
+            "8 Basic {R} Energy", "4 好朋友宝芬", "4 高级球", "4 破坏之锤",
+            "2 老大的指令", "3 博士的研究", "4 奇树", "2 神奇糖果",
+            "4 Night Stretcher", "4 Counter Catcher",
+        ])
+        r = client.post("/decks/import", headers=h, json={"text": text})
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        by = {e["name"]: e for e in j["parsed"]}
+        self.assertTrue(by["Unfair Stamp"]["matched"], "卡库独有卡应被识别")
+        self.assertFalse(by["Unfair Stamp"]["meta"]["engine_ready"])
+        self.assertEqual(by["Unfair Stamp"]["meta"]["source"], "card-db")
+        self.assertTrue(any("引擎未实现卡" in w for w in j["warnings"]), j["warnings"])
+        # engine_ready 统计不再恒等于总数（此前的漏算已修）
+        self.assertGreater(j["summary"]["not_implemented"], 0)
+        self.assertLess(j["summary"]["engine_ready"], j["summary"]["total"])
+
+    def test_basic_energy_alias_matches_both_namings(self):
+        """`Basic {P} Energy`（数据集命名）与 `Basic Psychic Energy`（既有命名）都能命中"""
+        h = user_headers()
+        for nm in ("Basic {P} Energy", "Basic Psychic Energy"):
+            r = client.post("/decks/import", headers=h,
+                            json={"text": f"4 {nm}\n4 多龙梅西亚\n4 好朋友宝芬"})
+            j = r.json()
+            hit = [e for e in j["parsed"] if e["name"] == nm]
+            self.assertTrue(hit and hit[0]["matched"], f"{nm} 未命中：{j['parsed']}")
+            meta = hit[0]["meta"] or {}
+            self.assertTrue(meta.get("is_basic_energy"), f"{nm} 未标记为基本能量")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

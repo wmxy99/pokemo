@@ -8,6 +8,7 @@ import BattlePage from './pages/BattlePage.jsx'
 import BatchPage from './pages/BatchPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
 import DecksPage from './pages/DecksPage.jsx'
+import LibraryPage from './pages/LibraryPage.jsx'
 import { DashboardPage, TrainingPage, UsersPage } from './pages/admin.jsx'
 
 const FRONT = [
@@ -15,6 +16,7 @@ const FRONT = [
   { key: 'batch', label: t('nav.batch') },
   { key: 'stats', label: t('nav.stats') },
   { key: 'decks', label: t('nav.decks') },
+  { key: 'library', label: t('nav.library') },
 ]
 const ADMIN = [
   { key: 'dash', label: '仪表盘 M6' },
@@ -97,6 +99,7 @@ function App() {
           {page === 'batch' && <BatchPage onMsg={onMsg} />}
           {page === 'stats' && <StatsPage onMsg={onMsg} onGoBatch={() => setPage('batch')} />}
           {page === 'decks' && <DecksPage onMsg={onMsg} onGoBattle={() => setPage('battle')} />}
+          {page === 'library' && <LibraryPage onMsg={onMsg} />}
         </>)}
         {zone === 'admin' && (<>
           {page === 'dash' && <DashboardPage onMsg={onMsg} />}

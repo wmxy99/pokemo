@@ -58,3 +58,11 @@ apps/web/dist10/
 apps/web/dist11/
 apps/web/dist12/
 apps/web/dist13/
+apps/web/dist14/
+# 例外：M1 卡牌数据集清洗产物（项目自撰规范化数据 + 质量报告）
+# 注意：必须先解禁父目录 data/（git 不会进入被排除的目录），再单独排除 db/
+!packages/card-db/data/
+packages/card-db/data/db/
+!packages/card-db/data/cleaned/
+!packages/card-db/data/cleaned/*.json
+!packages/card-db/data/cleaned/*.md

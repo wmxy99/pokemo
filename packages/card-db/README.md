@@ -34,6 +34,42 @@ $py = "D:\anconda\envs\pokemo\python.exe"
 & $py scripts/parse_effects.py --card-id 1
 ```
 
+## 卡牌数据集清洗与入库（M1 卡池补齐）
+
+数据源：`pokemon-tcg-ai-battle-challenge-strategy.zip`（EN + JP Card Data.csv，
+**一行一招式/特性**；zip 内 4 份卡 ID PDF 体积大，与本流程无关）。
+
+```bash
+cd packages/card-db
+python scripts/import_challenge_dataset.py --zip <path.zip>      # 清洗 + 入库
+python scripts/import_challenge_dataset.py --zip <path.zip> --dry-run   # 只看清洗结果
+python scripts/import_challenge_dataset.py --csv-dir <解压目录>   # 用已解压 CSV
+```
+
+产物：
+
+| 产物 | 说明 |
+|---|---|
+| `data/cleaned/cards_challenge.json` | **规范化卡库**（入库源，可版本管理） |
+| `data/cleaned/clean_report.md` | **清洗质量报告**（汇总 / 归一化项 / 问题清单 / 诚实标注） |
+| `data/db/pokelab.db` · `cards` 表 | upsert（幂等，按 name+series+number）；同时清理骨架期占位行 |
+
+**实测规模**：2022 行 → **1267 张卡**（宝可梦 1056 · 训练家 191 · 能量 20）·
+招式 1559 · 特性 223。
+
+清洗规则要点（详见 `clean_report.md`）：
+
+- `n/a` / 空串 / `-` → `null`（不再伪装成字符串）；
+- 能量符号归一：`●`→无色、`{G}…{C}`→属性代码、`{A}`→`any`、`{Team Rocket}`→`team_rocket`；
+- 费用 `●`+`{X}` 混排 → 有序能量表 + `cost_total`；
+- 伤害：`120`→fixed、`20×`→multiplier、`-120`→variable（原值留在 `raw`）；
+- `[Ability] X` → 特性；`[Tera]` → 规则文本（不误当招式）；
+- 同 Card ID 多行 → 聚合为一卡；EN+JP 按行序合并 → `name` + `name_ja`；
+- **名称匹配键 `name_key`**：数据集内撇号混用（`N’s` 53 张 vs `N's` 142 张），
+  归一键让匹配不受标点影响；基础能量按属性生成 `aliases`（`Basic {P} Energy`
+  ↔ `Basic Psychic Energy`）；
+- 引擎自撰卡池按 `name_key`/别名回填 `name_zh` 与 `engine_ready`（36 张，其中 7 张靠别名）。
+
 ## 数据与合规（红线）
 
 - 仓库**不包含**任何卡牌/规则文本数据（Kaggle 竞赛数据禁再分发；规则书版权属 TPCi）；

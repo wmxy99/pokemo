@@ -84,11 +84,13 @@ from .batch import router as batch_router      # noqa: E402
 from .train import router as train_router      # noqa: E402
 from .decks import router as decks_router      # noqa: E402
 from .stats import router as stats_router      # noqa: E402
+from .library import router as library_router  # noqa: E402
 app.include_router(battles_router)
 app.include_router(batch_router)
 app.include_router(train_router)
 app.include_router(decks_router)
 app.include_router(stats_router)
+app.include_router(library_router)
 
 
 @app.get("/", tags=["meta"])

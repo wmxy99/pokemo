@@ -69,6 +69,17 @@ export const api = {
   watchdog: () => req('/stats/watchdog'),
   // F7 卡组池矩阵（多对位批量任务）
   submitPool: (payload) => req('/batch/pool-jobs', { method: 'POST', body: payload }),
+  // F2 卡库（M1 清洗入库的 1267 张卡）
+  libraryCards: (params = {}) => {
+    const q = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') q.set(k, v)
+    })
+    const qs = q.toString()
+    return req('/cards' + (qs ? `?${qs}` : ''))
+  },
+  libraryStats: () => req('/cards/stats'),
+  cardDetail: (id) => req(`/cards/${id}`),
   // SSE 事件流 URL（EventSource 无法带 header → token 走 query）
   streamUrl: (path, params = {}) => {
     const q = new URLSearchParams(params)

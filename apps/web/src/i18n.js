@@ -2,7 +2,8 @@
 const DICT = {
   zh: {
     'nav.battle': '对战', 'nav.batch': '批量对战', 'nav.stats': '统计报告',
-    'nav.decks': '卡组管理', 'zone.front': '前台', 'zone.admin': '后台',
+    'nav.decks': '卡组管理', 'nav.library': '卡库',
+    'zone.front': '前台', 'zone.admin': '后台',
     'btn.login': '登录 / 注册', 'btn.logout': '退出', 'btn.start': '开始对局',
     'btn.restart': '重开对局', 'btn.submit': '提交任务', 'btn.cancel': '取消（保留已完成）',
     'btn.export': '导出', 'btn.retry': '重试', 'btn.parse': '解析并校验',
@@ -19,7 +20,8 @@ const DICT = {
   },
   en: {
     'nav.battle': 'Battle', 'nav.batch': 'Batch', 'nav.stats': 'Stats',
-    'nav.decks': 'Decks', 'zone.front': 'Front', 'zone.admin': 'Admin',
+    'nav.decks': 'Decks', 'nav.library': 'Library',
+    'zone.front': 'Front', 'zone.admin': 'Admin',
     'btn.login': 'Sign in / Register', 'btn.logout': 'Sign out',
     'btn.start': 'Start match', 'btn.restart': 'Restart', 'btn.submit': 'Submit',
     'btn.cancel': 'Cancel (keep partial)', 'btn.export': 'Export',

@@ -41,6 +41,17 @@ _POOL: dict | None = None
 _POOL_OBJ: dict = {}          # name(lower) -> 引擎卡**定义**（PokemonDef/TrainerDef/EnergyDef）
 
 
+def _norm_key(name: str) -> str:
+    """名称匹配键：小写 + 撇号归一 + 去非字母数字
+
+    数据集内撇号混用（``N’s Zoroark ex`` vs ``N's Zoroark ex``），
+    归一后才能与既有卡池/卡表对齐（与 ETL 的 ``name_key`` 同规则）。
+    """
+    s = (name or "").strip().lower()
+    s = s.replace("’", "'").replace("‘", "'").replace("`", "'")
+    return "".join(ch for ch in s if ch.isalnum())
+
+
 def _ref_of(cdef):
     """卡定义 → 全新的引用实例（每张牌独立，避免多份共享同一 ref 对象）"""
     from engine.cards import (EnergyDef, EnergyRef, PokeRef, PokemonDef,
@@ -144,21 +155,49 @@ def _pool() -> dict:
     except Exception:
         pass
 
-    # 3) card-db 补充（本地库；仅补名称存在性）
+    # 3) card-db 卡库补充（M1 清洗入库的 1267 张卡；仅补名称存在性与元数据）
+    #    引擎已建模的卡（前面步骤已注册）**优先**，此处只补空缺。
     try:
+        import json as _json
         import sqlite3
-        dbp = repo.parent / "pokelab-data" / "data" / "db" / "pokelab.db"
+        dbp = (repo / "packages" / "card-db" / "data" / "db" / "pokelab.db")
+        if not dbp.exists():
+            dbp = repo.parent / "pokelab-data" / "data" / "db" / "pokelab.db"
         if dbp.exists():
-            con = sqlite3.connect(str(dbp))
-            for name, st in con.execute("SELECT name,supertype FROM cards"):
+            con = sqlite3.connect(f"file:{dbp}?mode=ro", uri=True)
+            for name, st, ej in con.execute(
+                    "SELECT name,supertype,effects_json FROM cards"):
                 key = (name or "").lower()
-                if key and key not in out:
-                    kind = {"Pokemon": "pokemon", "Trainer": "trainer",
-                            "Energy": "energy"}.get(st, "unknown")
-                    out[key] = {"kind": kind, "name": name, "source": "card-db",
-                                "is_basic": kind == "pokemon",
-                                "engine_ready": False,
-                                "note": "仅在卡库登记，未进入引擎卡池"}
+                if not key:
+                    continue
+                lib = {}
+                try:
+                    lib = (_json.loads(ej or "{}").get("library") or {})
+                except Exception:                              # noqa: BLE001
+                    lib = {}
+                kind = lib.get("kind") or {
+                    "Pokemon": "pokemon", "Trainer": "trainer",
+                    "Energy": "energy"}.get(st, "unknown")
+                meta = {
+                    "kind": kind, "name": name, "source": "card-db",
+                    "is_basic": bool(lib.get("is_basic")
+                                     or (kind == "pokemon"
+                                         and lib.get("stage") is None
+                                         and st == "Pokemon"
+                                         and not lib.get("subtype"))),
+                    "is_basic_energy": bool(lib.get("is_basic_energy")),
+                    "name_zh": lib.get("name_zh") or "",
+                    "engine_ready": bool(lib.get("engine_ready")),
+                    "note": ("" if lib.get("engine_ready")
+                             else "卡库已收录，引擎未建模（不可对战）"),
+                }
+                # 主键 + 归一键 + 别名（撇号/基础能量命名差异）
+                keys = [key, _norm_key(name)] + [
+                    (al or "").lower() for al in (lib.get("aliases") or [])]
+                keys += [_norm_key(al) for al in (lib.get("aliases") or [])]
+                for k in keys:
+                    if k and k not in out:
+                        out[k] = meta
             con.close()
     except Exception:
         pass
@@ -204,7 +243,8 @@ def _parse(text: str) -> tuple[list, list]:
     pool = _pool()
     for e in entries:
         raw = e["name"]
-        meta = pool.get(raw.lower()) or pool.get(raw.strip())
+        meta = (pool.get(raw.lower()) or pool.get(raw.strip())
+                or pool.get(_norm_key(raw)))
         e["matched"] = bool(meta)
         e["meta"] = meta
         if meta:
@@ -277,8 +317,10 @@ def validate(text: str) -> dict:
                         " → 含此类卡的卡组暂不可对战")
 
     # M1：卡名已收录但引擎未实现（tag=unsupported）→ 对战时可占位替换，显式告知
-    not_impl = sorted({display_of.get(k, k) for k, m in meta_of.items()
-                       if m and not m.get("engine_ready", True)})
+    #   注意：按 **canonical 键**统计（display 名与 by_name 键不同域，混用会漏算）
+    not_impl_keys = {k for k, m in meta_of.items()
+                     if m and not m.get("engine_ready", True)}
+    not_impl = sorted({display_of.get(k, k) for k in not_impl_keys})
     if not_impl:
         warnings.append("引擎未实现卡（M1 灰名单，对战时以基础能量占位）：" +
                         "、".join(not_impl[:8]) +
@@ -292,9 +334,8 @@ def validate(text: str) -> dict:
         "energy": kinds.get("energy", 0),
         "unknown": kinds.get("unknown", 0),
         "basics": len(basics),
-        "engine_ready": total - sum(
-            by_name[k] for k in not_impl),
-        "not_implemented": sum(by_name[k] for k in not_impl),
+        "engine_ready": total - sum(by_name[k] for k in not_impl_keys),
+        "not_implemented": sum(by_name[k] for k in not_impl_keys),
         "battle_ready": bool(basics) and not unmatched,
     }
     return {"ok": not errors, "errors": errors, "warnings": warnings,

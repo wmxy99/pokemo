@@ -44,7 +44,16 @@ cd packages/card-db
 python scripts/import_challenge_dataset.py --zip <path.zip>      # 清洗 + 入库
 python scripts/import_challenge_dataset.py --zip <path.zip> --dry-run   # 只看清洗结果
 python scripts/import_challenge_dataset.py --csv-dir <解压目录>   # 用已解压 CSV
+# 附 K2 效果解析（机器生成 → 带 AI 标识；合规 6.1）
+python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
 ```
+
+**实测解析覆盖**（rule 后端）：解析卡 1119 · 条目 1481 · 可映射引擎 tag 241 ·
+**未建模动作 1144**（= 引擎待建模清单，见 `clean_report.md` §4）。
+
+**卡图（可选）**：在 `data/card_images.json` 提供 `{"TWM-130": "<url>"}` 或按卡名映射，
+入库写入 `cards.image_url`；脚本**不抓取图像**，URL 由使用者提供并自负合规责任
+（合规 6.1：可用但须标注权利方）。
 
 产物：
 

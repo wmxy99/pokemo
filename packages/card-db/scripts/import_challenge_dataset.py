@@ -223,7 +223,8 @@ def is_special_rule_only(name: str, kind: str, effect: str | None) -> bool:
 
 
 def build_card(rows: list[dict], jp_rows: list[dict], KE: list[str],
-               engine_index: dict, issues: dict) -> dict:
+               engine_index: dict, issues: dict,
+               images: dict | None = None) -> dict:
     """同一 Card ID 的多行 → 一张卡"""
     r0 = rows[0]
     name = (r0[KE[1]] or "").strip()
@@ -291,6 +292,10 @@ def build_card(rows: list[dict], jp_rows: list[dict], KE: list[str],
         "other_text": "\n\n".join(other_texts) or None,
         "engine_ready": False,
         "source": SOURCE_TAG,
+        # 卡图引用（可选侧车文件；合规 6.1：须标注权利方）
+        "image_url": ((images or {}).get(f"{series}-{number}".upper())
+                      or (images or {}).get(norm_key(name))
+                      or None),
     }
     # 匹配引擎自撰卡池：先用归一匹配键，再用别名（基础能量命名差异）
     card["aliases"] = aliases_for(card)
@@ -308,6 +313,120 @@ def build_card(rows: list[dict], jp_rows: list[dict], KE: list[str],
         card["engine_match"] = matched_by
     issues["zh_backfill" if eng else "engine_unmatched"] += 1
     return card
+
+
+def _load_effects_module():
+    """载入 agent.effects（K2 解析链）；失败返回 None（解析为可选项）"""
+    import sys
+    for pkg in ("agent", "engine"):
+        p = REPO / "packages" / pkg
+        if p.exists() and str(p) not in sys.path:
+            sys.path.insert(0, str(p))
+    try:
+        from agent import effects                          # noqa: WPS433
+        return effects
+    except Exception as e:                                 # noqa: BLE001
+        print(f"[warn] agent.effects 不可用，跳过效果解析：{e}")
+        return None
+
+
+def parse_effects_pass(cards: list[dict], backend: str = "rule") -> dict:
+    """对全库招式/特性/卡牌效果跑 K2 解析，产物带 **AI 标识**（合规 6.1）
+
+    每张卡的解析结果写入 ``card["parse"]``：
+      ``{items[], specs[], errors[], tags[], unsupported[], generated_by,
+         ai_generated, ai_notice}``
+    """
+    E = _load_effects_module()
+    st = {"cards_parsed": 0, "items": 0, "specs": 0, "errors": 0,
+          "engine_tags": 0, "unsupported": 0, "backend": backend,
+          "ai_notice": None}
+    if E is None:
+        return st
+    st["ai_notice"] = getattr(E, "AI_NOTICE", "")
+    kind_map = {"Trainer": "item", "Energy": "energy"}
+    for c in cards:
+        items, specs, errs, tags, unsup = [], [], [], [], []
+        # 招式
+        for a in c["attacks"]:
+            if not a.get("effect"):
+                continue
+            r = E.parse_effects(a["effect"], kind="attack",
+                                name=a.get("name") or "", backend=backend)
+            m = E.to_engine_tags(r["specs"])
+            items.append({"target": "attack", "name": a.get("name"),
+                          "specs": r["specs"], "errors": r["errors"],
+                          "engine_tags": m["tags"],
+                          "unsupported": m["unsupported"]})
+            specs += r["specs"]; errs += r["errors"]
+            tags += m["tags"]; unsup += m["unsupported"]
+        # 特性
+        for ab in c["abilities"]:
+            if not ab.get("effect"):
+                continue
+            r = E.parse_effects(ab["effect"], kind="ability",
+                                name=ab.get("name") or "", backend=backend)
+            m = E.to_engine_tags(r["specs"])
+            items.append({"target": "ability", "name": ab.get("name"),
+                          "specs": r["specs"], "errors": r["errors"],
+                          "engine_tags": m["tags"],
+                          "unsupported": m["unsupported"]})
+            specs += r["specs"]; errs += r["errors"]
+            tags += m["tags"]; unsup += m["unsupported"]
+        # 无招式卡（训练家/能量/规则）的整段效果
+        if c["other_text"]:
+            k = "supporter" if c["subtype"] == "Supporter" else kind_map.get(
+                c["supertype"], "rule")
+            r = E.parse_effects(c["other_text"], kind=k,
+                                name=c["name"], backend=backend)
+            m = E.to_engine_tags(r["specs"])
+            items.append({"target": "card", "name": c["name"],
+                          "specs": r["specs"], "errors": r["errors"],
+                          "engine_tags": m["tags"],
+                          "unsupported": m["unsupported"]})
+            specs += r["specs"]; errs += r["errors"]
+            tags += m["tags"]; unsup += m["unsupported"]
+        if items:
+            c["parse"] = {
+                "items": items, "specs": specs, "errors": errs,
+                "engine_tags": tags, "unsupported": unsup,
+                "generated_by": backend,
+                "ai_generated": True,
+                "ai_notice": st["ai_notice"],
+            }
+            st["cards_parsed"] += 1
+            st["items"] += len(items); st["specs"] += len(specs)
+            st["errors"] += len(errs); st["engine_tags"] += len(tags)
+            st["unsupported"] += len(unsup)
+    return st
+
+
+def load_image_map() -> dict:
+    """卡图映射（**可选**）：``data/card_images.json``
+
+    格式（两种键都支持）::
+
+        { "TWM-130": "https://…/dragapult-ex.png",
+          "多龙巴鲁托ex": "https://…/dragapult-ex.png" }
+
+    合规 6.1：卡图**可用但须标注权利方**（见 ``docs/COMPLIANCE.md``）；
+    本脚本**不抓取**图像，只做引用登记——URL 由使用者自行提供并自负合规责任。
+    """
+    f = DATA / "card_images.json"
+    if not f.exists():
+        return {}
+    try:
+        raw = json.loads(f.read_text(encoding="utf-8"))
+    except Exception as e:                                 # noqa: BLE001
+        print(f"[warn] card_images.json 解析失败：{e}")
+        return {}
+    out: dict = {}
+    for k, v in (raw or {}).items():
+        if not v:
+            continue
+        out[str(k).strip().upper()] = v
+        out[norm_key(str(k))] = v
+    return out
 
 
 def load_engine_index() -> dict:
@@ -353,6 +472,7 @@ def clean(zip_path, csv_dir) -> tuple[list, dict]:
     KE = list(en[0].keys())
     KJ = list(jp[0].keys()) if jp else []
     engine_index = load_engine_index()
+    images = load_image_map()
 
     issues = collections.Counter()
     # 按 Card ID 聚合（保持出现顺序）
@@ -366,7 +486,7 @@ def clean(zip_path, csv_dir) -> tuple[list, dict]:
     cards: list[dict] = []
     for cid, rows in grouped.items():
         cards.append(build_card(rows, jp_grouped.get(cid, []), KE,
-                                engine_index, issues))
+                                engine_index, issues, images))
 
     # 统计
     stats = {
@@ -382,6 +502,7 @@ def clean(zip_path, csv_dir) -> tuple[list, dict]:
         "engine_match_alias": sum(1 for c in cards
                                   if str(c.get("engine_match") or "").startswith("alias:")),
         "with_zh": sum(1 for c in cards if c["name_zh"]),
+        "with_image": sum(1 for c in cards if c.get("image_url")),
         "apostrophe_curly": sum(1 for c in cards if "’" in (c["name"] or "")),
         "cards_with_aliases": sum(1 for c in cards if c.get("aliases")),
         "multi_move_cards": sum(1 for c in cards if len(c["attacks"]) >= 2),
@@ -422,8 +543,11 @@ def write_report(cards: list[dict], stats: dict, path: Path) -> None:
          "",
          f"- 数据源：`pokemon-tcg-ai-battle-challenge-strategy.zip`（EN + JP Card Data.csv）",
          "- 产物：`data/cleaned/cards_challenge.json`（入库源）· `data/db/pokelab.db`（cards 表）",
-         "- 合规：仅清洗与存储**卡名 / 数值 / 规则文本**，**不使用官方卡图**（C2）；"
-         "效果文本为功能机制引用，非美术素材。",
+         "- 合规 6.1 / C2（v1.1）：卡牌**名称 / 规则文本 / 图像**可在遵守合规声明的前提下"
+         "使用，须**标注权利方**（Nintendo · Creatures Inc. · GAME FREAK inc. · "
+         "The Pokémon Company），且不得声称关联或获其背书；本项目为非商业社区研究项目。",
+         "- 合规 6.1：**机器/AI 生成的解析结果**（`parse` 字段）均带 `ai_generated` / "
+         "`generated_by` / `ai_notice` 显著标识，仅供研究参考。",
          "",
          "## 1. 清洗结果汇总",
          "",
@@ -509,9 +633,32 @@ def write_report(cards: list[dict], stats: dict, path: Path) -> None:
         + (f" —— {', '.join(qa['engine_pool_not_in_dataset'])}"
            if qa["engine_pool_not_in_dataset"] else ""),
         "",
-        "## 4. 诚实标注",
+        "## 4. K2 效果解析覆盖（机器生成 · 合规 6.1 已标识）",
         "",
-        "- 本数据集提供**卡面机制文本**（官方英文原文），项目**不使用官方卡图**（C2 红线）；",
+        ]
+    ps = stats.get("parse") or {}
+    if ps:
+        L += [
+            "| 项 | 数值 |", "|---|---|",
+            f"| 后端 | `{ps.get('backend')}` |",
+            f"| 已解析卡数 | {ps.get('cards_parsed')} |",
+            f"| 解析条目（招式/特性/整卡） | {ps.get('items')} |",
+            f"| 产出 spec 总数 | {ps.get('specs')} |",
+            f"| Schema 校验错误 | {ps.get('errors')} |",
+            f"| 可映射引擎 tag | {ps.get('engine_tags')} |",
+            f"| **未建模（待补）动作** | **{ps.get('unsupported')}** |",
+            "",
+            f"> AI 标识：本表全部数字来自 `{ps.get('backend')}` 后端自动解析，"
+            "结果带 `ai_generated=true` 与免责提示，**仅供研究参考**。",
+            "",
+        ]
+    L += [
+        "## 5. 诚实标注",
+        "",
+        "- 本数据集提供**卡面机制文本**（官方英文原文），按合规 6.1 / C2(v1.1) "
+        "**标注权利方后可用于研究演示**，项目不打包与本研究无关的官方美术素材；",
+        "- 机器/AI 解析结果（`parse`）在库、API 与 UI 三处均带显著 AI 标识，"
+        "不得作为官方规则呈现；",
         "- 引擎未建模的卡（"
         f"{stats['cards_out'] - stats['engine_ready']} 张）**可浏览/可组卡但不可对战**，"
         "由 `engine_ready` 标记，UI 与导入校验据此显示灰名单；",
@@ -533,6 +680,11 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
     con = sqlite3.connect(str(db_path))
     n_new = n_upd = 0
     try:
+        # 迁移：补 image_url 列（合规 6.1 卡图引用）
+        cols = {r[1] for r in con.execute("PRAGMA table_info(cards)")}
+        if "image_url" not in cols:
+            con.execute("ALTER TABLE cards ADD COLUMN image_url TEXT")
+            print("[migrate] cards 表新增列 image_url")
         n_demo = con.execute(
             "SELECT count(*) FROM cards WHERE source='demo-mock'").fetchone()[0]
         if n_demo:
@@ -567,6 +719,8 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
                     "is_basic": bool(c["supertype"] == "Pokemon" and c["stage"] == 0),
                     "is_basic_energy": c["subtype"] == "Basic Energy",
                 },
+                # 合规 6.1：机器/AI 解析结果单独存放并带显著标识
+                **({"parse": c["parse"]} if c.get("parse") else {}),
             }, ensure_ascii=False)
             status = "active"
             row = con.execute(
@@ -575,19 +729,20 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
             if row:
                 con.execute(
                     "UPDATE cards SET supertype=?, types=?, hp=?, rules_text=?, "
-                    "attacks_json=?, effects_json=?, status=?, source=?, "
-                    "updated_at=datetime('now','localtime') WHERE id=?",
+                    "attacks_json=?, effects_json=?, image_url=?, status=?, "
+                    "source=?, updated_at=datetime('now','localtime') WHERE id=?",
                     (c["supertype"], types, c["hp"], rules_text, attacks_json,
-                     effects_json, status, SOURCE_TAG, row[0]))
+                     effects_json, c.get("image_url"), status, SOURCE_TAG,
+                     row[0]))
                 n_upd += 1
             else:
                 con.execute(
                     "INSERT INTO cards(name,series,number,supertype,types,hp,"
-                    "rules_text,attacks_json,effects_json,status,source) "
-                    "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    "rules_text,attacks_json,effects_json,image_url,status,"
+                    "source) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                     (c["name"], c["series"], c["number"], c["supertype"], types,
-                     c["hp"], rules_text, attacks_json, effects_json, status,
-                     SOURCE_TAG))
+                     c["hp"], rules_text, attacks_json, effects_json,
+                     c.get("image_url"), status, SOURCE_TAG))
                 n_new += 1
         con.commit()
     finally:
@@ -603,6 +758,10 @@ def main() -> int:
     ap.add_argument("--out-json", type=Path, default=OUT_JSON)
     ap.add_argument("--out-report", type=Path, default=OUT_REPORT)
     ap.add_argument("--dry-run", action="store_true", help="只清洗与报告，不写库")
+    ap.add_argument("--parse-effects", action="store_true",
+                    help="跑 K2 效果解析（规则基线），产物带 AI 标识（合规 6.1）")
+    ap.add_argument("--parse-backend", default="rule",
+                    choices=["rule", "llm", "auto"], help="解析后端（默认 rule）")
     args = ap.parse_args()
 
     if not args.zip and not args.csv_dir:
@@ -610,17 +769,26 @@ def main() -> int:
 
     cards, stats = clean(args.zip, args.csv_dir)
 
+    # 0) 可选：K2 效果解析（机器生成 → 必须显著标识）
+    if args.parse_effects:
+        stats["parse"] = parse_effects_pass(cards, backend=args.parse_backend)
+
     # 1) 规范化 JSON
     args.out_json.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "meta": {
-            "version": "1.0",
+            "version": "1.1",
             "source": "pokemon-tcg-ai-battle-challenge-strategy.zip",
             "rows_in": stats["rows_in"],
             "cards": len(cards),
             "generated_by": "packages/card-db/scripts/import_challenge_dataset.py",
-            "compliance": ("仅卡名/数值/规则文本，无官方图像（C2）；"
-                           "引擎未建模卡由 engine_ready=false 标记"),
+            "compliance": ("合规 6.1/C2(v1.1)：卡名/规则文本/图像可用但须标注权利方"
+                           "（Nintendo · Creatures Inc. · GAME FREAK inc. · "
+                           "The Pokémon Company），不得声称关联或获背书；"
+                           "机器/AI 解析结果带 ai_generated/ai_notice 标识"),
+            "ai_generated_fields": ["parse.ai_generated", "parse.generated_by",
+                                    "parse.ai_notice"],
+            "parse_backend": (stats.get("parse") or {}).get("backend"),
         },
         "stats": {k: v for k, v in stats.items() if k != "qa"},
         "cards": cards,
@@ -642,6 +810,11 @@ def main() -> int:
           f"中文名 {stats['with_zh']}")
     print(f"[clean] 弯撇号 {stats['apostrophe_curly']} 张 · 带别名 "
           f"{stats['cards_with_aliases']} 张")
+    ps = stats.get("parse")
+    if ps:
+        print(f"[k2]    {ps['backend']} 后端：解析卡 {ps['cards_parsed']} · "
+              f"条目 {ps['items']} · spec {ps['specs']} · 引擎 tag {ps['engine_tags']} · "
+              f"未建模 {ps['unsupported']}（AI 生成，已标识）")
     print(f"[out]   {args.out_json}")
     print(f"[out]   {args.out_report}")
     if args.dry_run:

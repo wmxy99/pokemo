@@ -115,8 +115,18 @@ function App() {
           GAME FREAK inc. / The Pokémon Company. Not affiliated with or endorsed by The Pokémon Company.
         </p>
         <p>
-          宝可梦内容域永久免费非商用（C1）· 全站仅文字卡 + 官方外链、无官方卡图（C2）·
+          宝可梦内容域永久免费非商用（C1）· 卡名/规则文本/图像依合规 6.1 使用并标注权利方（C2 v1.1）·
           引擎为社区实现，与官方规则可能存在差异（C5）。
+        </p>
+        <p>
+          <b>6.1 内容合规</b>：卡牌名称与规则仅用于教学研究与算法演示，版权与商标归属其权利方；
+          对战结果与平衡性报告仅供研究参考；<b>AI 生成的效果解析与对战解说均已显著标识</b>；
+          因不当使用产生的责任由使用者承担。
+        </p>
+        <p>
+          <b>6.2 数据隐私</b>：支持 HTTPS 加密传输与数据库存储加密、支持本地化部署；
+          调用大模型 API 前对敏感信息脱敏，不将用户数据用于服务以外用途或向第三方提供。
+          <a href="/compliance" target="_blank" rel="noreferrer">查看完整合规声明 /compliance</a>
         </p>
       </footer>
 

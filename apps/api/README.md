@@ -241,6 +241,34 @@ POST /train/jobs
 
 K2 未评测时看门狗显示「尚未评测」并给出运行命令，不显示臆测数字。
 
+## 4.9 合规与隐私（6.1 / 6.2）
+
+> 权威文本见 **`docs/COMPLIANCE.md`**；代码侧以 `apps/api/app/compliance.py` 提供机器可读版本，二者必须一致。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/compliance` | 6.1 内容合规 + 6.2 数据隐私声明 + 红线 C1–C5 + **实现状态**（AI 标识 / 脱敏规则 / 加密 / 本地模式 / 审计） |
+| GET | `/compliance/audit?limit=50` | 外部 LLM 调用审计（**admin**）：仅端点/模型/字符数/脱敏计数，**不含原文** |
+
+**AI 生成内容标识（6.1）**：解析结果带 `ai_generated` / `generated_by` / `ai_notice`；
+`/cards/{id}.effects_parsed`、`/cards` 列表项 `ai_generated`、`/cards/stats.ai_parsed_cards`
+均如实暴露；UI 显示「AI 生成 / AI 解析」徽标。
+
+**数据隐私（6.2）**：
+
+| 措施 | 开关 / 位置 |
+|---|---|
+| HTTPS 传输 | `uvicorn --ssl-keyfile/--ssl-certfile`；自签助手 `apps/api/scripts/make_dev_cert.py` |
+| 存储加密 | 口令 PBKDF2-SHA256(20 万次)；字段加密 `POKELAB_FIELD_ENC=1`（Fernet，`apps/api/app/crypto.py`） |
+| 本地化部署 | `POKELAB_LOCAL_ONLY=1` → **禁止一切外部网络调用**（外部 LLM 端点被拒并回退规则基线） |
+| 外发前脱敏 | `packages/agent/agent/privacy.py`：邮箱/手机/证件/卡号/密钥/本地路径/自定义敏感词 |
+| 不用于服务外用途 | 本地模式可完全离线；外发仅发送脱敏文本；全量调用可审计 |
+
+```bash
+curl localhost:8000/compliance | jq '.content_compliance.statement, .data_privacy.statement'
+curl localhost:8000/compliance | jq '.red_lines[] | {id, statement}'   # C2 已修订为「可用+标注」
+```
+
 ## 5. 存储与数据目录
 
 **数据目录自动探测**（首个可写者胜，避免协同/沙箱写保护导致 `readonly database`）：

@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -30,6 +31,10 @@ from typing import Optional
 REPO = Path(__file__).resolve().parents[3]          # pokelab-ai
 GOLDEN_FILE = Path(__file__).resolve().parents[1] / "data" / "k2_golden.json"
 ART_DIR = REPO / "packages" / "agent" / "artifacts"
+
+# 合规 6.1：AI/机器生成内容须显著标识（本模块所有解析结果均带此提示）
+AI_NOTICE = ("本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；"
+             "请以官方规则与卡面原文为准。")
 
 # ---------------- Schema 常量 ----------------
 KINDS = ("attack", "ability", "item", "supporter", "energy", "rule")
@@ -112,6 +117,157 @@ _ATTACH_RE = re.compile(r"附\s*(\d+)?\s*个?\s*(火|超|草|恶|水|雷|斗|钢
 _PLACE_RE = re.compile(r"放(?:置)?\s*(\d+)\s*个?\s*(?:伤害)?指示物")
 
 
+# ---------------- 规则后端：英文句式（真实卡池为英文卡面） ----------------
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+
+_EN_STATUS = (("asleep", "sleep"), ("burned", "burn"), ("confused", "confuse"),
+              ("paralyzed", "paralyze"), ("poisoned", "poison"))
+_EN_DAMAGE_RE = re.compile(r"does\s+(\d+)\s+damage", re.I)
+_EN_SPREAD_RE = re.compile(r"put\s+(\d+)\s+damage\s+counters?", re.I)
+_EN_DRAW_RE = re.compile(r"draw\s+(?:up to\s+)?(\d+)\s+cards?", re.I)
+_EN_DISCARD_ENERGY_RE = re.compile(r"discard\s+(\d+)\s+(?:\w+\s+)?energ", re.I)
+_EN_DISCARD_RE = re.compile(r"discard\s+(?:up to\s+)?(\d+)\s+cards?", re.I)
+_EN_DISCARD_ALL_RE = re.compile(r"discard your (?:whole )?hand", re.I)
+_EN_SEARCH_TOP_RE = re.compile(r"(?:look at|search)\s+the top\s+(\d+)\s+cards",
+                               re.I)
+_EN_SEARCH_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?", re.I)
+_EN_SEARCH_ANY_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?"
+                               r"[^.]*", re.I)
+_EN_HEAL_RE = re.compile(r"heal\s+(\d+)\s+damage", re.I)
+_EN_ATTACH_RE = re.compile(r"attach\s+(?:up to\s+)?(\d+)?\s*"
+                           r"(?:\{[A-Za-z]+\}\s*)?(?:basic\s+)?"
+                           r"(grass|fire|water|lightning|psychic|fighting|"
+                           r"darkness|metal|dragon|colorless)?\s*energy", re.I)
+_EN_MOVE_RE = re.compile(r"move\s+(?:up to\s+)?(\d+)\s+damage\s+counters?",
+                         re.I)
+_EN_SWITCH_RE = re.compile(r"switch\s+(?:your|out|it)|with\s+(?:your|1 of your)\s+"
+                           r"benched|switch your active", re.I)
+_EN_KNOCKOUT_RE = re.compile(r"(?:is|are|was|were)\s+knocked out|knocked out by",
+                             re.I)
+_EN_EVOLVE_RE = re.compile(r"\bevolve[sd]?\b|evolution", re.I)
+_EN_MODIFY_RE = re.compile(r"weakness|resistance|prevents? all damage|"
+                           r"can'?t retreat|cannot retreat|isn'?t affected",
+                           re.I)
+_EN_BENCH_RE = re.compile(r"bench(?:ed)?\s+pok|onto your bench", re.I)
+_EN_HAND_RE = re.compile(r"(?:into|to)\s+your\s+hand", re.I)
+_EN_OPP_RE = re.compile(r"opponent[\u2019']?s?\b", re.I)
+
+
+def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
+    """规则后端（英文卡面）：抽取 spec（伤害/指示物/抽弃/检索/回复/附能/状态/
+    互换/击倒/静态规则 + 触发时机）"""
+    t = str(text or "")
+    actions: list = []
+    conditions: list = []
+    lower = t.lower()
+
+    m = _EN_DAMAGE_RE.search(t)
+    if m:
+        actions.append(act("damage", int(m.group(1)), "active_opponent"))
+
+    m = _EN_SPREAD_RE.search(t)
+    if m:
+        n = int(m.group(1))
+        tgt = "active_opponent_bench" if _EN_BENCH_RE.search(t) else "active_opponent"
+        extra = {"counters": n}
+        if re.search(r"in any way you like|as you like|anyway you like", t, re.I):
+            extra["free_distribute"] = True
+        actions.append(act("spread", n * 10, tgt, extra))
+
+    m = _EN_MOVE_RE.search(t)
+    if m:
+        tgt = "self" if re.search(r"your (?:own )?pok", t, re.I) else "active_opponent"
+        actions.append(act("move_damage", int(m.group(1)), tgt))
+
+    m = _EN_HEAL_RE.search(t)
+    if m:
+        actions.append(act("heal", int(m.group(1)), "self"))
+
+    m = _EN_DRAW_RE.search(t)
+    if m:
+        actions.append(act("draw", int(m.group(1)), "deck"))
+    elif re.search(r"draw (?:a|1) card", t, re.I):
+        actions.append(act("draw", 1, "deck"))
+
+    if _EN_DISCARD_ALL_RE.search(t):
+        actions.append(act("discard", None, "hand", {"all": True}))
+    elif _EN_DISCARD_ENERGY_RE.search(t):
+        n = int(_EN_DISCARD_ENERGY_RE.search(t).group(1))
+        tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
+        actions.append(act("discard", n, tgt, {"card_type": "energy"}))
+    elif _EN_DISCARD_RE.search(t):
+        n = int(_EN_DISCARD_RE.search(t).group(1))
+        tgt = "opponent_hand" if ("opponent" in lower and "hand" in lower) else "hand"
+        actions.append(act("discard", n, tgt))
+
+    m = _EN_SEARCH_TOP_RE.search(t)
+    if m:
+        actions.append(act("search", 1, "deck", {"look_top": int(m.group(1))}))
+    elif _EN_SEARCH_RE.search(t):
+        g = _EN_SEARCH_RE.search(t).group(1)
+        tgt = "discard" if "discard pile" in lower else "deck"
+        actions.append(act("search", int(g) if g else 1, tgt))
+
+    m = _EN_ATTACH_RE.search(t)
+    if m and "energy" in lower:
+        amt = int(m.group(1)) if m.group(1) else 1
+        et = (m.group(2) or "").lower() or None
+        actions.append(act("attach", amt, "self",
+                           {"energy_type": et} if et else None))
+
+    for word, tag in _EN_STATUS:
+        if word in lower:
+            tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
+            actions.append(act("status", None, tgt, {"status": tag}))
+            break
+
+    if _EN_SWITCH_RE.search(t):
+        mine = bool(re.search(r"your|switch out", t, re.I)) and \
+            not _EN_OPP_RE.search(t)
+        actions.append(act("switch", None,
+                           "self" if mine else "active_opponent_bench"))
+
+    if _EN_KNOCKOUT_RE.search(t) and not re.search(r"if .{0,20}knocked out",
+                                                   lower):
+        actions.append(act("knockout", None, "active_opponent"))
+
+    if _EN_EVOLVE_RE.search(t) and re.search(
+            r"evolve (?:it|this|your|1 of|a )", t, re.I):
+        actions.append(act("evolve", None, "self"))
+
+    if _EN_MODIFY_RE.search(t):
+        actions.append(act("rule", None, "any",
+                           {"note": "静态规则修改（弱点/抗性/伤害减免/限制）"}))
+
+    # 触发时机（英文）
+    if re.search(r"if .{0,30}(?:is|are) knocked out", lower) or \
+            re.search(r"when .{0,30}knocked out", lower):
+        trigger = "on_knockout"
+    elif re.search(r"when you play .{0,40}to evolve", lower) or \
+            re.search(r"when you evolve", lower):
+        trigger = "on_evolve"
+    elif re.search(r"once during your turn|once per turn", lower):
+        trigger = "static"
+    elif kind in ("attack", "item", "supporter", "energy"):
+        trigger = "on_use"
+    elif _EN_MODIFY_RE.search(t) or "as long as" in lower:
+        trigger = "static"
+    else:
+        trigger = "on_use"
+
+    if trigger == "static" and re.search(
+            r"once during your turn|once per turn", lower):
+        conditions.append({"field": "limit", "op": "eq",
+                           "value": "once_per_turn"})
+
+    if not actions:
+        actions.append(act("rule", None, "any", {"note": "静态/未建模（英文）"}))
+
+    return {"kind": kind, "name": name, "trigger": trigger,
+            "conditions": conditions, "actions": actions,
+            "source_text": t.strip()[:200]}
+
+
 def _trigger_of(text: str, kind: str) -> str:
     """触发时机判定顺序：被击倒/进化时 → 使用类卡 → 招式 → 静态规则 → 默认"""
     if "被击倒" in text or "气绝" in text:
@@ -142,7 +298,12 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     弃 N 张·弃 N 个能量 / 回复 N 点 / 附 N 个能量 / 检视牌库顶 N 取 M /
     检索·从弃牌堆取 N / 互换·换下 / 状态（中毒·灼伤·睡眠·麻痹·混乱）/
     击倒 / 每回合一次」等句式。
+
+    **语言分流**：文本不含中日韩字符时走英文卡面路径（``_parse_rule_en``），
+    因为真实卡池（challenge 数据集）为英文卡面。
     """
+    if text and not _CJK_RE.search(str(text)):
+        return _parse_rule_en(text, kind=kind, name=name)
     t = str(text or "").strip()
     # 剔除括号内注解（如「（引擎待实现）」「（合计 60 点）」），它们不是卡面效果
     t_clean = re.sub(r"[（(][^）)]*[）)]", "", t)
@@ -349,18 +510,33 @@ def extract_json(text: str) -> Optional[list]:
 
 
 def parse_llm(text: str, kind: str = "attack", name: str = "",
-              retrieved_rules: str = "") -> list:
-    """LLM 后端：按 prompts/parse_effects_*.md 模板调用 OpenAI 兼容接口"""
+              retrieved_rules: str = "", meta_out: Optional[dict] = None,
+              extra_sensitive: Optional[dict] = None) -> list:
+    """LLM 后端：按 prompts/parse_effects_*.md 模板调用 OpenAI 兼容接口
+
+    合规 6.2：调用前先**脱敏**（``agent.privacy.desensitize``），并校验端点是否被
+    本地模式允许（``POKELAB_LOCAL_ONLY=1`` → 禁止外部调用）；每次调用写**审计记录**
+    （仅端点/模型/字符数/脱敏计数，**不含原文**）。
+
+    ``meta_out``：可选 dict，原地回填 ``{endpoint, model, privacy, audit}``。
+    """
     from . import prompts as _prompts
+    from . import privacy as _privacy
     cfg = llm_config()
+    # 1) 端点校验（本地模式下外部端点直接拒绝）
+    ep = _privacy.check_endpoint(cfg["base"])
+    # 2) 渲染提示词 → 脱敏后再外发
     sys_t = _prompts.render("parse_effects_system",
                             retrieved_rules=retrieved_rules or "（无）")
     usr_t = _prompts.render("parse_effects_user", card_name=name or "(未命名)",
                             card_kind=kind, rules_text=text)
+    usr_clean, rep = _privacy.desensitize(usr_t, extra=extra_sensitive)
+    sys_clean, rep2 = _privacy.desensitize(sys_t)
+    rep["total"] += rep2["total"]
     body = json.dumps({
         "model": cfg["model"],
-        "messages": [{"role": "system", "content": sys_t},
-                     {"role": "user", "content": usr_t}],
+        "messages": [{"role": "system", "content": sys_clean},
+                     {"role": "user", "content": usr_clean}],
         "temperature": 0,
         "stream": False,
     }).encode("utf-8")
@@ -368,22 +544,39 @@ def parse_llm(text: str, kind: str = "attack", name: str = "",
         cfg["base"] + "/chat/completions", data=body,
         headers={"Content-Type": "application/json",
                  **({"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {})})
+    t0 = time.time()
     try:
         with urllib.request.urlopen(req, timeout=cfg["timeout"]) as r:
             payload = json.loads(r.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, OSError) as e:
+        _privacy.audit("llm_call", host=ep["host"], model=cfg["model"], ok=False,
+                       error=type(e).__name__,
+                       elapsed_ms=int((time.time() - t0) * 1000))
         raise LLMConfigError(f"LLM 请求失败：{e}") from e
     content = (payload.get("choices") or [{}])[0].get("message", {}).get("content", "")
+    # 3) 审计（不记录原文）
+    _privacy.audit("llm_call", host=ep["host"], external=ep["external"],
+                   model=cfg["model"], ok=True,
+                   prompt_chars=rep["chars_in"], sent_chars=rep["chars_out"],
+                   desensitized=rep["total"], response_chars=len(content or ""),
+                   elapsed_ms=int((time.time() - t0) * 1000))
+    if meta_out is not None:
+        meta_out.update({"endpoint": ep, "model": cfg["model"],
+                         "privacy": rep, "audit": True})
     return extract_json(content) or []
 
 
 def parse_effects(text: str, kind: str = "attack", name: str = "",
                   backend: str = "rule", retrieved_rules: str = "") -> dict:
-    """统一入口：返回 {backend, specs[], errors[], raw}
+    """统一入口：返回 {backend, specs[], errors[], raw, ai_generated, ai_notice …}
 
     backend: `rule` · `llm` · `auto`（有 LLM 配置走 llm，失败自动回退 rule）
+
+    合规 6.1：结果一律带 ``ai_generated=True`` 与 ``ai_notice``（显著标识）；
+    合规 6.2：``llm`` 路径下附 ``privacy``（脱敏计数）与 ``endpoint``（审计信息）。
     """
     used = backend
+    meta: dict = {}
     if backend == "auto":
         try:
             llm_config()
@@ -393,7 +586,7 @@ def parse_effects(text: str, kind: str = "attack", name: str = "",
     try:
         if used == "llm":
             raw = parse_llm(text, kind=kind, name=name,
-                            retrieved_rules=retrieved_rules)
+                            retrieved_rules=retrieved_rules, meta_out=meta)
             specs = [s for s in raw if isinstance(s, dict)] or \
                 [parse_rule(text, kind=kind, name=name)]
         else:
@@ -403,9 +596,27 @@ def parse_effects(text: str, kind: str = "attack", name: str = "",
         used, raw = "rule(fallback)", [parse_rule(text, kind=kind, name=name)]
         specs = raw
         return {"backend": used, "specs": specs, "raw": raw,
-                "errors": [str(e)]}
+                "errors": [str(e)], "generated_by": used,
+                "ai_generated": True, "ai_notice": AI_NOTICE,
+                "model": None, "endpoint": None, "privacy": None}
+    except Exception as e:                                   # noqa: BLE001
+        # 合规 6.2：本地模式拒绝外部端点（PrivacyError）等隐私策略拦截
+        # → 不抛出，回退规则基线并**如实报告**，
+        from .privacy import PrivacyError
+        if not isinstance(e, PrivacyError):
+            raise
+        used, raw = "rule(privacy-blocked)", [parse_rule(text, kind=kind,
+                                                         name=name)]
+        specs = raw
+        return {"backend": used, "specs": specs, "raw": raw,
+                "errors": [str(e)], "generated_by": used,
+                "ai_generated": True, "ai_notice": AI_NOTICE,
+                "model": None, "endpoint": None, "privacy": None}
     errs = validate_specs(specs)
-    return {"backend": used, "specs": specs, "raw": raw, "errors": errs}
+    return {"backend": used, "specs": specs, "raw": raw, "errors": errs,
+            "generated_by": used, "ai_generated": True, "ai_notice": AI_NOTICE,
+            "model": meta.get("model"), "endpoint": meta.get("endpoint"),
+            "privacy": meta.get("privacy")}
 
 
 # ---------------- 校验 ----------------

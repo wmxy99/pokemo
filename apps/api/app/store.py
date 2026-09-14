@@ -253,11 +253,14 @@ def drop_events(jid: str) -> None:
 
 # ---------- decks ----------
 def save_deck(rec: dict) -> None:
+    # 合规 6.2：用户卡表原文（可能含个人构筑信息）按需加密存储
+    from . import crypto
     with _lock:
         _conn.execute(
             "INSERT OR REPLACE INTO decks(id,owner,name,text,valid,cards,"
             "summary,created) VALUES(?,?,?,?,?,?,?,?)",
-            (rec["id"], rec["owner"], rec["name"], rec["text"],
+            (rec["id"], rec["owner"], rec["name"],
+             crypto.encrypt(rec.get("text")),
              1 if rec.get("valid") else 0,
              json.dumps(rec.get("cards", []), ensure_ascii=False),
              json.dumps(rec.get("summary", {}), ensure_ascii=False),
@@ -266,6 +269,7 @@ def save_deck(rec: dict) -> None:
 
 
 def get_deck(did: str) -> Optional[dict]:
+    from . import crypto
     with _lock:
         row = _conn.execute("SELECT * FROM decks WHERE id=?", (did,)).fetchone()
     if not row:
@@ -274,6 +278,7 @@ def get_deck(did: str) -> Optional[dict]:
     d["cards"] = json.loads(d["cards"] or "[]")
     d["summary"] = json.loads(d["summary"] or "{}")
     d["valid"] = bool(d["valid"])
+    d["text"] = crypto.decrypt(d.get("text"))     # 密文自动解密；历史明文原样
     return d
 
 

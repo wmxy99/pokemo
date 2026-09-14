@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 
 from . import store
+from .compliance import DATA_DECLARATION
 from .labels import deck_label_zh
 from .auth import Principal, current_user
 
@@ -92,7 +93,7 @@ def summary(p: Principal = Depends(current_user)):
     kpi["pool_jobs"] = pool_jobs
     kpi["matrix_pairs"] = len(matrix)
     return {"kpi": kpi, "matrix": matrix, "recent7d": recent,
-            "declaration": "Unofficial community data · 非官方数据（PRD C1）",
+            "declaration": DATA_DECLARATION,
             "sample_note": "样本量标注于矩阵 tooltip；n<30 时 CI 较宽，勿据此下结论"}
 
 

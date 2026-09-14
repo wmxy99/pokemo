@@ -66,3 +66,4 @@ packages/card-db/data/db/
 !packages/card-db/data/cleaned/
 !packages/card-db/data/cleaned/*.json
 !packages/card-db/data/cleaned/*.md
+apps/web/dist15/

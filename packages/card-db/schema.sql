@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS cards (
     hp            INTEGER,
     rules_text    TEXT,                                    -- 原始效果文本（合规引用源）
     attacks_json  TEXT,                                    -- 招式信息 JSON（文字卡渲染）
-    effects_json  TEXT,                                    -- LLM 解析产物（引擎执行 / 双轨）
+    effects_json  TEXT,                                    -- 解析产物（含 library 元数据 + parse 机器/AI 解析，带 AI 标识）
+    image_url     TEXT,                                    -- 卡图引用（合规 6.1：可用但须标注权利方，见 docs/COMPLIANCE.md）
     status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'unsupported')),
     source        TEXT,                                    -- 数据来源 / 许可标记
     created_at    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),

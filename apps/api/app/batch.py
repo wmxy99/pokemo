@@ -59,7 +59,7 @@ def _ci_half(p: float, n: int) -> float:
     return round(1.96 * (max(p * (1 - p), 1e-9) / n) ** 0.5, 4)
 
 
-DECLARATION = "Unofficial community data · 非官方数据（PRD C1）"
+from .compliance import DATA_DECLARATION as DECLARATION  # 统一声明（合规 6.1）
 
 
 def _run_pairs(job_id: str, pairs: list, games_each: int, seed0: int,

@@ -39,6 +39,21 @@
 | `data/k2_golden.json` | **手工标注**黄金集（50 条 = 26 真实卡池 + 14 合成 + 10 留出）；`expect` 只声明关心的字段 |
 | `evaluate(backend)` | 逐字段准确率 + **seen / holdout 分组**（留出句式才是泛化估计） |
 
+### 合规：AI 标识与数据隐私
+
+| 项 | 实现 |
+|---|---|
+| **AI 标识（6.1）** | `parse_effects()` 返回 `ai_generated=True` / `generated_by=rule\|llm` / `ai_notice`；报告与 API 复用同一文案，UI 显示徽标 |
+| **外发脱敏（6.2）** | `agent/privacy.py` → `desensitize()`：邮箱·手机·证件·卡号·API 密钥·`Authorization`·本地路径·自定义敏感词 |
+| **本地模式** | `POKELAB_LOCAL_ONLY=1` → `check_endpoint()` 拒绝外部端点（`PrivacyError`），解析回退规则基线并**如实报告**（`rule(privacy-blocked)`） |
+| **调用审计** | 每次外部 LLM 调用写 JSONL（端点/模型/字符数/脱敏计数/**不含原文**），`POKELAB_AUDIT=0` 可关闭，`/compliance/audit` 可查 |
+| **语言分流** | 文本含中日韩字符 → 中文句式解析；否则走 **英文卡面路径**（真实卡池为英文，`_parse_rule_en`） |
+
+```bash
+POKELAB_LOCAL_ONLY=1 python examples/run_k2.py --backend llm   # 外部端点被拒 → 自动回退 rule
+python -c "from agent import privacy as p; print(p.desensitize('邮箱 a@b.com 手机 13812345678'))"
+```
+
 ### 评测（K2 主指标：严格准确率）
 
 ```bash

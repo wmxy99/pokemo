@@ -25,6 +25,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from .auth import Principal, current_user
+from .compliance import (AI_NOTICE, ATTRIBUTION, DATA_DECLARATION)
 
 router = APIRouter(prefix="/cards", tags=["library"])
 
@@ -85,6 +86,14 @@ def _load() -> list[dict]:
             except Exception:                                  # noqa: BLE001
                 aj = {}
             d["library"] = lib
+            # 合规 6.1：机器/AI 解析结果单独取出并带标识
+            try:
+                d["parse"] = (json.loads(d.get("effects_json") or "{}")
+                              .get("parse")) or None
+            except Exception:                                  # noqa: BLE001
+                d["parse"] = None
+            d["ai_generated"] = bool(d.get("parse"))
+            d["image_url"] = (lib.get("image_url") or None)
             d["attacks"] = aj.get("attacks") or []
             d["abilities"] = aj.get("abilities") or []
             d["name_key"] = lib.get("name_key") or _norm_key(d["name"])
@@ -114,6 +123,8 @@ def _brief(c: dict) -> dict:
         "attacks_count": c["attacks_count"],
         "abilities_count": c["abilities_count"],
         "engine_ready": c["engine_ready"],
+        "image_url": c.get("image_url"),
+        "ai_generated": c["ai_generated"],
     }
 
 
@@ -125,7 +136,23 @@ def _detail(c: dict) -> dict:
         "abilities": c["abilities"],
         "library": c["library"],
         "status": c["status"], "source": c["source"],
+        "attribution": ATTRIBUTION,
     })
+    if c.get("parse"):
+        p_ = c["parse"]
+        out["effects_parsed"] = {
+            "ai_generated": True,
+            "generated_by": p_.get("generated_by"),
+            "ai_notice": p_.get("ai_notice") or AI_NOTICE,
+            "specs": p_.get("specs") or [],
+            "items": p_.get("items") or [],
+            "engine_tags": p_.get("engine_tags") or [],
+            "unsupported": p_.get("unsupported") or [],
+            "errors": p_.get("errors") or [],
+            "note": "机器/AI 解析，仅供研究参考；不代表官方规则",
+        }
+    else:
+        out["effects_parsed"] = None
     return out
 
 
@@ -191,7 +218,8 @@ def list_cards(q: str = Query("", description="卡名关键字（中/英/日，�
         "filters": {"q": q, "supertype": supertype, "type": type_,
                     "series": series, "subtype": subtype,
                     "engine_ready": engine_ready, "sort": sort},
-        "declaration": "Unofficial community data · 非官方数据（PRD C1）",
+        "declaration": DATA_DECLARATION,
+        "attribution": ATTRIBUTION,
     }
 
 
@@ -227,6 +255,10 @@ def library_stats(p: Principal = Depends(current_user)):
         "with_zh": sum(1 for c in cards if c["name_zh"]),
         "note": ("engine_ready=false 的卡可浏览/可组卡但**不可对战**"
                  "（引擎未建模，PRD C5 差异透明）"),
+        "ai_parsed_cards": sum(1 for c in cards if c.get("ai_generated")),
+        "ai_notice": AI_NOTICE,
+        "attribution": ATTRIBUTION,
+        "with_image": sum(1 for c in cards if c.get("image_url")),
     }
 
 

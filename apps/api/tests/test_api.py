@@ -418,6 +418,159 @@ class TestSSE(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
 
 
+class TestCompliance(unittest.TestCase):
+    """合规 6.1（内容）与 6.2（隐私）：声明机器可读 + 实现状态如实暴露"""
+
+    def test_content_statement(self):
+        r = client.get("/compliance")
+        self.assertEqual(r.status_code, 200, r.text)
+        j = r.json()
+        c = j["content_compliance"]
+        self.assertEqual(c["id"], "6.1")
+        # 原文关键要素
+        for kw in ("教学研究与算法演示", "归属其权利方", "显著方式予以标识",
+                   "责任由使用者承担"):
+            self.assertIn(kw, c["statement"])
+        self.assertTrue(c["research_only"])
+        self.assertTrue(c["no_endorsement"])
+        self.assertTrue(c["attribution_required"])
+        self.assertIn("Nintendo", c["attribution_template"])
+        self.assertIn("The Pokémon Company", c["attribution_template"])
+
+    def test_material_policy_allows_images_with_attribution(self):
+        """C2 v1.1：卡名/规则/图像可用（须标注），但不得声称关联"""
+        c = client.get("/compliance").json()["content_compliance"]
+        self.assertEqual(c["usage_policy"]["card_images"],
+                         "permitted_with_attribution")
+        self.assertEqual(c["usage_policy"]["decklist_text"],
+                         "permitted_with_attribution")
+        red = {x["id"]: x for x in client.get("/compliance").json()["red_lines"]}
+        self.assertIn("使用", red["C2"]["statement"])
+        self.assertIn("标注权利方", red["C2"]["statement"])
+        self.assertIn("revised_from", red["C2"])
+
+    def test_ai_labeling_policy(self):
+        c = client.get("/compliance").json()["content_compliance"]
+        lab = c["ai_labeling"]
+        self.assertEqual(sorted(lab["required_fields"]),
+                         ["ai_generated", "ai_notice", "generated_by"])
+        self.assertTrue(c["ai_status"]["enforced"])
+
+    def test_privacy_statement_and_impl(self):
+        j = client.get("/compliance").json()
+        p = j["data_privacy"]
+        self.assertEqual(p["id"], "6.2")
+        for kw in ("HTTPS", "数据库存储加密", "本地化", "脱敏", "第三方"):
+            self.assertIn(kw, p["statement"])
+        self.assertTrue(p["transport"]["https_supported"])
+        self.assertTrue(p["local_deployment"]["supported"])
+        self.assertEqual(p["local_deployment"]["local_only_env"],
+                         "POKELAB_LOCAL_ONLY=1")
+        self.assertTrue(p["llm_call"]["desensitize_before_send"])
+        self.assertTrue(p["llm_call"]["rules"], "应列出脱敏规则")
+        self.assertIn("field_encryption", p["storage"])
+        self.assertIn("live", p["storage"])
+        self.assertTrue(p["no_secondary_use"]["statement"])
+
+    def test_audit_endpoint_requires_admin(self):
+        # guest（无令牌）
+        self.assertEqual(client.get("/compliance/audit").status_code, 403)
+        # 普通用户
+        h = user_headers()
+        if _TOKEN.get("role") == "admin":
+            self.skipTest("首个用户为 admin，无法用普通用户验证")
+        self.assertEqual(client.get("/compliance/audit", headers=h).status_code,
+                         403)
+
+    def test_root_advertises_compliance(self):
+        j = client.get("/").json()
+        self.assertIn("compliance_detail", j)
+        self.assertIn("ai_notice", j)
+
+
+class TestAiLabeledCardPayload(unittest.TestCase):
+    """6.1：卡库中的机器/AI 解析结果必须带显著标识"""
+
+    def _parsed_card(self):
+        h = user_headers()
+        r = client.get("/cards?q=dragapult", headers=h).json()
+        self.assertTrue(r["items"])
+        cid = r["items"][0]["id"]
+        d = client.get(f"/cards/{cid}", headers=h).json()
+        return d
+
+    def test_detail_has_attribution_and_ai_fields(self):
+        d = self._parsed_card()
+        self.assertIn("attribution", d)
+        self.assertIn("Nintendo", d["attribution"])
+        self.assertIn("effects_parsed", d)
+        self.assertIn("ai_generated", d)
+
+    def test_parsed_effects_labeled(self):
+        d = self._parsed_card()
+        ep = d["effects_parsed"]
+        self.assertIsNotNone(ep, "该卡应有解析结果（ETL --parse-effects 已跑）")
+        self.assertTrue(ep["ai_generated"])
+        self.assertIn(ep["generated_by"], ("rule", "llm"))
+        self.assertIn("研究参考", ep["ai_notice"])
+        self.assertTrue(ep["specs"], "应产出 spec")
+        self.assertIn("unsupported", ep)
+
+    def test_list_items_flag_ai_and_stats_report_notice(self):
+        h = user_headers()
+        lst = client.get("/cards?page_size=5", headers=h).json()
+        self.assertIn("ai_generated", lst["items"][0])
+        self.assertIn("attribution", lst)
+        s = client.get("/cards/stats", headers=h).json()
+        self.assertGreater(s["ai_parsed_cards"], 0)
+        self.assertIn("研究参考", s["ai_notice"])
+        self.assertIn("Nintendo", s["attribution"])
+        self.assertIn("with_image", s)
+
+
+class TestFieldEncryption(unittest.TestCase):
+    """6.2：数据库存储加密（Fernet 字段级加密，可选启用）"""
+
+    def test_status_reports_availability(self):
+        from apps.api.app import crypto
+        st = crypto.status()
+        self.assertIn("available", st)
+        self.assertIn("enabled", st)
+        self.assertIn("POKELAB_FIELD_ENC=1", st["switch_env"])
+        self.assertTrue(st["mixed_safe"])
+
+    def test_roundtrip_when_enabled(self):
+        import os
+        from apps.api.app import crypto
+        if not crypto.available():
+            self.skipTest("cryptography 不可用")
+        saved = os.environ.get("POKELAB_FIELD_ENC")
+        os.environ["POKELAB_FIELD_ENC"] = "1"
+        try:
+            plain = "4 Dreepy TWM 128\n3 Dragapult ex TWM 130"
+            enc = crypto.encrypt(plain)
+            self.assertTrue(crypto.is_encrypted(enc))
+            self.assertNotIn("Dragapult", enc)          # 密文不含明文
+            self.assertEqual(crypto.decrypt(enc), plain)
+            # 历史明文仍可读（混合状态安全）
+            self.assertEqual(crypto.decrypt("plain text"), "plain text")
+        finally:
+            if saved is None:
+                os.environ.pop("POKELAB_FIELD_ENC", None)
+            else:
+                os.environ["POKELAB_FIELD_ENC"] = saved
+
+    def test_disabled_by_default_keeps_plaintext(self):
+        import os
+        from apps.api.app import crypto
+        saved = os.environ.pop("POKELAB_FIELD_ENC", None)
+        try:
+            self.assertEqual(crypto.encrypt("hello"), "hello")
+        finally:
+            if saved is not None:
+                os.environ["POKELAB_FIELD_ENC"] = saved
+
+
 class TestPresetsRealPool(unittest.TestCase):
     """M1：真实卡池预设 A1–A4（60 卡真实卡表 + 覆盖率报告 + 直接对战）"""
 

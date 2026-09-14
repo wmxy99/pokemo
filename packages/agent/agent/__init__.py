@@ -7,6 +7,8 @@
   mcts           引擎内蒙特卡洛树搜索（PUCT + 真实 rollout）
   pipeline       决策流水线（纯编排 decide / LangGraph build_langgraph_pipeline）
   prompts        提示词模板库（效果解析 / 解说，prompts/*.md）
+  effects        K2 卡牌效果解析（规则基线 / LLM 后端）
+  privacy        数据隐私保护（脱敏 / 本地模式 / 调用审计，合规 6.2）
 """
 __version__ = "0.1.0"
 
@@ -21,6 +23,9 @@ from . import bc
 from . import reward
 from . import dqn
 from . import distill
+from . import effects
+from . import privacy
 
 __all__ = ["state_encoder", "policy_net", "mcts", "pipeline", "prompts",
-           "policy_agent", "trainer", "bc", "reward", "dqn", "distill"]
+           "policy_agent", "trainer", "bc", "reward", "dqn", "distill",
+           "effects", "privacy"]

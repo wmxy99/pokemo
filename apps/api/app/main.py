@@ -85,12 +85,14 @@ from .train import router as train_router      # noqa: E402
 from .decks import router as decks_router      # noqa: E402
 from .stats import router as stats_router      # noqa: E402
 from .library import router as library_router  # noqa: E402
+from .compliance import router as compliance_router  # noqa: E402
 app.include_router(battles_router)
 app.include_router(batch_router)
 app.include_router(train_router)
 app.include_router(decks_router)
 app.include_router(stats_router)
 app.include_router(library_router)
+app.include_router(compliance_router)
 
 
 @app.get("/", tags=["meta"])
@@ -99,7 +101,10 @@ def root():
             "docs": "/docs", "openapi": "/openapi.json",
             "web": "/app（若 apps/web/dist 已构建）",
             "compliance": "Unofficial community project · Non-commercial · "
-                          "Pokémon © Nintendo/Creatures/GAME FREAK/TPC"}
+                          "Pokémon © Nintendo/Creatures/GAME FREAK/TPC",
+            "compliance_detail": "/compliance（6.1 内容合规 · 6.2 数据隐私）",
+            "ai_notice": "AI 生成的效果解析与对战解说均带显著标识"
+                         "（ai_generated / ai_notice 字段）"}
 
 
 # ---------------- 前端静态托管（apps/web 构建产物，同源部署） ----------------

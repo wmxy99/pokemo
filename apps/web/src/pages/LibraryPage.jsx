@@ -123,6 +123,34 @@ function CardDetail({ card, onClose }) {
         </>
       )}
 
+      {card.image_url && (
+        <div className="card-img-wrap">
+          <img src={card.image_url} alt={card.display} className="card-img" loading="lazy" />
+          <p className="sm muted" style={{ margin: '4px 0 0' }}>
+            图像版权归 Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 所有（合规 6.1）
+          </p>
+        </div>
+      )}
+
+      {card.effects_parsed && (
+        <>
+          <h4 style={{ margin: '12px 0 4px' }}>
+            效果解析 <Pill tone="info" title="本内容由机器/AI 自动生成，仅供研究参考">AI 生成</Pill>
+            <span className="sm muted"> · 后端 {card.effects_parsed.generated_by}</span>
+          </h4>
+          <p className="sm muted" style={{ margin: '2px 0 4px' }}>
+            {card.effects_parsed.ai_notice}
+          </p>
+          <pre className="spec-pre sm">{JSON.stringify(card.effects_parsed.specs, null, 1)}</pre>
+          {(card.effects_parsed.unsupported || []).length > 0 && (
+            <p className="sm muted">
+              引擎未建模动作 {card.effects_parsed.unsupported.length} 项：
+              {card.effects_parsed.unsupported.slice(0, 6).join('、')}
+            </p>
+          )}
+        </>
+      )}
+
       {card.rules_text && (
         <>
           <h4 style={{ margin: '12px 0 4px' }}>
@@ -134,6 +162,9 @@ function CardDetail({ card, onClose }) {
       <p className="sm muted" style={{ marginTop: 10 }}>
         数据来源：{card.source}
       </p>
+      {card.attribution && (
+        <p className="sm muted">{card.attribution}</p>
+      )}
     </div>
   )
 }
@@ -210,6 +241,14 @@ export default function LibraryPage({ onMsg }) {
             label={`引擎可对战（${stats.engine_ready}/${stats.total}）`} tone="warn" />
         </div>
       )}
+
+      <p className="sm muted" style={{ margin: '8px 0 0' }}>
+        <b>合规提示</b>：卡牌名称 / 规则文本 / 图像依合规 6.1 使用，版权归
+        Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 所有；
+        本项目为非官方、非商业的社区研究项目，与权利方无关联。
+        「<b>AI 解析</b>」标记的内容由机器/AI 自动生成，仅供研究参考，以官方规则为准。
+        {stats?.ai_notice ? ` ${stats.ai_notice}` : ''}
+      </p>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div className="row filter-row">
@@ -296,7 +335,10 @@ export default function LibraryPage({ onMsg }) {
                       {c.abilities_count > 0 ? ` +${c.abilities_count}特性` : ''}</td>
                     <td>{c.engine_ready
                       ? <Pill tone="ok">可对战</Pill>
-                      : <Pill tone="warn">未建模</Pill>}</td>
+                      : <Pill tone="warn">未建模</Pill>}
+                      {c.ai_generated && (
+                        <Pill tone="info" title="该卡的效果解析由机器/AI 自动生成，仅供研究参考">AI 解析</Pill>
+                      )}</td>
                     <td>
                       <button className="pill sm" onClick={() => openDetail(c.id)}>详情</button>
                     </td>

@@ -44,9 +44,29 @@ def main() -> int:
     ap.add_argument("--list-admins", action="store_true")
     ap.add_argument("--audit", action="store_true",
                     help="库体检：列出哈希格式非法（永远登录不了）的账号")
+    ap.add_argument("--vacuum", action="store_true",
+                    help="重建数据库，清除历史残留字节（改密/删数据后的旧明文）")
     ap.add_argument("--purge-prefix", help="删除名称以该前缀开头的账号（测试残留清理）")
     ap.add_argument("--yes", action="store_true", help="确认破坏性操作")
     a = ap.parse_args()
+
+    if a.vacuum:
+        # 为什么需要：`secure_delete` 只影响**今后**的写入；库里**已经存在**的
+        # 残留（被 UPDATE 覆盖的旧值、被 DELETE 释放的页）只能靠 VACUUM 重建清除。
+        # 典型场景：改密后旧明文口令仍躺在文件里，`strings api.db` 即可捞出。
+        path = store.DB_PATH
+        before = path.stat().st_size if path.exists() else 0
+        try:
+            store.vacuum()
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[失败] 无法重建数据库（服务是否仍在运行？先停掉再试）：{e}",
+                  file=sys.stderr)
+            return 2
+        after = path.stat().st_size if path.exists() else 0
+        print("已重建数据库（VACUUM）——历史残留字节已清除 ✅")
+        print(f"  {path}")
+        print(f"  文件大小 {before:,} → {after:,} B")
+        return 0
 
     if a.audit:
         # 为什么需要：`password_hash` 格式非法（明文/空串/残缺）时

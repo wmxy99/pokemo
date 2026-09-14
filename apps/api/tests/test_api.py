@@ -1766,5 +1766,85 @@ class TestPasswordHashGuard(unittest.TestCase):
             store.delete_user(name)
 
 
+class TestSecureDelete(unittest.TestCase):
+    """凭据不得以明文残留在数据库文件里
+
+    背景：SQLite 的 `UPDATE`/`DELETE` 默认**只改 btree 指针、不擦旧字节**
+    （`secure_delete` 默认为 0）。实测：给 `adm1` 改密后，旧明文 `pw123456`
+    仍原样躺在数据页里，`strings api.db` 即可捞出——属于凭据泄漏。
+    两层防线：① 连接打开时 `secure_delete=ON`（管**今后**的写入）；
+    ② `store.vacuum()` 重建库（清**已经存在**的残留）。
+    """
+
+    def test_connection_has_secure_delete_on(self):
+        val = store._conn.execute("PRAGMA secure_delete").fetchone()[0]
+        self.assertEqual(val, 1, "secure_delete 未开启：改密/删号会留下明文残留")
+
+    def test_changed_password_leaves_no_plaintext(self):
+        """改密后，旧口令不得在数据库原始字节中可被检索到"""
+        import uuid
+        from apps.api.app import auth as _auth
+        secret_old = "OLDsecretPLAIN" + uuid.uuid4().hex[:6]
+        secret_new = "NEWsecretPLAIN" + uuid.uuid4().hex[:6]
+        name = "zz_sec_" + uuid.uuid4().hex[:6]
+        store.create_user(name, _auth.hash_password(secret_old), "user")
+        store.set_user_password(name, _auth.hash_password(secret_new))
+        store.delete_user(name)
+        store._conn.commit()
+        raw = store.DB_PATH.read_bytes()
+        self.assertNotIn(secret_old.encode(), raw,
+                         "改密后旧口令仍残留在数据库文件中（明文泄漏）")
+        self.assertNotIn(secret_new.encode(), raw,
+                         "新口令以明文形式残留（不应被存储）")
+
+    def test_vacuum_removes_preexisting_residue(self):
+        """VACUUM 必须能清掉**已经存在**的残留（secure_delete 管不到的历史数据）
+
+        不依赖「UPDATE 是否恰好留下残留」——微观库里 SQLite 常在同页原地覆盖，
+        残留不稳定复现（初次写成这样时测试前提就失败了）。改为**直接把明文注入
+        文件字节**，稳定构造出「库里已存在明文残留」这一状态。
+        """
+        import sqlite3
+        import uuid
+        d = Path(tempfile.mkdtemp(prefix="pokelab_vacuum_"))
+        p = d / "api.db"
+        secret = "LEGACYplain" + uuid.uuid4().hex[:6]
+        con = sqlite3.connect(str(p))
+        con.execute("CREATE TABLE users(name TEXT, password_hash TEXT)")
+        con.execute("INSERT INTO users VALUES('x', 'v')")
+        con.commit()
+        page_size = con.execute("PRAGMA page_size").fetchone()[0]
+        con.close()
+
+        # 把明文写进第 2 页的空白区（模拟历史残留的真实形态）
+        raw = bytearray(p.read_bytes())
+        off = page_size * 2 + 200
+        raw[off:off + len(secret)] = secret.encode()
+        p.write_bytes(bytes(raw))
+        self.assertIn(secret.encode(), p.read_bytes(), "注入失败，测试前提不成立")
+
+        # `set_role.py --vacuum` 的底层动作
+        con = sqlite3.connect(str(p))
+        con.execute("VACUUM")
+        con.commit()
+        con.close()
+        self.assertNotIn(secret.encode(), p.read_bytes(),
+                         "VACUUM 未清除历史残留字节")
+        # 且数据仍在
+        con = sqlite3.connect(str(p))
+        self.assertEqual(con.execute("SELECT COUNT(*) FROM users").fetchone()[0], 1)
+        con.close()
+
+    def test_vacuum_api_runs(self):
+        """store.vacuum() 可调用且不破坏数据"""
+        n_before = store._conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        store.vacuum()
+        self.assertEqual(
+            store._conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
+            n_before)
+        self.assertEqual(
+            store._conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

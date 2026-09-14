@@ -60,12 +60,20 @@ DATA_DIR = _pick_data_dir()
 def _open_db(d: Path):
     """打开可写 SQLite：优先 api.db；若既有文件被环境写保护（readonly）→
     回退到带时间戳的新文件（新建文件总是可写，代价是重启不继承数据）。
+
+    **secure_delete=ON**（关键）：默认 SQLite 的 `UPDATE`/`DELETE` 只改 btree 指针、
+    不擦除旧字节，被改/被删的数据会以明文留在文件里，`strings` 即可捞出。
+    `users.password_hash` 这类凭据一旦改密，旧值仍可恢复——实测本库改密后
+    明文 `pw123456` 仍留在数据页中（`PRAGMA secure_delete` 默认为 0）。
+    故在此**显式打开**：写入时以零填充被覆盖/释放的单元。
+    （代价是写放大略增，对本项目的写入量可忽略。）
     """
     last_err = None
     for name in ("api.db", f"api_{int(time.time())}.db"):
         p = d / name
         try:
             con = sqlite3.connect(str(p), check_same_thread=False)
+            con.execute("PRAGMA secure_delete=ON")
             con.execute("CREATE TABLE IF NOT EXISTS _wprobe(x INTEGER)")
             con.execute("INSERT INTO _wprobe VALUES (1)")
             con.execute("DELETE FROM _wprobe")
@@ -114,6 +122,23 @@ sessions_lock = threading.RLock()
 
 def now() -> float:
     return time.time()
+
+
+def vacuum() -> None:
+    """重建数据库，**清除历史残留字节**
+
+    为什么需要它，而不是只靠 `secure_delete=ON`：
+    ``secure_delete`` 只对**今后**的写入生效——库里**已经存在**的残留（被 UPDATE
+    覆盖的旧值、被 DELETE 释放的空闲页）它管不着。实测：给 `adm1` 改密后，旧明文
+    `pw123456` 仍原样躺在数据页里，`strings api.db` 就能捞出来。
+
+    何时调用：改密 / 删除账号 / 清理凭据之后（由 `scripts/set_role.py --vacuum`）。
+    注意：需要**独占访问**——服务在跑时会因锁冲突失败，先停服务再执行。
+    """
+    with _lock:
+        _conn.commit()
+        _conn.execute("VACUUM")
+        _conn.commit()
 
 
 def new_id(kind: str) -> str:

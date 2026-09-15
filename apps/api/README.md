@@ -276,6 +276,61 @@ curl localhost:8000/compliance | jq '.content_compliance.statement, .data_privac
 curl localhost:8000/compliance | jq '.red_lines[] | {id, statement}'   # C2 已修订为「可用+标注」
 ```
 
+## 4.10 本地 Qwen3-4B 量化服务（离线推理 · ADR-LLM-001）
+
+> ADR-LLM-001：**解析/解说统一本地 Qwen3-4B（8bit）**，K2 不达标切云端保底。
+> 本节是把该决策落成「可被 PokéLab 直接调用的端点」的运维说明。
+
+| 脚本 | 作用 |
+|---|---|
+| `scripts/local_qwen.py` | 量化加载 + **OpenAI 兼容服务**（`serve` / `info` / `generate`） |
+| `scripts/qwen_precision.py` | **三层精度对照**（权重级 / 困惑度 / 端到端），产出 `artifacts/qwen_precision_report.{md,json}` |
+
+**为什么是 8bit 而不是 4bit**：本机 RTX 4050 **6GB** 放不下 bf16（≈8.05GB）；
+8bit(LLM.int8) 实测 footprint **4.11GB**，且 **`lm_head` 不被量化**（logits 仍 bf16 计算，
+token 选择不受 int8 权重误差影响）。4bit 更省显存但精度退化可测量，与本项目
+「确保数据精度」的验收口径不符——故**默认 8bit**。
+
+### 起服务（约 20s 加载 4.11GB）
+
+```bash
+python scripts/local_qwen.py serve                 # 默认 127.0.0.1:9997
+curl http://127.0.0.1:9997/healthz                 # {"ok":true,...}
+curl http://127.0.0.1:9997/v1/models
+```
+
+然后在后台 **「模型配置」** 页选预设 `本地 vLLM/Ollama` 或直接填
+`http://127.0.0.1:9997/v1`（Key 留空），保存即生效。
+
+**合规**：`127.0.0.1` 属本机端点，`privacy.is_external()` 判定为**非外发**——
+因此 `POKELAB_LOCAL_ONLY=1`（完全离线）下**依然可用**，这正是 6.2「支持本地化部署」的落地路径。
+调用仍走 `agent.llmclient.chat()` 统一出口（端点校验 → 脱敏 → 调用 → 审计），不绕过合规链路。
+
+### 三层精度对照
+
+```bash
+python scripts/qwen_precision.py --layer 1     # 权重级（≈1 分钟）
+python scripts/qwen_precision.py --layer 2     # 困惑度（含 bf16 参考，较慢）
+python scripts/qwen_precision.py --layer 3     # 端到端
+python scripts/qwen_precision.py --layer all   # 全部（建议后台跑）
+```
+
+三层各自的含义与「为什么需要」写在 `qwen_precision.py` 的模块 docstring 里；
+**结论数字以 `artifacts/qwen_precision_report.md` 为准**（可随时复跑覆盖）。
+
+> **bf16 参考怎么来的**：6GB 显存装不下 bf16，故用 `device_map="auto"` + `max_memory`
+> 把部分层放 CPU 计算——**计算精度仍是 bf16**，只是慢。比「拿 4bit 当参考」严谨得多：
+> 后者只能说明两个量化档的差异，说明不了与原始模型的差距。
+
+### 已知边界
+
+| 项 | 现状 |
+|---|---|
+| 并发 | **单卡串行**（服务内加锁），不支持批量并发；请求会排队 |
+| 显存余量 | 8bit 后仅余 ≈0.6–0.9GB 给 KV cache → 上下文建议 ≤4K；与 RL 训练**务必错峰** |
+| 首字延迟 | 6GB 卡上约 3–4 tok/s（贪心），长输出请调 `POKELAB_QWEN_MAX_NEW` |
+| 4bit 档 | 已实现（`POKELAB_QWEN_QUANT=4bit`）但**非默认**；如需长上下文/并行训练可切，需接受精度退化 |
+
 ## 5. 存储与数据目录
 
 **数据目录自动探测**（首个可写者胜，避免协同/沙箱写保护导致 `readonly database`）：

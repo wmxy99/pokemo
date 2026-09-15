@@ -29,6 +29,17 @@ build/
 *.pt
 artifacts/
 
+# 例外：量化精度报告要进版本库——它是「确保数据精度」的**验收证据**（约 24KB，
+# 由 apps/api/scripts/qwen_precision.py 复跑覆盖生成）。
+# 注意写法：git 不允许重新包含「父目录已被排除」的文件，故必须先解禁目录本身，
+# 再排除其余内容、最后单独放行。**加前导斜杠是为了只作用于仓库根**，
+# 避免把 packages/agent/artifacts/（含 .pt 权重）一并解禁。
+!/artifacts/
+/artifacts/*
+!/artifacts/qwen_precision_report.md
+!/artifacts/qwen_precision_report.json
+!/artifacts/local_llm_verify.json
+
 # 编辑器 / OS
 .idea/
 .vscode/

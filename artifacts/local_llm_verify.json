@@ -1,0 +1,64 @@
+{
+  "quant": "8bit",
+  "base": "http://127.0.0.1:58694/v1",
+  "passed": 11,
+  "total": 11,
+  "elapsed_s": 92.0,
+  "results": [
+    {
+      "check": "服务就绪（/healthz ok）",
+      "ok": true,
+      "detail": "22s · quant=8bit"
+    },
+    {
+      "check": "llmclient 读到本地配置",
+      "ok": true,
+      "detail": "source=env"
+    },
+    {
+      "check": "本机端点被判为非外发（非 external）",
+      "ok": true,
+      "detail": "is_external=False"
+    },
+    {
+      "check": "POKELAB_LOCAL_ONLY=1 下端点未被拒",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "OpenAI 协议调用返回内容",
+      "ok": true,
+      "detail": "model=qwen3-4b-8bit · 1718ms · '正常。'"
+    },
+    {
+      "check": "K2 样例集可用（从人工池取到效果文本）",
+      "ok": true,
+      "detail": "取到 2 条"
+    },
+    {
+      "check": "K2 解析（llm 后端）· Drakloak / Dragon Tail",
+      "ok": true,
+      "detail": "backend=llm · specs=1 · errors=0"
+    },
+    {
+      "check": "K2 解析（llm 后端）· Dragapult ex / Phantom Dive",
+      "ok": true,
+      "detail": "backend=llm · specs=1 · errors=0"
+    },
+    {
+      "check": "对战解说走通本地模型（generated_by=llm）",
+      "ok": true,
+      "detail": "generated_by=llm · '我方抽了牌，手牌变成12张。对手刚用Scratch打我方愿增猿，造成20点伤害。'"
+    },
+    {
+      "check": "解说带 C4 标识（ai_generated/ai_notice）",
+      "ok": true,
+      "detail": "ai_notice=有"
+    },
+    {
+      "check": "审计已记录且不含原文",
+      "ok": true,
+      "detail": "4 条 · 原文泄漏=否 ✅"
+    }
+  ]
+}

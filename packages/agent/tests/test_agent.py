@@ -121,6 +121,24 @@ class TestPrompts(unittest.TestCase):
         self.assertIn("parse_effects_user", names)
         self.assertIn("commentator_system", names)
 
+    def test_parse_system_prompt_has_no_inline_enum_list(self):
+        """回归守卫：Schema 里**不得**把枚举写成引号内的 `a|b|c`
+
+        踩过的真 bug（本地 Qwen3-4B 实测）：原提示词写
+            "target": "active_opponent|self|bench|…"
+        模型把这个字面量抄了下来，输出 `"target":"active|bench"` → Schema 校验判非法
+        （`action.target 非法：active|bench`），整条解析作废。
+        枚举必须放进**独立枚举表**并明确「只能填一个」，否则小模型极易照抄。
+        """
+        import re
+        text = prompts.load("parse_effects_system")
+        for field in ("kind", "trigger", "type", "target", "op"):
+            pat = rf'"{field}"\s*:\s*"[^"]*\|[^"]*"'
+            self.assertIsNone(
+                re.search(pat, text),
+                f"提示词里 {field} 的枚举又写成引号内 `a|b|c` 了（模型会照抄，见本用例说明）")
+        self.assertIn("只能填", text, "缺少「枚举只能填一个取值」的硬性要求")
+
     def test_render_replaces_tokens(self):
         out = prompts.render(
             "parse_effects_user", card_name="Dragapult ex",

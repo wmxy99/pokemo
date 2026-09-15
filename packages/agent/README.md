@@ -162,5 +162,18 @@ python examples/eval_matrix.py --features full --weights artifacts/policy_full.p
      （技术方案 §1），跨卡组须用公平对位（镜像/轮换先手）。
 - LangGraph 为可选依赖：纯编排 `decide()` 零依赖可本地跑；`pip install langgraph` 后可用
   StateGraph 形态（行为一致，有单测对齐）；
-- LLM（本地 Qwen3-4B 8bit / 云端 OpenAI 兼容）接入见 `prompts/` 与 card-db 解析流水线
-  （ADR-LLM-001：K2 不达标切云端保底）。
+- LLM（本地 Qwen3-4B 8bit / 云端 OpenAI 兼容）接入见 `prompts/`、`llmclient.py`
+  与 `commentary.py`；**统一出口是 `llmclient.chat()`**（端点校验 → 脱敏 → 调用 → 审计），
+  任何调用点都不得绕过它直连外部端点。
+
+  **本地 Qwen3-4B 落地方式**（ADR-LLM-001：解析/解说统一本地，K2 不达标切云端保底）：
+  起一个 OpenAI 兼容的本地端点即可，无需改本包代码——
+
+  ```bash
+  cd apps/api && python scripts/local_qwen.py serve          # 127.0.0.1:9997
+  export POKELAB_LLM_BASE=http://127.0.0.1:9997/v1           # 或后台「模型配置」页填
+  ```
+
+  本机端点被 `privacy.is_external()` 判为**非外发**，故 `POKELAB_LOCAL_ONLY=1`
+  （完全离线）下**依然可用**——这是 6.2「支持本地化部署」的实际路径。
+  量化档位（8bit 默认 / 4bit 可选）与三层精度对照见 `apps/api/README.md` §4.10。

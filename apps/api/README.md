@@ -385,11 +385,17 @@ B 类 16 条里 **rule 后端都识别出了具体机制**（`coin_flip`/`shield
 `damage/draw/attach/heal/discard/switch/search/evolve/spread/move_damage/knockout/status/rule`），
 模型只能退回 `rule`。补枚举 + few-shot 是提升完全映射率最直接的一步。
 
-> ⚠ **口径边界**：本脚本测的是**卡池解析可用率**（能交付合法结构化结果），
-> 与 rule 基线的 99.7% support_rate **同口径**对照。它**不等于**「语义正确率」——
-> 判断语义正确需要人工真值，即 `examples/run_k2.py` 的黄金集严格准确率
-> （黄金集 50 条，LLM 后端实测约需 35 分钟，**尚未跑**）。
-> 另注意 plan B：8bit 全量 3.8 小时在离线批处理场景可接受。
+> ⚠ **口径区分（必读）**：本节测的是**卡池解析可用率**（能否交付合法结果 + 映射到
+> 引擎 tag），与 rule 的 99.7% support_rate **同口径**。它**不等于语义准确率** ——
+>
+> **黄金集（50 条人工真值）实测已跑完：LLM 后端 strict 32.0%**（seen 35% / holdout 20%），
+> **未达 85% 门槛 → 按 ADR-LLM-001 应启用「云端保底」**。两组数字**不矛盾**：
+> `parse_rate` 98%（格式没问题）但**数值准确率仅 46%**、kind 64% → 短板在语义。
+> 对照 rule 后端在同一黄金集上 strict **100%**。报告：`artifacts/k2_report_llm.md`；
+> 改动前基线对照见 `artifacts/k2_report_llm_before.json`。
+>
+> **耗时已变化**：提示词补入机制级枚举与 few-shot 后（渲染 6105 字符），单条从 41.4 s
+> 涨到 **141 s** → 全量 328 条约 **13 小时**（精简提示词已列为 P0）。
 
 > **bf16 参考怎么来的**：6GB 显存装不下 bf16，故用 `device_map="auto"` + `max_memory`
 > 把部分层放 CPU 计算——**计算精度仍是 bf16**，只是慢。比「拿 4bit 当参考」严谨得多：

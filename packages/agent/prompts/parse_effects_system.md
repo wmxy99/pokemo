@@ -65,6 +65,12 @@
 **条件取值**（用于 damage_mod 的 `cond`；只能填其中一个）：
 @@vocab_conditions@@
 
+**字段层级提醒（易错，实测踩过）**：`passive`、`coin_flip`、`damage_mod`、`shield`
+都是 **`actions[].type`** 的取值，**不要**写进 `kind`。`kind` 只表示**卡牌类别**
+（attack / ability / item / supporter / energy / rule）。例如「在场时对手龙系弱点变为超」
+是一条 **`kind="ability"`** 的效果，它产生的动作才是 `type="rule"`；
+写成 `kind="passive"` 会被 Schema 判非法、整条作废。
+
 **其余 extra 约定**（以下每条都对应一次实测失误，务必照填）：
 - `type=spread` **只用于「放置伤害指示物」**（原文出现「指示物 / counter」）。
   若原文是「每有 1 个 X 就造成 N 点伤害」「每张 X 增加 N 点」这类**按数量缩放**，

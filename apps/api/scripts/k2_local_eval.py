@@ -601,19 +601,26 @@ def _write_report(items: list, sample: list, rows, a) -> None:
               "| # | 名称 | rule 基线 | 修复前 LLM | 修复后 LLM | 结果 |",
               "|---|---|---|---|---|---|"]
         for i, r in enumerate(sel, 1):
-            b, a, rl = r["before"]["tags"], r["tags"], r["rule_tags"]
-            if set(a) == set(rl) and set(b) != set(rl):
+            # ⚠ 不要用 b/a 这类短名做解包：本函数末尾还要用参数 `a`（argparse 的
+            # Namespace）取 `a.quant` —— 首版写成 `b, a, rl = …` 直接把它覆盖成 list，
+            # 于是 **.md 写成功、.json 抛 AttributeError**，产出「报告在、机读产物没了」
+            # 的静默不一致（最坏的一种：不报错但状态残缺）。
+            t_before = r["before"]["tags"]
+            t_after = r["tags"]
+            t_rule = r["rule_tags"]
+            if set(t_after) == set(t_rule) and set(t_before) != set(t_rule):
                 res = "✅ 已对齐"
-            elif set(a) == set(rl) and set(b) == set(rl):
+            elif set(t_after) == set(t_rule) and set(t_before) == set(t_rule):
                 res = "— 本就对齐"
-            elif set(b) == set(rl) and set(a) != set(rl):
+            elif set(t_before) == set(t_rule) and set(t_after) != set(t_rule):
                 res = "❌ **退化**"
-            elif a != b:
+            elif t_after != t_before:
                 res = "△ 有变化仍不一致"
             else:
                 res = "— 无变化"
-            L.append(f"| {i} | {r['name']} | {'、'.join(rl) or '—'} "
-                     f"| {'、'.join(b) or '—'} | {'、'.join(a) or '—'} | {res} |")
+            L.append(f"| {i} | {r['name']} | {'、'.join(t_rule) or '—'} "
+                     f"| {'、'.join(t_before) or '—'} | {'、'.join(t_after) or '—'} "
+                     f"| {res} |")
         L += [""]
 
     fails = [r for r in rows if r["raw_empty"] or r["errors"]]
@@ -677,13 +684,20 @@ def _write_report(items: list, sample: list, rows, a) -> None:
           "   说明 LLM 越能独立产出结果。",
           "4. 语料为 `cards_real.json` 的 `desc_zh`（**自述转写**，非官方文案；C2/C5）。",
           ""]
-    md_p.write_text("\n".join(L) + "\n", encoding="utf-8")
+    # 顺序：**先机读、后人读**。若 json 写入失败，md 就不会写出 —— 宁可"完全没产出"，
+    # 也不要「报告在、机读产物没了」这种静默不一致。
+    # （首版正是反过来的：局部变量 `a` 被覆盖 → .md 正常写出、.json 抛 AttributeError，
+    #   表面看一切正常，实际机读产物缺失。）
     js_p.write_text(json.dumps(
         {"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
          "quant": a.quant, "seed": a.seed, "tag": a.tag or a.quant,
          "summary": s, "rows": rows}, ensure_ascii=False, indent=2),
         encoding="utf-8")
-    print(f"[k2-eval] 报告 -> {md_p}")
+    md_p.write_text("\n".join(L) + "\n", encoding="utf-8")
+    for _p in (md_p, js_p):                     # 双产物自检
+        if not _p.is_file():
+            raise RuntimeError(f"[k2-eval] 产物缺失：{_p}")
+    print(f"[k2-eval] 报告 -> {md_p} ｜ 机读 -> {js_p}")
 
 
 if __name__ == "__main__":

@@ -148,5 +148,71 @@ class TestPrompts(unittest.TestCase):
         self.assertNotIn("@@card_name@@", out)
 
 
+class TestSystemPromptInjection(unittest.TestCase):
+    """系统提示词的「枚举/取值域注入」必须与代码同步
+
+    背景：实测发现 LLM 把「抛币 / 护盾 / 伤害缩放」这类效果笼统写成 `rule`，
+    导致引擎映射不到（`unsupported: rule`）——而根因**不是模型能力**，是提示词的
+    `action.type` 枚举表**只列到 `rule`**，而校验层 `ACTION_TYPES` 早已支持
+    `coin_flip`/`damage_mod`/`shield`/`passive`/`recover`。模型只能按提示词填。
+
+    → 修法不是「再抄一遍枚举到 .md」（那正是漂移的来源），而是**从代码常量与引擎
+    动态注入**。本组用例守住这条：注入漏了、或有人往提示词里塞了不可映射的示例，
+    都会在这里失败——**不用等真跑 40 分钟 GPU 才发现**。
+    """
+
+    def setUp(self):
+        from agent import effects as E
+        self.E = E
+
+    def test_enum_lists_injected_from_constants(self):
+        """渲染后必须包含全部枚举取值（单一来源 = 代码常量）"""
+        import re
+        sp = self.E.render_system_prompt()
+        self.assertIsNone(re.search(r"@@\w+@@", sp), "提示词有未替换的占位符")
+        for label, vals in (("kind", self.E.KINDS),
+                            ("trigger", self.E.TRIGGERS),
+                            ("action.type", self.E.ACTION_TYPES),
+                            ("target", self.E.TARGETS)):
+            for v in vals:
+                self.assertIn(v, sp, f"{label} 的取值 {v} 未注入提示词")
+
+    def test_mechanism_types_present(self):
+        """机制级 type 必须在枚举里（否则模型只能退回 rule）"""
+        sp = self.E.render_system_prompt()
+        for v in ("coin_flip", "damage_mod", "shield", "passive"):
+            self.assertIn(v, sp, f"机制级 type {v} 未出现在提示词枚举中")
+
+    def test_engine_vocab_injected(self):
+        """引擎取值域必须注入（计数源/条件来自 engine.battle.dmg_vocab）"""
+        sp = self.E.render_system_prompt()
+        vocab = self.E.engine_vocab()
+        self.assertTrue(vocab.get("counters"), "未能从引擎读到计数源取值域")
+        self.assertIn(vocab["counters"][0], sp)
+        self.assertIn(vocab["conditions"][0], sp)
+
+    def test_fewshot_examples_map_to_engine(self):
+        """提示词里的 few-shot 示例**必须能被引擎映射**
+
+        这是本组最关键的一条：示例是模型要模仿的样板。若示例本身映射不到引擎
+        （如 `mode` 写了个引擎不认的值 → 落到 else 分支变成「固定加伤」，语义全错），
+        模型就会学着产出一批「看起来合法、其实映射错」的结果，而且**很难察觉**。
+        """
+        import json
+        import re
+        sp = self.E.render_system_prompt()
+        blocks = re.findall(r"^(\[\{.*\}\])$", sp, re.M)
+        self.assertGreaterEqual(len(blocks), 4,
+                                "示例数量少于预期（应含多动作/抛币/护盾/缩放）")
+        for i, b in enumerate(blocks, 1):
+            specs = json.loads(b)                      # 示例必须是合法 JSON
+            errs = self.E.validate_specs(specs)        # 且通过 Schema 校验
+            self.assertEqual(errs, [], f"例{i} 未通过 Schema 校验：{errs}")
+            tg = self.E.to_engine_tags(specs)          # 且能映射到引擎 tag
+            self.assertEqual(tg["unsupported"], [],
+                             f"例{i} 含未建模动作：{tg['unsupported']}")
+            self.assertTrue(tg["tags"], f"例{i} 未产出任何引擎 tag")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -48,6 +48,87 @@ COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
 # 引擎可执行 tag 映射（与 engine/data/cards_real.json 的 meta.engine_tags 对齐）
 ENGINE_STATUS_TAGS = ("poison", "burn", "sleep", "paralyze", "confuse")
 
+# ---- target 别名归一化 ----
+# 为什么需要：LLM 常输出「枚举外但语义明确」的值。实测 A 类失败里有
+# `action.target 非法：opponent_bench` —— 它想表达「对手后备区」，合法值叫
+# `active_opponent_bench`。整条效果因一个词而作废，性价比极低。
+#
+# **边界（重要）**：只收**含义唯一**的别名。像 `active`（分不清敌我）、`bench`
+# （虽合法但语义宽）这类**一律不猜** —— 让校验如实报错，远好过「猜错了静默用错目标」：
+# 目标错了引擎会结算到错的宝可梦身上，那是**无声的错误行为**，比解析失败更危险。
+_TARGET_ALIASES = {
+    # 对手侧
+    "opponent_bench": "active_opponent_bench",
+    "opp_bench": "active_opponent_bench",
+    "opponents_bench": "active_opponent_bench",
+    "opponent_active": "active_opponent",
+    "opp_active": "active_opponent",
+    "opponents_active": "active_opponent",
+    "defending_pokemon": "active_opponent",
+    "opp_hand": "opponent_hand",
+    # 自己侧
+    "own_active": "self",
+    "my_active": "self",
+    "self_active": "self",
+    "own_bench": "bench",
+    "my_bench": "bench",
+    "your_bench": "bench",
+    "own_hand": "hand",
+    "my_hand": "hand",
+    "your_hand": "hand",
+    "own_discard": "discard",
+    "my_discard": "discard",
+    # 牌库 / 任意
+    "library": "deck",
+    "deck_top": "deck",
+    "anywhere": "any",
+}
+
+
+def normalize_target(t):
+    """把 `action.target` 的自然表达归一化到合法枚举值（**只处理语义唯一者**）
+
+    返回原值当无法确定——绝不猜。（详见 `_TARGET_ALIASES` 上方的边界说明。）
+    """
+    if not isinstance(t, str):
+        return t
+    key = t.strip().lower().replace("-", "_").replace(" ", "_")
+    if key in TARGETS:
+        return key
+    return _TARGET_ALIASES.get(key, t)
+
+
+def normalize_specs(specs: list) -> list:
+    """归一化 spec 里可救回的字段（当前：`action.target` 别名）→ **返回新对象**
+
+    放在 **validate 之前**，且必须是**无副作用**的：`parse_effects` 里 `raw` 与
+    `specs` 引用的是**同一批 dict**（`specs = [s for s in raw if isinstance(s, dict)]`
+    只筛不拷），若就地改 dict，`raw` 会被一起改掉 —— 而评测
+    （`k2_local_eval`）正是用 `raw` 判断「模型有没有真产出结果」。
+    **首版就是就地改的，被 `test_llm_target_alias_rescued_on_real_path` 抓出来了。**
+    """
+    out: list = []
+    for s in specs or ():
+        if not isinstance(s, dict):
+            out.append(s)
+            continue
+        acts = s.get("actions")
+        if not isinstance(acts, list):
+            out.append(s)
+            continue
+        new_acts = []
+        for a in acts:
+            if isinstance(a, dict) and "target" in a:
+                a2 = dict(a)                       # 浅拷贝，不动原对象
+                a2["target"] = normalize_target(a["target"])
+                new_acts.append(a2)
+            else:
+                new_acts.append(a)
+        s2 = dict(s)
+        s2["actions"] = new_acts
+        out.append(s2)
+    return out
+
 
 # ---------------- 工具 ----------------
 def _num(text: str) -> Optional[int]:
@@ -1024,6 +1105,67 @@ def extract_json(text: str) -> Optional[list]:
     return data if isinstance(data, list) else None
 
 
+_ENGINE_VOCAB: dict = {}
+
+
+def engine_vocab() -> dict:
+    """引擎侧取值域（计数源 / 条件 / 能量区 / 被动形态）—— **动态读取，不硬编码**
+
+    为什么这样做：K2 提示词必须告诉模型 `dmg_plus:N:per:<counter>` 里的 `<counter>`
+    能填什么。若把取值**手抄进提示词**，引擎加了新计数源而提示词忘了同步，就会出现
+    「模型按提示词填了、引擎却抛错」的错配 —— 本项目已因「提示词与代码不同步」踩过
+    一次（旧 `pokelab/effects.py` 的枚举写成引号内 `a|b|c`，模型照抄导致整条作废）。
+    → 故取值域只在引擎侧定义一次（`engine.battle.dmg_vocab()`），渲染时注入。
+
+    缓存 + 容错：取值域是静态的，而 `parse_llm` 是热路径（每条都要渲染提示词）；
+    引擎不可用时返回空 dict —— 提示词退化为「见引擎文档」，而不是让整条解析链挂掉。
+    """
+    if _ENGINE_VOCAB:
+        return _ENGINE_VOCAB
+    try:
+        import sys as _sys
+        eng = str(REPO / "packages" / "engine")
+        if eng not in _sys.path:
+            _sys.path.insert(0, eng)
+        from engine import battle as _battle              # noqa: E402
+        _ENGINE_VOCAB.update(_battle.dmg_vocab())
+    except Exception:                                     # noqa: BLE001
+        pass
+    return _ENGINE_VOCAB
+
+
+def _vocab_text(key: str) -> str:
+    """把某类取值域渲染成提示词片段；缺数据时给**明确占位**（而非空白枚举）"""
+    vals = engine_vocab().get(key) or []
+    return "、".join(vals) if vals else "（引擎未提供，遇此类效果请在 extra.note 说明）"
+
+
+def render_system_prompt(retrieved_rules: str = "") -> str:
+    """渲染 K2 系统提示词 —— 枚举与取值域**从代码/引擎注入**
+
+    抽成独立函数是为了**可离线测试**：不起 LLM 服务就能验证
+    「枚举是否完整注入」「示例的 JSON 是否真能被引擎映射」。否则这类问题
+    只能在真跑模型时暴露，而那时已经烧掉几十分钟 GPU 时间。
+    """
+    from . import prompts as _prompts
+    return _prompts.render(
+        "parse_effects_system",
+        retrieved_rules=retrieved_rules or "（无）",
+        # 枚举表：单一来源 = 本模块常量（避免 .md 与校验层漂移）
+        enum_kind=" · ".join(KINDS),
+        enum_trigger=" · ".join(TRIGGERS),
+        enum_cond_op=" · ".join(COND_OPS),
+        enum_action_type=" · ".join(ACTION_TYPES),
+        enum_target=" · ".join(TARGETS),
+        enum_status=" · ".join(ENGINE_STATUS_TAGS),
+        # 取值域：单一来源 = 引擎（避免 .md 与引擎漂移）
+        vocab_counters=_vocab_text("counters"),
+        vocab_conditions=_vocab_text("conditions"),
+        vocab_energy_zones=_vocab_text("energy_zones"),
+        vocab_passive_tags=_vocab_text("passive_tags"),
+    )
+
+
 def parse_llm(text: str, kind: str = "attack", name: str = "",
               retrieved_rules: str = "", meta_out: Optional[dict] = None,
               extra_sensitive: Optional[dict] = None) -> list:
@@ -1034,11 +1176,12 @@ def parse_llm(text: str, kind: str = "attack", name: str = "",
     （仅端点/模型/字符数/脱敏计数，**不含原文**）。
 
     ``meta_out``：可选 dict，原地回填 ``{endpoint, model, privacy, audit}``。
+
+    **枚举与取值域从代码常量注入**（而非写在 .md 里）—— 见 `engine_vocab()` 的说明。
     """
     from . import prompts as _prompts
     # 渲染提示词后交给统一客户端（客户端内部完成：端点校验 → 脱敏 → 调用 → 审计）
-    sys_t = _prompts.render("parse_effects_system",
-                            retrieved_rules=retrieved_rules or "（无）")
+    sys_t = render_system_prompt(retrieved_rules)
     usr_t = _prompts.render("parse_effects_user", card_name=name or "(未命名)",
                             card_kind=kind, rules_text=text)
     res = _llm_chat([{"role": "system", "content": sys_t},
@@ -1098,6 +1241,9 @@ def parse_effects(text: str, kind: str = "attack", name: str = "",
                 "errors": [str(e)], "generated_by": used,
                 "ai_generated": True, "ai_notice": AI_NOTICE,
                 "model": None, "endpoint": None, "privacy": None}
+    # 归一化（不改 raw）：把 LLM 语义明确但枚举外的写法救回来，再校验。
+    # 例：`opponent_bench` → `active_opponent_bench`（实测确有这样一条整条作废）。
+    specs = normalize_specs(specs)
     errs = validate_specs(specs)
     return {"backend": used, "specs": specs, "raw": raw, "errors": errs,
             "generated_by": used, "ai_generated": True, "ai_notice": AI_NOTICE,

@@ -1955,6 +1955,26 @@ _CONDITIONS = {
 }
 
 
+def dmg_vocab() -> dict:
+    """伤害修正层可用的**取值域**（供提示词注入 —— 避免文档与引擎漂移）
+
+    为什么要有这个公开访问器：K2 提示词需要告诉模型 `dmg_plus:N:per:<counter>`
+    里 `<counter>` 能填什么。若把取值**硬编码进提示词**，引擎加了新计数源而提示词
+    忘了同步，就会出现「模型按提示词填了、引擎却抛错」的错配（本项目已因提示词与
+    代码不同步踩过一次：枚举写成引号内 `a|b|c` 导致模型照抄）。
+    → 故取值域只有**引擎这一处定义**，提示词渲染时动态注入。
+
+    返回的 `counters` 只含具名计数源；`<zone>_energy[_<color>]` 形式由
+    `energy_zones` 与颜色组合而成（见 `_ENERGY_COUNTER_RE`）。
+    """
+    return {
+        "counters": sorted(_COUNTERS),
+        "conditions": sorted(_CONDITIONS),
+        "energy_zones": sorted(_ENERGY_ZONES),
+        "passive_tags": ["bench_immune"],       # 见 _is_bench_immune 的 tag 白名单
+    }
+
+
 def _eval_counter(battle, counter: str) -> int:
     """计数源求值（未知 → 抛错，禁止静默 0）"""
     if counter.isdigit():

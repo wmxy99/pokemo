@@ -190,6 +190,12 @@ def main() -> int:
     ap.add_argument("--rerender", default=None, metavar="JSON",
                     help="从已有 JSON 重渲染 Markdown（**不占 GPU**）——"
                          "改了报告措辞/统计口径后用它刷新，不必重跑几十分钟")
+    ap.add_argument("--rerun-from", default=None, metavar="JSON",
+                    help="从旧报告取条目做**定向重跑**（改了提示词/归一化后验证效果），"
+                         "配合 --only 只跑问题子集，约十几分钟而非全量")
+    ap.add_argument("--only", default="tag-diff",
+                    help="与 --rerun-from 搭配：tag-diff（tag 与 rule 不一致）"
+                         "/ a / b / c / fail / all")
     a = ap.parse_args()
 
     # `--rerender`：只读 JSON 重出 Markdown。用途：报告格式或统计口径调整后，
@@ -215,29 +221,39 @@ def main() -> int:
     print("=" * 70)
 
     # ---- ① 卡池条目 + rule 全量基线 ----
-    items = E.collect_pool_items()
-    print(f"\n① 卡池条目（招式+特性，含展示文本：中文优先、无中文则回退英文）：{len(items)}")
-    _zh = sum(1 for i in items if lang_of(i["text"]) == "zh")
-    print(f"   语言分布：中文 {_zh} 条 / 英文 {len(items) - _zh} 条"
-          f"（扩展池无中文文本，故英文占多数）")
-    t0 = time.time()
-    for it in items:
-        r = E.parse_effects(it["text"], kind=it["kind"], name=it["name"],
-                            backend="rule")
-        tg = E.to_engine_tags(r["specs"]) if r["specs"] else \
-            {"tags": [], "unsupported": []}
-        it["rule_tags"] = tg["tags"]
-        it["rule_unsupported"] = tg["unsupported"]
-        it["rule_actions"] = sorted({
-            act.get("type") for s in r["specs"] for act in (s.get("actions") or [])
-            if isinstance(act, dict)})
-    rule_ok = sum(1 for it in items if not it["rule_unsupported"])
-    print(f"   rule 基线：完全映射 {rule_ok}/{len(items)} = "
-          f"{_pct(rule_ok / len(items))}（耗时 {time.time() - t0:.1f}s）")
-    print(f"   rule 判为未建模的难例：{len(items) - rule_ok} 条")
+    if a.rerun_from:
+        # 定向重跑：条目与其 rule 基线都从旧报告恢复（同一文本 rule 结果确定不变），
+        # 省掉全量 rule 基线与抽样两步，直接把 GPU 时间花在问题条目上。
+        items = _items_from_report(Path(a.rerun_from), a.only)
+        if not items:
+            raise SystemExit(f"[k2-eval] 按 --only {a.only} 筛选后无条目")
+        print(f"\n① 定向重跑：{len(items)} 条"
+              f"（来源 {Path(a.rerun_from).name}，筛选 {a.only}）")
+    else:
+        items = E.collect_pool_items()
+        print(f"\n① 卡池条目（招式+特性，含展示文本：中文优先、无中文则回退英文）：{len(items)}")
+        _zh = sum(1 for i in items if lang_of(i["text"]) == "zh")
+        print(f"   语言分布：中文 {_zh} 条 / 英文 {len(items) - _zh} 条"
+              f"（扩展池无中文文本，故英文占多数）")
+        t0 = time.time()
+        for it in items:
+            r = E.parse_effects(it["text"], kind=it["kind"], name=it["name"],
+                                backend="rule")
+            tg = E.to_engine_tags(r["specs"]) if r["specs"] else \
+                {"tags": [], "unsupported": []}
+            it["rule_tags"] = tg["tags"]
+            it["rule_unsupported"] = tg["unsupported"]
+            it["rule_actions"] = sorted({
+                act.get("type") for s in r["specs"] for act in (s.get("actions") or [])
+                if isinstance(act, dict)})
+        rule_ok = sum(1 for it in items if not it["rule_unsupported"])
+        print(f"   rule 基线：完全映射 {rule_ok}/{len(items)} = "
+              f"{_pct(rule_ok / len(items))}（耗时 {time.time() - t0:.1f}s）")
+        print(f"   rule 判为未建模的难例：{len(items) - rule_ok} 条")
 
     # ---- ② 抽样 ----
-    sample = items if a.sample == 0 else stratified_sample(items, a.sample, a.seed)
+    sample = items if (a.sample == 0 or a.rerun_from) else \
+        stratified_sample(items, a.sample, a.seed)
     hard = sum(1 for it in sample if it["rule_unsupported"])
     print(f"\n② 抽样：{len(sample)} 条（seed={a.seed}）"
           f"｜其中 rule 难例 {hard} 条 / 易例 {len(sample) - hard} 条")
@@ -299,7 +315,7 @@ def main() -> int:
         llm_actions = sorted({
             act.get("type") for s in r["specs"] for act in (s.get("actions") or [])
             if isinstance(act, dict)}) if not raw_empty else []
-        rows.append({
+        row = {
             "name": it["name"], "name_zh": it["name_zh"], "kind": it["kind"],
             "text": it["text"], "lang": lang_of(it["text"]),
             "rule_unsupported": len(it["rule_unsupported"]),
@@ -309,7 +325,10 @@ def main() -> int:
             "tags": tg["tags"], "unsupported": tg["unsupported"],
             "llm_actions": llm_actions,
             "elapsed_ms": int(dt * 1000),
-        })
+        }
+        if it.get("before") is not None:      # 定向重跑：带上修复前结果做对比
+            row["before"] = it["before"]
+        rows.append(row)
         eta = (time.time() - t1) / i * (len(sample) - i)
         flag = "空" if raw_empty else ("错" if r["errors"] else "ok")
         print(f"   [{i:>3}/{len(sample)}] {flag:<2} {dt:5.1f}s "
@@ -331,6 +350,48 @@ def _classify(rows: list) -> dict:
     b = [r for r in bc if r["unsupported"]]
     c = [r for r in bc if not r["unsupported"]]
     return {"A_parse_failed": a, "B_unmodeled": b, "C_fully_mapped": c}
+
+
+def _items_from_report(path: Path, only: str) -> list:
+    """从旧报告恢复条目（含其 rule 基线与**修复前结果**）→ 用于定向重跑
+
+    为什么需要定向重跑：改了提示词/归一化之后要回答「**修复有没有效果**」，
+    全量重跑 60 条要 40 分钟；而问题往往只集中在少数条目上（如实测 15 条 tag 不一致）。
+    定向重跑那批即可，并把旧结果一并带入 → 产出**修复前后逐条对比**。
+
+    `rule_*` 字段直接沿用旧报告：同一文本的 rule 基线是确定性的，不会变。
+    """
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows = data.get("rows") or []
+    if not rows:
+        raise SystemExit(f"[k2-eval] {path.name} 无 rows（dry-run 产物？）")
+    only = (only or "all").lower()
+    if only in ("tag-diff", "diff"):
+        sel = [r for r in rows if r.get("tags") and r.get("rule_tags")
+               and set(r["tags"]) != set(r["rule_tags"])]
+    elif only in ("a", "b", "c"):
+        key = {"a": "A_parse_failed", "b": "B_unmodeled",
+               "c": "C_fully_mapped"}[only]
+        sel = _classify(rows)[key]
+    elif only == "fail":
+        sel = [r for r in rows if r.get("raw_empty") or r.get("errors")]
+    else:
+        sel = rows
+    items = []
+    for r in sel:
+        items.append({
+            "kind": r["kind"], "name": r["name"],
+            "name_zh": r.get("name_zh") or r["name"], "text": r["text"],
+            "rule_tags": r.get("rule_tags") or [],
+            # 主流程只用 len()，这里按原长度占位即可
+            "rule_unsupported": [None] * int(r.get("rule_unsupported") or 0),
+            "rule_actions": r.get("rule_actions") or [],
+            "before": {"tags": r.get("tags") or [],
+                       "unsupported": r.get("unsupported") or [],
+                       "raw_empty": r.get("raw_empty"),
+                       "errors": r.get("errors") or []},
+        })
+    return items
 
 
 def _summary(rows: list, items: list) -> dict:
@@ -520,6 +581,39 @@ def _write_report(items: list, sample: list, rows, a) -> None:
                      f"| [{_pct(d['usable_ci95'][0])}, {_pct(d['usable_ci95'][1])}] "
                      f"| {d['A_parse_failed']} | {d['B_unmodeled']} "
                      f"| {d['C_fully_mapped']} |")
+        L += [""]
+
+    # 定向重跑时输出"修复前后"对比（判据：是否与 rule 基线一致 —— 见 P2-2 抽检结论）
+    if any(r.get("before") for r in rows):
+        sel = [r for r in rows if r.get("before")]
+        before_ok = sum(1 for r in sel
+                        if set(r["before"]["tags"]) == set(r["rule_tags"]))
+        after_ok = sum(1 for r in sel if set(r["tags"]) == set(r["rule_tags"]))
+        arrow = "↑ 改善" if after_ok > before_ok else (
+            "↓ 退化" if after_ok < before_ok else "持平")
+        L += ["### 修复前后对比（定向重跑）", "",
+              f"- 与 rule 基线一致：修复前 **{before_ok}/{len(sel)}** → "
+              f"修复后 **{after_ok}/{len(sel)}**（{arrow}）",
+              "- 判据说明：以「是否与 rule 基线一致」衡量，依据是 P2-2 抽检结论"
+              "（15 条不一致里 rule 明显更准，LLM 的问题集中在计数缩放误判、"
+              "丢 extra 细节、draw 语义不分、「全部」丢失四类）。",
+              "",
+              "| # | 名称 | rule 基线 | 修复前 LLM | 修复后 LLM | 结果 |",
+              "|---|---|---|---|---|---|"]
+        for i, r in enumerate(sel, 1):
+            b, a, rl = r["before"]["tags"], r["tags"], r["rule_tags"]
+            if set(a) == set(rl) and set(b) != set(rl):
+                res = "✅ 已对齐"
+            elif set(a) == set(rl) and set(b) == set(rl):
+                res = "— 本就对齐"
+            elif set(b) == set(rl) and set(a) != set(rl):
+                res = "❌ **退化**"
+            elif a != b:
+                res = "△ 有变化仍不一致"
+            else:
+                res = "— 无变化"
+            L.append(f"| {i} | {r['name']} | {'、'.join(rl) or '—'} "
+                     f"| {'、'.join(b) or '—'} | {'、'.join(a) or '—'} | {res} |")
         L += [""]
 
     fails = [r for r in rows if r["raw_empty"] or r["errors"]]

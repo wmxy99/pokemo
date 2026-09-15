@@ -545,5 +545,70 @@ class TestEvaluation(unittest.TestCase):
                                     f"{name} 的招式 {a.name} 缺中文效果文本")
 
 
+class TestTargetNormalization(unittest.TestCase):
+    """`action.target` 别名归一化
+
+    背景：实测 A 类失败有一条 `action.target 非法：opponent_bench` —— LLM 想表达
+    「对手后备区」，而合法枚举值是 `active_opponent_bench`。整条效果因**一个词**作废。
+
+    归一化必须**只收语义唯一者**：歧义取值（如 `active` 分不清敌我）宁可不收，
+    因为「猜错了静默用错目标」比「解析失败」更危险——前者会让引擎把效果结算到
+    错的宝可梦身上，且**不会报错**。
+    """
+
+    def test_known_alias_normalized(self):
+        for raw, want in (("opponent_bench", "active_opponent_bench"),
+                          ("Opp-Bench", "active_opponent_bench"),   # 大小写 + 连字符
+                          ("my active", "self"),                    # 空格
+                          ("library", "deck"),
+                          ("opp_hand", "opponent_hand")):
+            self.assertEqual(E.normalize_target(raw), want)
+
+    def test_legal_value_untouched(self):
+        for v in E.TARGETS:
+            self.assertEqual(E.normalize_target(v), v)
+
+    def test_ambiguous_value_not_guessed(self):
+        """歧义取值**不猜**（见类 docstring 的边界说明）"""
+        for v in ("active", "his_pokemon", "the_bench", ""):
+            self.assertEqual(E.normalize_target(v), v,
+                             f"{v!r} 属于语义不唯一，不应被归一化")
+        self.assertEqual(E.normalize_target(None), None)
+
+    def test_llm_target_alias_rescued_on_real_path(self):
+        """走真实 llm 分支：别名被救回，且 **`raw` 保持模型原样**"""
+        import json as _json
+        from unittest import mock
+        spec = [{"kind": "attack", "name": "Drag Off", "trigger": "on_use",
+                 "conditions": [],
+                 "actions": [{"type": "switch", "amount": None,
+                              "target": "opponent_bench",
+                              "extra": {"reason": "gust"}}],
+                 "source_text": "自述转写：把对手的后备宝可梦换到战斗位。"}]
+        fake = {"content": _json.dumps(spec, ensure_ascii=False),
+                "endpoint": "http://127.0.0.1:1/v1", "model": "test",
+                "privacy": {}, "elapsed_ms": 1, "source": "test"}
+        with mock.patch.object(E, "_llm_chat", return_value=fake):
+            r = E.parse_effects("把对手的后备宝可梦换到战斗位。", kind="attack",
+                                name="Drag Off", backend="llm")
+        self.assertEqual(r["backend"], "llm")
+        self.assertEqual(r["errors"], [], f"本应被别名救回，却仍报错：{r['errors']}")
+        self.assertEqual(r["specs"][0]["actions"][0]["target"],
+                         "active_opponent_bench")
+        # **raw 不得被改动**：评测（k2_local_eval）用 raw 判断「模型是否真产出了
+        # 结果」，若把归一化也写进 raw，那个判据就失真了。
+        self.assertEqual(r["raw"][0]["actions"][0]["target"], "opponent_bench")
+
+    def test_non_string_and_missing_target_safe(self):
+        """异常输入不得抛错（模型可能给 null / 数字 / 缺字段）"""
+        specs = [{"kind": "attack", "actions": [
+            {"type": "damage", "target": None},
+            {"type": "damage"},
+            {"type": "damage", "target": 123},
+        ]}]
+        E.normalize_specs(specs)          # 不抛异常即通过
+        self.assertIsNone(specs[0]["actions"][0]["target"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -284,12 +284,27 @@ curl localhost:8000/compliance | jq '.red_lines[] | {id, statement}'   # C2 已�
 | 脚本 | 作用 |
 |---|---|
 | `scripts/local_qwen.py` | 量化加载 + **OpenAI 兼容服务**（`serve` / `info` / `generate`） |
-| `scripts/qwen_precision.py` | **三层精度对照**（权重级 / 困惑度 / 端到端），产出 `artifacts/qwen_precision_report.{md,json}` |
+| `scripts/qwen_precision.py` | **三层精度对照**（权重级 / 困惑度 / 端到端）+ 档位对照，产出 `artifacts/qwen_precision_report*.{md,json}` |
+| `scripts/k2_local_eval.py` | **K2 达标率实测**（本地模型真跑卡池解析），产出 `artifacts/k2_local_eval.{md,json}` |
 
-**为什么是 8bit 而不是 4bit**：本机 RTX 4050 **6GB** 放不下 bf16（≈8.05GB）；
-8bit(LLM.int8) 实测 footprint **4.11GB**，且 **`lm_head` 不被量化**（logits 仍 bf16 计算，
-token 选择不受 int8 权重误差影响）。4bit 更省显存但精度退化可测量，与本项目
-「确保数据精度」的验收口径不符——故**默认 8bit**。
+**为什么是 8bit 而不是 4bit**（**已实测两档，非推断**）：本机 RTX 4050 **6GB**
+放不下 bf16（≈8.05GB）；8bit(LLM.int8) 实测 footprint **4.11GB**，且 **`lm_head`
+不被量化**（logits 仍 bf16 计算，token 选择不受 int8 权重误差影响）。
+
+4bit(NF4+双量化) 只要 **2.42GB**、且**快约 3.9 倍**，但代价是**精度明显退化**：
+
+| 档位 | 权重占用 | PPL 偏差 | 第 1 层权重误差 | 生成速度 | 验收 |
+|---|---:|---:|---:|---:|---|
+| **8bit**（默认） | 4.11 GB | **−0.147%** ✅ | 1.01% | 4.6 tok/s | **通过** |
+| 4bit | 2.42 GB | **+21.8%** ❌ | 9.28%（×9.2） | **17.98 tok/s** | 未通过 |
+
+故**默认 8bit**（`POKELAB_QWEN_QUANT`）——与「确保数据精度」的验收口径一致。
+4bit 仅作**大批量离线解析**的候选（须先验 K2 抽取达标率）。完整对照见
+`artifacts/qwen_precision_compare.md`。
+
+> 4bit 快 3.9 倍不是笔误：两档生成的 token 数相同，差异来自解码是 **memory-bound**
+> ——4bit 权重少一半（读得少），而 8bit 的 `MatMul8bitLt` 每次前向还要做**离群值分解**，
+> batch=1 时这笔固定开销占比很高。
 
 ### 起服务（约 20s 加载 4.11GB）
 
@@ -313,10 +328,41 @@ python scripts/qwen_precision.py --layer 1     # 权重级（≈1 分钟）
 python scripts/qwen_precision.py --layer 2     # 困惑度（含 bf16 参考，较慢）
 python scripts/qwen_precision.py --layer 3     # 端到端
 python scripts/qwen_precision.py --layer all   # 全部（建议后台跑）
+
+python scripts/qwen_precision.py --layer all --quant 4bit   # 换档位（写 *_4bit.* 不覆盖 8bit）
+python scripts/qwen_precision.py --layer compare            # 两档对照（纯读数，不占 GPU）
+python scripts/qwen_precision.py --layer report             # 只重渲染 Markdown（改措辞后免重跑）
 ```
 
 三层各自的含义与「为什么需要」写在 `qwen_precision.py` 的模块 docstring 里；
-**结论数字以 `artifacts/qwen_precision_report.md` 为准**（可随时复跑覆盖）。
+**结论数字以 `artifacts/qwen_precision_report.md`（8bit）与
+`artifacts/qwen_precision_compare.md`（两档对照）为准**（可随时复跑覆盖）。
+
+> `--layer report` / `--layer compare` **不碰 GPU**：改了报告措辞或判据后，
+> 用它们从已有 JSON 重渲染即可，不必再花几分钟重跑量化对照。
+
+### K2 达标率实测（本地模型 · 决定是否启用云端保底）
+
+`rule` 基线在卡池上的 support_rate = **99.7%**，但那是**离线规则基线**的数字，
+不能代表 LLM 后端。ADR-LLM-001 规定「K2 不达标 → 切云端保底」，故必须**真跑**：
+
+```bash
+python scripts/k2_local_eval.py --dry-run                # 只跑 rule + 抽样，秒级验证口径
+python scripts/k2_local_eval.py --sample 60              # 抽样实跑（8bit 约 35–60 分钟）
+python scripts/k2_local_eval.py --sample 0               # 全量 328 条（8bit 约 3–5 小时）
+```
+
+**口径要点（否则会把数字读高）**：
+
+1. **不能直接用 `support_rate`** —— 解析失败（无 spec）时 `to_engine_tags` 会被短路成
+   `{tags:[], unsupported:[]}`，`not unsupported` 为真 → **失败被计入「完全支持」**；
+   且 `parse_effects` 的 llm 分支在 **LLM 空返回时用 rule 结果兜底**，而 `backend`
+   仍报 `"llm"`。两者叠加会让 LLM 达标率**系统性虚高**。
+2. 改用 `raw` 字段判断（它保留的是 **LLM 原始输出**，非兜底结果），严格三分：
+   **A 解析失败 / B 解析成功但引擎未建模 / C 完全映射**；B 类**不算**解析失败。
+3. **按语料语言分组**：卡池 328 条里 **294 条（89.6%）是纯英文**（扩展池无 `desc_zh`，
+   `display_desc` 回退英文），仅 34 条中文；而提示词是中文撰写的，两者难度不同。
+4. 报告给 **Wilson 95% 置信区间**（小样本比正态近似稳），并列出 A 类失败明细。
 
 > **bf16 参考怎么来的**：6GB 显存装不下 bf16，故用 `device_map="auto"` + `max_memory`
 > 把部分层放 CPU 计算——**计算精度仍是 bf16**，只是慢。比「拿 4bit 当参考」严谨得多：

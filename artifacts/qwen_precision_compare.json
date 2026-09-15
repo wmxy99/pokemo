@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-09-15 11:30:13",
+  "quants": [
+    "8bit",
+    "4bit"
+  ],
+  "footprint_gb": {
+    "8bit": 4.11,
+    "4bit": 2.42
+  },
+  "tok_per_s": {
+    "8bit": 4.6,
+    "4bit": 17.98
+  },
+  "layer1_rel_frobenius_mean": {
+    "8bit": 0.01010105,
+    "4bit": 0.092832
+  },
+  "layer2_ppl_delta_pct": {
+    "8bit": -0.147,
+    "4bit": 21.825
+  },
+  "layer3_exact_match_rate": {
+    "8bit": 0.667,
+    "4bit": 0.333
+  },
+  "passed": {
+    "8bit": true,
+    "4bit": false
+  },
+  "default_quant": "8bit"
+}

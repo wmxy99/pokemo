@@ -10,15 +10,33 @@ pokelab-data/
 │  ├─ schema.py     # pydantic：CardEffect/CardRecord/RuleChunk（对齐 DB v1.1）
 │  ├─ db.py         # SQLite：执行 qrwdan/schema.sql 建 10 表 + 增删（cards/rule_chunks）
 │  ├─ loader.py     # pokemontcg.io JSON / Kaggle CSV → CardRecord（清洗映射）
-│  ├─ effects.py    # 效果 JSON 提取 + pydantic 校验 + Qwen3-4B 解析客户端
+│  ├─ effects.py    # ⚠ LLM 路径已废弃（见下方「废弃登记」）；纯函数 extract_json/validate 仍可复用
 │  └─ kb.py         # 规则条款化分块 + rule_chunks 入库 + 检索（向量化预留）
 ├─ scripts/
 │  ├─ fetch_pokemontcg.py  # 【本机联网执行】拉 pokemontcg.io → JSONL
 │  ├─ import_cards.py      # JSONL/CSV → cards 表（status=pending）
-│  ├─ parse_effects.py     # 本地 Qwen3-4B 8bit 解析 pending 卡 → effects_json
+│  ├─ parse_effects.py     # ⚠ 已废弃（默认拒绝执行）；`--check` 可看空转证据
 │  └─ seed_demo.py         # 离线 demo：建库+样例卡+规则条款（验证闭环）
 └─ data/            # raw/（外部数据，不提交仓库）· db/pokelab.db
 ```
+
+## 废弃登记（2026-09-15）
+
+| 组件 | 状态 | 原因与替代 |
+|---|---|---|
+| `scripts/parse_effects.py` | **已废弃**（默认拒绝执行，需 `--force-deprecated`） | ① 筛 `status='pending'` 而现库 **1267 张全 active** → 恒空转；② 写入格式 `[{CardEffect}]` 与现库 `effects_json`（`{library,parse}`，下游 `coverage_backlog.py` 读 `.parse`）**不兼容，误跑会让 coverage 统计静默归零**；③ 已被 `agent.effects.parse_effects` 取代 |
+| `pokelab/effects.py::llm_parse_text` | **已废弃** | 注入式客户端 + 内嵌 prompt 与产品提示词**不同步**（把枚举写成引号内 `a\|b\|c`，实测导致模型照抄字面量）。改用 `packages/agent/prompts/parse_effects_*.md` 单一提示词源 |
+
+替代路径（现行）：
+
+```bash
+python apps/api/scripts/local_qwen.py serve                      # 起本地 OpenAI 兼容服务
+POKELAB_LLM_BASE=http://127.0.0.1:9997/v1 \
+    python packages/agent/examples/run_k2.py --backend llm        # 解析 + 评测（不落库）
+```
+
+零副作用自检：`python scripts/parse_effects.py --check`
+（实测输出：status 全为 active、pending 命中 0、`effects_json` 结构分布）
 
 ## 使用（三步走）
 
@@ -116,20 +134,36 @@ cd packages/card-db && python scripts/gen_engine_pool.py --dry-run  # 只统计�
 ## 设计要点
 
 - 唯一键 `(series, number)`（对齐 DB v1.1）；`status` 状态机：pending（元数据已入，待解析）→ active（effects_json 可用）/ unsupported（灰名单）；
+  - **现状（2026-09-15 实测）**：库里 **1267 张全为 `active`**，`pending` 为 0 ——
+    即该状态机的「待解析」阶段已不再发生（卡由 ETL `import_challenge_dataset.py`
+    一次性带 `effects_json` 导入）。因此 `parse_effects.py` 这条 pending→active 链路空转。
+  - `effects_json` 的**实际结构是 ETL 写入的 `{"library":{…}, "parse":{…}}`**（并非
+    `list[CardEffect]`）；1119/1267 张带 `parse` 键，下游 `coverage_backlog.py` 消费的
+    正是 `effects_json.parse`（其余 148 张为仅 `{library}` 的条目）。
 - 效果结构化 Schema：`list[CardEffect] = kind + trigger + conditions[] + actions[] + source_text + citations[]`；
+  - 注：这是**早期设计**形态；现网运行的结构以上一条的 `{library,parse}` 为准。
+    `list[CardEffect]` 仍用于 `pokelab/schema.py` 的类型定义（已随 LLM 路径一并降级为参考）。
 - 规则知识库：按"章节/裁定条目"原子化分块 → `rule_chunks(source_ref, chunk_text)`；向量化（bge-m3 + FAISS）为后续步骤，`embedding_key` 已预留；
-- 解析流水线：`rules_text → LLM(Qwen3-4B) → JSON → pydantic 校验 → 入库/转人工`（引擎可执行合法性由引擎层校验，此处只保 Schema）。
+- ~~解析流水线：`rules_text → LLM(Qwen3-4B) → JSON → pydantic 校验 → 入库/转人工`~~
+  → **已迁移**：解析与评测统一走 `packages/agent`（`parse_effects()` + `run_k2.py`），
+  不再由本包承担入库式解析（详见「废弃登记」）。
 
 ## 排障笔记（已实测 2026-09-08）
+
+> 以下两条是**踩坑结论**，对现行 `apps/api/scripts/local_qwen.py` 同样适用
+> （该脚本已内置两处处理），故保留；但引用的 `effects.extract_json` 属已废弃模块的
+> 同名函数，请对照 `agent.effects.extract_json`（含围栏/前后缀/thinking 残留容错）。
 
 **Qwen3 解析不输出 JSON 的根因 = thinking 模式**：Qwen3 默认在 chat template 触发 `<think>` 思考链，
 JSON 被包在思考后且 token 预算常不足 → 修复：`apply_chat_template(msgs, ..., enable_thinking=False)`。
 ⚠️ 该开关是 **template 渲染变量**，须传给 apply_chat_template；传给 `model.generate(enable_thinking=...)`
-会报 `model_kwargs not used`。输出侧另留 `<think>...</think>` 剥离兜底（effects.extract_json 已内置）。
+会报 `model_kwargs not used`。输出侧另留 `<think>...</think>` 剥离兜底。
 
 **device_map 键格式**：8bit 加载 `max_memory` 须用整数键 `{0: "5.2GB"}`；`"cuda:0"` 键在 transformers 5.x 不被接受。
 
 ## 待办（本机联网步骤，需你在浏览器可达网络执行）
 1. 下载 Kaggle EN_Card_Data.csv（竞赛 Data 页）或运行 fetch_pokemontcg.py；
-2. 导入后批量 parse（`--all`）；
+2. 导入后如需复核解析质量，走 **agent 侧评测**（不落库）：
+   `POKELAB_LLM_BASE=http://127.0.0.1:9997/v1 python packages/agent/examples/run_k2.py --backend llm`
+   （~~`parse_effects.py --all`~~ 已废弃，见「废弃登记」）；
 3. 官方规则书/Compendium 文本 → kb 工具入库（seed_demo 演示了格式）。

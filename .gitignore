@@ -38,7 +38,17 @@ artifacts/
 /artifacts/*
 !/artifacts/qwen_precision_report.md
 !/artifacts/qwen_precision_report.json
+# 非默认档位（4bit）与两档对照——同样属验收证据，按档位分文件存放，
+# 避免跑 4bit 时把 8bit 的证据覆盖掉（见 qwen_precision.py::_report_paths）。
+!/artifacts/qwen_precision_report_4bit.md
+!/artifacts/qwen_precision_report_4bit.json
+!/artifacts/qwen_precision_compare.md
+!/artifacts/qwen_precision_compare.json
 !/artifacts/local_llm_verify.json
+# K2 达标率实测（本地模型真跑卡池解析）——决定是否启用 ADR-LLM-001 云端保底的依据。
+# 注意：脚本自己写 `artifacts/_k2_eval_audit.jsonl`（临时审计），**不**在此放行。
+!/artifacts/k2_local_eval.md
+!/artifacts/k2_local_eval.json
 
 # 编辑器 / OS
 .idea/

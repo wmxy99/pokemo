@@ -1,11 +1,32 @@
 # -*- coding: utf-8 -*-
 """PokéLab Data · 卡牌效果解析（LLM + Schema 校验）
 
-解析流水线：卡牌 rules_text → LLM（本地 Qwen3-4B 8bit，ADR-LLM-001）→
-效果 JSON → pydantic 校验（本模块 validate）→ 引擎 Schema 校验（P1 后置层）→
-入库 effects_json + status=active；校验失败 → 转人工（status 保持 pending）。
+⚠ **[已废弃 2026-09-15] 本模块的 LLM 路径（`llm_parse_text`）不再使用。**
 
-说明：effects_json 的「引擎可执行」合法性由引擎层负责，本模块只保证结构化 Schema 正确。
+废弃原因：它是**注入式**客户端（要求调用方先把 model/tokenizer 传进来），并内嵌了一份
+与产品提示词**不同步**的 system prompt —— 那份 prompt 把枚举写成引号内的
+`"target":"active_opponent|self|bench|any"`，实测会让模型把 `|` 当字面量抄下来
+（`"active|bench"`）而整条 Schema 校验失败。该缺陷已在
+`packages/agent/prompts/parse_effects_system.md` 修正（改为独立枚举表 + 单选硬约束），
+但**本模块内的旧 prompt 未同步**——继续使用它会持续产出非法结果。
+
+唯一调用方 `scripts/parse_effects.py` 亦已废弃（见该文件头部：状态机空转 +
+写入格式与现库 `effects_json` 不兼容）。
+
+现行入口
+--------
+- 解析：`packages/agent/agent/effects.py::parse_effects(text, backend="rule|llm|auto")`
+  —— 经 `llmclient.chat()` 走 OpenAI 兼容端点（本地 Qwen3-4B 或云端），
+  复用 `packages/agent/prompts/parse_effects_*.md` 单一提示词源；
+- 评测：`packages/agent/examples/run_k2.py`。
+
+保留本模块仅为可追溯（历史 commit / 设计文档引用），**新代码请勿依赖**。
+下面两个纯函数（`extract_json` / `validate_effects`）本身无副作用、仍可复用，
+但 `agent.effects` 已有更完善的同名实现（含围栏/thinking 残留容错），优先用后者。
+
+---
+原说明：解析流水线：卡牌 rules_text → LLM → 效果 JSON → pydantic 校验 →
+入库 effects_json + status=active；校验失败 → 转人工（status 保持 pending）。
 """
 from __future__ import annotations
 import json, re
@@ -50,8 +71,14 @@ def validate_effects(text: str) -> list[CardEffect]:
 
 
 def llm_parse_text(rules_text: str, model=None, tokenizer=None) -> list[CardEffect]:
-    """经本地 Qwen3-4B 解析（model/tokenizer 由调用方注入，复用 8bit 加载）；
-    必须走 chat template（Qwen3 强依赖）；model 为空时抛 NotImplemented。"""
+    """[已废弃 2026-09-15] 经注入的 Qwen3-4B 解析效果文本
+
+    **勿在新代码中使用**（见模块 docstring：内嵌 prompt 与产品提示词不同步，
+    且把枚举写成引号内 `a|b|c`，实测导致模型照抄字面量而校验失败）。
+    改用 `agent.effects.parse_effects(text, backend="llm")`。
+
+    保留实现以便追溯；`model/tokenizer` 为空时抛 NotImplementedError。
+    """
     if model is None or tokenizer is None:
         raise NotImplementedError("需注入已加载的 Qwen3-4B model/tokenizer（见 scripts/parse_effects.py）")
     sys_prompt = (

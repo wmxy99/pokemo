@@ -1,0 +1,886 @@
+{
+  "quant": "4bit",
+  "layer1": {
+    "layer": 1,
+    "quant": "4bit",
+    "sampled": 42,
+    "total_linears": 253,
+    "stride": 6,
+    "footprint_gb": 2.42,
+    "load_s": 11.5,
+    "layout": {
+      "quantized_linears": 252,
+      "unquantized_linears": [
+        [
+          "lm_head",
+          "torch.bfloat16"
+        ]
+      ],
+      "embeddings": [
+        [
+          "model.embed_tokens",
+          "torch.bfloat16"
+        ]
+      ],
+      "tie_word_embeddings": true
+    },
+    "rel_frobenius": {
+      "mean": 0.092832,
+      "median": 0.09282,
+      "max": 0.094053,
+      "min": 0.092226
+    },
+    "cosine": {
+      "mean": 0.99569042,
+      "median": 0.99569806,
+      "max": 0.99574602,
+      "min": 0.99557769
+    },
+    "snr_db": {
+      "mean": 20.64619048,
+      "median": 20.65,
+      "max": 20.7,
+      "min": 20.53
+    },
+    "max_abs_err": {
+      "mean": 0.04149226,
+      "median": 0.041016,
+      "max": 0.074219,
+      "min": 0.018066
+    },
+    "mean_abs_err": {
+      "mean": 0.00165798,
+      "median": 0.001686,
+      "max": 0.002017,
+      "min": 0.00089
+    },
+    "cosine_le_one": true,
+    "rows": [
+      {
+        "param": "model.layers.0.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092742,
+        "max_abs_err": 0.039062,
+        "mean_abs_err": 0.001679,
+        "cosine": 0.99569858,
+        "ref_abs_mean": 0.018171,
+        "snr_db": 20.65
+      },
+      {
+        "param": "model.layers.0.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.09316,
+        "max_abs_err": 0.058594,
+        "mean_abs_err": 0.001701,
+        "cosine": 0.99566042,
+        "ref_abs_mean": 0.018272,
+        "snr_db": 20.62
+      },
+      {
+        "param": "model.layers.1.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092684,
+        "max_abs_err": 0.029297,
+        "mean_abs_err": 0.00089,
+        "cosine": 0.99570365,
+        "ref_abs_mean": 0.009554,
+        "snr_db": 20.66
+      },
+      {
+        "param": "model.layers.2.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.093258,
+        "max_abs_err": 0.03125,
+        "mean_abs_err": 0.001077,
+        "cosine": 0.99565075,
+        "ref_abs_mean": 0.011108,
+        "snr_db": 20.61
+      },
+      {
+        "param": "model.layers.3.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092272,
+        "max_abs_err": 0.052734,
+        "mean_abs_err": 0.001624,
+        "cosine": 0.99574174,
+        "ref_abs_mean": 0.017715,
+        "snr_db": 20.7
+      },
+      {
+        "param": "model.layers.4.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.092532,
+        "max_abs_err": 0.018555,
+        "mean_abs_err": 0.001793,
+        "cosine": 0.99571906,
+        "ref_abs_mean": 0.019373,
+        "snr_db": 20.67
+      },
+      {
+        "param": "model.layers.5.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.092904,
+        "max_abs_err": 0.038086,
+        "mean_abs_err": 0.001609,
+        "cosine": 0.99568365,
+        "ref_abs_mean": 0.017345,
+        "snr_db": 20.64
+      },
+      {
+        "param": "model.layers.6.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.093021,
+        "max_abs_err": 0.041504,
+        "mean_abs_err": 0.001686,
+        "cosine": 0.99567295,
+        "ref_abs_mean": 0.018159,
+        "snr_db": 20.63
+      },
+      {
+        "param": "model.layers.6.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.093402,
+        "max_abs_err": 0.060547,
+        "mean_abs_err": 0.001629,
+        "cosine": 0.99563744,
+        "ref_abs_mean": 0.017444,
+        "snr_db": 20.59
+      },
+      {
+        "param": "model.layers.7.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092407,
+        "max_abs_err": 0.035156,
+        "mean_abs_err": 0.00163,
+        "cosine": 0.9957294,
+        "ref_abs_mean": 0.017707,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.8.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092333,
+        "max_abs_err": 0.040039,
+        "mean_abs_err": 0.001847,
+        "cosine": 0.99573641,
+        "ref_abs_mean": 0.020111,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.9.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092359,
+        "max_abs_err": 0.050781,
+        "mean_abs_err": 0.001651,
+        "cosine": 0.99573393,
+        "ref_abs_mean": 0.017952,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.10.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.092995,
+        "max_abs_err": 0.019531,
+        "mean_abs_err": 0.001893,
+        "cosine": 0.99567547,
+        "ref_abs_mean": 0.020227,
+        "snr_db": 20.63
+      },
+      {
+        "param": "model.layers.11.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.093217,
+        "max_abs_err": 0.046875,
+        "mean_abs_err": 0.001652,
+        "cosine": 0.99565519,
+        "ref_abs_mean": 0.017754,
+        "snr_db": 20.61
+      },
+      {
+        "param": "model.layers.12.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092963,
+        "max_abs_err": 0.041016,
+        "mean_abs_err": 0.001655,
+        "cosine": 0.9956783,
+        "ref_abs_mean": 0.017803,
+        "snr_db": 20.63
+      },
+      {
+        "param": "model.layers.12.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.093136,
+        "max_abs_err": 0.074219,
+        "mean_abs_err": 0.001695,
+        "cosine": 0.99566279,
+        "ref_abs_mean": 0.018125,
+        "snr_db": 20.62
+      },
+      {
+        "param": "model.layers.13.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.09275,
+        "max_abs_err": 0.036133,
+        "mean_abs_err": 0.001736,
+        "cosine": 0.99569809,
+        "ref_abs_mean": 0.018736,
+        "snr_db": 20.65
+      },
+      {
+        "param": "model.layers.14.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092598,
+        "max_abs_err": 0.053711,
+        "mean_abs_err": 0.001745,
+        "cosine": 0.99571216,
+        "ref_abs_mean": 0.018894,
+        "snr_db": 20.67
+      },
+      {
+        "param": "model.layers.15.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092467,
+        "max_abs_err": 0.044922,
+        "mean_abs_err": 0.001545,
+        "cosine": 0.99572413,
+        "ref_abs_mean": 0.016757,
+        "snr_db": 20.68
+      },
+      {
+        "param": "model.layers.16.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.09282,
+        "max_abs_err": 0.018066,
+        "mean_abs_err": 0.001783,
+        "cosine": 0.99569183,
+        "ref_abs_mean": 0.019131,
+        "snr_db": 20.65
+      },
+      {
+        "param": "model.layers.17.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.093148,
+        "max_abs_err": 0.03125,
+        "mean_abs_err": 0.001513,
+        "cosine": 0.99566096,
+        "ref_abs_mean": 0.016257,
+        "snr_db": 20.62
+      },
+      {
+        "param": "model.layers.18.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092746,
+        "max_abs_err": 0.050781,
+        "mean_abs_err": 0.001587,
+        "cosine": 0.99569806,
+        "ref_abs_mean": 0.017108,
+        "snr_db": 20.65
+      },
+      {
+        "param": "model.layers.18.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.094053,
+        "max_abs_err": 0.056641,
+        "mean_abs_err": 0.001667,
+        "cosine": 0.99557769,
+        "ref_abs_mean": 0.017524,
+        "snr_db": 20.53
+      },
+      {
+        "param": "model.layers.19.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092896,
+        "max_abs_err": 0.040039,
+        "mean_abs_err": 0.001687,
+        "cosine": 0.9956845,
+        "ref_abs_mean": 0.018137,
+        "snr_db": 20.64
+      },
+      {
+        "param": "model.layers.20.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092716,
+        "max_abs_err": 0.0625,
+        "mean_abs_err": 0.001648,
+        "cosine": 0.99570122,
+        "ref_abs_mean": 0.017803,
+        "snr_db": 20.66
+      },
+      {
+        "param": "model.layers.21.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092595,
+        "max_abs_err": 0.030273,
+        "mean_abs_err": 0.001517,
+        "cosine": 0.99571267,
+        "ref_abs_mean": 0.016408,
+        "snr_db": 20.67
+      },
+      {
+        "param": "model.layers.22.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.09363,
+        "max_abs_err": 0.029297,
+        "mean_abs_err": 0.001713,
+        "cosine": 0.99561653,
+        "ref_abs_mean": 0.018117,
+        "snr_db": 20.57
+      },
+      {
+        "param": "model.layers.23.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.093079,
+        "max_abs_err": 0.03418,
+        "mean_abs_err": 0.001518,
+        "cosine": 0.99566768,
+        "ref_abs_mean": 0.016318,
+        "snr_db": 20.62
+      },
+      {
+        "param": "model.layers.24.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092956,
+        "max_abs_err": 0.042969,
+        "mean_abs_err": 0.001698,
+        "cosine": 0.9956791,
+        "ref_abs_mean": 0.018141,
+        "snr_db": 20.63
+      },
+      {
+        "param": "model.layers.24.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.093233,
+        "max_abs_err": 0.042969,
+        "mean_abs_err": 0.001708,
+        "cosine": 0.99565377,
+        "ref_abs_mean": 0.018253,
+        "snr_db": 20.61
+      },
+      {
+        "param": "model.layers.25.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092416,
+        "max_abs_err": 0.042969,
+        "mean_abs_err": 0.001738,
+        "cosine": 0.99572876,
+        "ref_abs_mean": 0.018874,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.26.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092438,
+        "max_abs_err": 0.045898,
+        "mean_abs_err": 0.001807,
+        "cosine": 0.99572685,
+        "ref_abs_mean": 0.019629,
+        "snr_db": 20.68
+      },
+      {
+        "param": "model.layers.27.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092367,
+        "max_abs_err": 0.038086,
+        "mean_abs_err": 0.001622,
+        "cosine": 0.99573305,
+        "ref_abs_mean": 0.017623,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.28.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.092911,
+        "max_abs_err": 0.019043,
+        "mean_abs_err": 0.001822,
+        "cosine": 0.99568356,
+        "ref_abs_mean": 0.019508,
+        "snr_db": 20.64
+      },
+      {
+        "param": "model.layers.29.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.093361,
+        "max_abs_err": 0.033203,
+        "mean_abs_err": 0.001479,
+        "cosine": 0.99564068,
+        "ref_abs_mean": 0.015829,
+        "snr_db": 20.6
+      },
+      {
+        "param": "model.layers.30.self_attn.q_proj.weight",
+        "shape": [
+          4096,
+          2560
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092853,
+        "max_abs_err": 0.044922,
+        "mean_abs_err": 0.001634,
+        "cosine": 0.99568904,
+        "ref_abs_mean": 0.017617,
+        "snr_db": 20.64
+      },
+      {
+        "param": "model.layers.30.mlp.down_proj.weight",
+        "shape": [
+          2560,
+          9728
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092386,
+        "max_abs_err": 0.052734,
+        "mean_abs_err": 0.001795,
+        "cosine": 0.99573135,
+        "ref_abs_mean": 0.019526,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.31.mlp.up_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092226,
+        "max_abs_err": 0.037109,
+        "mean_abs_err": 0.001871,
+        "cosine": 0.99574602,
+        "ref_abs_mean": 0.020395,
+        "snr_db": 20.7
+      },
+      {
+        "param": "model.layers.32.mlp.gate_proj.weight",
+        "shape": [
+          9728,
+          2560
+        ],
+        "numel": 24903680,
+        "rel_frobenius": 0.092392,
+        "max_abs_err": 0.050781,
+        "mean_abs_err": 0.001734,
+        "cosine": 0.995731,
+        "ref_abs_mean": 0.018863,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.33.self_attn.o_proj.weight",
+        "shape": [
+          2560,
+          4096
+        ],
+        "numel": 10485760,
+        "rel_frobenius": 0.092402,
+        "max_abs_err": 0.066406,
+        "mean_abs_err": 0.001786,
+        "cosine": 0.99573033,
+        "ref_abs_mean": 0.019409,
+        "snr_db": 20.69
+      },
+      {
+        "param": "model.layers.34.self_attn.v_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.093469,
+        "max_abs_err": 0.02832,
+        "mean_abs_err": 0.002017,
+        "cosine": 0.9956322,
+        "ref_abs_mean": 0.021338,
+        "snr_db": 20.59
+      },
+      {
+        "param": "model.layers.35.self_attn.k_proj.weight",
+        "shape": [
+          1024,
+          2560
+        ],
+        "numel": 2621440,
+        "rel_frobenius": 0.092651,
+        "max_abs_err": 0.032227,
+        "mean_abs_err": 0.001554,
+        "cosine": 0.99570684,
+        "ref_abs_mean": 0.016853,
+        "snr_db": 20.66
+      }
+    ],
+    "skipped": [
+      {
+        "param": "lm_head.weight",
+        "reason": "Parameter 无量化状态"
+      }
+    ],
+    "skipped_n": 1
+  },
+  "layer2": {
+    "layer": 2,
+    "quant": "4bit",
+    "text_chars": 309,
+    "quantized": {
+      "tokens": 225,
+      "loss": 3.668135,
+      "ppl": 39.1788
+    },
+    "quant_load_s": 11.2,
+    "reference": {
+      "tokens": 225,
+      "loss": 3.47072,
+      "ppl": 32.1599
+    },
+    "ref_load_s": 8.9,
+    "ppl_delta_abs": 7.0189,
+    "ppl_delta_pct": 21.825,
+    "pass": false
+  },
+  "layer3": {
+    "layer": 3,
+    "quant": "4bit",
+    "n_prompts": 6,
+    "max_new_tokens": 64,
+    "quantized": [
+      {
+        "id": "dmg_weakness",
+        "kind": "domain",
+        "note": "正确答案：翻倍（×2）",
+        "content": "攻击方属性与守方弱点属性相同时，伤害增加50%。",
+        "completion_tokens": 18,
+        "elapsed_ms": 1465,
+        "correct": false,
+        "criterion": "答『翻倍/2倍』"
+      },
+      {
+        "id": "ko_prize",
+        "kind": "domain",
+        "note": "正确答案：2 张（答 3 张为错）",
+        "content": "击倒一只宝可梦 ex，对手取得3张奖赏卡。",
+        "completion_tokens": 17,
+        "elapsed_ms": 876,
+        "correct": false,
+        "criterion": "答『2 张』（答 3 张为错）"
+      },
+      {
+        "id": "poison_dmg",
+        "kind": "domain",
+        "note": "正确答案：10 点",
+        "content": "中毒状态在检查阶段造成2点伤害。",
+        "completion_tokens": 11,
+        "elapsed_ms": 578,
+        "correct": false,
+        "criterion": "答『10 点』"
+      },
+      {
+        "id": "k2_simple",
+        "kind": "json",
+        "note": "要求结构化：伤害数值须为 JSON 中的**数值**字段（30）",
+        "content": "[\n  {\n    \"effect\": \"造成 30 点伤害，并让对手的战斗宝可梦陷入中毒。\"\n  }\n]",
+        "completion_tokens": 31,
+        "elapsed_ms": 1630,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 30（复述不算通过）"
+      },
+      {
+        "id": "k2_coin",
+        "kind": "json",
+        "note": "要求结构化：追加伤害数值须为 JSON 中的**数值**字段（20）",
+        "content": "{\"effect\": \"抛硬币，若为正面，此招式追加 20 点伤害。\"}",
+        "completion_tokens": 26,
+        "elapsed_ms": 1375,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 20（复述不算通过）"
+      },
+      {
+        "id": "k2_draw",
+        "kind": "json",
+        "note": "要求结构化：检索数量须为 JSON 中的**数值**字段（2）",
+        "content": "[\n  {\n    \"effect\": \"从牌库中检索 2 张基本能量并附着到自己的宝可梦身上。\"\n  }\n]",
+        "completion_tokens": 34,
+        "elapsed_ms": 1696,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 2（复述不算通过）"
+      }
+    ],
+    "reference": [
+      {
+        "id": "dmg_weakness",
+        "kind": "domain",
+        "note": "正确答案：翻倍（×2）",
+        "content": "攻击方属性与守方弱点属性相同时，伤害增加50%。",
+        "completion_tokens": 18,
+        "elapsed_ms": 19160,
+        "correct": false,
+        "criterion": "答『翻倍/2倍』"
+      },
+      {
+        "id": "ko_prize",
+        "kind": "domain",
+        "note": "正确答案：2 张（答 3 张为错）",
+        "content": "击倒一只宝可梦 EX，对手取得3张奖赏卡。",
+        "completion_tokens": 17,
+        "elapsed_ms": 15127,
+        "correct": false,
+        "criterion": "答『2 张』（答 3 张为错）"
+      },
+      {
+        "id": "poison_dmg",
+        "kind": "domain",
+        "note": "正确答案：10 点",
+        "content": "中毒状态在检查阶段造成2点伤害。",
+        "completion_tokens": 11,
+        "elapsed_ms": 9912,
+        "correct": false,
+        "criterion": "答『10 点』"
+      },
+      {
+        "id": "k2_simple",
+        "kind": "json",
+        "note": "要求结构化：伤害数值须为 JSON 中的**数值**字段（30）",
+        "content": "[\n  {\n    \"effect\": \"造成 30 点伤害\"\n  },\n  {\n    \"effect\": \"让对手的战斗宝可梦陷入中毒\"\n  }\n]",
+        "completion_tokens": 39,
+        "elapsed_ms": 34799,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 30（复述不算通过）"
+      },
+      {
+        "id": "k2_coin",
+        "kind": "json",
+        "note": "要求结构化：追加伤害数值须为 JSON 中的**数值**字段（20）",
+        "content": "[{\"effect\": \"抛硬币，若为正面，此招式追加 20 点伤害。\"}]",
+        "completion_tokens": 28,
+        "elapsed_ms": 24888,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 20（复述不算通过）"
+      },
+      {
+        "id": "k2_draw",
+        "kind": "json",
+        "note": "要求结构化：检索数量须为 JSON 中的**数值**字段（2）",
+        "content": "[{\"effect\": \"从牌库中检索 2 张基本能量并附着到自己的宝可梦身上。\"}]",
+        "completion_tokens": 29,
+        "elapsed_ms": 25992,
+        "correct": false,
+        "criterion": "JSON 数组中含数值字段 2（复述不算通过）"
+      }
+    ],
+    "pairs": [
+      {
+        "id": "dmg_weakness",
+        "kind": "domain",
+        "note": "正确答案：翻倍（×2）",
+        "exact_match": true,
+        "normalized_match": true,
+        "char_similarity": 1.0,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "答『翻倍/2倍』"
+      },
+      {
+        "id": "ko_prize",
+        "kind": "domain",
+        "note": "正确答案：2 张（答 3 张为错）",
+        "exact_match": false,
+        "normalized_match": true,
+        "char_similarity": 1.0,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "答『2 张』（答 3 张为错）"
+      },
+      {
+        "id": "poison_dmg",
+        "kind": "domain",
+        "note": "正确答案：10 点",
+        "exact_match": true,
+        "normalized_match": true,
+        "char_similarity": 1.0,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "答『10 点』"
+      },
+      {
+        "id": "k2_simple",
+        "kind": "json",
+        "note": "要求结构化：伤害数值须为 JSON 中的**数值**字段（30）",
+        "exact_match": false,
+        "normalized_match": false,
+        "char_similarity": 0.8,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "JSON 数组中含数值字段 30（复述不算通过）"
+      },
+      {
+        "id": "k2_coin",
+        "kind": "json",
+        "note": "要求结构化：追加伤害数值须为 JSON 中的**数值**字段（20）",
+        "exact_match": false,
+        "normalized_match": false,
+        "char_similarity": 0.973,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "JSON 数组中含数值字段 20（复述不算通过）"
+      },
+      {
+        "id": "k2_draw",
+        "kind": "json",
+        "note": "要求结构化：检索数量须为 JSON 中的**数值**字段（2）",
+        "exact_match": false,
+        "normalized_match": false,
+        "char_similarity": 0.9556,
+        "q_correct": false,
+        "r_correct": false,
+        "criterion": "JSON 数组中含数值字段 2（复述不算通过）"
+      }
+    ],
+    "exact_match_rate": 0.333,
+    "normalized_match_rate": 0.5,
+    "char_similarity_mean": 0.9548,
+    "quant_correct": 0,
+    "ref_correct": 0,
+    "correctness_delta": 0,
+    "correctness_disagreements": [],
+    "pass": true,
+    "verdict": "完全一致"
+  },
+  "torch": "2.13.0+cu130",
+  "model_path": "D:\\pokemo\\qwen3-4b\\moxing",
+  "elapsed_s": 196.1
+}

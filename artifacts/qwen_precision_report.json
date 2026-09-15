@@ -6,6 +6,8 @@
     "sampled": 42,
     "total_linears": 253,
     "stride": 6,
+    "footprint_gb": 4.11,
+    "load_s": 26.3,
     "layout": {
       "quantized_linears": 252,
       "unquantized_linears": [
@@ -886,5 +888,5 @@
   },
   "torch": "2.13.0+cu130",
   "model_path": "D:\\pokemo\\qwen3-4b\\moxing",
-  "elapsed_s": 160.5
+  "elapsed_s": 53.4
 }

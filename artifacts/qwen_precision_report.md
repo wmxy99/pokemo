@@ -3,7 +3,7 @@
 - 模型：`D:\pokemo\qwen3-4b\moxing`（Qwen3-4B）
 - 硬件：RTX 4050 Laptop 6GB · torch 2.13.0+cu130
 - 量化档位：**8bit**
-- 生成时间：2026-09-15 09:21:45
+- 生成时间：2026-09-15 11:30:12
 
 ## 第 1 层 · 权重级（反量化 vs 原始 bf16）
 
@@ -75,4 +75,4 @@
 
 ---
 
-复跑：`python scripts/qwen_precision.py --layer all`（报告覆盖写入本文件）
+复跑：`python scripts/qwen_precision.py --layer all --quant 8bit`（覆盖写入本文件）

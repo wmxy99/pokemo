@@ -1534,8 +1534,17 @@ def evaluate(backend: str = "rule", golden: Optional[dict] = None,
     }
 
 
-def parse_card_pool(backend: str = "rule") -> dict:
-    """对**真实卡池**的全部招式/特性 desc_zh 跑解析（K2 的真实语料口径）"""
+def collect_pool_items() -> list:
+    """真实卡池的全部招式/特性条目（取有**展示文本**者）—— K2 的真实语料口径
+
+    注意：`display_desc` 是「中文优先、无中文回退英文」，所以本语料**中英混杂**——
+    实测 328 条里中文仅 34 条，其余 294 条是英文（扩展池没有 `desc_zh`）。
+    评测时按语言分组统计，别混在一起报一个总数。
+
+    抽成独立函数是为了让「全量跑」(``parse_card_pool``) 与「抽样评测」
+    （``apps/api/scripts/k2_local_eval.py``）**共用同一取数逻辑**，
+    否则两处各写一份、日后口径悄悄漂移，数字就不可比了。
+    """
     import sys
     eng = REPO / "packages" / "engine"
     if str(eng) not in sys.path:
@@ -1544,7 +1553,6 @@ def parse_card_pool(backend: str = "rule") -> dict:
     items: list = []
     for name, item in reallib.catalog().items():
         d = item["def"]
-        kind = {"pokemon": None}.get(item.get("kind"), None)
         for a in getattr(d, "attacks", ()) or ():
             if a.display_desc:
                 items.append({"kind": "attack", "name": a.name,
@@ -1553,6 +1561,12 @@ def parse_card_pool(backend: str = "rule") -> dict:
             if ab.display_desc:
                 items.append({"kind": "ability", "name": ab.name,
                               "name_zh": ab.name_zh, "text": ab.display_desc})
+    return items
+
+
+def parse_card_pool(backend: str = "rule") -> dict:
+    """对**真实卡池**的全部招式/特性 desc_zh 跑解析（K2 的真实语料口径）"""
+    items = collect_pool_items()
     out = []
     for it in items:
         res = parse_effects(it["text"], kind=it["kind"], name=it["name"],

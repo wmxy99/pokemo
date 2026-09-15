@@ -197,13 +197,17 @@ class TestSystemPromptInjection(unittest.TestCase):
         这是本组最关键的一条：示例是模型要模仿的样板。若示例本身映射不到引擎
         （如 `mode` 写了个引擎不认的值 → 落到 else 分支变成「固定加伤」，语义全错），
         模型就会学着产出一批「看起来合法、其实映射错」的结果，而且**很难察觉**。
+
+        示例数量：为控制提示词长度（长提示词会显著拖慢本地推理），只保留
+        **最易错的两类** —— 抛币与按计数缩放；spread/护盾的格式改由
+        「机制级 type 表 + extra 约定」的文字说明覆盖。
         """
         import json
         import re
         sp = self.E.render_system_prompt()
         blocks = re.findall(r"^(\[\{.*\}\])$", sp, re.M)
-        self.assertGreaterEqual(len(blocks), 4,
-                                "示例数量少于预期（应含多动作/抛币/护盾/缩放）")
+        self.assertGreaterEqual(len(blocks), 2,
+                                "示例数量少于预期（应含抛币与按计数缩放）")
         for i, b in enumerate(blocks, 1):
             specs = json.loads(b)                      # 示例必须是合法 JSON
             errs = self.E.validate_specs(specs)        # 且通过 Schema 校验
@@ -212,6 +216,24 @@ class TestSystemPromptInjection(unittest.TestCase):
             self.assertEqual(tg["unsupported"], [],
                              f"例{i} 含未建模动作：{tg['unsupported']}")
             self.assertTrue(tg["tags"], f"例{i} 未产出任何引擎 tag")
+
+    def test_kind_trigger_guide_present(self):
+        """kind/trigger 判定表必须在（实测 31 条既有失败里占比最大的一类）"""
+        sp = self.E.render_system_prompt()
+        self.assertIn("kind 与 trigger 判定", sp)
+
+    def test_prompt_length_budget(self):
+        """提示词长度**预算守卫**：长提示词会线性拖慢本地推理
+
+        实测：4356 字符 → 卡池单条 41.4s；6105 字符 → 单条 141s（3.4 倍）。
+        设上限是为了防止后续再加内容时不知不觉把推理成本推高。
+        放宽上限前请先实测一次单条耗时。
+        """
+        sp = self.E.render_system_prompt()
+        self.assertLessEqual(
+            len(sp), 5000,
+            f"提示词已 {len(sp)} 字符，超过 5000 预算（会显著拖慢本地推理）；"
+            f"加内容前请先精简或实测单条耗时")
 
 
 if __name__ == "__main__":

@@ -610,5 +610,62 @@ class TestTargetNormalization(unittest.TestCase):
         self.assertIsNone(specs[0]["actions"][0]["target"])
 
 
+class TestValueNormalization(unittest.TestCase):
+    """`actions[].extra` 取值字段归一化（计数源 / 能量属性）
+
+    背景：卡池重跑实测发现，即使提示词给了取值域，模型**仍会自创变体**
+    （计数源 `own_all_pokemon`、能量属性 `w`）。这类错误在引擎侧是**硬失败**
+    （`_eval_counter` 遇未知计数源直接抛 ValueError）→ 救回收益明确。
+
+    与 target 归一化同一条边界：**只映射语义唯一者，歧义一律不猜**。
+    """
+
+    def test_counter_alias_and_case(self):
+        for raw, want in (("own_all_pokemon", "own_field"),
+                          ("Opp-All-Pokemon", "opp_field"),   # 大小写+连字符
+                          ("own_hand_count", "own_hand"),      # 冗余后缀
+                          ("own_active_damage_counters", "own_active_counters")):
+            self.assertEqual(E.normalize_counter(raw), want)
+
+    def test_valid_counter_not_mangled(self):
+        """合法计数源必须原样保留 —— 尤其 `own_discard_count` 恰以 `_count` 结尾，
+        后缀剥离规则若写得糙就会把它改成非法的 `own_discard`。"""
+        for v in E.engine_vocab().get("counters", []):
+            self.assertEqual(E.normalize_counter(v), v, f"合法值 {v} 被改动了")
+
+    def test_unknown_counter_left_alone(self):
+        for raw in ("unknown_thing", "own_all_pokemon_x", "own_pokemon"):
+            self.assertEqual(E.normalize_counter(raw), raw)
+
+    def test_energy_type_alias(self):
+        for raw, want in (("w", "water"), ("G", "grass"), ("metal_energy", "metal")):
+            self.assertEqual(E.normalize_energy_type(raw), want)
+
+    def test_ambiguous_energy_type_not_guessed(self):
+        """`f`(Fire? Fighting?) / `d`(Darkness? Dragon?) 在 TCG 缩写里有歧义 → 不猜。
+
+        `basic` 是「基本能量」泛称（不含属性）→ 同样不猜：猜成某个属性会**静默算错**。
+        """
+        for raw in ("f", "d", "basic", "colorless_x"):
+            self.assertEqual(E.normalize_energy_type(raw), raw)
+
+    def test_normalize_specs_covers_extra_and_is_pure(self):
+        """端到端：extra 被归一化，且**原对象不被改动**（`raw` 依赖它）"""
+        specs = [{"kind": "attack", "actions": [
+            {"type": "damage_mod", "extra": {"mode": "plus_per",
+                                             "per": "own_all_pokemon"}},
+            {"type": "attach", "extra": {"energy_type": "w", "zone": "hand"}},
+        ]}]
+        out = E.normalize_specs(specs)
+        self.assertEqual(out[0]["actions"][0]["extra"]["per"], "own_field")
+        self.assertEqual(out[0]["actions"][1]["extra"]["energy_type"], "water")
+        self.assertEqual(specs[0]["actions"][0]["extra"]["per"], "own_all_pokemon",
+                         "原对象被就地改动了（会污染 raw）")
+        # 归一化后应能映射到引擎 tag（此前 own_all_pokemon / w 会失败）
+        tags = E.to_engine_tags(out)["tags"]
+        self.assertTrue(any("own_field" in t for t in tags), tags)
+        self.assertTrue(any("water" in t for t in tags), tags)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

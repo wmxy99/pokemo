@@ -394,8 +394,41 @@ B 类 16 条里 **rule 后端都识别出了具体机制**（`coin_flip`/`shield
 > 对照 rule 后端在同一黄金集上 strict **100%**。报告：`artifacts/k2_report_llm.md`；
 > 改动前基线对照见 `artifacts/k2_report_llm_before.json`。
 >
-> **耗时已变化**：提示词补入机制级枚举与 few-shot 后（渲染 6105 字符），单条从 41.4 s
-> 涨到 **141 s** → 全量 328 条约 **13 小时**（精简提示词已列为 P0）。
+> **耗时已变化**：提示词补入机制级枚举与 few-shot 后一度涨到 6105 字符（单条 141 s），
+> 已精简回 **4551 字符**（示例 4→2、机制表压缩、新增 kind/trigger 判定表），
+> 单条耗时与新基线见下方实测。
+
+### 云端保底配置（**已触发** · ADR-LLM-001）
+
+黄金集 LLM 实测 **32% ≪ 85% 门槛** → 按 ADR-LLM-001 **应启用云端保底**。
+落地方式**不需要改代码** —— 把端点指向云端即可：
+
+```bash
+export POKELAB_LLM_BASE=https://api.deepseek.com/v1
+export POKELAB_LLM_KEY=sk-xxx
+export POKELAB_LLM_MODEL=deepseek-chat
+# 也可走后台「模型配置」页（运行时配置优先于环境变量）
+```
+
+⚠️ **合规提示（必读）**：切云端意味着**数据外发**。
+
+- `POKELAB_LOCAL_ONLY=1`（完全离线）会**拒绝**外部端点 → 此模式下保底不可用，只能跑本地；
+- 端点校验、脱敏、审计由 `agent.privacy` + `llmclient` 统一承担
+  （脱敏后外发 + 审计留痕，**不含原文**）；
+- 外发前请确认卡面文本已作**自述转写**处理（本项目已如此，非官方文案）。
+
+**⚠️ 尚未验证**：云端模型的 K2 严格准确率**没有实测**（需要真实 API Key）。
+本地 32% 只说明「本地 4B 不足以承担 K2 抽取」；**云端能否过 85% 必须用同一黄金集复跑**：
+
+```bash
+POKELAB_LLM_BASE=<云端端点> POKELAB_LLM_KEY=<key> POKELAB_LLM_MODEL=<model> \
+  python packages/agent/examples/run_k2.py --backend llm --no-pool
+```
+
+> **为什么不做「自动回退」**：K2 不达标是「**调用成功但语义不准**」，单次调用内
+> **无法自动检测**（没有置信度信号）→ 自动回退在技术上无依据。真实可选的是
+> 「整体切换」或「本地调用失败（服务未起/空返回）时切换」，后者属**可用性**增强
+> 而非**精度**保底，本仓库未实现 —— 避免在核心调用路径引入隐式外发。
 
 > **bf16 参考怎么来的**：6GB 显存装不下 bf16，故用 `device_map="auto"` + `max_memory`
 > 把部分层放 CPU 计算——**计算精度仍是 bf16**，只是慢。比「拿 4bit 当参考」严谨得多：

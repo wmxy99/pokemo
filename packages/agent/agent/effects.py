@@ -85,6 +85,105 @@ _TARGET_ALIASES = {
 }
 
 
+# ---- extra 取值字段归一化 ----
+# 卡池重跑实测：模型拿到取值域后**仍会自创变体** —— 计数源 `own_all_pokemon`（引擎为
+# `own_field`）、能量属性 `w` / `basic`。这类错误在引擎侧是**硬失败**（`_eval_counter`
+# 遇未知计数源直接抛 ValueError），所以救回它们收益明确。
+#
+# **边界同上：只收语义唯一者。** 特别注意 `f`（Fire? Fighting?）与 `d`
+# （Darkness? Dragon?）在 TCG 缩写里都存在歧义 → **一律不猜**。
+_COUNTER_ALIASES = {
+    # 「场上全部宝可梦」引擎叫 *_field
+    "own_all_pokemon": "own_field",
+    "opp_all_pokemon": "opp_field",
+    "own_all_pokemons": "own_field",
+    "opp_all_pokemons": "opp_field",
+    # 「伤害指示物」的冗长写法
+    "own_active_damage_counters": "own_active_counters",
+    "opp_active_damage_counters": "opp_active_counters",
+    "own_damage_counters": "own_active_counters",
+    "opp_damage_counters": "opp_active_counters",
+    # 「后备宝可梦数」
+    "own_bench_pokemon": "own_bench",
+    "opp_bench_pokemon": "opp_bench",
+    # 「手牌张数」
+    "own_hand_cards": "own_hand",
+}
+
+# 能量属性单字母缩写 → 引擎属性名（TCG 官方符号的常见转写）
+# 只列**无歧义**的：f 与 d 故意不收（见上）。
+_ENERGY_TYPE_ALIASES = {
+    "g": "grass", "w": "water", "l": "lightning", "p": "psychic",
+    "m": "metal", "c": "colorless", "r": "fire",
+    "grass_energy": "grass", "fire_energy": "fire", "water_energy": "water",
+    "lightning_energy": "lightning", "psychic_energy": "psychic",
+    "fighting_energy": "fighting", "darkness_energy": "darkness",
+    "metal_energy": "metal", "dragon_energy": "dragon",
+    "colorless_energy": "colorless",
+}
+
+
+def _norm_key(v) -> str:
+    """统一小写 / 连字符 / 空格 → 下划线（归一化用的比较键）"""
+    return str(v).strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def normalize_counter(c):
+    """计数源（`dmg_plus:…:per:<counter>`）归一化到引擎合法取值
+
+    三级：① 已是合法值 → 原样；② 命中别名表；③ 剥掉 `_count/_num/…` 冗余后缀后
+    为合法值。**③ 不会误伤** `own_discard_count` 这类「本身合法、又恰好以 `_count`
+    结尾」的计数源 —— 剥离后若不合法就放弃剥离。
+    """
+    if not isinstance(c, str):
+        return c
+    key = _norm_key(c)
+    valid = set(engine_vocab().get("counters") or ())
+    if not valid:                       # 引擎不可用 → 不猜，保持原样
+        return c
+    if key in valid:
+        return key
+    if key in _COUNTER_ALIASES:
+        return _COUNTER_ALIASES[key]
+    for suf in ("_count", "_cnt", "_num", "_number"):
+        if key.endswith(suf) and key[: -len(suf)] in valid:
+            return key[: -len(suf)]
+    return c
+
+
+def normalize_energy_type(t):
+    """能量属性归一化（单字母缩写 / `xx_energy` → 引擎属性名）
+
+    合法属性名**从引擎读取**（`engine.cards.TYPES`），不在此硬编码。
+    """
+    if not isinstance(t, str):
+        return t
+    key = _norm_key(t)
+    valid = set(engine_vocab().get("energy_types") or ())
+    if not valid:                       # 引擎不可用 → 不猜，保持原样
+        return t
+    if key in valid:
+        return key
+    return _ENERGY_TYPE_ALIASES.get(key, t)
+
+
+def normalize_extra(extra):
+    """归一化 `actions[].extra` 里可救回的取值字段（计数源 / 能量属性）
+
+    **刻意不做**的：`extra.what` / `extra.kind`（检索/回收的目标种类）——
+    实测模型给的是 `from_discard`（那是**来源**，不是种类），属语义不同；
+    猜它会把「回收什么」弄错 → 保持原样让引擎如实报未建模。
+    """
+    if not isinstance(extra, dict):
+        return extra
+    out = dict(extra)
+    if "per" in out:
+        out["per"] = normalize_counter(out["per"])
+    if "energy_type" in out:
+        out["energy_type"] = normalize_energy_type(out["energy_type"])
+    return out
+
+
 def normalize_target(t):
     """把 `action.target` 的自然表达归一化到合法枚举值（**只处理语义唯一者**）
 
@@ -99,7 +198,10 @@ def normalize_target(t):
 
 
 def normalize_specs(specs: list) -> list:
-    """归一化 spec 里可救回的字段（当前：`action.target` 别名）→ **返回新对象**
+    """归一化 spec 里可救回的字段 → **返回新对象**
+
+    当前覆盖：`action.target`（别名表）与 `action.extra` 的 `per`（计数源）、
+    `energy_type`（能量属性）。各别名表都遵守「**只映射语义唯一者，歧义不猜**」。
 
     放在 **validate 之前**，且必须是**无副作用**的：`parse_effects` 里 `raw` 与
     `specs` 引用的是**同一批 dict**（`specs = [s for s in raw if isinstance(s, dict)]`
@@ -118,12 +220,15 @@ def normalize_specs(specs: list) -> list:
             continue
         new_acts = []
         for a in acts:
-            if isinstance(a, dict) and "target" in a:
-                a2 = dict(a)                       # 浅拷贝，不动原对象
-                a2["target"] = normalize_target(a["target"])
-                new_acts.append(a2)
-            else:
+            if not isinstance(a, dict):
                 new_acts.append(a)
+                continue
+            a2 = dict(a)                           # 浅拷贝，不动原对象
+            if "target" in a2:
+                a2["target"] = normalize_target(a2["target"])
+            if "extra" in a2:
+                a2["extra"] = normalize_extra(a2["extra"])
+            new_acts.append(a2)
         s2 = dict(s)
         s2["actions"] = new_acts
         out.append(s2)
@@ -1129,6 +1234,10 @@ def engine_vocab() -> dict:
             _sys.path.insert(0, eng)
         from engine import battle as _battle              # noqa: E402
         _ENGINE_VOCAB.update(_battle.dmg_vocab())
+        # 能量属性名也取自引擎（`engine.cards.TYPES`）—— 与「单一来源」原则一致：
+        # 引擎加了新属性，归一化自动跟上，不会出现「提示词/归一化表里还是旧列表」。
+        from engine import cards as _cards                # noqa: E402
+        _ENGINE_VOCAB["energy_types"] = list(_cards.TYPES)
     except Exception:                                     # noqa: BLE001
         pass
     return _ENGINE_VOCAB

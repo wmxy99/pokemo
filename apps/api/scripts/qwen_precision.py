@@ -448,6 +448,11 @@ def _judge_applicability(res: dict) -> tuple:
 
 
 # ---------------- 报告 ----------------
+def _pct(x, nd: int = 1):
+    """比率 → 百分比文本；None → `—`（缺数据时不要显示 0.0%）"""
+    return "—" if x is None else f"{x * 100:.{nd}f}%"
+
+
 def _report_paths(tag: str | None):
     """按量化档位决定报告落盘路径。
 
@@ -623,6 +628,41 @@ def _tok_per_s(l3: dict | None) -> float | None:
     return round(tok / (ms / 1000), 2) if ms else None
 
 
+def _json_array_ok(content) -> bool:
+    """输出能否被解析为 **JSON 数组**
+
+    这是结构化抽取任务的**硬性要求**：`agent.effects.extract_json` 找的是 `[`…`]`，
+    若模型输出的是裸对象 `{…}`，整条会被判为「无输出」→ 退化到 rule 兜底。
+    故它对 K2 是**比措辞相似度更关键的指标**。
+
+    **实测发现（这正是加它的原因）**：4bit 在 `k2_coin` 用例上输出了
+    `{"effect": …}`（对象）而 8bit/bf16 都输出 `[{…}]`（数组）—— PPL 只说明「分布变了」，
+    而这条说明「**格式遵循能力变差了**」，后者对抽取任务才是致命的。
+    """
+    s = str(content or "")
+    i, k = s.find("["), s.rfind("]")
+    if i == -1 or k <= i:
+        return False
+    try:
+        return isinstance(json.loads(s[i:k + 1]), list)
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
+def _json_ok_rate(l3: dict | None) -> float | None:
+    """**仅对 `kind == "json"` 的用例**统计 JSON 数组合规率
+
+    为什么要筛 kind：E2E_PROMPTS 里混了两类——问答类（`domain`，如「中毒造成多少伤害」）
+    本来就不该输出 JSON 数组，把它们算进来会把比率稀释成无意义的数字
+    （首版没筛，8bit 显示 50% = 6 条里 3 条刚好是问答类，看起来像「8bit 也不合规」）。
+    """
+    outs = [o for o in ((l3 or {}).get("quantized") or [])
+            if o.get("kind") == "json"]
+    if not outs:
+        return None
+    return round(sum(1 for o in outs if _json_array_ok(o.get("content"))) / len(outs), 3)
+
+
 def compare_report() -> int:
     """读各档位已有 JSON → 生成档位对照报告（**不占 GPU**，可随时复跑）
 
@@ -707,22 +747,29 @@ def compare_report() -> int:
     L += [""]
 
     L += ["### 第 3 层 · 端到端（greedy 输出对照）", "",
-          "| 档位 | 完全一致 | 归一一致 | 字符相似 | 正误（量化 vs 参考） | 判定 |",
-          "|---|---:|---:|---:|---:|---|"]
+          "| 档位 | 完全一致 | 归一一致 | 字符相似 | **JSON 数组合规** | 正误（量化 vs 参考） | 判定 |",
+          "|---|---:|---:|---:|---:|---:|---|"]
     for q in quants:
         l3 = data[q].get("layer3") or {}
         ja, _note = _judge_applicability(l3)
         verdict = ("**N/A ⚠**" if not ja
                    else ("PASS ✅" if l3.get("pass") else "FAIL ❌"))
+        jok = _json_ok_rate(l3)
         L.append(f"| **{q}** | {l3.get('exact_match_rate')} | "
                  f"{l3.get('normalized_match_rate')} | {l3.get('char_similarity_mean')} "
+                 f"| **{_pct(jok)}** "
                  f"| {l3.get('quant_correct')} vs {l3.get('ref_correct')} "
                  f"(Δ{l3.get('correctness_delta')}) | {verdict} |")
     L += ["",
           "> **注意判定列的口径**：正误判据要求「量化档不差于参考」。当**两档都没有"
           "正确答案**时（如 4bit 的 0 vs 0），该判据**没有区分力**——此时显示 `N/A`，"
-          "应改看**完全一致率 / 字符相似度**判断行为漂移（4bit 完全一致率 0.333 vs "
-          "8bit 0.667，说明其行为漂移明显更大）。把那种情况报成 PASS 是误导。", ""]
+          "应改看**完全一致率 / 字符相似度 / JSON 数组合规率**判断行为漂移"
+          "（4bit 完全一致率 0.333 vs 8bit 0.667，说明其行为漂移明显更大）。"
+          "把那种情况报成 PASS 是误导。", "",
+          "> **JSON 数组合规率**是本报告里**最贴近 K2 任务**的指标：输出若不是数组，"
+          "`extract_json` 取不到结果 → 该条退化为 rule 兜底（记为解析失败）。"
+          "实测 4bit 出现过「输出裸对象而非数组」的情况，这正是「PPL 变差」在"
+          "**结构化抽取**任务上的具体表现——两者结合看，4bit 不适合承担 K2 抽取。", ""]
 
     # ---- 结论 ----
     verdicts = {}
@@ -792,6 +839,8 @@ def compare_report() -> int:
             q: g(data[q], "layer2", "ppl_delta_pct") for q in quants},
         "layer3_exact_match_rate": {
             q: g(data[q], "layer3", "exact_match_rate") for q in quants},
+        "layer3_json_array_ok_rate": {
+            q: _json_ok_rate(data[q].get("layer3")) for q in quants},
         "passed": ok,
         "default_quant": "8bit",
     }, ensure_ascii=False, indent=2), encoding="utf-8")

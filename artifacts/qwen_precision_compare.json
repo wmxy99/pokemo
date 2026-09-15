@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15 11:30:13",
+  "generated_at": "2026-09-15 11:34:11",
   "quants": [
     "8bit",
     "4bit"
@@ -23,6 +23,10 @@
   "layer3_exact_match_rate": {
     "8bit": 0.667,
     "4bit": 0.333
+  },
+  "layer3_json_array_ok_rate": {
+    "8bit": 1.0,
+    "4bit": 0.667
   },
   "passed": {
     "8bit": true,

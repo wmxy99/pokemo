@@ -49,6 +49,8 @@ artifacts/
 # 注意：脚本自己写 `artifacts/_k2_eval_audit.jsonl`（临时审计），**不**在此放行。
 !/artifacts/k2_local_eval.md
 !/artifacts/k2_local_eval.json
+!/artifacts/k2_local_eval_4bit.md
+!/artifacts/k2_local_eval_4bit.json
 
 # 编辑器 / OS
 .idea/

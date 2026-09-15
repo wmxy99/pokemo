@@ -187,7 +187,28 @@ def main() -> int:
                     help="报告文件后缀（默认按 --quant 推导；8bit 用无后缀原名）")
     ap.add_argument("--dry-run", action="store_true",
                     help="只跑 rule 基线 + 抽样，不起服务（秒级，验证口径）")
+    ap.add_argument("--rerender", default=None, metavar="JSON",
+                    help="从已有 JSON 重渲染 Markdown（**不占 GPU**）——"
+                         "改了报告措辞/统计口径后用它刷新，不必重跑几十分钟")
     a = ap.parse_args()
+
+    # `--rerender`：只读 JSON 重出 Markdown。用途：报告格式或统计口径调整后，
+    # 无需再花几十分钟重跑（也避免两次跑出的数字不一致）。
+    if a.rerender:
+        jp = Path(a.rerender)
+        if not jp.is_file():
+            raise SystemExit(f"[k2-eval] 缺少 {jp}")
+        data = json.loads(jp.read_text(encoding="utf-8"))
+        rows = data.get("rows") or []
+        if not rows:
+            raise SystemExit(f"[k2-eval] {jp.name} 是 dry-run 产物（无 rows），无法重渲染")
+        a.quant = data.get("quant") or a.quant
+        a.tag = data.get("tag") or a.quant
+        a.seed = data.get("seed", a.seed)
+        items = E.collect_pool_items()
+        print(f"[k2-eval] 重渲染 {jp.name}：{len(rows)} 条（quant={a.quant}）")
+        _write_report(items, rows, rows, a)
+        return 0
 
     print("=" * 70)
     print("K2 卡池解析达标率 · 本地模型实跑")
@@ -321,9 +342,13 @@ def _summary(rows: list, items: list) -> dict:
     fallback = sum(1 for r in rows if r["raw_empty"])
     # rule 在同一样本上的对照（关键：同口径、同样本才可比）
     rule_ok = sum(1 for r in rows if not r["rule_unsupported"])
-    agree = sum(1 for r in rows if r["llm_actions"] and
-                r["llm_actions"] == r["rule_actions"])
-    both_nonempty = sum(1 for r in rows if r["llm_actions"] and r["rule_actions"])
+    # 一致率必须比**引擎 tag 空间**，不能比「解析出的原始动作类型」——
+    # 两个后端的动作命名空间本就不同（rule 出 `coin_flip`/`shield`，LLM 可能出 `rule`），
+    # 直接比原始 type 必然低（首版就这样，得到 42.4% 这种会很误导的数字）。
+    agree = sum(1 for r in rows
+                if r.get("tags") and set(r["tags"]) == set(r.get("rule_tags") or []))
+    both_nonempty = sum(1 for r in rows
+                        if r.get("tags") and r.get("rule_tags"))
     avg_s = (sum(r["elapsed_ms"] for r in rows) / n / 1000) if n else None
     # 按语言分组（提示词是中文写的，而语料 89.6% 是英文 —— 不分组会掩盖差异）
     by_lang = {}
@@ -354,8 +379,8 @@ def _summary(rows: list, items: list) -> dict:
         "raw_empty_rate": round(fallback / n, 4) if n else None,
         "errors_rate": round(sum(1 for r in rows if r["errors"]) / n, 4) if n else None,
         "rule_fully_mapped_on_sample": round(rule_ok / n, 4) if n else None,
-        "action_agreement": round(agree / both_nonempty, 4) if both_nonempty else None,
-        "action_agreement_n": both_nonempty,
+        "engine_tag_agreement": round(agree / both_nonempty, 4) if both_nonempty else None,
+        "engine_tag_agreement_n": both_nonempty,
         "avg_sec_per_item": round(avg_s, 1) if avg_s else None,
         "by_lang": by_lang,
         "k2_target": K2_TARGET,
@@ -382,8 +407,8 @@ def _print_summary(rows: list, items: list, a) -> None:
         print(f"  [{lg}] n={d['n']:<3} 可用率 {_pct(d['usable_rate'])}"
               f" 95%CI[{_pct(d['usable_ci95'][0])}, {_pct(d['usable_ci95'][1])}]"
               f"  (A{d['A_parse_failed']}/B{d['B_unmodeled']}/C{d['C_fully_mapped']})")
-    print(f"  动作集合一致率（llm vs rule）：{_pct(s['action_agreement'])}"
-          f"（可比 {s['action_agreement_n']} 条）")
+    print(f"  引擎 tag 一致率（llm vs rule）：{_pct(s['engine_tag_agreement'])}"
+          f"（可比 {s['engine_tag_agreement_n']} 条）")
     print(f"  均耗时 {s['avg_sec_per_item']}s/条 → 全量 {s['pool_total']} 条约 "
           f"{s['est_full_pool_hours']} 小时")
     print(f"\n  **K2 判定（门槛 {int(K2_TARGET*100)}%）**："
@@ -399,6 +424,26 @@ def _report_paths(tag: str | None):
     suffix = "" if (tag or "8bit").lower() in ("", "8bit") else f"_{tag.lower()}"
     base = f"k2_local_eval{suffix}"
     return REPO / "artifacts" / f"{base}.md", REPO / "artifacts" / f"{base}.json"
+
+
+def _err_kind(msg: str) -> str:
+    """把 schema 错误归成人类可读的类别
+
+    为什么要分类：只列「哪些条失败」还不够——需要一眼看出**主要失败模式**，
+    才能判断该补提示词、补后处理，还是补引擎。
+    """
+    m = str(msg)
+    if "缺字段" in m:
+        return "缺字段（输出 Schema 不完整）"
+    if "非法" in m:
+        return "枚举/取值非法"
+    if "应为" in m:
+        return "类型不符（数组/对象）"
+    if "不是对象" in m:
+        return "结构错误（数组元素非对象）"
+    if "空输出" in m or not m.strip():
+        return "LLM 空返回（未产出 JSON）"
+    return "其他"
 
 
 def _write_report(items: list, sample: list, rows, a) -> None:
@@ -453,8 +498,10 @@ def _write_report(items: list, sample: list, rows, a) -> None:
           "",
           f"**对照**：rule 后端在**同一样本**上的完全映射率 = "
           f"{_pct(s['rule_fully_mapped_on_sample'])}；"
-          f"动作集合一致率（llm vs rule，可比 {s['action_agreement_n']} 条）= "
-          f"{_pct(s['action_agreement'])}", "",
+          f"**引擎 tag 一致率**（llm vs rule，可比 {s['engine_tag_agreement_n']} 条）= "
+          f"{_pct(s['engine_tag_agreement'])}"
+          "（比的是**映射后的引擎 tag**，不是原始动作 type——两个后端的动作命名空间"
+          "本就不同，比原始 type 会得到很低且无意义的数字）", "",
           f"**K2 判定**：{'PASS ✅' if s['k2_pass'] else '未达 ❌'}"
           f"（{_pct(s['usable_rate'])} vs 门槛 {int(K2_TARGET*100)}%）", "",
           f"耗时：{s['avg_sec_per_item']}s/条 → 全量 {s['pool_total']} 条约 "
@@ -480,21 +527,45 @@ def _write_report(items: list, sample: list, rows, a) -> None:
     if not fails:
         L.append("无。")
     else:
-        L += ["| # | 名称 | kind | 现象 | 文本 |", "|---|---|---|---|---|"]
+        kinds: dict = {}
+        for r in fails:
+            for e in (r["errors"] or ["LLM 空返回（未产出 JSON）"]):
+                k = _err_kind(str(e))
+                kinds[k] = kinds.get(k, 0) + 1
+        L += ["**错误类型分布**（按 error 条目计，一条记录可能有多条）：", "",
+              "| 类型 | 条数 |", "|---|---:|"]
+        for k, v in sorted(kinds.items(), key=lambda x: -x[1]):
+            L.append(f"| {k} | {v} |")
+        L += ["", "逐条明细：", "",
+              "| # | 名称 | kind | 语言 | 现象 | 文本 |", "|---|---|---|---|---|---|"]
         for i, r in enumerate(fails, 1):
             why = ("LLM 空返回→rule 兜底" if r["raw_empty"]
                    else f"errors: {str(r['errors'])[:60]}")
-            L.append(f"| {i} | {r['name']} | {r['kind']} | {why} "
-                     f"| {r['text'][:44]} |")
+            L.append(f"| {i} | {r['name']} | {r['kind']} | {r.get('lang', '?')} "
+                     f"| {why} | {r['text'][:44]} |")
     L += [""]
 
-    L += ["## 3. B 类明细（解析成功，但引擎尚未建模——引擎侧工作）", "",
-          "| # | 名称 | LLM 得到的动作 | 未建模动作 |", "|---|---|---|---|"]
+    L += ["## 3. B 类明细（解析成功，但动作映射不到引擎 tag）", "",
+          "> **B 类不是解析失败**，但**也未必是引擎缺口**——先看最后一列的对照，"
+          "它是本报告最容易误读的一处：", "",
+          "> 实测（8bit）16 条 B 类里，**rule 后端都识别出了具体机制**"
+          "（`coin_flip` / `shield` / `status` / `damage_mod` / `move_damage` …），"
+          "**这些引擎已建模**；而 LLM 把它们笼统合并成了 `rule`（静态规则修改，"
+          "引擎未建模该类型）。**即：这 16 条主要反映 LLM 解析粒度不足（丢失可执行语义），"
+          "而不是引擎没做。**", "",
+          "> **可操作的改进点**：提示词的 `action.type` 枚举里没有「抛币」这类机制级取值"
+          "（只有 `damage/draw/attach/heal/discard/switch/search/evolve/spread/"
+          "move_damage/knockout/status/rule`），模型只能退回 `rule` 兜底。"
+          "补上机制级枚举 + 少量 few-shot，是提升「完全映射率」最直接的一步"
+          "（本报告只记录、未擅自改提示词——那会影响既有测试与行为，需评审）。", "",
+          "| # | 名称 | 语言 | LLM 得到的动作 | rule 后端识别 | 未建模动作 |",
+          "|---|---|---|---|---|---|"]
     cls = _classify(rows)
     for i, r in enumerate(cls["B_unmodeled"], 1):
         uns = "、".join(sorted({u.get("type", "?") for u in r["unsupported"]}))
-        L.append(f"| {i} | {r['name']} | {'、'.join(r['llm_actions']) or '—'} "
-                 f"| {uns} |")
+        rule_a = "、".join(r.get("rule_actions") or []) or "**（未识别出动作）**"
+        L.append(f"| {i} | {r['name']} | {r.get('lang', '?')} "
+                 f"| {'、'.join(r['llm_actions']) or '—'} | {rule_a} | {uns} |")
     L += [""]
 
     L += ["## 4. 口径说明（**必读**，否则会误读上面的数字）", "",
@@ -507,7 +578,8 @@ def _write_report(items: list, sample: list, rows, a) -> None:
           "   两者叠加会让 LLM 的达标率**系统性虚高**。",
           "2. 本报告改用 `raw` 字段判断（它保留的是 **LLM 原始输出**，非兜底结果），",
           "   并严格三分 A/B/C；**B 类不算解析失败**——解析是对的，缺的是引擎建模。",
-          "3. **抽样估计**：n 有限，请结合 95% 置信区间读；`rule 兜底率` 越低，",
+          "3. **抽样估计**：n 有限，请结合 95% 置信区间读；区间用 **Wilson 区间**"
+          "（小样本下比正态近似稳，不会给出负数下界）。`rule 兜底率` 越低，",
           "   说明 LLM 越能独立产出结果。",
           "4. 语料为 `cards_real.json` 的 `desc_zh`（**自述转写**，非官方文案；C2/C5）。",
           ""]

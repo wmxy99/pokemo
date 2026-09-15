@@ -1,0 +1,1568 @@
+{
+  "generated_at": "2026-09-15 12:17:39",
+  "quant": "4bit",
+  "seed": 42,
+  "tag": "4bit",
+  "summary": {
+    "n": 60,
+    "pool_total": 328,
+    "A_parse_failed": 10,
+    "B_unmodeled": 14,
+    "C_fully_mapped": 36,
+    "usable_rate": 0.8333,
+    "usable_ci95": [
+      0.7197,
+      0.9069
+    ],
+    "fully_mapped_rate": 0.6,
+    "fully_mapped_ci95": [
+      0.4737,
+      0.7143
+    ],
+    "raw_empty_rate": 0.1667,
+    "errors_rate": 0.0,
+    "rule_fully_mapped_on_sample": 0.9833,
+    "engine_tag_agreement": 0.6333,
+    "engine_tag_agreement_n": 30,
+    "avg_sec_per_item": 6.8,
+    "by_lang": {
+      "zh": {
+        "n": 8,
+        "A_parse_failed": 2,
+        "B_unmodeled": 1,
+        "C_fully_mapped": 5,
+        "usable_rate": 0.75,
+        "usable_ci95": [
+          0.4093,
+          0.9285
+        ]
+      },
+      "en": {
+        "n": 52,
+        "A_parse_failed": 8,
+        "B_unmodeled": 13,
+        "C_fully_mapped": 31,
+        "usable_rate": 0.8462,
+        "usable_ci95": [
+          0.7248,
+          0.9199
+        ]
+      }
+    },
+    "k2_target": 0.85,
+    "k2_pass": false,
+    "est_full_pool_hours": 0.6
+  },
+  "rows": [
+    {
+      "name": "Corner",
+      "name_zh": "逼入角落",
+      "kind": "attack",
+      "text": "造成 30 点伤害。对手的战斗宝可梦下回合无法撤退。",
+      "lang": "zh",
+      "rule_unsupported": 1,
+      "rule_tags": [],
+      "rule_actions": [
+        "damage",
+        "rule"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "对手的战斗宝可梦下回合无法撤退"
+        }
+      ],
+      "llm_actions": [
+        "damage",
+        "rule"
+      ],
+      "elapsed_ms": 8146
+    },
+    {
+      "name": "Adrena-Brain",
+      "name_zh": "肾上腺素脑",
+      "kind": "ability",
+      "text": "每回合一次：从自身移动至多 3 个伤害指示物到对手的战斗宝可梦。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "move_damage:3"
+      ],
+      "rule_actions": [
+        "move_damage"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "move_damage:3"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 7158
+    },
+    {
+      "name": "Dive",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin:heads:shield:prevent_all"
+      ],
+      "rule_actions": [
+        "coin_flip"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "coin:heads:shield:prevent_all"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4805
+    },
+    {
+      "name": "Buddy Blast",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 60 more damage for each Ethan’s Adventure card in your discard pile.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:60:per:own_discard_count"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8419
+    },
+    {
+      "name": "Powerful Rage",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 20 damage for each damage counter on this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:20:per:own_active_counters"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Each damage counter on this Pokémon deals 20 damage to the active opponent."
+        }
+      ],
+      "llm_actions": [
+        "damage",
+        "rule"
+      ],
+      "elapsed_ms": 7839
+    },
+    {
+      "name": "Best Punch",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip a coin. If tails, this attack does nothing.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin:tails:dmg_zero"
+      ],
+      "rule_actions": [
+        "coin_flip"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "If tails, this attack does nothing."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5131
+    },
+    {
+      "name": "Bellowing Thunder",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "You may discard any amount of Basic Energy from your Pokémon. This attack does 70 damage for each card you discarded in this way.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:70:per:own_discarded_this_turn"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard:0"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage",
+        "discard"
+      ],
+      "elapsed_ms": 9081
+    },
+    {
+      "name": "Poison Spray",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Poisoned.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "poison"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Your opponent’s Active Pokémon is now Poisoned."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5439
+    },
+    {
+      "name": "Aurora Gain",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Heal 20 damage from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "heal:20"
+      ],
+      "rule_actions": [
+        "heal"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "heal:20"
+      ],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Heal 20 damage from this Pokémon."
+        }
+      ],
+      "llm_actions": [
+        "heal",
+        "rule"
+      ],
+      "elapsed_ms": 6528
+    },
+    {
+      "name": "Protecting Steel",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "During your opponent’s next turn, this Pokémon takes 50 less damage from attacks (after applying Weakness and Resistance).",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "shield:reduce:50"
+      ],
+      "rule_actions": [
+        "shield"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "shield:reduce:50"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 8473
+    },
+    {
+      "name": "Spiky Wheel",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 40 more damage for each {D} Energy attached to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:40:per:own_active_energy_darkness"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 9025
+    },
+    {
+      "name": "Run Away Draw",
+      "name_zh": "逃跑抽牌",
+      "kind": "ability",
+      "text": "每回合一次：抽至手牌 5 张（引擎近似检索）",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw_to:5"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw:5"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 6271
+    },
+    {
+      "name": "Land Crush",
+      "name_zh": "大地粉碎",
+      "kind": "attack",
+      "text": "造成 90 点伤害。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [],
+      "rule_actions": [
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 5142
+    },
+    {
+      "name": "Snack Seek",
+      "name_zh": "",
+      "kind": "ability",
+      "text": "Once during your turn, you may look at the top card of your deck. You may discard that card.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recon:1"
+      ],
+      "rule_actions": [
+        "search"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw:1",
+        "discard:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard",
+        "draw"
+      ],
+      "elapsed_ms": 6882
+    },
+    {
+      "name": "Spinning Gears",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Confused.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "confuse"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Your opponent’s Active Pokémon is now Confused."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5607
+    },
+    {
+      "name": "Rallying Horn",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "If any of your Ethan’s Pokémon were Knocked Out by damage from an attack during your opponent’s last turn, this attack does 100 more damage.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:100:if:opp_ko_last_turn"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 7396
+    },
+    {
+      "name": "Double Headbutt",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 2 coins. This attack does 10 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:2:heads:dmg_plus:10"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 9917
+    },
+    {
+      "name": "Poison Ring",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "poison"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 5219
+    },
+    {
+      "name": "Itchy Pollen",
+      "name_zh": "痒痒花粉",
+      "kind": "attack",
+      "text": "造成 10 点伤害。对手的战斗宝可梦陷入中毒。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "poison"
+      ],
+      "rule_actions": [
+        "damage",
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "poison"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage",
+        "status"
+      ],
+      "elapsed_ms": 7210
+    },
+    {
+      "name": "Heat Burn",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Burned.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "burn"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4596
+    },
+    {
+      "name": "Onyx",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Discard all Energy from this Pokémon, and take a Prize card.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "discard_energy:all"
+      ],
+      "rule_actions": [
+        "discard"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard_energy:1",
+        "draw:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard",
+        "draw"
+      ],
+      "elapsed_ms": 7204
+    },
+    {
+      "name": "X-Boot",
+      "name_zh": "",
+      "kind": "ability",
+      "text": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recon:1"
+      ],
+      "rule_actions": [
+        "search"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "recon:1"
+      ],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Shuffle your deck"
+        }
+      ],
+      "llm_actions": [
+        "rule",
+        "search"
+      ],
+      "elapsed_ms": 12095
+    },
+    {
+      "name": "Triple Smash",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 3 coins. This attack does 120 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:3:heads:dmg_plus:120"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8539
+    },
+    {
+      "name": "Fall Back to Reload",
+      "name_zh": "",
+      "kind": "ability",
+      "text": "Once during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic {W} Energy cards from your hand to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "attach_energy:2:water:hand"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "attach_energy:2:W"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "attach"
+      ],
+      "elapsed_ms": 7480
+    },
+    {
+      "name": "Regi Charge",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Attach up to 2 Basic {M} Energy cards from your discard pile to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "attach:2:metal:discard"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "attach:2:M"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "attach"
+      ],
+      "elapsed_ms": 6847
+    },
+    {
+      "name": "Hypnotic Ray",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Asleep.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "sleep"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "sleep"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "status"
+      ],
+      "elapsed_ms": 5892
+    },
+    {
+      "name": "Recon Directive",
+      "name_zh": "侦察指令",
+      "kind": "ability",
+      "text": "每回合一次：检视牌库顶 2 张取 1 入手",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recon:1"
+      ],
+      "rule_actions": [
+        "search"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4970
+    },
+    {
+      "name": "Triple Stab",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 3 coins. This attack does 10 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:3:heads:dmg_plus:10"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 7431
+    },
+    {
+      "name": "Cosmic Beatdown",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 20 damage for each of your Pokémon in play.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:20:per:own_field"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8777
+    },
+    {
+      "name": "Hard Gears",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "During your opponent’s next turn, this Pokémon takes 10 less damage from attacks (after applying Weakness and Resistance).",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "shield:reduce:10"
+      ],
+      "rule_actions": [
+        "shield"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "shield:reduce:10"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 8485
+    },
+    {
+      "name": "Double Spin",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 2 coins. This attack does 10 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:2:heads:dmg_plus:10"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8744
+    },
+    {
+      "name": "Voltage Burst",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 50 more damage for each Prize card your opponent has taken. This Pokémon also does 30 damage to itself.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:50:per:opp_prizes_left"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8186
+    },
+    {
+      "name": "Energized Shell",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 30 damage for each Energy attached to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:30:per:own_active_energy"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Each Energy attached to this Pokémon deals 30 damage to the active opponent."
+        }
+      ],
+      "llm_actions": [
+        "damage",
+        "rule"
+      ],
+      "elapsed_ms": 8124
+    },
+    {
+      "name": "Surprise Attack",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip a coin. If tails, this attack does nothing.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin:tails:dmg_zero"
+      ],
+      "rule_actions": [
+        "coin_flip"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "If tails, this attack does nothing."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5525
+    },
+    {
+      "name": "Add On",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Draw 4 cards.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw:4"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw:4"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4935
+    },
+    {
+      "name": "Double Smash",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 2 coins. This attack does 80 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:2:heads:dmg_plus:80"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8443
+    },
+    {
+      "name": "Icy Wind",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Asleep.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "sleep"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "sleep"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4065
+    },
+    {
+      "name": "Raging Curse",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 10 damage for each damage counter on all of your Benched Cynthia’s Pokémon. This attack’s damage isn’t affected by Weakness.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:10:per:own_bench_counters"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "This attack’s damage isn’t affected by Weakness."
+        }
+      ],
+      "llm_actions": [
+        "damage",
+        "rule"
+      ],
+      "elapsed_ms": 9980
+    },
+    {
+      "name": "Blaze Kick",
+      "name_zh": "火焰踢",
+      "kind": "attack",
+      "text": "造成 180 点伤害。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [],
+      "rule_actions": [
+        "damage"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 5159
+    },
+    {
+      "name": "Collect",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Draw a card.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw:1"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 4662
+    },
+    {
+      "name": "Settle the Score",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 60 more damage for each Prize card your opponent took during their last turn.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:60:per:opp_prizes_left"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 7816
+    },
+    {
+      "name": "Mini Drain",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Heal 10 damage from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "heal:10"
+      ],
+      "rule_actions": [
+        "heal"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "heal:10"
+      ],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "HP 10 修复"
+        }
+      ],
+      "llm_actions": [
+        "heal",
+        "rule"
+      ],
+      "elapsed_ms": 6452
+    },
+    {
+      "name": "Blazing Burst",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 50 more damage for each Prize card your opponent has taken. Discard an Energy from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:50:per:opp_prizes_left"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage",
+        "discard"
+      ],
+      "elapsed_ms": 8026
+    },
+    {
+      "name": "Hot Magma",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Burned.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "burn"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "burn"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "status"
+      ],
+      "elapsed_ms": 5344
+    },
+    {
+      "name": "Coated Attack",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "During your opponent’s next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "shield:prevent_all"
+      ],
+      "rule_actions": [
+        "shield"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "shield:prevent_all"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4695
+    },
+    {
+      "name": "Drag Down",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip a coin. If heads, your opponent’s Active Pokémon is now Paralyzed.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "paralyze"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "paralyze"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "status"
+      ],
+      "elapsed_ms": 5978
+    },
+    {
+      "name": "Obliterating Nose",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Discard 3 Energy from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "discard_energy:3"
+      ],
+      "rule_actions": [
+        "discard"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard:3"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard"
+      ],
+      "elapsed_ms": 5766
+    },
+    {
+      "name": "Perplex",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Confused.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "confuse"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Your opponent’s Active Pokémon is now Confused."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5293
+    },
+    {
+      "name": "Return",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "You may draw cards until you have 6 cards in your hand.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw_to:6"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4243
+    },
+    {
+      "name": "Combat Thunder",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "This attack does 20 more damage for each of your opponent’s Benched Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:20:per:opp_bench"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 8477
+    },
+    {
+      "name": "Strange Hacking",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Confused. You may move any number of damage counters on your opponent’s Pokémon to their other Pokémon in any way you like.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "confuse"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "confuse"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "status"
+      ],
+      "elapsed_ms": 6752
+    },
+    {
+      "name": "Recovery Net",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Put up to 2 Pokémon from your discard pile into your hand.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recover:2:pokemon"
+      ],
+      "rule_actions": [
+        "recover"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw:2"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 5813
+    },
+    {
+      "name": "Blaze Dance",
+      "name_zh": "火焰之舞",
+      "kind": "ability",
+      "text": "被动：由手牌进化此宝可梦时，可从弃牌堆至多取 2 张基本火能量附到后备宝可梦（引擎子集：附到自身）。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "evolve_attach:2:fire:discard"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "evolve_attach:2:discard"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "attach"
+      ],
+      "elapsed_ms": 8252
+    },
+    {
+      "name": "Raging Amethyst",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Discard all Energy from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "discard_energy:all"
+      ],
+      "rule_actions": [
+        "discard"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Discard all Energy from this Pokémon."
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 5688
+    },
+    {
+      "name": "Drag Off",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot. This attack does 30 damage to the new Active Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "gust"
+      ],
+      "rule_actions": [
+        "damage",
+        "switch"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "gust"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage",
+        "switch"
+      ],
+      "elapsed_ms": 7599
+    },
+    {
+      "name": "Burst Roar",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Discard your hand and draw 6 cards.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw:6",
+        "discard:all"
+      ],
+      "rule_actions": [
+        "discard",
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard:1",
+        "draw:6"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard",
+        "draw"
+      ],
+      "elapsed_ms": 6361
+    },
+    {
+      "name": "Hide",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin:heads:shield:prevent_all"
+      ],
+      "rule_actions": [
+        "coin_flip"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "coin:heads:shield:prevent_all"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4750
+    },
+    {
+      "name": "Poison Jab",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Your opponent’s Active Pokémon is now Poisoned.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "poison"
+      ],
+      "rule_actions": [
+        "status"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [
+        {
+          "type": "rule",
+          "reason": "Poisoned"
+        }
+      ],
+      "llm_actions": [
+        "rule"
+      ],
+      "elapsed_ms": 4657
+    },
+    {
+      "name": "Tail Slap",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "Flip 2 coins. This attack does 20 damage for each heads.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "coin_each:2:heads:dmg_plus:20"
+      ],
+      "rule_actions": [
+        "coin_flip",
+        "damage"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [],
+      "unsupported": [],
+      "llm_actions": [
+        "damage"
+      ],
+      "elapsed_ms": 7974
+    },
+    {
+      "name": "Crown Opal",
+      "name_zh": "",
+      "kind": "attack",
+      "text": "During your opponent’s next turn, prevent all damage done to this Pokémon by attacks from Basic non-{C} Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "shield:prevent_all"
+      ],
+      "rule_actions": [
+        "shield"
+      ],
+      "raw_empty": true,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "shield:prevent_all"
+      ],
+      "unsupported": [],
+      "llm_actions": [],
+      "elapsed_ms": 4993
+    }
+  ]
+}

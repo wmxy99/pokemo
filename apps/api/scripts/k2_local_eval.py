@@ -285,10 +285,23 @@ def main() -> int:
     # 审计写到独立文件，避免污染真实审计日志。
     # **不用 unlink()**：本沙箱拦截删除并 fail-closed（SAFE_DELETE_FAIL_CLOSED），
     # 用「截断」达到同样效果。
-    audit = REPO / "artifacts" / "_k2_eval_audit.jsonl"
+    #
+    # 文件名**按 tag 区分**：连续跑两批（如黄金集之后紧接着卡池重跑）时，前一个
+    # 进程对固定文件名的句柄可能尚未释放 → `PermissionError`，**整个评测直接挂掉**。
+    # 实测踩过这一次。再退一步：真被占用就换带时间戳的名字并**打印警告** ——
+    # 审计是合规辅助，不该阻断业务；但也**不能静默跳过**，故必须留下警告。
+    _sfx = (a.tag or a.quant or "8bit").lower()
+    audit = REPO / "artifacts" / f"_k2_eval_audit_{_sfx}.jsonl"
     audit.parent.mkdir(parents=True, exist_ok=True)
-    with open(audit, "w", encoding="utf-8"):
-        pass
+    try:
+        with open(audit, "w", encoding="utf-8"):
+            pass
+    except PermissionError:
+        audit = REPO / "artifacts" / f"_k2_eval_audit_{_sfx}_{int(time.time())}.jsonl"
+        print(f"[k2-eval] ⚠ 审计文件被占用，改用 {audit.name}（合规记录仍完整）",
+              flush=True)
+        with open(audit, "w", encoding="utf-8"):
+            pass
     os.environ["POKELAB_AUDIT_LOG"] = str(audit)
 
     print(f"\n③ 启动本地服务（{a.quant}）：{root}"

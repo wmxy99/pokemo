@@ -221,9 +221,36 @@ class TestSystemPromptInjection(unittest.TestCase):
             # 它是**合法且正确**的解析，不该被断言判死。
 
     def test_kind_trigger_guide_present(self):
-        """kind/trigger 判定表必须在（实测 31 条既有失败里占比最大的一类）"""
+        """trigger 判定表 + 「kind 原样回填」必须在
+
+        历史背景：原先这里查的是「kind 与 trigger 判定」表。后来发现 **`kind` 是
+        调用方已知事实**（`parse_effects(kind=…)` 传入），让模型从文本"判断"它
+        既无必要也不可靠 —— 实测 4 条 kind 失败全是模型**改写**了已给的类别。
+        现在只让模型判断 `trigger`，`kind` 必须回填。
+        """
         sp = self.E.render_system_prompt()
-        self.assertIn("kind 与 trigger 判定", sp)
+        self.assertIn("# trigger 判定", sp)
+        self.assertIn("`kind` 必须原样回填", sp)
+
+    def test_user_prompt_fully_rendered(self):
+        """用户提示词**不得残留占位符**，且必须带上卡牌类别
+
+        这是本组最该有、却长期缺失的一条守卫 —— 缺了它，一个真 bug 藏了很久：
+        `parse_effects_user.md` 声明 `@@supertype@@`/`@@hp@@` 等键，而 `parse_llm`
+        只传 `card_name`/`card_kind`/`rules_text`，且模板渲染器**默认保留未替换的
+        占位符**（为人工核查方便）→ 模型收到的是含 `@@supertype@@` 乱码的提示词，
+        **卡牌类别从未传达给模型**。云端 4 条 kind 失败全由此而来。
+        """
+        up = self.E.render_user_prompt("Dragapult ex", "ability", "每回合一次：抽至手牌 5 张")
+        self.assertEqual(prompts.leftover_tokens(up), [],
+                         f"用户提示词残留占位符：{prompts.leftover_tokens(up)}")
+        self.assertIn("ability", up)        # 类别必须真的在提示词里
+        self.assertIn("抽至手牌 5 张", up)
+
+    def test_render_strict_raises_on_leftover(self):
+        """`render(strict=True)` 必须拦住残留占位符（防止上述 bug 复发）"""
+        with self.assertRaises(prompts.PromptRenderError):
+            prompts.render("parse_effects_user", strict=True, card_name="X")
 
     def test_prompt_length_budget(self):
         """提示词长度**预算守卫**：长提示词拖慢推理，但**质量优先**
@@ -234,18 +261,22 @@ class TestSystemPromptInjection(unittest.TestCase):
           · 5868 字符（v6）→ 40.0%（本地）
           · 7103 字符（+target 约定表 / 能量卡 trigger / 机制分解粒度 / search 约定）
             → 本地 40%、**云端 58% → 82%**
+          · 8214 字符（+kind 回填/trigger 解耦/rule·attach·limit·switch·coin/括号口径约定）
+            → 云端 **92%**（达标），见 k2_report_cloud4.md
 
-        预算放到 7200 的依据（**不是无意识膨胀**）：
-        ① 新增内容全部**针对实测失败**，且经云端验证有效（+24pp）；
-        ② 实测发现 82% 附近存在「**改动波动带**」—— 继续微调会修好一些、弄坏一些
-           （如 search 约定修好 2 条、同时弄坏 2 条，净零），故**再往上加之前必须先证明净收益**；
+        预算放到 8400 的依据（**不是无意识膨胀**）：
+        ① 新增内容全部**指向实测的「语义边界未定义」**：上轮 9 条失败无一属模型能力问题
+           （kind/trigger/取值约定各占一部分），写死约定是唯一出路 —— 同做法上轮 +24pp；
+        ② 已按「先证净收益」执行：本轮先跑云端（+10pp），**同时记录 3 条新失败**
+           （其中 2 条是我上轮重写时丢掉既有约定造成的回归，已补回）；
         ③ 主力后端是云端，对提示词长度不敏感；本地已确认不适合承担 K2（40% ≪ 85%）。
+        **【约束】这是最后一次未经"净收益证明"就上调预算** —— 再加内容必须有云端实测支撑。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 7200,
-            f"提示词已 {len(sp)} 字符，超过 7200 预算；"
-            f"加内容前请先在云端实测净收益（当前 82%，已进入波动带）")
+            len(sp), 8400,
+            f"提示词已 {len(sp)} 字符，超过 8400 预算；"
+            f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 
 if __name__ == "__main__":

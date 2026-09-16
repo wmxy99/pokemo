@@ -671,5 +671,34 @@ class TestValueNormalization(unittest.TestCase):
         self.assertTrue(any("water" in t for t in tags), tags)
 
 
+class TestTargetOptional(unittest.TestCase):
+    """`target` 的「未指定」是合法状态（与 `amount` 一致）
+
+    历史：`validate_specs` 原先写的是 `a.get("target") not in TARGETS`，
+    把「**没填**」也判为非法 —— 而真值里 `rule` 类动作本就不填 target。
+    后果：模型输出 `"target": null` 就整条作废（实测 `ru_energy_once` 因
+    `action.target 非法：None` 落进 A 类失败，掩盖了真正的分歧）。
+    只应惩罚「**给了但非法**」的值。
+    """
+
+    def _spec(self, action):
+        return [{"kind": "rule", "name": "X", "trigger": "static", "conditions": [],
+                 "actions": [action], "source_text": "t", "citations": []}]
+
+    def test_missing_target_is_ok(self):
+        errs = E.validate_specs(self._spec({"type": "draw", "amount": 2}))
+        self.assertEqual(errs, [], f"缺 target 不应报错：{errs}")
+
+    def test_explicit_null_target_is_ok(self):
+        errs = E.validate_specs(self._spec({"type": "draw", "amount": 2, "target": None}))
+        self.assertEqual(errs, [], f"显式 null 应与缺省等价：{errs}")
+
+    def test_invalid_target_still_rejected(self):
+        """放宽不能过头：枚举外的**非空**取值仍须报错"""
+        errs = E.validate_specs(self._spec({"type": "draw", "amount": 2,
+                                            "target": "opponent_bench"}))
+        self.assertTrue(any("target 非法" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

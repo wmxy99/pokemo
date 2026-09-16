@@ -1259,6 +1259,7 @@ def render_system_prompt(retrieved_rules: str = "") -> str:
     from . import prompts as _prompts
     return _prompts.render(
         "parse_effects_system",
+        strict=True,                # 残留占位符 = 提示词里出现乱码，必须报错
         retrieved_rules=retrieved_rules or "（无）",
         # 枚举表：单一来源 = 本模块常量（避免 .md 与校验层漂移）
         enum_kind=" · ".join(KINDS),
@@ -1275,9 +1276,40 @@ def render_system_prompt(retrieved_rules: str = "") -> str:
     )
 
 
+def render_user_prompt(card_name: str = "", card_kind: str = "attack",
+                       rules_text: str = "",
+                       card_meta: Optional[dict] = None) -> str:
+    """渲染 K2 用户提示词 —— **卡牌类别必须随文本一起给出**
+
+    这是 2026-09-16 修掉的一个真 bug：模板原先声明 `@@series@@`/`@@number@@`/
+    `@@supertype@@`/`@@hp@@`/`@@attacks_meta@@`，而 `parse_llm` 只传 `card_name`/
+    `card_kind`/`rules_text` → 那些占位符**原样发给了模型**（模板渲染默认保留未替换
+    的占位符，且不报错）。
+
+    后果：模型**从未收到卡牌类别**，只能从文本猜；而「回复自己宝可梦 30 点 HP」
+    这类文本本身无法判定是招式还是物品 → **必然猜错**（云端 4 条 kind 失败全由此而来）。
+    也就是说 `kind_acc` 当时测的不是"回填能力"而是"盲猜能力"。
+
+    现在：① 模板只用调用方确实提供的键；② 走 `strict=True`，再出现残留就抛错；
+    ③ 类别显式标注并**要求原样回填**。`card_meta` 是留给card-db 的扩展位
+    （系列/编号/HP 等），无则显示「（无）」。
+    """
+    from . import prompts as _prompts
+    meta = "（无）"
+    if card_meta:
+        meta = " · ".join(f"{k}={v}" for k, v in card_meta.items() if v not in (None, "")) \
+            or "（无）"
+    return _prompts.render("parse_effects_user", strict=True,
+                           card_name=card_name or "(未命名)",
+                           card_kind=card_kind,
+                           card_meta=meta,
+                           rules_text=rules_text)
+
+
 def parse_llm(text: str, kind: str = "attack", name: str = "",
               retrieved_rules: str = "", meta_out: Optional[dict] = None,
-              extra_sensitive: Optional[dict] = None) -> list:
+              extra_sensitive: Optional[dict] = None,
+              card_meta: Optional[dict] = None) -> list:
     """LLM 后端：按 prompts/parse_effects_*.md 模板调用 OpenAI 兼容接口
 
     合规 6.2：调用前先**脱敏**（``agent.privacy.desensitize``），并校验端点是否被
@@ -1285,14 +1317,13 @@ def parse_llm(text: str, kind: str = "attack", name: str = "",
     （仅端点/模型/字符数/脱敏计数，**不含原文**）。
 
     ``meta_out``：可选 dict，原地回填 ``{endpoint, model, privacy, audit}``。
+    ``card_meta``：可选卡牌元数据（系列/编号/HP 等），随用户提示词一并给出。
 
     **枚举与取值域从代码常量注入**（而非写在 .md 里）—— 见 `engine_vocab()` 的说明。
     """
-    from . import prompts as _prompts
     # 渲染提示词后交给统一客户端（客户端内部完成：端点校验 → 脱敏 → 调用 → 审计）
     sys_t = render_system_prompt(retrieved_rules)
-    usr_t = _prompts.render("parse_effects_user", card_name=name or "(未命名)",
-                            card_kind=kind, rules_text=text)
+    usr_t = render_user_prompt(name, kind, text, card_meta=card_meta)
     res = _llm_chat([{"role": "system", "content": sys_t},
                      {"role": "user", "content": usr_t}],
                     temperature=0, purpose="llm_call")
@@ -1396,8 +1427,14 @@ def validate_specs(specs: list) -> list:
                 continue
             if a.get("type") not in ACTION_TYPES:
                 errs.append(f"[{i}] action.type 非法：{a.get('type')}")
-            if a.get("target") not in TARGETS:
-                errs.append(f"[{i}] action.target 非法：{a.get('target')}")
+            # `target` 允许**缺省或显式 null**，表示「未指定」（与 `amount` 一致）。
+            # 原先 `a.get("target") not in TARGETS` 把「没填」也判为非法 —— 而真值里
+            # rule 类动作本就不填 target（「未指定」是数据模型里的合法状态）。
+            # 只惩罚「给了但非法」的值，否则模型输出 `"target": null` 就整条作废
+            # （实测 ru_energy_once 即因 `action.target 非法：None` 落进 A 类失败）。
+            tgt = a.get("target")
+            if tgt is not None and tgt not in TARGETS:
+                errs.append(f"[{i}] action.target 非法：{tgt}")
             amt = a.get("amount")
             if amt is not None and not isinstance(amt, int):
                 errs.append(f"[{i}] action.amount 应为整数（HP 计）：{amt!r}")

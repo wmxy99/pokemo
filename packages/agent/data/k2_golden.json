@@ -8,7 +8,7 @@
   "text_source": "真实卡池来自 package_engine/engine/data/cards_real.json 的 desc_zh（自述转写，非官方文案）；synthetic 用例为典型句式覆盖",
   "holdout_note": "留出集（holdout）：句式与开发期不同，**未**针对性适配，用于观察泛化；报告分 seen / holdout 两组统计",
   "name_fix_note": "英文名已与 cards_real.json 对齐（由不变量用例test_non_synthetic_texts_match_card_pool 守卫）",
-  "schema_clarify_note": "2026-09-16 schema 澄清：`target` 统一为「动作的直接宾语（动作对它做了什么）」——作用类取被作用对象、转移类取来源或去向。据此修正 draw 的唯一不一致；并把 rule 类动作的 target 移出严格比对（取 any 属约定，非文本可判）。变更明细见 schema_clarify_changes。",
+  "schema_clarify_note": "2026-09-16 schema 澄清：`target` 统一为「动作的直接宾语（动作对它做了什么）」——作用类取被作用对象、转移类取来源或去向。据此修正 draw 的唯一不一致；并把 rule 类动作的 target 移出严格比对（取 any 属约定，非文本可判）。变更明细见 schema_clarify_changes。 2026-09-16 追加：ab_cursed_blast 的 spread.target 移出比对（文本「对手 1 只宝可梦」未指明战斗位/后备，属文本不可判；且实测 spread 的 target 不参与引擎 tag 生成）。",
   "schema_clarify_changes": [
    {
     "id": "atk_corner",
@@ -29,6 +29,10 @@
    {
     "id": "ru_first_turn",
     "change": "rule.target 移出比对（any 属约定，非文本可判）"
+   },
+   {
+    "id": "ab_cursed_blast",
+    "change": "spread.target 移出比对（原 active_opponent_bench）：文本未指明位置，且 spread 的 target 不参与引擎 tag 生成"
    }
   ]
  },
@@ -430,7 +434,6 @@
      {
       "type": "spread",
       "amount": 130,
-      "target": "active_opponent_bench",
       "extra": {
        "counters": 13
       }

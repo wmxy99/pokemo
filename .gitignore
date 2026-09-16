@@ -81,6 +81,12 @@ artifacts/
 !/artifacts/k2_report_cloud2.json
 !/artifacts/k2_report_cloud3.md
 !/artifacts/k2_report_cloud3.json
+# 后续各轮只留机读结果（其 .md 明细在中途清理时被删；四轮曲线见
+# artifacts/k2_p1_validation_report.md 的 8.11 节）
+!/artifacts/k2_report_cloud4.json
+!/artifacts/k2_report_cloud5.json
+!/artifacts/k2_report_cloud6.md
+!/artifacts/k2_report_cloud6.json
 # 注：`_k2_eval_audit*.jsonl`（审计，含 tag 后缀）与 `k2_local_eval_rerun[^4]*`
 # 等中间产物仍被忽略 —— 只保留有结论价值的那几份。
 

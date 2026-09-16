@@ -12,10 +12,10 @@
 6. 「每回合一次」类限制写入 condition：`field="limit", op="eq", value="once_per_turn"`。
 7. **字段层级（易错）**：`passive`、`coin_flip`、`damage_mod`、`shield` 是
    **`actions[].type`** 的取值，**不要**写进 `kind`。`kind` 只表示卡牌类别。
-8. **文本显式口径优先**：若效果文本已给出**折算后的结算口径**（例如
-   「（本引擎按期望值固定造成 50 点伤害）」「按期望值计」），就**按文本给的口径**输出
-   （如直接用 `damage`, amount=50），**不要**再分解成 `coin_flip` 等机制动作
-   —— 文本怎么说就怎么标，不要替它"还原机制"。
+8. **文本显式口径优先（本条优先于「机制分解」）**：若效果文本已给出**折算后的结算口径**
+   （例如「按期望值固定造成 50 点伤害」「按期望值计」），则**以文本口径为准** ——
+   **即使文本同时描述了机制**（如「抛 3 次硬币」）也**不要**分解成 `coin_flip`，
+   直接用文本给的 `damage` 与 `amount`；只有文本**没给**折算口径时才按机制 type 分解。
 
 # kind 与 trigger 判定（实测最易错，务必照此）
 | 情形 | kind | trigger |
@@ -79,6 +79,12 @@
 **例 2（按计数缩放 —— 最易错，务必对照）** 输入：「招式 Powerful Rage：此招式对自身每有 1 个伤害指示物就造成 20 点伤害。」
 [{"kind":"attack","name":"Powerful Rage","trigger":"on_use","conditions":[],"actions":[{"type":"damage_mod","amount":20,"target":"active_opponent","extra":{"mode":"plus_per","per":"own_active_counters"}}],"source_text":"自述转写：招式 Powerful Rage 按自身伤害指示物数量，每个造成 20 点伤害。","citations":[]}]
 
+**例 3（护盾减伤）** 输入：「招式 Protecting Steel：在下个对手回合，此宝可梦受到的招式伤害减少 30 点。」
+[{"kind":"attack","name":"Protecting Steel","trigger":"on_use","conditions":[],"actions":[{"type":"shield","amount":30,"target":"self","extra":{"kind":"reduce"}}],"source_text":"自述转写：招式 Protecting Steel 在下个对手回合使此宝可梦受到的伤害减少 30 点。","citations":[]}]
+
+**例 4（多动作 + 任意分配指示物）** 输入：「招式 Phantom Dive：对对方战斗宝可梦造成 200 点伤害，之后在对方后备宝可梦中以任意方式放置 6 个伤害指示物。」
+[{"kind":"attack","name":"Phantom Dive","trigger":"on_use","conditions":[],"actions":[{"type":"damage","amount":200,"target":"active_opponent","extra":{}},{"type":"spread","amount":60,"target":"active_opponent_bench","extra":{"free_distribute":true,"counters":6}}],"source_text":"自述转写：招式 Phantom Dive 对对方战斗宝可梦造成 200 点伤害，之后在对方后备任意放置 6 个伤害指示物。","citations":[]}]
+
 # 规则知识库片段（RAG 检索结果，可能为空）
 @@retrieved_rules@@
 
@@ -87,3 +93,4 @@
 ④ 无 thinking/推理文本 ⑤ 无 markdown 围栏
 ⑥ **枚举字段只含单个取值**（不得出现 `|`、`/`、`、` 等连接符）
 ⑦ 抛币 / 伤害修正 / 护盾 / 被动**没有**被写成 `rule`
+⑧ 文本若已给折算口径（「按期望值固定造成 N 点」），**没有**被分解成机制 type

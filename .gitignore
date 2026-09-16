@@ -74,6 +74,9 @@ artifacts/
 !/artifacts/k2_report_llm_fury.json
 !/artifacts/k2_local_eval_rerun4.md
 !/artifacts/k2_local_eval_rerun4.json
+# 云端保底实测（真实 deepseek-chat）—— 证明「瓶颈不在模型规模」的关键证据
+!/artifacts/k2_report_cloud.md
+!/artifacts/k2_report_cloud.json
 # 注：`_k2_eval_audit*.jsonl`（审计，含 tag 后缀）与 `k2_local_eval_rerun[^4]*`
 # 等中间产物仍被忽略 —— 只保留有结论价值的那几份。
 

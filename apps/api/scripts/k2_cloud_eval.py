@@ -96,10 +96,18 @@ def main() -> int:
     jp = REPO / "artifacts" / f"k2_report_{a.out_tag}.json"
     if jp.is_file():
         d = json.loads(jp.read_text(encoding="utf-8"))
-        m = d.get("metrics") or {}
-        strict = float(m.get("strict") or 0) * 100
-        seen = float(m.get("strict_seen") or 0) * 100
-        hold = float(m.get("strict_holdout") or 0) * 100
+        # 产物格式：`run_k2.py` 把指标**平铺在顶层**（strict_acc / seen_strict_acc …），
+        # 不是 `metrics: {...}`。首版按 `metrics.strict` 读 → 永远得 0.0%，
+        # 而报告里明明写着 58%（差到会被当成"云端完全不能打"）。
+        def _acc(*keys):
+            for k in keys:
+                v = d.get(k)
+                if isinstance(v, (int, float)):
+                    return float(v) * 100
+            return 0.0
+        strict = _acc("strict_acc", "strict")
+        seen = _acc("seen_strict_acc")
+        hold = _acc("holdout_strict_acc")
         print("\n" + "=" * 62)
         print(f"  云端 strict = {strict:.1f}%   （seen {seen:.1f}% / holdout {hold:.1f}%）")
         print(f"  本地最好   = {LOCAL_BEST_STRICT:.1f}%   ← 8bit，见 k2_report_llm_v6.md")
@@ -107,8 +115,14 @@ def main() -> int:
         print(f"  门槛 {K2_TARGET:.0f}% → **{verdict}**")
         print("=" * 62)
         if strict < K2_TARGET:
-            print("  提示：若云端也未达标，说明瓶颈在**任务定义/真值口径**而非模型规模，"
-                  "需要回到黄金集标注质量与 Schema 设计上查。")
+            if strict > LOCAL_BEST_STRICT:
+                print(f"  ⚠ 云端比本地高 {strict - LOCAL_BEST_STRICT:.1f}pp，但**仍未达标** ——")
+                print("    这说明瓶颈**不在模型规模**，而在任务定义 / 真值口径 / Schema 设计。")
+                print("    下一步应查：① `target` 语义是否定义清楚（实测最常见的分歧点）")
+                print("               ② 黄金集标注与 Schema 的约定是否一致")
+                print("               ③ 是否有无法从文本判定的字段（应移出严格比对）")
+            else:
+                print("  ⚠ 云端未超过本地最好成绩，建议先核对端点/模型是否选对。")
     else:
         print(f"[cloud-k2] 未找到机读产物 {jp.name}（run_k2 退出码 {rc}）")
     return rc

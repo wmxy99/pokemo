@@ -7,7 +7,30 @@
   "kpi": "K2 目标：严格准确率 ≥85%（PRD）；本集为工程基线集，扩充至 200+ 条属 P1",
   "text_source": "真实卡池来自 package_engine/engine/data/cards_real.json 的 desc_zh（自述转写，非官方文案）；synthetic 用例为典型句式覆盖",
   "holdout_note": "留出集（holdout）：句式与开发期不同，**未**针对性适配，用于观察泛化；报告分 seen / holdout 两组统计",
-  "name_fix_note": "英文名已与 cards_real.json 对齐（由不变量用例test_non_synthetic_texts_match_card_pool 守卫）"
+  "name_fix_note": "英文名已与 cards_real.json 对齐（由不变量用例test_non_synthetic_texts_match_card_pool 守卫）",
+  "schema_clarify_note": "2026-09-16 schema 澄清：`target` 统一为「动作的直接宾语（动作对它做了什么）」——作用类取被作用对象、转移类取来源或去向。据此修正 draw 的唯一不一致；并把 rule 类动作的 target 移出严格比对（取 any 属约定，非文本可判）。变更明细见 schema_clarify_changes。",
+  "schema_clarify_changes": [
+   {
+    "id": "atk_corner",
+    "change": "rule.target 移出比对（any 属约定，非文本可判）"
+   },
+   {
+    "id": "ab_run_draw",
+    "change": "draw.target: hand -> deck（统一为「从牌库抽」）"
+   },
+   {
+    "id": "ab_fairy_domain",
+    "change": "rule.target 移出比对（any 属约定，非文本可判）"
+   },
+   {
+    "id": "ru_prize",
+    "change": "rule.target 移出比对（any 属约定，非文本可判）"
+   },
+   {
+    "id": "ru_first_turn",
+    "change": "rule.target 移出比对（any 属约定，非文本可判）"
+   }
+  ]
  },
  "cases": [
   {
@@ -266,8 +289,7 @@
      },
      {
       "type": "rule",
-      "amount": null,
-      "target": "any"
+      "amount": null
      }
     ]
    }
@@ -378,7 +400,7 @@
      {
       "type": "draw",
       "amount": null,
-      "target": "hand",
+      "target": "deck",
       "extra": {
        "to_hand_size": 5
       }
@@ -507,8 +529,7 @@
     "actions": [
      {
       "type": "rule",
-      "amount": null,
-      "target": "any"
+      "amount": null
      }
     ]
    }
@@ -804,8 +825,7 @@
     "actions": [
      {
       "type": "rule",
-      "amount": null,
-      "target": "any"
+      "amount": null
      }
     ]
    },
@@ -822,8 +842,7 @@
     "actions": [
      {
       "type": "rule",
-      "amount": null,
-      "target": "any"
+      "amount": null
      }
     ]
    },

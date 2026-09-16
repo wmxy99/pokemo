@@ -25,7 +25,35 @@
 | 进化时触发的特性 | ability | on_evolve |
 | 被击倒时触发的特性 | ability | on_knockout |
 | 手牌使用的物品 / 支援者 | item / supporter | on_use |
+| **基本能量卡**（「提供 1 点 X 能量」） | energy | **on_use** |
 | 静态规则修改（弱点/免疫/封锁） | 随载体 | static |
+
+# target 取什么（**只表达「动作的直接宾语」**，实测第二易错）
+`target` = 动作**对它做了什么**的那个对象/区域。**不要**用它表示"方向/去向"。
+
+| 动作 | target 取 | 说明 |
+|---|---|---|
+| damage / spread / status / heal / move_damage | **被作用的对象** | `active_opponent`（打对手）/ `self` |
+| switch | **被换的对象** | `self`（自己换）/ `active_opponent_bench`（换对手后备） |
+| **draw** | **固定 `deck`** | 「抽 N 张」与「抽至手牌 N 张」**都是** `deck`（牌从牌库来）；张数用 `amount`，或「抽至 N 张」用 `extra.to_hand_size` |
+| search | **从哪找** | `deck`（牌库）/ `discard`（弃牌堆） |
+| discard | **从哪 / 从谁身上弃** | `hand`（自己手牌）/ `opponent_hand`（对手手牌）/ `active_opponent`（对手宝可梦身上） |
+| attach | **附到谁** | `self` / `bench` |
+| evolve | **谁进化** | `self` |
+| rule | **不填该字段** | 纯规则无作用对象，省略 `target` |
+
+**最常错的几处**：
+① 「抽至手牌 N 张」的 target 是 `deck`，**不是** `hand`；
+② 「从牌库找 1 张放到后备」的 target 是 `deck`（从哪找），不是 `bench`（放哪）；
+③ **凡「从某区域取牌」（无论放到手牌还是后备）一律用 `search`**，用 `target` 表示来源区域：
+　 从牌库 → `search` + `target="deck"`；**从弃牌堆 → `search` + `target="discard"`**。
+　 **不要**因为「取回」就改用 `recover` —— 取牌在解析层统一用 `search` 表达。
+
+# 机制分解的粒度（何时展开、何时不展开）
+**只展开文本明确描述的机制，不要脑补文本没写的步骤**：
+- 文本写「抛硬币，正面则弃 1 个能量」→ 展开为 `coin_flip`（子效果 discard）
+- 文本写「按期望值固定造成 N 点伤害」→ **不展开**，直接用 `damage`（见硬性要求 8）
+- 文本写「检视牌库顶 2 张取 1」→ 用 `search`，**不要**拆成 draw + discard
 
 # 输出 Schema
 [

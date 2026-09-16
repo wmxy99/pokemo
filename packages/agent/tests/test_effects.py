@@ -66,8 +66,12 @@ class TestRuleParser(unittest.TestCase):
     def test_draw_to_hand_size(self):
         s = E.parse_rule("每回合一次：抽至手牌 5 张", kind="ability", name="X")
         d = s["actions"][0]
+        # 2026-09-16 schema 澄清：`target` 只表「动作的直接宾语」——
+        # 抽牌的宾语是「牌」，来源固定为牌库，故 target 统一为 `deck`；
+        # 「抽至手牌」这个**去向**由 `extra.to_hand_size` 承载，
+        # 不再让 target 兼表方向（原先一处 hand、一处 deck 的不一致正是这么来的）。
         self.assertEqual((d["type"], d["amount"], d["target"]),
-                         ("draw", None, "hand"))
+                         ("draw", None, "deck"))
         self.assertEqual(d["extra"]["to_hand_size"], 5)
 
     def test_status_target_self_vs_opponent(self):

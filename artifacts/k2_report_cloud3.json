@@ -1,0 +1,33 @@
+{
+ "generated_at": "2026-09-16 17:08:00",
+ "backend": "llm",
+ "n": 50,
+ "target": 0.85,
+ "strict_acc": 0.82,
+ "parse_rate": 0.96,
+ "kind_acc": 0.92,
+ "trigger_acc": 0.98,
+ "action_set_acc": 0.94,
+ "amount_acc": 0.9,
+ "target_acc": 0.9574,
+ "limit_acc": 1.0,
+ "seen_n": 40,
+ "seen_strict_acc": 0.85,
+ "holdout_n": 10,
+ "holdout_strict_acc": 0.7,
+ "failed_cases": [
+  "ab_cursed_blast",
+  "it_hammer",
+  "sp_crispin",
+  "sp_iono",
+  "ru_energy_once",
+  "ru_prize",
+  "ho_swap",
+  "ho_heal_hp",
+  "ho_opponent_discard"
+ ],
+ "pool_support_rate": null,
+ "pool_n": null,
+ "passed": false,
+ "notes": "rule 为离线基线；LLM 数字需配置 Key 实测；以 holdout_strict_acc 作为泛化参考"
+}

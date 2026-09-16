@@ -446,7 +446,7 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if m:
         actions.append(act("draw", int(m.group(1)), "deck"))
     elif _EN_DRAW_TO_RE.search(t):
-        actions.append(act("draw", None, "hand",
+        actions.append(act("draw", None, "deck",
                            {"to_hand_size": int(_EN_DRAW_TO_RE.search(t).group(1))}))
     elif re.search(r"draw (?:a|1) card", t, re.I):
         actions.append(act("draw", 1, "deck"))
@@ -870,7 +870,7 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
     # 4) 抽到指定手牌数
     m = _DRAW_UNTIL_RE.search(t)
     if m and kind == "ability":
-        out.append(act("draw", None, "hand",
+        out.append(act("draw", None, "deck",
                        {"to_hand_size": int(m.group(1))}))
 
     # 5) 招式内检索进化
@@ -987,7 +987,7 @@ def _parse_rule_zh(text: str, kind: str = "attack", name: str = "",
     if "抽" in t_norm:
         m = _DRAW_TO_RE.search(t_norm)
         if m:
-            actions.append(act("draw", None, "hand",
+            actions.append(act("draw", None, "deck",
                                {"to_hand_size": int(m.group(1))}))
         else:
             m = _DRAW_RE.search(t_norm)
@@ -1669,9 +1669,20 @@ def _amounts(spec: dict) -> dict:
     return {k: sorted(v, key=lambda x: (x is None, x)) for k, v in out.items()}
 
 
-def _targets(spec: dict) -> dict:
+def _targets(spec: dict, declared_only: bool = False) -> dict:
+    """按动作类型聚合 target
+
+    ``declared_only=True``：**跳过没有显式声明 `target` 的动作** ——
+    用于「某些动作类型的 target 无法从文本判定，不该计入严格比对」的场景
+    （如 `rule` 类动作的 `any` 只是约定，不是从文本读出来的）。
+
+    不加这个开关的话，未声明的动作会被收集成 `None`，反而与实际的字符串值
+    比对失败 —— 那是**假失败**：模型没错，是评测把"没声明"当成了"期望 None"。
+    """
     out: dict = {}
     for a in spec.get("actions") or []:
+        if declared_only and "target" not in a:
+            continue
         out.setdefault(a.get("type"), []).append(a.get("target"))
     return {k: sorted(v, key=lambda x: str(x)) for k, v in out.items()}
 
@@ -1711,7 +1722,20 @@ def compare(case: dict, spec: Optional[dict]) -> dict:
         _cmp("action_set", _action_type_multiset(exp.get("actions")),
              _action_type_multiset(got.get("actions")))
         _cmp("amount", _amounts(exp), _amounts(got))
-        _cmp("target", _targets(exp), _targets(got))
+        # target：**只比对「expect 里显式声明了 target」的动作类型**。
+        # 有些动作的 target 无法从文本判定（典型是 `rule` 类取 `any`，那是约定而非
+        # 文本可读信息）—— 这类动作在 expect 里**不写 target** 即自动移出严格比对，
+        # 避免把「评测约定」当成「模型错误」。
+        _exp_t = _targets(exp, declared_only=True)
+        if not _exp_t:
+            r["target"] = None                     # 全部未声明 → 不计入
+        else:
+            _got_t = _targets(got)
+            _g = {k: _got_t.get(k, []) for k in _exp_t}
+            ok = _exp_t == _g
+            r["target"] = ok
+            if not ok:
+                r["diffs"].append(f"target: 期望 {_exp_t!r} ≠ 实际 {_g!r}")
     if "limit" in exp:
         _cmp("limit", exp.get("limit"), _limit_of(got))
     return r

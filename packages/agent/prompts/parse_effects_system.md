@@ -85,6 +85,12 @@
 **例 4（多动作 + 任意分配指示物）** 输入：「招式 Phantom Dive：对对方战斗宝可梦造成 200 点伤害，之后在对方后备宝可梦中以任意方式放置 6 个伤害指示物。」
 [{"kind":"attack","name":"Phantom Dive","trigger":"on_use","conditions":[],"actions":[{"type":"damage","amount":200,"target":"active_opponent","extra":{}},{"type":"spread","amount":60,"target":"active_opponent_bench","extra":{"free_distribute":true,"counters":6}}],"source_text":"自述转写：招式 Phantom Dive 对对方战斗宝可梦造成 200 点伤害，之后在对方后备任意放置 6 个伤害指示物。","citations":[]}]
 
+**例 5（文本已给折算口径 —— 与例 1 对照，**务必区分**）** 输入：「招式 X：抛 3 次硬币，正面次数 ×10 点伤害（本引擎按期望值固定造成 30 点伤害）。」
+[{"kind":"attack","name":"X","trigger":"on_use","conditions":[],"actions":[{"type":"damage","amount":30,"target":"active_opponent","extra":{}}],"source_text":"自述转写：招式 X 抛 3 次硬币，正面次数 ×10 点伤害；本引擎按期望值固定造成 30 点伤害。","citations":[]}]
+> 对比要点：例 1 只说「抛硬币、反面不打」→ **没有**折算口径 → 用 `coin_flip`；
+> 例 5 虽然也「抛 3 次硬币」，但文本**已给出折算后的结算值** → 用 `damage` + 该数值。
+> **判断依据是「文本有没有给折算口径」，而不是「有没有提到硬币」。**
+
 # 规则知识库片段（RAG 检索结果，可能为空）
 @@retrieved_rules@@
 

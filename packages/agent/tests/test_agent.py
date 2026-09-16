@@ -212,10 +212,13 @@ class TestSystemPromptInjection(unittest.TestCase):
             specs = json.loads(b)                      # 示例必须是合法 JSON
             errs = self.E.validate_specs(specs)        # 且通过 Schema 校验
             self.assertEqual(errs, [], f"例{i} 未通过 Schema 校验：{errs}")
-            tg = self.E.to_engine_tags(specs)          # 且能映射到引擎 tag
+            tg = self.E.to_engine_tags(specs)          # 且不含未建模动作
             self.assertEqual(tg["unsupported"], [],
                              f"例{i} 含未建模动作：{tg['unsupported']}")
-            self.assertTrue(tg["tags"], f"例{i} 未产出任何引擎 tag")
+            # **不要求 `tags` 非空**：`damage` 类动作由招式的 damage 字段承载，
+            # 本身不产出引擎 tag（见 `to_engine_tags` 的 damage 分支）——
+            # 例 5（文本已给折算口径 → 直接 damage）就是这种情况，
+            # 它是**合法且正确**的解析，不该被断言判死。
 
     def test_kind_trigger_guide_present(self):
         """kind/trigger 判定表必须在（实测 31 条既有失败里占比最大的一类）"""

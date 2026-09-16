@@ -1,0 +1,564 @@
+{
+  "generated_at": "2026-09-16 14:20:01",
+  "quant": "8bit",
+  "seed": 42,
+  "tag": "rerun4",
+  "summary": {
+    "n": 15,
+    "pool_total": 328,
+    "A_parse_failed": 0,
+    "B_unmodeled": 0,
+    "C_fully_mapped": 15,
+    "usable_rate": 1.0,
+    "usable_ci95": [
+      0.7961,
+      1.0
+    ],
+    "fully_mapped_rate": 1.0,
+    "fully_mapped_ci95": [
+      0.7961,
+      1.0
+    ],
+    "raw_empty_rate": 0.0,
+    "errors_rate": 0.0,
+    "rule_fully_mapped_on_sample": 1.0,
+    "engine_tag_agreement": 0.2,
+    "engine_tag_agreement_n": 15,
+    "avg_sec_per_item": 119.7,
+    "by_lang": {
+      "zh": {
+        "n": 2,
+        "A_parse_failed": 0,
+        "B_unmodeled": 0,
+        "C_fully_mapped": 2,
+        "usable_rate": 1.0,
+        "usable_ci95": [
+          0.3424,
+          1.0
+        ]
+      },
+      "en": {
+        "n": 13,
+        "A_parse_failed": 0,
+        "B_unmodeled": 0,
+        "C_fully_mapped": 13,
+        "usable_rate": 1.0,
+        "usable_ci95": [
+          0.7719,
+          1.0
+        ]
+      }
+    },
+    "k2_target": 0.85,
+    "k2_pass": true,
+    "est_full_pool_hours": 10.9
+  },
+  "rows": [
+    {
+      "name": "Powerful Rage",
+      "name_zh": "Powerful Rage",
+      "kind": "attack",
+      "text": "This attack does 20 damage for each damage counter on this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:20:per:own_active_counters"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "dmg_plus:20:per:own_active_counters"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage_mod"
+      ],
+      "elapsed_ms": 164289,
+      "before": {
+        "tags": [
+          "spread_free:10"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Bellowing Thunder",
+      "name_zh": "Bellowing Thunder",
+      "kind": "attack",
+      "text": "You may discard any amount of Basic Energy from your Pokémon. This attack does 70 damage for each card you discarded in this way.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:70:per:own_discarded_this_turn"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard_energy:all"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage",
+        "discard"
+      ],
+      "elapsed_ms": 145801,
+      "before": {
+        "tags": [
+          "discard:1"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Spiky Wheel",
+      "name_zh": "Spiky Wheel",
+      "kind": "attack",
+      "text": "This attack does 40 more damage for each {D} Energy attached to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:40:per:own_active_energy_darkness"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "dmg_plus:40:per:own_active_energy"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage_mod"
+      ],
+      "elapsed_ms": 125650,
+      "before": {
+        "tags": [
+          "spread_free:40"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Run Away Draw",
+      "name_zh": "逃跑抽牌",
+      "kind": "ability",
+      "text": "每回合一次：抽至手牌 5 张（引擎近似检索）",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw_to:5"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw_to:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 107644,
+      "before": {
+        "tags": [
+          "draw:5"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Snack Seek",
+      "name_zh": "Snack Seek",
+      "kind": "ability",
+      "text": "Once during your turn, you may look at the top card of your deck. You may discard that card.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recon:1"
+      ],
+      "rule_actions": [
+        "search"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw_to:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 116563,
+      "before": {
+        "tags": [
+          "draw:1",
+          "discard:1"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Onyx",
+      "name_zh": "Onyx",
+      "kind": "attack",
+      "text": "Discard all Energy from this Pokémon, and take a Prize card.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "discard_energy:all"
+      ],
+      "rule_actions": [
+        "discard"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard_energy:all"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard"
+      ],
+      "elapsed_ms": 96201,
+      "before": {
+        "tags": [
+          "discard:1",
+          "draw:1"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Fall Back to Reload",
+      "name_zh": "Fall Back to Reload",
+      "kind": "ability",
+      "text": "Once during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic {W} Energy cards from your hand to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "attach_energy:2:water:hand"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "evolve_attach:2:basic:hand"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "attach"
+      ],
+      "elapsed_ms": 150731,
+      "before": {
+        "tags": [
+          "attach_energy:2"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Regi Charge",
+      "name_zh": "Regi Charge",
+      "kind": "attack",
+      "text": "Attach up to 2 Basic {M} Energy cards from your discard pile to this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "attach:2:metal:discard"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "attach_energy:2:basic:discard"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "attach"
+      ],
+      "elapsed_ms": 125126,
+      "before": {
+        "tags": [
+          "attach:2"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Cosmic Beatdown",
+      "name_zh": "Cosmic Beatdown",
+      "kind": "attack",
+      "text": "This attack does 20 damage for each of your Pokémon in play.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:20:per:own_field"
+      ],
+      "rule_actions": [
+        "damage",
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "dmg_plus:20:per:own_active_counters"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage_mod"
+      ],
+      "elapsed_ms": 113964,
+      "before": {
+        "tags": [
+          "spread_free:20"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Blazing Burst",
+      "name_zh": "Blazing Burst",
+      "kind": "attack",
+      "text": "This attack does 50 more damage for each Prize card your opponent has taken. Discard an Energy from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "dmg_plus:50:per:opp_prizes_left"
+      ],
+      "rule_actions": [
+        "damage_mod"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "dmg_plus:50:per:opp_prizes_left",
+        "discard_energy:all"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "damage_mod",
+        "discard"
+      ],
+      "elapsed_ms": 150406,
+      "before": {
+        "tags": [
+          "discard:1"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Obliterating Nose",
+      "name_zh": "Obliterating Nose",
+      "kind": "attack",
+      "text": "Discard 3 Energy from this Pokémon.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "discard_energy:3"
+      ],
+      "rule_actions": [
+        "discard"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard_energy:all"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard"
+      ],
+      "elapsed_ms": 93982,
+      "before": {
+        "tags": [
+          "discard:3"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Return",
+      "name_zh": "Return",
+      "kind": "attack",
+      "text": "You may draw cards until you have 6 cards in your hand.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw_to:6"
+      ],
+      "rule_actions": [
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "draw_to:1"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "draw"
+      ],
+      "elapsed_ms": 93226,
+      "before": {
+        "tags": [
+          "draw:6"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Recovery Net",
+      "name_zh": "Recovery Net",
+      "kind": "attack",
+      "text": "Put up to 2 Pokémon from your discard pile into your hand.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "recover:2:pokemon"
+      ],
+      "rule_actions": [
+        "recover"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "recover:2:pokemon"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "recover"
+      ],
+      "elapsed_ms": 97279,
+      "before": {
+        "tags": [
+          "draw:2"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Blaze Dance",
+      "name_zh": "火焰之舞",
+      "kind": "ability",
+      "text": "被动：由手牌进化此宝可梦时，可从弃牌堆至多取 2 张基本火能量附到后备宝可梦（引擎子集：附到自身）。",
+      "lang": "zh",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "evolve_attach:2:fire:discard"
+      ],
+      "rule_actions": [
+        "attach"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "recover:2:energy"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "recover"
+      ],
+      "elapsed_ms": 114856,
+      "before": {
+        "tags": [
+          "attach_energy:2"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    },
+    {
+      "name": "Burst Roar",
+      "name_zh": "Burst Roar",
+      "kind": "attack",
+      "text": "Discard your hand and draw 6 cards.",
+      "lang": "en",
+      "rule_unsupported": 0,
+      "rule_tags": [
+        "draw:6",
+        "discard:all"
+      ],
+      "rule_actions": [
+        "discard",
+        "draw"
+      ],
+      "raw_empty": false,
+      "errors": [],
+      "backend": "llm",
+      "tags": [
+        "discard:all"
+      ],
+      "unsupported": [],
+      "llm_actions": [
+        "discard"
+      ],
+      "elapsed_ms": 99717,
+      "before": {
+        "tags": [
+          "discard:1",
+          "draw:6"
+        ],
+        "unsupported": [],
+        "raw_empty": false,
+        "errors": []
+      }
+    }
+  ]
+}

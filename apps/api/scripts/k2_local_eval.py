@@ -459,8 +459,27 @@ def _summary(rows: list, items: list) -> dict:
         "by_lang": by_lang,
         "k2_target": K2_TARGET,
         "k2_pass": bool(usable / n >= K2_TARGET) if n else False,
-        "est_full_pool_hours": round(avg_s * len(items) / 3600, 1) if avg_s else None,
+        "est_full_pool_hours": round(
+            avg_s * (_pool_total() or len(items)) / 3600, 1) if avg_s else None,
     }
+
+
+_POOL_TOTAL: dict = {}
+
+
+def _pool_total() -> int:
+    """卡池总条目数（招式 + 特性）—— 供「全量耗时」估算使用
+
+    **不能用当前跑批的条目数**：定向重跑（`--rerun-from`）只跑十几条，
+    拿它去乘会得出「全量 0.5 小时」这种明显错误的结论（实测踩到过，
+    而真实量级是 13 小时 —— 相差 26 倍，会严重误导排期）。
+    """
+    if "n" not in _POOL_TOTAL:
+        try:
+            _POOL_TOTAL["n"] = len(E.collect_pool_items())
+        except Exception:                                 # noqa: BLE001
+            _POOL_TOTAL["n"] = 0
+    return int(_POOL_TOTAL["n"])
 
 
 def _print_summary(rows: list, items: list, a) -> None:

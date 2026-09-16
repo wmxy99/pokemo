@@ -1,0 +1,29 @@
+{
+ "generated_at": "2026-09-16 14:14:39",
+ "backend": "llm",
+ "n": 8,
+ "target": 0.85,
+ "strict_acc": 0.375,
+ "parse_rate": 0.875,
+ "kind_acc": 0.75,
+ "trigger_acc": 0.875,
+ "action_set_acc": 0.75,
+ "amount_acc": 0.625,
+ "target_acc": 0.625,
+ "limit_acc": 1.0,
+ "seen_n": 7,
+ "seen_strict_acc": 0.4286,
+ "holdout_n": 1,
+ "holdout_strict_acc": 0.0,
+ "failed_cases": [
+  "atk_corner",
+  "en_psychic",
+  "it_ultra_ball",
+  "it_hammer",
+  "ho_status_phrase"
+ ],
+ "pool_support_rate": null,
+ "pool_n": null,
+ "passed": false,
+ "notes": "rule 为离线基线；LLM 数字需配置 Key 实测；以 holdout_strict_acc 作为泛化参考"
+}

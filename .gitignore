@@ -59,6 +59,23 @@ artifacts/
 !/artifacts/k2_report_llm.json
 !/artifacts/k2_report_llm_before.md
 !/artifacts/k2_report_llm_before.json
+# 各版提示词实测产物 —— **四版曲线是「示例数 > 长度」这一结论的唯一证据**，
+# 必须留痕：v2 32% / v3(精简) 24% / v4(折中) 32% / v5 38%；
+# 另有定向集（`_fury`，验证「文本折算口径优先」）与卡池重跑（`_rerun4`，验证归一化）。
+!/artifacts/k2_report_llm_v3.md
+!/artifacts/k2_report_llm_v3.json
+!/artifacts/k2_report_llm_v4.md
+!/artifacts/k2_report_llm_v4.json
+!/artifacts/k2_report_llm_v5.md
+!/artifacts/k2_report_llm_v5.json
+!/artifacts/k2_report_llm_v6.md
+!/artifacts/k2_report_llm_v6.json
+!/artifacts/k2_report_llm_fury.md
+!/artifacts/k2_report_llm_fury.json
+!/artifacts/k2_local_eval_rerun4.md
+!/artifacts/k2_local_eval_rerun4.json
+# 注：`_k2_eval_audit*.jsonl`（审计，含 tag 后缀）与 `k2_local_eval_rerun[^4]*`
+# 等中间产物仍被忽略 —— 只保留有结论价值的那几份。
 
 # 编辑器 / OS
 .idea/

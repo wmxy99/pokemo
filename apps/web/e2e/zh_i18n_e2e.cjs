@@ -6,7 +6,8 @@ const fs = require('fs')
 const path = require('path')
 
 const BASE = process.argv[2] || 'http://127.0.0.1:8000'
-const OUTDIR = process.argv[3] || 'C:/Users/无名/pokelab_shots'
+const OUTDIR = process.argv[3] || process.env.POKELAB_SHOTS
+  || path.join(require('os').tmpdir(), 'pokelab_shots')
 const CHROME = ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'].find((p) => fs.existsSync(p))
 const OUT = path.join(OUTDIR, `zh_${Date.now()}.json`)

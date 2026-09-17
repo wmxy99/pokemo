@@ -5,7 +5,8 @@ const puppeteer = require('puppeteer-core')
 const fs = require('fs')
 
 const BASE = process.argv[2] || 'http://127.0.0.1:8000'
-const TEXT_PATH = process.argv[3] || 'D:/pokemo/deck_text_e2e.txt'
+const TEXT_PATH = process.argv[3] || process.env.POKELAB_DECK_TEXT
+  || require('path').join(__dirname, 'fixtures', 'deck_text.txt')
 const CHROME = ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'].find((p) => fs.existsSync(p))
 
@@ -13,6 +14,8 @@ const steps = []
 const log = (name, ok, extra = {}) => { steps.push({ name, ok, ...extra }) }
 
 ;(async () => {
+  if (!fs.existsSync(TEXT_PATH)) throw new Error(
+    `卡表文件不存在：${TEXT_PATH}\n可用第 3 个参数或环境变量 POKELAB_DECK_TEXT 指定`)
   const deckText = fs.readFileSync(TEXT_PATH, 'utf-8')
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new',
     args: ['--no-sandbox', '--disable-gpu'] })

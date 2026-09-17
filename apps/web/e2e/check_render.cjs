@@ -1,9 +1,9 @@
 // 渲染自检：真实 Chrome 打开 /app/，收集 console/网络/运行时错误并截图
-// 用法：node apps/web/check_render.cjs [url] [outPng]
+// 用法：node apps/web/e2e/check_render.cjs [url] [outPng]（默认落盘到 ../dist/）
 const puppeteer = require('puppeteer-core')
 
 const URL = process.argv[2] || 'http://127.0.0.1:8000/app/'
-const OUT = process.argv[3] || 'D:/pokemo/pokelab-ai/apps/web/dist/preview.png'
+const OUT = process.argv[3] || require('path').join(__dirname, '..', 'dist', 'preview.png')
 const CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',

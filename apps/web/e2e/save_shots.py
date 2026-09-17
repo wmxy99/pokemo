@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import sys
+from pathlib import Path
 import time
 
 raw = sys.stdin.read()
@@ -16,7 +17,8 @@ if i < 0:
     print(raw[:300])
     sys.exit(2)
 data = json.loads(raw[i:])
-out = sys.argv[1] if len(sys.argv) > 1 else r"D:/pokemo/pokelab-ai/apps/web/dist2/shots"
+out = (sys.argv[1] if len(sys.argv) > 1
+       else str(Path(__file__).resolve().parent.parent / "dist" / "shots"))
 os.makedirs(out, exist_ok=True)
 print("chrome :", data.get("chrome"))
 print("problems:", data.get("problems") or "（无）")

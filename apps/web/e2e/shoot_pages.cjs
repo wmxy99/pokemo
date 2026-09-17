@@ -1,11 +1,11 @@
 // 逐页截图 + 错误采集（前台 4 页 / 后台 3 页）
-// 用法：node apps/web/shoot_pages.cjs [baseUrl] [outDir]
+// 用法：node apps/web/e2e/shoot_pages.cjs [baseUrl] [outDir]（默认 ../dist/shots）
 const puppeteer = require('puppeteer-core')
 const fs = require('fs')
 const path = require('path')
 
 const BASE = process.argv[2] || 'http://127.0.0.1:8000'
-const OUT = process.argv[3] || 'D:/pokemo/pokelab-ai/apps/web/dist/shots'
+const OUT = process.argv[3] || path.join(__dirname, '..', 'dist', 'shots')
 const CHROME = ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe']
   .find((p) => fs.existsSync(p))

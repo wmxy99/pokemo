@@ -1,11 +1,12 @@
 # PokéLab Data · 卡牌数据集与规则知识库构建
 
-阶段一（P1a–P1c）数据工程包。运行环境：`D:\anconda\envs\pokemo`（Python 3.12）。
+阶段一（P1a–P1c）数据工程包。运行环境：**Python 3.12**（依赖见 `requirements.txt`；
+本地开发常用 conda 环境，路径因人而异，**不写死**）。
 
 ## 目录结构
 
 ```
-pokelab-data/
+packages/card-db/
 ├─ pokelab/
 │  ├─ schema.py     # pydantic：CardEffect/CardRecord/RuleChunk（对齐 DB v1.1）
 │  ├─ db.py         # SQLite：执行 qrwdan/schema.sql 建 10 表 + 增删（cards/rule_chunks）
@@ -41,15 +42,14 @@ POKELAB_LLM_BASE=http://127.0.0.1:9997/v1 \
 ## 使用（三步走）
 
 ```bash
-$py = "D:\anconda\envs\pokemo\python.exe"
 # 0) 离线验证管道闭环（无需网络/真实数据）
-& $py scripts/seed_demo.py
-# 1) 真实数据（本机浏览器可达网络时执行；Kaggle 数据需账号下载）
-& $py scripts/fetch_pokemontcg.py --set sv3 --limit 300 --out data/raw/pokemontcg.jsonl
-& $py scripts/import_cards.py --jsonl data/raw/pokemontcg.jsonl
-#    —— 或 Kaggle：& $py scripts/import_cards.py --kaggle-csv <EN_Card_Data.csv>
-# 2) 效果解析（本地 Qwen3-4B 8bit，单卡约 1 分钟级）
-& $py scripts/parse_effects.py --card-id 1
+python scripts/seed_demo.py
+# 1) 真实数据（需网络；Kaggle 数据需账号下载）
+python scripts/fetch_pokemontcg.py --set sv3 --limit 300 --out data/raw/pokemontcg.jsonl
+python scripts/import_cards.py --jsonl data/raw/pokemontcg.jsonl
+#    —— 或 Kaggle：python scripts/import_cards.py --kaggle-csv <EN_Card_Data.csv>
+# 2) 效果解析（本地 Qwen3-4B 8bit；权重不入库，需先设 POKELAB_QWEN_PATH）
+python scripts/parse_effects.py --card-id 1
 ```
 
 ## 卡牌数据集清洗与入库（M1 卡池补齐）
@@ -87,6 +87,24 @@ python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
 
 **实测规模**：2022 行 → **1267 张卡**（宝可梦 1056 · 训练家 191 · 能量 20）·
 招式 1559 · 特性 223。
+
+### ⚠ 覆盖率有**两个口径**，对外引用请用严格口径
+
+| 口径 | 数值（2026-09-17） | 定义 | 用在哪 |
+|---|---:|---|---|
+| **严格：`engine_ready`** | **426 / 1267** | 库内标志位（含近似/fidelity 条件） | `/cards/stats`、卡组校验、对局可用池 |
+| 解析层面「无未建模动作」 | 530 / 1267 | 只表示解析链未产出未建模动作 | `unmodeled_registry.md` 的进展对比 |
+
+两者**不是同一件事**，差值部分 = 「解析通过但标志仍不可对战」的卡。
+对外（README / 发布说明 / KPI）**统一用 426**；`unmodeled_registry.md` 已同步标注两种口径。
+
+### ⚠ `pokelab.db` 里的设计期表已被取代（勿误用）
+
+`batch_tasks` · `decks` · `deck_cards` · `matches` · `model_registry` ·
+`report_exports` · `training_tasks` · `users` —— 这 8 张表来自**早期 schema 设计**，
+**业务已迁至 API 运行库**（`~/.pokelab/api.db`，见 `docs/architecture.md`），现均为空表。
+本库现役只有两张表：`cards`（卡池）与 `rule_chunks`（规则知识库）。
+新增功能请走 API 侧 `store.py`，**不要**往这些空表里写。
 
 清洗规则要点（详见 `clean_report.md`）：
 

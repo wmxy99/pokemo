@@ -4,7 +4,7 @@ PokéLab AI 的自研简化版宝可梦 TCG 对战规则引擎 + 模拟器（对
 《技术方案 v1.0》模块 1）。纯 Python 标准库实现，**确定性**（seed 驱动），无外部依赖。
 
 ```
-D:\pokemo\pokelab-engine\
+<repo>/packages/engine/
 ├── engine/
 │   ├── cards.py       卡牌模型（PokemonDef/AttackDef/EnergyDef + 场上实例 FieldPokemon）
 │   ├── state.py       GameConfig（规则开关）/ PlayerState（牌库/手牌/场地/奖赏）

@@ -1,11 +1,15 @@
-# docs · 架构决策记录（ADR）与边界文档
+# docs · 架构、ADR 与边界文档
 
 | 文档 | 内容 | 状态 |
 |------|------|------|
-| （待迁移）`引擎规则边界.md` | v1 简化子集与官方规则差异清单 | 现位于 packages/engine/README.md |
-| （待迁移）`架构总览.md` | monorepo 依赖图 / 模块边界 | P1 前补齐 |
-| ADR-LLM-001 | 本地 Qwen3-4B（8bit）+ bge-m3，解析/解说统一本地，K2 不达标切云端保底 | 已确认（技术方案 v1.0） |
-| ADR-DB-001 | decks 归档语义 / matches.batch_task_id 反查 | 已确认（数据库设计 v1.1） |
+| [`architecture.md`](architecture.md) | **架构总览**：monorepo 依赖图 / 请求链路 / 运行时数据与配置 / LLM 数据链路 / 测试与 CI | ✅ 已补齐 |
+| [`COMPLIANCE.md`](COMPLIANCE.md) | 合规 6.1（内容）/ 6.2（数据隐私）实现状态、脱敏与审计、上线前自查清单 | ✅ 现行 |
+| 引擎规则边界 | v1 简化子集与官方规则差异清单 | 见 `packages/engine/README.md`「规则边界」（**不迁入 docs/**，避免两处维护） |
+| ADR-LLM-001 | 本地 Qwen3-4B（8bit）+ bge-m3，解析/解说统一本地，K2 不达标切云端保底 | 已确认（技术方案 v1.0）· **保底已启用并验证**，见 `COMPLIANCE.md` |
+| ADR-DB-001 | `decks` 归档语义 / `matches.batch_task_id` 反查 | 已确认（数据库设计 v1.1） |
 
+> **ADR 正文约定**：新增 ADR 请在本目录建 `adr-NNN-<slug>.md`，并在此表登记一行。
+> 当前两条 ADR 的正文随决策链根文档存放（见下），本表摘要即仓库内可见的权威记录。
+>
 > 决策链根文档（可行性分析 → 立项 → MVP → 战略 v0.2 → 技术方案 v1.0）为产品/研发
-> 评审基线，存储于仓库外（本地 D:\pokemo 文档区）；docs/ 仅收录工程侧 ADR 与运行边界。
+> 评审基线，存储于仓库外；`docs/` 收录工程侧文档：**架构、ADR 摘要、运行边界与合规**。

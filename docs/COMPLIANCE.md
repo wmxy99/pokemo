@@ -107,8 +107,10 @@
 | **本地模式可用性** | `127.0.0.1` 属 `privacy._LOCAL_HOSTS` → `is_external()`=**False** → `POKELAB_LOCAL_ONLY=1` 下**不被拦截**，调用正常 |
 | 量化档位 | **8bit（LLM.int8）为默认**；`lm_head` 不被量化（logits 仍 bf16） |
 | 精度证据 | 三层对照（权重级/困惑度/端到端）见 `artifacts/qwen_precision_report.md`，可复跑 |
-| 与云端的关系 | ADR-LLM-001：**解析/解说优先本地**，K2 不达标才切云端保底。**⚠️ 触发条件已满足** |
-| **保底状态（2026-09-15）** | **已触发**：黄金集（50 条人工真值）LLM 后端 strict **32.0% ≪ 85% 门槛** → 按 ADR-LLM-001 应切云端。配置方法见 `apps/api/README.md`「云端保底配置」；**云端准确率尚未实测**（需真实 API Key） |
+| 与云端的关系 | ADR-LLM-001：**解析/解说优先本地**，K2 不达标才切云端保底。**⚠️ 已触发并已验证** |
+| **保底状态（2026-09-17 更新）** | **已启用**。判据链：① 本地 Qwen3-4B(8bit) 黄金集（50 条人工真值）strict **40.0%** → 不足以承担 K2；② 按 ADR-LLM-001 切云端；③ **云端 deepseek-chat 实测 strict 100%（50/50，含 10 条 holdout 全对）** |
+| 云端的口径与边界 | 100% 是**工程基准集**成绩（该集经 6 轮提示词迭代，**存在过拟合风险**；独立证据仅 holdout n=10）→ 结论应为「**云端 POC 达标，K2 由云端承担**」，扩集至 200+ 条（P1）后再作生产结论。证据：`artifacts/k2_report_cloud6.md`、`artifacts/k2_p1_validation_report.md` §8.9–8.11 |
+| 云端实测的合规记录 | 经**用户显式提供 Key** + 脚本 `--yes` 确认；外发前过脱敏、每次调用写审计（**不含原文**）；**用审计日志独立验证过**「确实发生过真实外发」（排除"静默回退基线后报出高分"的假象：回退时报告会显示 `backend=rule(fallback)`） |
 | 保底的合规边界 | 切云端 = **数据外发** → `POKELAB_LOCAL_ONLY=1` 下**不可用**（外部端点被 `check_endpoint` 拒绝）；外发仍走脱敏 + 审计（不含原文）；**未实现「自动回退」**（精度问题无法在单次调用内自动检测，理由见 README） |
 
 > 该端点仍走 `llmclient.chat()` 四步（本机端点只是「非外发」，**不等于免检**）——
@@ -185,3 +187,7 @@ python -m uvicorn apps.api.app.main:app --port 8000
 - [ ] `POKELAB_FIELD_ENC=1` 且密钥文件权限受限（如启用字段加密）
 - [ ] 需要完全离线时设置 `POKELAB_LOCAL_ONLY=1` 并验证外部端点被拒
 - [ ] `~/.pokelab/llm_audit.jsonl` 存在且不含原文（抽查）
+- [ ] **已备份 `~/.pokelab/`**（`api.db` ＋ `.field_key` ＋ `.jwt_secret`）
+      —— 运行库在仓库外、默认无备份；**`.field_key` 一旦丢失，库里已存的 LLM 密钥将无法解密**
+- [ ] 云端保底端点/Key 已在后台「模型配置」登记（或经 `POKELAB_LLM_*` 注入），且 `POKELAB_AUDIT` 未关闭
+- [ ] 若宣称 K2 达标：引用的是**云端**成绩（本地 4B 未达标，见上表），并注明基准集规模与 holdout 结果

@@ -1,7 +1,8 @@
 # PokéLab AI · Web 客户端（apps/web）
 
 React 18 + Vite 前端，**严格对齐**《UI/UX 规范 v1.1》《PRD v1.2 F3/F5/F6/F7/F13》《技术方案 v1.0》
-与高保真原型 `D:\pokemo\prototype\PokéLab_Web_Prototype.html`（token/组件/双层结构一致）。
+与高保真原型（`prototype/PokéLab_Web_Prototype.html`，随决策链根文档存放于仓库外）
+的 token / 组件 / 双层结构一致；规范化实现见 `src/styles.css`。
 
 ## 1. 运行
 
@@ -125,7 +126,7 @@ npm run build
 后端按 `dist3 → dist2 → dist` **顺序挂载第一个存在的目录**（`apps/api/app/main.py`）。
 
 **验证工具**：`check_render.cjs`（单页渲染+console 采集）、`shoot_pages.cjs`（前台 4 页+后台 3 页批量截图）
-→ 注：受限环境下 Node 写项目盘可能 EPERM，可输出到用户主目录（如 `C:/Users/<user>/pokelab_shots`）。
+→ 注：受限环境下 Node 写项目盘可能 EPERM，可输出到用户主目录（如 `$POKELAB_SHOTS（默认系统临时目录/pokelab_shots）`）。
 
 ## 6. 已知边界
 

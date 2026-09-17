@@ -184,12 +184,18 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                        ent_coef: float = 0.02, lr_decay: float = 1.0,
                        lr_schedule: str = "linear",
                        eval_fn=None, eval_every: int = 0,
-                       shaping: float = 0.0,
+                       shaping: float = 0.0, alternate_sides: bool = False,
                        save_path: Optional[str] = None) -> dict:
-    """课程式训练：policy(agent0) vs 固定对手（如 BaselineAI）。
+    """课程式训练：policy vs 固定对手（如 BaselineAI）。
 
-    只更新 agent0 的策略步；回报为该视角单侧折扣（无交替），训练更稳定，
+    只更新 policy 的策略步；回报为该视角单侧折扣，训练更稳定，
     胜率 vs 固定对手可单调观测（适合"先打败基线，再自对弈"的课程）。
+
+    ``alternate_sides``（**K1 建议开启**）：奇数局让 policy 作**后手**。
+    默认 False 时 policy **恒为先手** —— 那样训出来的策略**从没学过后手**，
+    而 K1 是双盲口径（一半局作为后手）→ 训练/评估口径不一致，白白丢掉一半分数。
+    （`view()` 以行动方为视角，故同一网络两侧通用。）
+
     ent_coef：熵正则（防局部）；lr_decay：线性衰减终点系数（lr → lr*lr_decay）；
     eval_fn(steps)：每 eval_every 局回调（供 vs baseline 周期观测）。
     shaping：局面得分中间奖励权重（配合 agent.reward.state_reward）。
@@ -199,8 +205,10 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     rng = random.Random(seed)
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     stats = {"episodes": 0, "wins": 0, "losses": 0, "draws": 0,
-             "actor_loss": [], "win_tail": []}
+             "actor_loss": [], "win_tail": [], "alternate_sides":
+             bool(alternate_sides)}
     for ep in range(episodes):
+        me = (ep % 2) if alternate_sides else 0     # 我方座位（0=先手）
         # lr 调度：linear（lr → lr*lr_decay）/ cosine（手册推荐，平滑早衰减）
         frac = (ep + 1) / max(1, episodes)
         lr_min = lr * lr_decay
@@ -211,11 +219,11 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
         opt.param_groups[0]["lr"] = cur
         battle = _fresh_battle(deck_a, deck_b, seed=rng.randrange(1 << 30))
         net.eval()
-        frames = []          # 仅 agent0 决策点
+        frames = []          # 仅我方决策点
         guard = 0
         while not battle.finished and guard < 500:
             guard += 1
-            if battle.current == 0:
+            if battle.current == me:
                 view = battle.view()
                 legal = view.get("legal") or [{"verb": "pass"}]
                 if len(legal) == 1:
@@ -245,9 +253,9 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
                 res = battle.step(copy.deepcopy(opponent.decide(opp_view)))
             if not res["ok"]:
                 battle.step({"verb": "pass"})
-        # 单侧折扣回报（含 shaping 中间奖励）
-        r = 1.0 if battle.winner == 0 else (-1.0 if battle.winner is not None
-                                            else 0.0)
+        # 单侧折扣回报（含 shaping 中间奖励）—— 视角为**我方座位**
+        r = 1.0 if battle.winner == me else (-1.0 if battle.winner is not None
+                                             else 0.0)
         g = 0.0
         targets = [0.0] * len(frames)
         for t in range(len(frames) - 1, -1, -1):
@@ -257,7 +265,7 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
         if not frames:
             continue
         stats["episodes"] += 1
-        if battle.winner == 0:
+        if battle.winner == me:
             stats["wins"] += 1
         elif battle.winner is None:
             stats["draws"] += 1
@@ -305,6 +313,12 @@ def clone_net(net: SmallPolicyValueNet, device: str = "cpu") -> SmallPolicyValue
 def eval_winrate(deck_a: list, deck_b: list, net,
                  n: int = 20, seeds: Optional[range] = None,
                  opponent="baseline", device: str = "cpu") -> dict:
+    """⚠ **单侧口径**：策略**恒为先手**（player 0）。
+
+    **不要用它做 K1 判定**：本引擎先手优势显著（基线自对局先手胜率约 0.61），
+    该口径会把先手优势算进策略战绩 —— 与基线打平的策略会显示约 0.61。
+    K1 验收请用 `eval_winrate_blind`（双盲：交替先后手，PRD「200 局双盲口径」）。
+    """
     from engine import decklib as _  # noqa  (deck 由调用方提供)
     from engine.simulator import run_match
     from engine.agents import BaselineAI, RandomAgent
@@ -326,9 +340,68 @@ def eval_winrate(deck_a: list, deck_b: list, net,
             "win_rate": wins / n}
 
 
+def eval_winrate_blind(deck_a: list, deck_b: list, net,
+                       n: int = 200, opponent="baseline",
+                       device: str = "cpu", seed0: int = 0) -> dict:
+    """**K1 验收口径**：双盲（交替先后手）。
+
+    同一套对手、同一副镜像卡组下，策略**一半局数作先手、一半作后手** ——
+    这样先手优势被对称抵消，胜率才是真实相对强度（PRD：「200 局双盲口径为准」）。
+
+    同时给出**参照线**：纯基线自对局在本批 seeds 上的先手胜率（`ref_first_winrate`）。
+    读表方式：
+      · 策略双盲 ≈ 0.50 → 与基线同强度
+      · 策略双盲 = ref 附近（~0.61）→ 只是"稳定赢先手"，**不代表比基线强**
+      · **K1 ≥0.70 指双盲值**（此时才真正强于规则基线）
+    """
+    from engine.simulator import run_match
+    from engine.agents import BaselineAI, RandomAgent
+    from .policy_agent import PolicyAgent
+    pa = PolicyAgent(net, device=device, name="policy")
+    make_opp = (lambda i: BaselineAI("baseline")) if opponent == "baseline" \
+        else (lambda i: RandomAgent("random", seed=1000 + i))
+    wins = losses = draws = 0
+    ref_wins = 0                      # 基线自对局：player0 胜场（先手参照）
+    for i in range(n):
+        seed = seed0 + i
+        policy_first = (i % 2 == 0)
+        if policy_first:              # 偶：策略先手（player 0）
+            b = run_match(deck_a, deck_b, pa, make_opp(i), seed=seed)
+            me = 0
+        else:                         # 奇：策略后手（player 1）
+            b = run_match(deck_a, deck_b, make_opp(i), pa, seed=seed)
+            me = 1
+        if b.winner is None:
+            draws += 1
+        elif b.winner == me:
+            wins += 1
+        else:
+            losses += 1
+    # 参照：同批 seeds 上的纯基线自对局（先手胜率）
+    ref_n = max(1, n // 4)
+    for i in range(ref_n):
+        b = run_match(deck_a, deck_b, BaselineAI("bA"), BaselineAI("bB"),
+                      seed=seed0 + i)
+        if b.winner == 0:
+            ref_wins += 1
+    return {"n": n, "wins": wins, "losses": losses, "draws": draws,
+            "win_rate": wins / n, "blind": True,
+            "ref_first_winrate": ref_wins / ref_n, "ref_n": ref_n,
+            "as_first": (n + 1) // 2, "as_second": n // 2}
+
+
 def load_net(path: str, device: str = "cpu") -> SmallPolicyValueNet:
+    """加载策略网络；**宽度从 checkpoint 推断**（hidden 不再需要手填）
+
+    历史：这里曾用默认 hidden=64 构造再 `load_state_dict` —— 对任何非默认宽度的
+    checkpoint（如长训产出的 hidden=128）**直接 size mismatch 报错**，
+    使用者只能手动改代码。现从 `ctx.0.weight` 的形状推断。
+    """
     from .state_encoder import ACTION_DIM, encoder_dim
-    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM).to(device)
-    net.load_state_dict(torch.load(path, map_location=device))
+    sd = torch.load(path, map_location=device)
+    hidden = int(sd["ctx.0.weight"].shape[0]) if "ctx.0.weight" in sd else 64
+    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM,
+                              hidden=hidden).to(device)
+    net.load_state_dict(sd)
     net.eval()
     return net

@@ -54,13 +54,33 @@ def _rollout(battle, master_rng: random.Random,
     return b.winner
 
 
+def _value_of(battle, value_fn: Callable, root_player: int) -> Optional[float]:
+    """用**价值头**评估局面 → 归一化到 [0,1] 的「root 视角胜率」
+
+    `value_fn(view)` 应返回**该 view 行动方视角**的价值（策略网的 value 头即如此，
+    训练时以自身折扣回报为目标，量纲 ≈ [-1,1]）。这里换算成 root 视角的 [0,1]：
+    `(±v + 1) / 2`。相比「rollout 到终局」，叶评估**没有 rollout 噪声、且快几个数量级**
+    （一次前向 vs 一次完整对局），因此同样时间预算下能搜更多节点。
+    """
+    try:
+        v = float(value_fn(battle.view()))
+    except Exception:                                    # noqa: BLE001
+        return None
+    if battle.current != root_player:
+        v = -v
+    return max(0.0, min(1.0, (v + 1.0) / 2.0))
+
+
 def _search(battle, iters: int = 40, c_puct: float = 1.4,
             policy=None, device: str = "cpu",
             rollout_policy: Optional[Callable] = None,
             time_budget_s: Optional[float] = None,
-            seed: Optional[int] = None):
+            seed: Optional[int] = None,
+            value_fn: Optional[Callable] = None):
     """执行搜索；返回 (children, legal)。
 
+    ``value_fn``：叶评估函数（**推荐**，见 `_value_of`）。给定后**不再 rollout**，
+    直接以价值头估值回传 —— 更准（无 rollout 噪声）且更快（可用更多迭代）。
     children=None 表示无分支（<2 合法动作）；否则 children[i] 对应 legal[i]。
     """
     legal = battle.legal_actions()
@@ -104,35 +124,65 @@ def _search(battle, iters: int = 40, c_puct: float = 1.4,
             pick = max(range(len(children)),
                        key=lambda i: children[i].ucb(parent_n, c_puct))
         child = children[pick]
-        # 2) 应用动作 → rollout
+        # 2) 应用动作 → 叶评估（价值头优先；否则 rollout 到终局）
         b = copy.deepcopy(battle)
         b.rng = random.Random(master.getrandbits(32))
         res = b.step(dict(legal[pick]))
         if not res["ok"]:
             b.step({"verb": "pass"})
-        winner = _rollout(b, master, rollout_policy)
-        # 3) 回传（root 视角）
-        if winner == root_player:
-            child.wins += 1.0
-        elif winner is None:
-            child.wins += 0.5
+        if value_fn is not None and not b.finished:
+            q = _value_of(b, value_fn, root_player)
+            if q is None:                       # 价值不可用 → 退回 rollout
+                winner = _rollout(b, master, rollout_policy)
+                q = 1.0 if winner == root_player else (0.5 if winner is None
+                                                       else 0.0)
+        else:
+            winner = b.winner if b.finished else _rollout(b, master,
+                                                          rollout_policy)
+            q = 1.0 if winner == root_player else (0.5 if winner is None else 0.0)
+        # 3) 回传（root 视角，q ∈ [0,1]）
+        child.wins += q
         child.visits += 1
     return children, legal
+
+
+def net_value_fn(net, device: str = "cpu") -> Callable:
+    """把策略网的价值头包装成 `_value_of` 需要的 `value_fn(view) -> float`
+
+    注意：价值头是以**行动方视角**训练的，故直接喂 `battle.view()`（默认视角 = 行动方）。
+    """
+    import torch
+    from .state_encoder import encode_state
+
+    def _fn(view: dict) -> float:
+        with torch.no_grad():
+            s = torch.tensor([encode_state(view)], dtype=torch.float32,
+                             device=device)
+            return float(net.evaluate_state(s)[0].item())
+    return _fn
 
 
 def mcts_select_action(battle, iters: int = 40, c_puct: float = 1.4,
                        policy=None, device: str = "cpu",
                        rollout_policy: Optional[Callable] = None,
                        time_budget_s: Optional[float] = None,
-                       seed: Optional[int] = None) -> dict:
+                       seed: Optional[int] = None,
+                       value_fn: Optional[Callable] = None,
+                       use_value_head: bool = True) -> dict:
     """在 battle（主阶段、轮到 current）上执行 MCTS，返回最优动作 dict。
 
     policy: SmallPolicyValueNet 或 None（均匀先验）。battle 必须可被 copy.deepcopy。
+    ``use_value_head``（默认 True）：给出 ``policy`` 时**自动**用价值头做叶评估
+    （比 rollout 到终局更准更快 —— 同样时间可搜更多节点）。传
+    ``value_fn`` 可覆盖（如自定义评估器）；传 ``use_value_head=False`` 则退回 rollout。
     """
+    if value_fn is None and use_value_head and policy is not None:
+        value_fn = net_value_fn(policy, device=device)
     children, legal = _search(battle, iters=iters, c_puct=c_puct,
                               policy=policy, device=device,
                               rollout_policy=rollout_policy,
-                              time_budget_s=time_budget_s, seed=seed)
+                              time_budget_s=time_budget_s, seed=seed,
+                              value_fn=value_fn)
     if not legal:
         return {"verb": "pass"}
     if children is None:

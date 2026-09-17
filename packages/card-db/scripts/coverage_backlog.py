@@ -150,7 +150,9 @@ def load_parse_gaps() -> dict:
     totals = {"cards": 0, "cards_parsed": 0, "items": 0, "specs": 0,
               "engine_tags": 0, "unsupported": 0,
               "cards_with_unsupported": 0, "cards_fully_mapped": 0,
-              "cards_with_supported_tag": 0}
+              "cards_with_supported_tag": 0,
+              # 严格口径：库内标志位（与 /cards/stats、卡组校验同源）
+              "cards_engine_ready": 0, "cards_ready_no_specs": 0}
     # 分组容器：key → {batch, sub, desc, entries, cards:set, samples[]}
     groups: dict = {}
     cur.execute("select id, name, effects_json from cards")
@@ -161,6 +163,17 @@ def load_parse_gaps() -> dict:
         except Exception:                                    # noqa: BLE001
             d = {}
         pr = (d or {}).get("parse")
+        # ---- 全库口径统计（**必须在 `if not pr: continue` 之前**）----
+        # 严格口径：库内标志位（与 `/cards/stats`、卡组校验同源）
+        lib = (d or {}).get("library") or {}
+        if lib.get("engine_ready"):
+            totals["cards_engine_ready"] += 1
+        # ⚠ 口径陷阱：**没有效果条目**的卡（基本能量、白板宝可梦）因
+        # `unsupported == []` 会**真空成立**，从而被计入"全效果可映射"。
+        # 单独计数（限定在「有 parse 段」的卡内，确保是 530 的**子集**），
+        # 供报告如实标注（避免把"无需映射"当成"覆盖成功"）。
+        if pr and not (pr.get("unsupported") or []) and not (pr.get("specs") or []):
+            totals["cards_ready_no_specs"] += 1
         if not pr:
             continue
         totals["cards_parsed"] += 1
@@ -470,8 +483,13 @@ def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
          f"- 数据源：`{rep['source']['db']}`（解析后端 "
          f"`{rep['source']['parse_backend']}`）",
          f"- 全库 {t['cards']} 张 · 未建模动作条目 **{t['unsupported']}** 条 · "
-         f"已映射 tag {t['engine_tags']} 条 · 全效果可映射卡 "
-         f"{t['cards_fully_mapped']} 张",
+         f"已映射 tag {t['engine_tags']} 条",
+         f"- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）："
+         f"{t.get('cards_engine_ready', 0)} 张**",
+         f"- 解析层面「无未建模动作」卡：{t['cards_fully_mapped']} 张 —— **口径不同**："
+         f"它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件"
+         f"（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。"
+         f"**对外引用统一以严格口径（上一行）为准。**",
          "",
          "## 批次图例",
          "",

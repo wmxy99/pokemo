@@ -46,12 +46,24 @@ import time
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_MODEL = r"D:\pokemo\qwen3-4b\moxing"
+# 默认留空：模型权重**不入库**（数据红线），必须由使用者经环境变量指定
+DEFAULT_MODEL = os.environ.get("POKELAB_QWEN_PATH", "")
 
 
 # ---------------- 配置 ----------------
 def model_path() -> str:
-    return os.environ.get("POKELAB_QWEN_PATH", DEFAULT_MODEL)
+    """本地权重目录（**不入库**，必须由环境变量指定）
+
+    历史：这里曾硬编码一个开发者本机的绝对路径 —— 对其它机器无效，
+    也违反「仓库不含本地个人路径」的红线。
+    """
+    p = os.environ.get("POKELAB_QWEN_PATH") or DEFAULT_MODEL
+    if not p:
+        raise SystemExit(
+            "未指定本地模型权重目录：请设置 POKELAB_QWEN_PATH 环境变量"
+            "（例如 POKELAB_QWEN_PATH=/path/to/Qwen3-4B）。"
+            "权重不入库（数据红线），需自行下载。")
+    return p
 
 
 def quant_mode() -> str:

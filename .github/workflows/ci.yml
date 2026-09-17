@@ -37,15 +37,57 @@ jobs:
       - name: Static compile (torch 依赖在本地运行测试)
         run: python -m py_compile packages/agent/agent/*.py
 
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install deps
+        run: pip install -r apps/api/requirements.txt
+      - name: Run API tests (126)
+        run: |
+          cd apps/api
+          python -m unittest discover -s tests -v
+      - name: Backup script smoke test (--check 不应崩溃)
+        run: python apps/api/scripts/backup_data.py --check || test $? -eq 2
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: npm, cache-dependency-path: apps/web/package-lock.json }
+      - name: Install & build
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+      - name: i18n key parity (zh/en 键必须一致)
+        run: node apps/web/e2e/check_i18n.cjs
+
   redline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Data-redline guard
+      - name: Data-redline guard (文件名)
         run: |
           if git ls-files | grep -E '(^data/|\.db$|EN_Card_Data|rulebook|compendium|\.safetensors$|\.faiss$|\.index$)' ; then
             echo "::error::数据红线违规：仓库包含禁止分发文件" && exit 1
           fi
-          if git ls-files | grep -E 'D:\\pokemo|C:\\Users' ; then
-            echo "::error::仓库包含本地个人路径" && exit 1
+      - name: Data-redline guard (文件内容：本地绝对路径 / 凭据)
+        run: |
+          # 只扫**跟踪的文本文件**的内容（历史上的守卫只看文件名，漏掉了 README 里的本地路径）。
+          # 例外：脱敏测试本身就需要「假路径 / 假密钥」作为夹具 → 白名单放行。
+          FILES=$(git ls-files '*.md' '*.py' '*.js' '*.jsx' '*.json' '*.yml' '*.txt' '*.cjs' \
+                  | grep -v -E '^(apps/api/data/|artifacts/)' \
+                  | grep -v -E '^packages/agent/tests/test_privacy\.py$' || true)
+          fail=0
+          # 个人目录 / 常见本机环境目录（Program Files 等标准安装位置不算）
+          if echo "$FILES" | xargs -r grep -nE '[A-Za-z]:[\\/](Users|pokemo|anconda|anaconda)[\\/]' ; then
+            echo "::error::仓库内容包含本地个人路径（见上）" && fail=1
           fi
+          if echo "$FILES" | xargs -r grep -nE 'sk-[A-Za-z0-9]{16,}' ; then
+            echo "::error::疑似提交了 API 密钥" && fail=1
+          fi
+          exit $fail

@@ -17,7 +17,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import sys
 import threading
 from pathlib import Path
 from typing import Optional
@@ -32,17 +34,34 @@ router = APIRouter(prefix="/cards", tags=["library"])
 _REPO = Path(__file__).resolve().parents[3]          # pokelab-ai
 _DB_CANDIDATES = (
     _REPO / "packages" / "card-db" / "data" / "db" / "pokelab.db",
-    _REPO.parent / "pokelab-data" / "data" / "db" / "pokelab.db",
 )
 
 _lock = threading.Lock()
 _cache: dict = {"mtime": None, "cards": []}
+_warned: set = set()
+
+
+def _candidates() -> tuple:
+    """卡库位置：`POKELAB_CARD_DB` 覆盖 → 仓库内标准路径
+
+    历史：这里曾把**仓库外的旧数据目录**（`../pokelab-data/...`，仅 3 张卡且 schema 已漂移）
+    作为回退。风险是**静默降级** —— 主库缺失时会「看起来正常但只有 3 张卡」。
+    现改为：只认标准路径（或显式环境变量），缺失时**打出明确告警**而不是悄悄换源。
+    """
+    env = os.environ.get("POKELAB_CARD_DB")
+    return ((Path(env),) if env else ()) + _DB_CANDIDATES
 
 
 def _db_path() -> Optional[Path]:
-    for p in _DB_CANDIDATES:
+    for p in _candidates():
         if p.exists():
             return p
+    if "missing" not in _warned:
+        _warned.add("missing")
+        print("[library] ⚠ 未找到卡库数据库，/cards 将返回空列表。"
+              f"期望路径：{[str(p) for p in _candidates()]}；"
+              "可用 POKELAB_CARD_DB 指定，或按 packages/card-db/README.md 导入数据。",
+              file=sys.stderr)
     return None
 
 

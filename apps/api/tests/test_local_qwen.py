@@ -26,8 +26,8 @@ SCRIPTS = API_DIR / "scripts"
 HEAVY = os.environ.get("POKELAB_TEST_LOCAL_QWEN") == "1"
 
 # 模型目录必须存在，重档才有意义
-_MODEL_OK = Path(os.environ.get(
-    "POKELAB_QWEN_PATH", r"D:\pokemo\qwen3-4b\moxing")).exists()
+_MODEL_OK = bool(os.environ.get("POKELAB_QWEN_PATH")) and \
+    Path(os.environ["POKELAB_QWEN_PATH"]).exists()
 
 
 def _load_module():

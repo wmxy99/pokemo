@@ -34,6 +34,7 @@
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -140,7 +141,7 @@ def load_qwen():
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from transformers.utils import logging as hflog
     hflog.set_verbosity_error()
-    MODEL = r"D:\pokemo\qwen3-4b\moxing"
+    MODEL = os.environ.get("POKELAB_QWEN_PATH", "")   # 权重不入库，需环境变量指定
     tok = AutoTokenizer.from_pretrained(MODEL)
     q = BitsAndBytesConfig(load_in_8bit=True)
     t0 = time.time()

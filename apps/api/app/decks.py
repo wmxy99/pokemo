@@ -159,10 +159,14 @@ def _pool() -> dict:
     #    引擎已建模的卡（前面步骤已注册）**优先**，此处只补空缺。
     try:
         import json as _json
+        import os as _os
         import sqlite3
-        dbp = (repo / "packages" / "card-db" / "data" / "db" / "pokelab.db")
-        if not dbp.exists():
-            dbp = repo.parent / "pokelab-data" / "data" / "db" / "pokelab.db"
+        # 卡库位置：POKELAB_CARD_DB 覆盖 → 仓库内标准路径。
+        # **不再回退到仓库外的旧数据目录**（仅 3 张卡、schema 已漂移）—— 那种回退会
+        # 让卡组校验「看起来通过」却基于陈旧卡池，属静默降级。
+        _env = _os.environ.get("POKELAB_CARD_DB")
+        dbp = (Path(_env) if _env else
+               repo / "packages" / "card-db" / "data" / "db" / "pokelab.db")
         if dbp.exists():
             con = sqlite3.connect(f"file:{dbp}?mode=ro", uri=True)
             for name, st, ej in con.execute(

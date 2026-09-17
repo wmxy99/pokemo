@@ -1,71 +1,70 @@
-# PokéLab AI · K1 长训运行指引（用户本机执行）
+# PokéLab AI · K1 运行指引（训练 + 验收）
 
-> 背景：沙箱会话无法跨轮维持数小时后台进程（两次尝试均被环境清理）。
-> 本文件为**在本机终端**运行长训的命令与说明。产物权重与曲线在用户本机留存。
+> **K1 定义**：对规则基线（BaselineAI）胜率 **≥ 0.70**，以 **200 局双盲口径**为准（PRD）。
 
-## 〇、一键脚本（推荐）
+## 〇、⚠️ 口径纠正（2026-09-17，重要）
+
+**过去 K1 用的是「单侧口径」**：`trainer.eval_winrate` 恒把策略放在**先手位**，
+再数 `winner == 0`。而本引擎**先手优势约 6pp**（基线自对局先手胜率实测 0.56–0.61）：
+与基线打平的策略在这口径下也会显示 ~0.61 → **系统性高估**，且报告里的
+「基线AI 自对局参照 win_rate_a=0.610」正是这个偏差的量化。
+
+现在 K1 **只用双盲口径**：一半局数作先手、一半作后手，先手优势被对称抵消。
+
+| 口径 | 函数 | 用途 |
+|---|---|---|
+| **双盲（K1 判定）** | `trainer.eval_winrate_blind` | **唯一**可用于 K1 判定的口径；同时给出基线自对局先手参照 |
+| 单侧（先手固定） | `trainer.eval_winrate` | 仅供**与历史报告对照**；训练期监控 |
+
+读表方式：双盲 ≈0.50 与基线同强；≈0.56–0.61 只是「稳定赢先手」；**≥0.70 才真正强于基线**。
+
+## 一、验收（可重复 · 与训练解耦）
 
 ```bash
 cd <repo>/packages/agent
-conda activate pokemo
-# 完整课程 + 结束自动高置信评估 + K1 判定报告（产物 k1_policy.pt / K1_report.md）
+python examples/k1_accept.py                          # 默认 artifacts/final_long.pt，双盲 200 局
+python examples/k1_accept.py artifacts/a.pt artifacts/b.pt   # 多权重对比
+python examples/k1_accept.py --games 200 --report artifacts/K1_accept.md
+```
+
+退出码：`0` 达标 / `1` 未达 / `2` 权重缺失。报告含：双盲胜率 + 95%CI + 单侧对照 + 先手参照。
+
+## 二、训练（课程式 BC → vs 基线 PPO → 自对弈 → MCTS 蒸馏）
+
+```bash
+# 完整课程（BC 150 局 → 40k 局 vs 基线 → 24k 自对弈 → MCTS 蒸馏 → 双盲 200 局终评）
 python -u examples/run_k1_longtrain.py
-# 短试跑（10 分钟内验证闭环）
-python -u examples/run_k1_longtrain.py --stage1-episodes 3000 \
-    --stage2-episodes 1000 --stage3-episodes 50 --final-games 40
-# 续跑（--from-weights 跳过 BC 从阶段1继续，按给定局数）
-python -u examples/run_k1_longtrain.py --from-weights artifacts/k1_policy.pt \
-    --stage1-episodes 15000 --stage2-episodes 8000
-```
-参数：--bc-episodes/--bc-epochs · --stage1-episodes · --stage2-episodes
-· --stage3-episodes/--stage3-mcts-iters · --features legacy|full · --final-games
-· --eval-every/--games · --seed · --device(auto/cuda/cpu) · --save/--report。
-预计：默认课程（40000/24000/400 · lr cosine · MCTS10 · 终评 n=100）约 1.5–3h（RTX 4050）。
 
+# 从已有权重续训（自动识别网络宽度；跳过 BC）
+python -u examples/run_k1_longtrain.py --from-weights artifacts/final_long.pt \
+    --stage1-episodes 20000 --lr 3e-4 --reward-shaping 0.0 --final-games 200
 
-## 一、推荐命令（镜像同卡组 · 课程式 BC→vs基线→冻结自对弈）
-
-```bash
-cd <repo>/packages/agent
-# 使用项目 conda 环境（已装 GPU torch）
-conda activate pokemo
-
-# 阶段1（vs 规则基线 8 万局）+ 阶段2（对冻结快照自对弈 4 万局）
-python -u examples/train_pipeline.py \
-  --decks lightning \
-  --bc-episodes 150 --bc-epochs 25 \
-  --ppo-episodes 80000 --ppo-epochs 3 \
-  --lr 3e-3 --ent-coef 0.05 --clip 0.3 --hidden 128 --lr-decay 0.1 \
-  --eval-every 20000 --games 30 \
-  --device cuda \
-  --save artifacts/final_gpu_k1.pt \
-  --stage2-episodes 40000 --stage2-snapshot-every 20000 \
-  --seed 31 > artifacts/train_gpu_k1.log 2>&1 &
-
-# 查看进度
-tail -f packages/agent/artifacts/train_gpu_k1.log
-# 每 2 万局会打印一次 [eval:...] vs baseline win_rate
+# 关闭「交替先后手」训练（**不推荐**：会白丢后手的一半对局）
+python -u examples/run_k1_longtrain.py --no-alternate
 ```
 
-## 二、说明与建议
+关键参数：`--bc-episodes/--bc-epochs` · `--stage1-episodes`（vs 固定对手）·
+`--stage2-episodes/--stage2-snapshot-every`（对冻结快照自对弈）·
+`--stage3-episodes/--stage3-mcts-iters`（MCTS soft 蒸馏）· `--lr/--clip/--ent-coef/--lr-decay/--lr-schedule` ·
+`--reward-shaping` · `--features legacy|full` · `--final-games`（**默认 200 = 协议**）·
+`--no-alternate` · `--device` · `--save/--report`。
 
-| 项 | 说明 |
-|----|------|
-| BC 缓存 | `artifacts/bc_data_lightning_mirror.pt`（3459 帧）可直接复用（cache hit） |
-| 实测样本（本沙箱已产出） | BC 3459 帧 · 25 epochs → **acc 0.995**；eval vs baseline **0.60 (18/30)** —— 起点高于前轮 0.50 版本，长训冲 0.70 更有基础 |
-| 引擎 CPU-bound | 数据收集是 Python 引擎循环，GPU 仅加速网络前向/反向；加速比约 1.3–2× |
-| 预计时长 | 8 万+4 万局：CPU ~1.2–2h / GPU ~40–70min（本机 RTX 4050） |
-| 评估噪声 | 每轮 eval games=30；最终看 **n=40–100**（可另跑 `--eval` 模式） |
-| 产物 | 权重 `artifacts/final_gpu_k1.pt`；曲线 `artifacts/curve.json`（`.gitignore` 已排除） |
+## 三、已实测的结论（改参数前先读）
 
-## 三、评估单独命令
+| # | 结论 | 证据 |
+|---|---|---|
+| 1 | **训练必须交替先后手**（`--no-alternate` 关掉就只学会先手，而 K1 一半局是后手） | 本次为训练循环新增 `alternate_sides`（`trainer.train_ppo_vs_fixed`） |
+| 2 | **奖励塑造（`--reward-shaping`）负作用**：默认 0.05 时 4000 局训练胜率 0.64，设 0 后同配置 **0.67** | 4000 局对照实验（seed=5，其余同参） |
+| 3 | **长训会退化**：shaping=0.05 + 15k 局，训练胜率 0.69 → **0.61**，单侧评估 0.70 → 0.525 | 采用 **shaping=0** 后 20k 局期间稳定在 0.69（不再崩） |
+| 4 | **价值头 MCTS 不如预期**：iters 100 → 0.650，iters 300 → **0.525**（深搜放大价值头偏差） | 价值头以折扣回报为目标、未做胜率标定；当前不宜靠加迭代提强度 |
+| 5 | **MCTS(30) + 策略网 ≈ 网络本身**（0.65–0.73，n=20–30 噪声大），且 2–9 s/局 | 搜索不是当前瓶颈，**瓶颈在网络棋力** |
+| 6 | 单侧口径读数为双盲 **+6pp 左右**（0.67 双盲 ↔ 0.73 单侧） | 双盲 200 局 vs 单侧对照 |
+| 7 | 现有最佳权重：`artifacts/final_long.pt`（双盲 **0.670**，n=100，±0.092） | `k1_accept.py` |
 
-```bash
-python examples/train_pipeline.py --decks lightning --mirror \
-  --eval --weights artifacts/final_gpu_k1.pt --games 60 --opponent baseline
-```
+## 四、想继续冲 0.70 的建议顺序
 
-## 四、判断是否跨过 0.70
-
-看日志最后的 `[eval:ppo-done] vs baseline win_rate`（games 建议 ≥60 再下结论），
-并对照同参数 `baseline vs baseline` 基准行 `[ref] ... win_rate_a`（镜像应为 ~0.5±噪声）。
+1. **更多 `--reward-shaping 0` 的 vs 基线长训**（本次实测不再退化，是最有据的方向）
+2. **自对弈细化**（`--stage2-episodes` 与冻结快照，把"稳赢先手"变成"稳赢局面"）
+3. **MCTS soft 蒸馏**（`--stage3-*`）—— 但注意结论 #4：**先给价值头做胜率标定**，否则蒸馏的是有偏信号
+4. **特征升级**（`--features full`：手牌/元数据特征，59 维）—— 需重采 BC 缓存
+5. 每次改动都用 `examples/k1_accept.py --games 200` 复测；**只看双盲值**

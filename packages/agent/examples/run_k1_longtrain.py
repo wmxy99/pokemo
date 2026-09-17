@@ -71,9 +71,13 @@ def main():
     ap.add_argument("--reward-shaping", type=float, default=0.05)
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy")
     ap.add_argument("--eval-every", type=int, default=5000)
+    ap.add_argument("--no-alternate", action="store_true",
+                    help="关闭「交替先后手」训练（默认开启）—— 默认开启是因为"
+                         "K1 双盲口径要求策略会打后手，只训先手会白丢一半对局")
     ap.add_argument("--games", type=int, default=30)
-    ap.add_argument("--final-games", type=int, default=100,
-                    help="终评样本量（手册≥100；正式验收协议请 --final-games 200）")
+    ap.add_argument("--final-games", type=int, default=200,
+                    help="终评样本量。**默认 200 = PRD 验收协议**（双盲口径）；"
+                         "训练期调小可加快迭代")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--device", default="auto")
     ap.add_argument("--save", default="artifacts/k1_policy.pt")
@@ -97,8 +101,19 @@ def main():
     net = make_net(sdim, ACTION_DIM, hidden=args.hidden, device=args.device)
     n_start = 1
     if args.from_weights:
-        net.load_state_dict(torch_load(args.from_weights, args.device))
-        print(f"[k1] 续跑：已加载 {args.from_weights}，跳过 BC")
+        # 宽度从 checkpoint 推断（隐藏层数不一致时 load_state_dict 会直接报错，
+        # 此前必须先知道训练时用的 --hidden；见 trainer.load_net 的同源修复）
+        _sd = torch_load(args.from_weights, args.device)
+        if "ctx.0.weight" in _sd:
+            inf_hidden = int(_sd["ctx.0.weight"].shape[0])
+            if inf_hidden != args.hidden:
+                print(f"[k1] 检测到 checkpoint 宽度 hidden={inf_hidden}"
+                      f"（命令行为 {args.hidden}）→ 以 checkpoint 为准")
+                args.hidden = inf_hidden
+                net = make_net(sdim, ACTION_DIM, hidden=args.hidden,
+                               device=args.device)
+        net.load_state_dict(_sd)
+        print(f"[k1] 续跑：已加载 {args.from_weights}（hidden={args.hidden}），跳过 BC")
     else:
         t0 = time.time()
         cache = (f"artifacts/bc_data_{args.decks}_mirror_"
@@ -145,6 +160,7 @@ def main():
             ent_coef=args.ent_coef, lr_decay=args.lr_decay,
             lr_schedule=args.lr_schedule,
             shaping=args.reward_shaping,
+            alternate_sides=not args.no_alternate,
             eval_fn=lambda ep: _eval(f"stage1-{ep}"),
             eval_every=args.eval_every, seed=args.seed,
             device=args.device, save_path=args.save,
@@ -198,14 +214,19 @@ def main():
     from engine.simulator import run_many
     ref = run_many(da, db, BaselineAI("bA"), BaselineAI("bB"),
                    n=args.final_games)
+    # **K1 判定口径 = 双盲（交替先后手）**：本引擎先手优势显著（基线自对局先手约 0.56–0.61），
+    # 单侧口径会把先手优势算进战绩 → 与基线打平的策略也能显示 ~0.61。
+    ev_blind = trainer.eval_winrate_blind(da, db, net, n=args.final_games,
+                                          opponent="baseline",
+                                          device=args.device)
     ev_b = trainer.eval_winrate(da, db, net, n=args.final_games,
                                 opponent="baseline", device=args.device)
     ev_r = trainer.eval_winrate(da, db, net,
                                 n=max(20, args.final_games // 2),
                                 opponent="random", device=args.device)
-    ci_half = 1.96 * (ev_b["win_rate"] * (1 - ev_b["win_rate"])
-                      / max(1, ev_b["n"])) ** 0.5
-    passed = ev_b["win_rate"] >= 0.70
+    p = ev_blind["win_rate"]
+    ci_half = 1.96 * (p * (1 - p) / max(1, ev_blind["n"])) ** 0.5
+    passed = p >= 0.70
     curve["total_s"] = round(time.time() - t_all, 1)
     curve["passed_k1"] = passed
     Path(args.report).parent.mkdir(parents=True, exist_ok=True)
@@ -216,29 +237,46 @@ def main():
         f"- 配置：decks={args.decks}(镜像) features={args.features} "
         f"state_dim={sdim} · stage1={args.stage1_episodes} "
         f"stage2={args.stage2_episodes} stage3={args.stage3_episodes}"
-        f"(mcts{args.stage3_mcts_iters}) · eval_every={args.eval_every}", "",
+        f"(mcts{args.stage3_mcts_iters}) · eval_every={args.eval_every} · "
+        f"交替训练={'否' if args.no_alternate else '是'}", "",
         "## 最终评估（高置信）", "",
         "| 对手 | n | 胜率 | 95%CI |",
         "|---|---|---|---|",
-        f"| 规则基线 AI | {ev_b['n']} | {ev_b['win_rate']:.3f} | "
-        f"±{ci_half:.3f} |",
+        f"| **规则基线 AI（双盲 · K1 判定口径）** | {ev_blind['n']} | "
+        f"**{p:.3f}** | ±{ci_half:.3f} |",
+        f"| 规则基线 AI（单侧先手，仅供与历史报告对照） | {ev_b['n']} | "
+        f"{ev_b['win_rate']:.3f} | — |",
         f"| 随机 AI | {ev_r['n']} | {ev_r['win_rate']:.3f} | — |",
-        f"| 基线AI 自对局参照 | {ref['n']} | win_rate_a={ref['win_rate_a']:.3f} | — |",
-        "", "## 训练过程 vs baseline", "",
+        f"| 基线AI 自对局参照（先手胜率，用于校准先手优势） | "
+        f"{ev_blind['ref_n']} | win_rate_a={ev_blind['ref_first_winrate']:.3f} | — |",
+        "",
+        f"> 双盲口径：{ev_blind['as_first']} 局先手 + {ev_blind['as_second']} 局后手，"
+        f"先手优势被对称抵消 —— **这才是相对强度**。",
+        "> 读表：双盲 ≈0.50 与基线同强；≈0.56–0.61 只是「稳定赢先手」；"
+        "**≥0.70 才代表真正强于规则基线**。",
+        "", "## 训练过程 vs baseline（单侧口径，训练期监控用）", "",
         "| 阶段 | 胜率 |", "|---|---|"]
     for e in curve["eval"]:
         lines.append(f"| {e['tag']} | {e['win_rate']:.3f} "
                      f"({e['wins']}/{e['n']}) |")
-    lines += ["", "## K1 判定（PRD：≥70%，200 局双盲口径为准）", ""]
+    lines += ["", "## K1 判定（PRD：≥70%，**200 局双盲口径为准**）", ""]
     if passed:
-        verdict = "PASS ✅（接近门槛，正式验收请按 200 局协议复核）"
+        verdict = "PASS ✅"
     else:
-        verdict = "未达 0.70 —— 继续长训或按 README「冲 70% 手册」调参"
+        verdict = (f"未达 0.70（差 {0.70 - p:.3f}）—— 继续长训或调参"
+                   f"（见 examples/RUN_K1_LONG.md）")
     lines += [f"**结论：{verdict}**",
-              f"- 本报告 n={ev_b['n']}（比协议 200 局小，95%CI ±{ci_half:.3f}）",
-              f"- 权重：{args.save}", f"- 曲线：artifacts/curve.json 已由各阶段输出"]
+              f"- 口径：双盲 n={ev_blind['n']}（{ev_blind['as_first']} 先手 / "
+              f"{ev_blind['as_second']} 后手）· 95%CI ±{ci_half:.3f} · "
+              f"**PRD 要求 200 局**"
+              + ("（已达协议局数）" if ev_blind["n"] >= 200
+                 else f"（当前 {ev_blind['n']} 局，未达协议）"),
+              f"- 权重：{args.save}",
+              f"- 曲线：{args.report.replace('.md', '_curve.json')} 已由各阶段输出"]
     Path(args.report).write_text("\n".join(lines), encoding="utf-8")
-    print("\n".join(lines[-7:]))
+    (Path(args.report).parent / "curve.json").write_text(
+        json.dumps(curve, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("\n".join(lines[-8:]))
 
 
 def torch_load(path, device):

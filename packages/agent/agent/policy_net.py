@@ -72,4 +72,12 @@ def make_net(state_dim: int, action_dim: int, hidden: int = 64,
     net = SmallPolicyValueNet(state_dim, action_dim, hidden=hidden)
     net = net.to(device)
     net.eval()
+    # 把**构建时的编码配置**绑到网络对象上：编码器是全局会话状态，
+    # 同进程内评估两个配置不同的网络（如 rich vs basic 的 head-to-head）时，
+    # 全局配置只可能等于其中一个 → 必然踩另一个。绑到对象上才彻底。
+    try:
+        from .state_encoder import active_encoder
+        net.encoder_cfg = active_encoder()      # None = legacy/basic
+    except Exception:                            # noqa: BLE001
+        pass
     return net

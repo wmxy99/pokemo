@@ -378,5 +378,89 @@ class TestRichActionFeatures(unittest.TestCase):
             infer_config_from_state_dict(sd)
 
 
+class TestEncoderConfigBinding(unittest.TestCase):
+    """编码配置必须**绑在网络对象上**，而不是只靠全局会话状态
+
+    实测坑：head-to-head 要同进程加载 rich（action=31）与 basic（action=14）两个网络，
+    而全局 `_ACTIVE_CFG` 只可能等于其中一个 → 另一个报
+    `mat1 and mat2 shapes cannot be multiplied (5x14 and 31x64)`。
+    """
+
+    def tearDown(self):
+        from agent.state_encoder import set_active_encoder
+        set_active_encoder(None)
+
+    def test_make_net_and_load_net_carry_cfg(self):
+        import tempfile
+        import torch
+        from agent.state_encoder import (EncoderConfig, action_dim,
+                                         encoder_dim, set_active_encoder)
+        from agent.trainer import load_net
+        cfg = EncoderConfig(action_features="rich")
+        set_active_encoder(cfg)
+        net = make_net(encoder_dim(), action_dim(), hidden=32)
+        self.assertEqual(net.encoder_cfg.action_features, "rich")
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "rich.pt"
+            torch.save(net.state_dict(), p)
+            set_active_encoder(None)                 # 故意清掉全局配置
+            got = load_net(str(p), device="cpu")
+            self.assertIsNotNone(got.encoder_cfg)
+            self.assertEqual(got.encoder_cfg.action_features, "rich")
+
+    def test_two_configs_coexist_in_one_process(self):
+        """回归守卫：rich 与 basic 两个策略**同进程对战**必须能跑
+
+        这正是 h2h（`eval_h2h_blind`）的用法 —— 修复前直接维度报错。
+        """
+        from agent.state_encoder import EncoderConfig, set_active_encoder
+        from agent.trainer import load_net
+        rich_p = Path("artifacts/k1_rich.pt")
+        basic_p = Path("artifacts/k1_basic707.pt")
+        if not (rich_p.exists() and basic_p.exists()):
+            self.skipTest("缺少 k1_rich.pt / k1_basic707.pt（权重不入库，CI 跳过）")
+        rich = load_net(str(rich_p), device="cpu")
+        basic = load_net(str(basic_p), device="cpu")
+        # 全局配置此时等于 basic（最后加载的）—— rich 仍须按自己的配置编码
+        set_active_encoder(None if basic.encoder_cfg is None else None)
+        da = decklib.make_deck("lightning")
+        r = trainer.eval_h2h_blind(da, list(da), rich, basic, n=4, device="cpu")
+        self.assertEqual(r["n"], 4)
+        self.assertLessEqual(r["wins"], 4)
+
+    def test_h2h_same_net_is_symmetric(self):
+        """同一网络自战（镜像 + 交替座位）必须 ≈0.5
+
+        这是 h2h 口径**没有座位偏置**的最直接证据：若交替座位失效（例如 A 恒先手），
+        同网络自战会显示 **≈0.64（先手优势）** 而不是 0.5。
+        容差 ±0.08 是为了容纳"引擎 RNG 非严格座位对称"带来的 1–2 局抖动
+        （实测 n=40 得 19/40=0.475），但仍**远小于先手优势** → 断言依然有效。
+        """
+        from agent.state_encoder import set_active_encoder
+        from agent.trainer import load_net
+        p = Path("artifacts/k1_cont40k.pt")
+        if not p.exists():
+            self.skipTest("缺少 k1_cont40k.pt（权重不入库，CI 跳过）")
+        set_active_encoder(None)
+        net = load_net(str(p), device="cpu")
+        da = decklib.make_deck("lightning")
+        r = trainer.eval_h2h_blind(da, list(da), net, net, n=60, device="cpu")
+        self.assertLess(abs(r["win_rate"] - 0.5), 0.08,
+                        f"同网络自战应≈0.5，实测 {r['win_rate']}"
+                        f"（若≈0.64 则是交替座位失效）")
+
+    def test_opponent_factory(self):
+        """对手工厂：baseline/random/support 与可调用；未知名称必须抛错"""
+        from engine.agents import BaselineAI, SupportAI
+        self.assertIsInstance(trainer._opponent_factory("baseline")(0),
+                              BaselineAI)
+        self.assertIsInstance(trainer._opponent_factory("support")(0),
+                              SupportAI)
+        sentinel = object()
+        self.assertIs(trainer._opponent_factory(lambda i: sentinel)(3), sentinel)
+        with self.assertRaises(ValueError):
+            trainer._opponent_factory("nope")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

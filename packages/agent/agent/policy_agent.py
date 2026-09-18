@@ -62,6 +62,20 @@ class PolicyAgent:
         self.temperature = max(temperature, 1e-6)
         self.rng = random.Random(seed)
 
+    def _encoder_cfg(self):
+        """本 Agent 应使用的编码配置：**优先网络自带的**（见 `make_net` / `load_net`）
+
+        为什么要绑在网络上：编码器是**全局会话状态**，而同一个进程里可能同时评估
+        两个配置不同的网络（如 `rich` vs `basic` 的 head-to-head）—— 全局配置
+        只可能等于其中一个，另一个必然被喂错维度的特征（实测报
+        `mat1 and mat2 shapes cannot be multiplied (5x14 and 31x64)`）。
+        """
+        for n in self.nets:
+            if hasattr(n, "encoder_cfg"):
+                return n.encoder_cfg
+        from .state_encoder import active_encoder
+        return active_encoder()
+
     def decide(self, view: dict) -> dict:
         legal = legal_actions_from_view(view)
         if len(legal) == 1:
@@ -69,11 +83,12 @@ class PolicyAgent:
         if not self.nets:
             pick = self.rng.randrange(len(legal))
             return build_spread_plan(view, dict(legal[pick]))
+        cfg = self._encoder_cfg()
         with torch.no_grad():
-            state = torch.tensor([encode_state(view)], dtype=torch.float32,
-                                 device=self.device)
+            state = torch.tensor([encode_state(view, cfg)],
+                                 dtype=torch.float32, device=self.device)
             feats = torch.tensor(
-                [[encode_action(view, a) for a in legal]],
+                [[encode_action(view, a, cfg) for a in legal]],
                 dtype=torch.float32, device=self.device)
             probs = None
             for n in self.nets:                      # 集成：先验取平均
@@ -86,26 +101,19 @@ class PolicyAgent:
         else:
             idx = int(probs.argmax().item())
         return build_spread_plan(view, dict(legal[idx]))
-        with torch.no_grad():
-            state = torch.tensor([encode_state(view)], dtype=torch.float32,
-                                 device=self.device)
-            feats = torch.tensor(
-                [[encode_action(view, a) for a in legal]],
-                dtype=torch.float32, device=self.device)
-            probs = self.net.action_priors(state, feats,
-                                           temperature=self.temperature)[0]
-        if self.sample:
-            idx = int(torch.multinomial(probs, 1).item())
-        else:
-            idx = int(probs.argmax().item())
-        return build_spread_plan(view, dict(legal[idx]))
 
 
 def load_policy(path: str, device: str = "cpu"):
-    """加载训练产物 → 网络实例"""
+    """加载训练产物 → 网络实例（**宽度与编码配置都从权重推断**，见 trainer.load_net）"""
     from .policy_net import SmallPolicyValueNet
-    # 动作维度随 cfg.action_features 变化 → 必须用 action_dim()（不能用常量）
-    net = SmallPolicyValueNet(encoder_dim(), action_dim()).to(device)
-    net.load_state_dict(torch.load(path, map_location=device))
+    from .state_encoder import (action_dim, apply_config_from_state_dict,
+                                encoder_dim)
+    sd = torch.load(path, map_location=device)
+    hidden = int(sd["ctx.0.weight"].shape[0]) if "ctx.0.weight" in sd else 64
+    cfg = apply_config_from_state_dict(sd)
+    net = SmallPolicyValueNet(encoder_dim(), action_dim(),
+                              hidden=hidden).to(device)
+    net.encoder_cfg = cfg
+    net.load_state_dict(sd)
     net.eval()
     return net

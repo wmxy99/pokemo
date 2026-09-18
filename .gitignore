@@ -61,6 +61,26 @@ artifacts/
 # 是「K1 PASS」的唯一凭据：正式验收 + 独立 seed 复验 + 同 seed 对照 + 搜索对照 + 标定
 !/packages/agent/artifacts/
 /packages/agent/artifacts/*
+!/packages/agent/artifacts/k1_richfull.md
+!/packages/agent/artifacts/k1_richfull.json
+!/packages/agent/artifacts/k1_rich40k.md
+!/packages/agent/artifacts/k1_rich40k.json
+!/packages/agent/artifacts/k1_fire_rich.md
+!/packages/agent/artifacts/k1_fire_rich.json
+!/packages/agent/artifacts/k1_fire_basic.md
+!/packages/agent/artifacts/k1_fire_basic.json
+!/packages/agent/artifacts/K1_accept_variants.md
+!/packages/agent/artifacts/K1_accept_variants.json
+!/packages/agent/artifacts/K1_accept_variants_seed1000.md
+!/packages/agent/artifacts/K1_accept_variants_seed1000.json
+!/packages/agent/artifacts/K1_accept_fire.md
+!/packages/agent/artifacts/K1_accept_fire.json
+!/packages/agent/artifacts/K1_accept_fire_seed1000.md
+!/packages/agent/artifacts/K1_accept_fire_seed1000.json
+!/packages/agent/artifacts/k1_migrate.md
+!/packages/agent/artifacts/k1_migrate.json
+!/packages/agent/artifacts/k1_migrate2.md
+!/packages/agent/artifacts/k1_migrate2.json
 !/packages/agent/artifacts/k1_rich.md
 !/packages/agent/artifacts/k1_basic707.md
 !/packages/agent/artifacts/k1_cont40k.md

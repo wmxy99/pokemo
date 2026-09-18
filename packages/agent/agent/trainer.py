@@ -339,6 +339,58 @@ def eval_winrate(deck_a: list, deck_b: list, net,
             "win_rate": wins / n}
 
 
+def _opponent_factory(opponent):
+    """对手工厂：字符串（baseline/random/support）或可调用 `f(i) -> Agent`
+
+    `baseline` = **K1 冻结参照**（口径不可变）；`support` = 会用训练家/特性的强化
+    规则 AI（v1.3 新增，用于"迁移性"验证 —— 确认策略不是只会打某一个对手）；
+    `random` = 弱对照。传可调用时按局号构造，便于做策略对策略的 head-to-head。
+    """
+    from engine.agents import BaselineAI, RandomAgent, SupportAI
+    if callable(opponent):
+        return opponent
+    table = {
+        "baseline": lambda i: BaselineAI("baseline"),
+        "random": lambda i: RandomAgent("random", seed=1000 + i),
+        "support": lambda i: SupportAI("support_ai"),
+    }
+    if opponent not in table:
+        raise ValueError(f"未知对手 {opponent!r}（可选：{'/'.join(table)} 或可调用）")
+    return table[opponent]
+
+
+def eval_h2h_blind(deck_a: list, deck_b: list, net_a, net_b,
+                   n: int = 200, device: str = "cpu", seed0: int = 0) -> dict:
+    """**策略对策略**的双盲胜率（A 视角）：交替先后手，镜像卡组
+
+    用途是回答"迁移性/真强度"：新策略是否只是**更会打某个特定对手**，
+    还是**整体更强**。与冻结参照的自对局不同，这里双方都是学习出来的策略
+    （例如 rich 特征 vs basic 特征、或新旧两代权重），因此能直接比较强弱。
+    """
+    from engine.simulator import run_match
+    from .policy_agent import PolicyAgent
+    pa = PolicyAgent(net_a, device=device, name="A")
+    pb = PolicyAgent(net_b, device=device, name="B")
+    wins = losses = draws = 0
+    for i in range(n):
+        seed = seed0 + i
+        if i % 2 == 0:                       # A 先手
+            b = run_match(deck_a, deck_b, pa, pb, seed=seed)
+            me = 0
+        else:                                # A 后手
+            b = run_match(deck_a, deck_b, pb, pa, seed=seed)
+            me = 1
+        if b.winner is None:
+            draws += 1
+        elif b.winner == me:
+            wins += 1
+        else:
+            losses += 1
+    return {"n": n, "wins": wins, "losses": losses, "draws": draws,
+            "win_rate": wins / n, "blind": True, "h2h": True,
+            "as_first": (n + 1) // 2, "as_second": n // 2}
+
+
 def eval_winrate_blind(deck_a: list, deck_b: list, net,
                        n: int = 200, opponent="baseline",
                        device: str = "cpu", seed0: int = 0) -> dict:
@@ -354,11 +406,10 @@ def eval_winrate_blind(deck_a: list, deck_b: list, net,
       · **K1 ≥0.70 指双盲值**（此时才真正强于规则基线）
     """
     from engine.simulator import run_match
-    from engine.agents import BaselineAI, RandomAgent
+    from engine.agents import BaselineAI
     from .policy_agent import PolicyAgent
     pa = PolicyAgent(net, device=device, name="policy")
-    make_opp = (lambda i: BaselineAI("baseline")) if opponent == "baseline" \
-        else (lambda i: RandomAgent("random", seed=1000 + i))
+    make_opp = _opponent_factory(opponent)
     wins = losses = draws = 0
     ref_wins = 0                      # 基线自对局：player0 胜场（先手参照）
     for i in range(n):
@@ -403,14 +454,9 @@ def eval_winrate_blind_mcts(deck_a: list, deck_b: list, net,
     为什么不能复用 `run_match`：MCTS 需要 **battle 对象**（深拷贝/推进），
     而 view 接口的 Agent 拿不到 → 只能在引擎循环里手写（本函数即为此）。
     """
-    from engine.agents import BaselineAI, RandomAgent
+    from engine.agents import BaselineAI
     from .mcts import mcts_select_action
-    if opponent == "baseline":
-        def make_opp(i):
-            return BaselineAI("baseline")
-    else:
-        def make_opp(i):
-            return RandomAgent("random", seed=1000 + i)
+    make_opp = _opponent_factory(opponent)
 
     wins = losses = draws = 0
     for i in range(n):
@@ -467,9 +513,10 @@ def load_net(path: str, device: str = "cpu") -> SmallPolicyValueNet:
                                 encoder_dim)
     sd = torch.load(path, map_location=device)
     hidden = int(sd["ctx.0.weight"].shape[0]) if "ctx.0.weight" in sd else 64
-    apply_config_from_state_dict(sd)          # 可能为 None（= legacy/basic）
+    cfg = apply_config_from_state_dict(sd)    # 可能为 None（= legacy/basic）
     net = SmallPolicyValueNet(encoder_dim(), action_dim(),
                               hidden=hidden).to(device)
+    net.encoder_cfg = cfg            # **绑到对象**：同进程评估多配置也不会互踩
     net.load_state_dict(sd)
     net.eval()
     return net

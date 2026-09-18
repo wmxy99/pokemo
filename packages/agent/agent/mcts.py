@@ -113,15 +113,16 @@ def _search(battle, iters: int = 40, c_puct: float = 1.4,
     master = random.Random(seed if seed is not None else battle.seed)
     root_player = battle.current
 
-    # 策略先验
+    # 策略先验（编码配置取自网络对象，避免同进程多配置互踩）
     priors = [1.0 / len(legal)] * len(legal)
     if policy is not None:
         import torch
+        _cfg = getattr(policy, "encoder_cfg", None)
         try:
-            state = torch.tensor([encode_state(battle.view())],
+            state = torch.tensor([encode_state(battle.view(), _cfg)],
                                  dtype=torch.float32, device=device)
             feats = torch.tensor(
-                [[encode_action(battle.view(), a) for a in legal]],
+                [[encode_action(battle.view(), a, _cfg) for a in legal]],
                 dtype=torch.float32, device=device)
             priors = policy.action_priors(state, feats)[0].tolist()
         except Exception:
@@ -171,14 +172,18 @@ def _search(battle, iters: int = 40, c_puct: float = 1.4,
 def net_value_fn(net, device: str = "cpu") -> Callable:
     """把策略网的价值头包装成 `_value_of` 需要的 `value_fn(view) -> float`
 
-    注意：价值头是以**行动方视角**训练的，故直接喂 `battle.view()`（默认视角 = 行动方）。
+    注意 1：价值头以**行动方视角**训练，故直接喂 `battle.view()`（默认视角 = 行动方）。
+    注意 2：编码配置**取自网络对象**（`net.encoder_cfg`）—— 同进程里评估多个配置
+    不同的网络时（如 `rich` vs `basic` 的 head-to-head），全局会话配置只可能对上
+    其中一个，另一个必然被喂错维度的特征。
     """
     import torch
     from .state_encoder import encode_state
+    cfg = getattr(net, "encoder_cfg", None)
 
     def _fn(view: dict) -> float:
         with torch.no_grad():
-            s = torch.tensor([encode_state(view)], dtype=torch.float32,
+            s = torch.tensor([encode_state(view, cfg)], dtype=torch.float32,
                              device=device)
             return float(net.evaluate_state(s)[0].item())
     return _fn
@@ -241,11 +246,12 @@ def _expand(node: _TNode, policy, device: str, master: random.Random) -> None:
     priors = [1.0 / len(legal)] * len(legal)
     if policy is not None:
         import torch
+        _cfg = getattr(policy, "encoder_cfg", None)
         try:
-            state = torch.tensor([encode_state(node.battle.view())],
+            state = torch.tensor([encode_state(node.battle.view(), _cfg)],
                                  dtype=torch.float32, device=device)
             feats = torch.tensor(
-                [[encode_action(node.battle.view(), a) for a in legal]],
+                [[encode_action(node.battle.view(), a, _cfg) for a in legal]],
                 dtype=torch.float32, device=device)
             priors = policy.action_priors(state, feats)[0].tolist()
         except Exception:                                # noqa: BLE001
@@ -410,11 +416,12 @@ def mcts_with_stats(battle, iters: int = 40, **kw) -> tuple:
     device = kw.pop("device", "cpu")
     priors = [1.0 / len(legal)] * len(legal)
     if policy is not None:
+        _cfg = getattr(policy, "encoder_cfg", None)
         try:
-            state = torch.tensor([encode_state(battle.view())],
+            state = torch.tensor([encode_state(battle.view(), _cfg)],
                                  dtype=torch.float32, device=device)
             feats = torch.tensor(
-                [[encode_action(battle.view(), a) for a in legal]],
+                [[encode_action(battle.view(), a, _cfg) for a in legal]],
                 dtype=torch.float32, device=device)
             priors = policy.action_priors(state, feats)[0].tolist()
         except Exception:

@@ -106,8 +106,23 @@ def _extra_features(view: dict, name: str) -> list:
     raise ValueError(f"未知特征域 {name}（可选 hand/meta）")
 
 
-def encode_action(view: dict, action: dict) -> list:
-    """单个合法动作 → 动作特征（verb one-hot + 参数归一 + tag one-hot）"""
+def encode_action(view: dict, action: dict,
+                  cfg: Optional["EncoderConfig"] = None) -> list:
+    """单个合法动作 → 动作特征
+
+    基础块（14 维，历史行为）：verb one-hot(7) + 参数归一(3) + tag one-hot(4)
+
+    ⚠ **基础块的一个结构性缺陷**（K1 攻坚持平时定位到）：`index/attack/target`
+    只是**原始下标归一化**，而下标与卡牌身份无关 —— 例如 `{"verb":"attach",
+    "target":0}` 与 `"target":1` 只差 0.0 vs 0.167，网络**无法知道**目标是谁
+    （战斗位 60HP 电花 还是 后备 70HP 电光鼠、已附几张能量、是否将被打倒）。
+    实测该引擎的 attach 决策空间就是 5 个下标 → **策略无法区分"能量该附给谁"**。
+
+    富块（`cfg.action_features == "rich"`，+17 维）：把"**被作用实体**"公开属性
+    编码进去（HP/已受伤/能量数/阶级/ex/状态/被打倒风险/撤退费/最大招式伤害…
+    + 招式自身的伤害与费用）。全部来自 `view` 公开信息，不使用隐藏信息。
+    """
+    cfg = cfg if cfg is not None else _ACTIVE_CFG
     verb = action.get("verb", "pass")
     a: list[float] = [0.0] * len(VERBS)
     if verb in VERBS:
@@ -119,7 +134,120 @@ def encode_action(view: dict, action: dict) -> list:
     tag = action.get("tag", "")
     tg = [1.0 if tag == t else 0.0 for t in TRAINER_TAGS] if tag else [0.0] * 4
     a += tg
+    if cfg is not None and getattr(cfg, "action_features", "basic") == "rich":
+        a += _rich_action_features(view, action)
     return a
+
+
+def _rich_action_features(view: dict, action: dict) -> list:
+    """富块（定长 17 维）：描述动作**直接作用的实体**（下标 → 卡牌属性）
+
+    下标约定（实测自 `engine/battle.py` 的 legal_actions 生成处）：
+      · `attach.target`：0 = 战斗位；bi+1 = 后备 bi
+      · `retreat.bench`：bi（**不 +1**）；被撤退的是战斗位
+      · `play.index`：手牌下标
+      · `attack.attack`：招式下标（招式信息在 action 自身里，含 damage/cost_map）
+    """
+    ms = (view or {}).get("me_state") or {}
+    active = ms.get("active")
+    bench = ms.get("bench") or []
+    hand = ms.get("hand") or []
+    verb = action.get("verb", "pass")
+
+    ent = None                       # 被作用的宝可梦
+    card = None                      # 被作用的卡（手牌）
+    if verb == "attach":
+        t = action.get("target", 0) or 0
+        ent = active if t == 0 else (bench[t - 1] if 1 <= t <= len(bench) else None)
+    elif verb == "retreat":
+        bi = action.get("bench", 0) or 0
+        ent = bench[bi] if 0 <= bi < len(bench) else None
+    elif verb in ("play", "evolve"):
+        i = action.get("index", 0) or 0
+        card = hand[i] if 0 <= i < len(hand) else None
+        if card is not None and card.get("type") == "pokemon":
+            ent = card                  # 手牌宝可梦也能算实体特征
+    elif verb == "attack":
+        ent = active
+    elif verb == "pass":
+        pass
+
+    ent = ent or {}
+    card = card or {}
+    atks = ent.get("attacks") or []
+    hp = float(ent.get("hp", 0) or 0)
+    dmg = float(ent.get("dmg", 0) or 0)
+    max_dmg = max([float(x.get("damage", 0) or 0) for x in atks], default=0.0)
+    ctype = card.get("type") or ""
+    cost_total = 0.0
+    for pair in (action.get("cost_map") or []):
+        try:
+            cost_total += float(pair[1])
+        except Exception:                                # noqa: BLE001
+            pass
+    return [
+        1.0 if ent is active and ent else 0.0,
+        min(1.0, max(0.0, hp - dmg) / 320.0),
+        min(1.0, dmg / 320.0),
+        min(1.0, float(ent.get("energy", 0) or 0) / 8.0),
+        min(1.0, float(ent.get("stage", 0) or 0) / 2.0),
+        1.0 if ent.get("ex") else 0.0,
+        min(1.0, len(ent.get("status") or []) / 3.0),
+        1.0 if (ent and dmg >= hp > 0) else 0.0,          # 将被击倒风险
+        min(1.0, float(ent.get("retreat", 0) or 0) / 4.0),
+        min(1.0, max_dmg / 320.0),
+        min(1.0, len(atks) / 4.0),
+        1.0 if ctype == "pokemon" else 0.0,
+        1.0 if ctype == "energy" else 0.0,
+        1.0 if ctype in ("item", "supporter") else 0.0,
+        min(1.0, hp / 320.0),
+        min(1.0, float(action.get("damage", 0) or 0) / 320.0),
+        min(1.0, cost_total / 5.0),
+    ]
+
+
+RICH_ACTION_EXTRA = 17
+
+
+def infer_config_from_state_dict(sd: dict) -> Optional["EncoderConfig"]:
+    """从 checkpoint 的权重形状**反推编码配置**（None = legacy 51/14）
+
+    为什么需要：权重与编码器强绑定（state_dim / action_dim 不同），而
+    `load_net` 过去按**当前会话**配置建网 —— 拿 rich 权重去评估时直接
+    `size mismatch`（实测：`action_enc.0.weight` 31 vs 14），且调用方得记着
+    先 `set_active_encoder`。改为从权重自动推断，既少一类坑，也让评估脚本
+    （k1_accept / calibrate_value）无需额外参数。
+
+    可推断的组合（当前工程实际使用的两种）：
+      · state 51 + action 14 → legacy/basic（返回 None，与历史行为一致）
+      · state 59 + action 31 → full(hand+meta) + rich
+    其它维度抛错要求显式配置 —— **不猜**（feature 顺序会影响向量布局）。
+    """
+    try:
+        sdim = int(sd["ctx.0.weight"].shape[1])          # (hidden, state_dim)
+        adim = int(sd["action_enc.0.weight"].shape[1])   # (hidden//2, action_dim)
+    except Exception:                                    # noqa: BLE001
+        return None
+    base_state = STATE_DIM
+    if sdim == base_state and adim == 14:
+        return None
+    if sdim == base_state + 8 and adim == 31:
+        return EncoderConfig(features=("hand", "meta"), action_features="rich")
+    if sdim == base_state + 8 and adim == 14:
+        return EncoderConfig(features=("hand", "meta"))
+    if sdim == base_state and adim == 31:
+        return EncoderConfig(action_features="rich")
+    raise ValueError(
+        f"无法从权重推断编码配置（state_dim={sdim} / action_dim={adim}）—— "
+        f"请显式 set_active_encoder() 指定；**不要**用当前会话默认值硬套"
+        f"（维度不符会报错，语义不符会静默算错）。")
+
+
+def apply_config_from_state_dict(sd: dict) -> Optional["EncoderConfig"]:
+    """按 checkpoint 推断并**激活**编码配置；返回推断结果（None = legacy）"""
+    cfg = infer_config_from_state_dict(sd)
+    set_active_encoder(cfg)
+    return cfg
 
 
 def legal_actions_from_view(view: dict) -> list:
@@ -131,13 +259,17 @@ STATE_DIM = None  # 惰性求值（由首次 encode_state 推断，见模块底�
 
 @dataclass(frozen=True)
 class EncoderConfig:
-    """状态编码配置（bad-case 迭代入口）。
+    """编码配置（bad-case 迭代入口）。
 
     features 可选域：'hand'（我方手牌构成 +4）· 'meta'（回合/资源比例 +4）。
     组合维度 = 51 + 4·n，由 encoder_dim() 给出。
+
+    action_features：'basic'（14 维，历史行为）或 'rich'（+17 维，见 encode_action
+    的说明 —— 把"被作用实体"的属性编码进动作特征）。**改动它必须重新训练**。
     """
     features: tuple = ()
     device: str = "cpu"
+    action_features: str = "basic"
 
 
 # 会话级激活配置：set_active_encoder(cfg) 后，无参 encode_state/encoder_dim
@@ -163,6 +295,20 @@ def encoder_dim(cfg: Optional[EncoderConfig] = None) -> int:
     return STATE_DIM + sum(
         4 for f in cfg.features
         if f in ("hand", "meta"))  # 未知域抛错交给 encode 路径
+
+
+def action_dim(cfg: Optional[EncoderConfig] = None) -> int:
+    """动作特征维度（随 cfg.action_features 变化）。
+
+    **构网时必须用它而不是常量 `ACTION_DIM`** —— 否则 rich 模式下
+    `action_enc` 的输入维度会与编码输出不匹配（直接报错，或更糟：静默错位）。
+    `ACTION_DIM` 仅作为 legacy 常量保留（历史脚本兼容）。
+    """
+    cfg = cfg if cfg is not None else _ACTIVE_CFG
+    base = len(VERBS) + 3 + len(TRAINER_TAGS)
+    if cfg is not None and getattr(cfg, "action_features", "basic") == "rich":
+        return base + RICH_ACTION_EXTRA
+    return base
 
 
 def _probe_dim() -> int:

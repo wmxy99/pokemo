@@ -40,7 +40,7 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.agents import BaselineAI, RandomAgent
-from agent.state_encoder import (EncoderConfig, ACTION_DIM, encoder_dim,
+from agent.state_encoder import (EncoderConfig, action_dim, encoder_dim,
                                  set_active_encoder)
 from agent.policy_net import make_net
 from agent import bc, trainer, distill
@@ -70,6 +70,13 @@ def main():
     ap.add_argument("--hidden", type=int, default=128)
     ap.add_argument("--reward-shaping", type=float, default=0.05)
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy")
+    ap.add_argument("--action-features", choices=["basic", "rich"],
+                    default="basic",
+                    help="动作特征：basic=14 维（历史行为，只含下标归一化）；"
+                         "rich=31 维，额外编码「被作用实体」的属性（HP/能量/阶级/"
+                         "被打倒风险/招式伤害…）。实测 basic 下 attach 的 5 个候选"
+                         "只差一个下标 → 策略**分不清该把能量附给谁**。"
+                         "换 rich 必须从头训练（不能续跑旧权重）。")
     ap.add_argument("--eval-every", type=int, default=5000)
     ap.add_argument("--no-alternate", action="store_true",
                     help="关闭「交替先后手」训练（默认开启）—— 默认开启是因为"
@@ -90,15 +97,19 @@ def main():
 
     da = decklib.make_deck(args.decks)
     db = list(da)
-    enc_cfg = EncoderConfig(features=("hand", "meta")) \
-        if args.features == "full" else None
+    _feats = ("hand", "meta") if args.features == "full" else ()
+    enc_cfg = (EncoderConfig(features=_feats,
+                             action_features=args.action_features)
+               if (_feats or args.action_features != "basic") else None)
     set_active_encoder(enc_cfg)
     sdim = encoder_dim()
-    print(f"[k1] decks={args.decks}(mirror) features={args.features} "
-          f"state_dim={sdim} device={args.device} seed={args.seed}")
+    adim = action_dim()
+    print(f"[k1] decks={args.decks}(mirror) features={args.features}"
+          f"+{args.action_features} state_dim={sdim} action_dim={adim} "
+          f"device={args.device} seed={args.seed}")
     Path(args.save).parent.mkdir(parents=True, exist_ok=True)
 
-    net = make_net(sdim, ACTION_DIM, hidden=args.hidden, device=args.device)
+    net = make_net(sdim, action_dim(), hidden=args.hidden, device=args.device)
     n_start = 1
     if args.from_weights:
         # 宽度从 checkpoint 推断（隐藏层数不一致时 load_state_dict 会直接报错，
@@ -110,21 +121,48 @@ def main():
                 print(f"[k1] 检测到 checkpoint 宽度 hidden={inf_hidden}"
                       f"（命令行为 {args.hidden}）→ 以 checkpoint 为准")
                 args.hidden = inf_hidden
-                net = make_net(sdim, ACTION_DIM, hidden=args.hidden,
+                net = make_net(sdim, action_dim(), hidden=args.hidden,
                                device=args.device)
+        # ⚠ 编码器换了（state/action 维度变）就不能续跑旧权重 —— 必须显式报错，
+        # 否则 load_state_dict 的形状不匹配会给出难以定位的报错（或更糟：静默错位）。
+        _sd_shape = _sd["ctx.0.weight"].shape[1]
+        if int(_sd_shape) != sdim:
+            raise SystemExit(
+                f"权重 {args.from_weights} 的 state_dim={int(_sd_shape)} 与当前"
+                f"编码配置的 {sdim} 不一致（features={args.features}"
+                f"+{args.action_features}）→ 该配置必须**从头训练**，不能续跑。")
         net.load_state_dict(_sd)
         print(f"[k1] 续跑：已加载 {args.from_weights}（hidden={args.hidden}），跳过 BC")
     else:
         t0 = time.time()
+        # 缓存名**含编码模式**：帧里存的是*编码后*向量（state_vec/feats_all），
+        # 换模式复用会维度不符（故 base/full 之外还要区分 action_features）。
         cache = (f"artifacts/bc_data_{args.decks}_mirror_"
-                 f"{'full' if enc_cfg else 'base'}.pt")
-        if Path(cache).exists() and enc_cfg is None and \
-                not Path(f"artifacts/bc_data_{args.decks}_mirror.pt").exists():
-            pass  # base 缓存缺失时下面 collect
+                 f"{'full' if _feats else 'base'}"
+                 f"{'_rich' if args.action_features == 'rich' else ''}.pt")
+        # ⚠ 缓存有效性校验：只按「文件存在」复用会踩到**被截断的缓存** ——
+        # 实测 `bc_data_lightning_mirror_full.pt` 只有 41 帧（冒烟残留），
+        # 静默复用等于 BC 没做（先验≈弱随机），却**照样跑完不报错**。
+        # 故低于阈值即判无效并重采。实测约 **57 帧/局**（3459 帧 / 60 局），
+        # 取 `5×episodes` 作下限：宁可多采一次（秒级），也不要拿废缓存训一整轮。
+        min_frames = max(50, args.bc_episodes * 5)
+        frames = None
         if Path(cache).exists():
-            frames = bc.load_frames(cache)
-            print(f"[bc] cache hit {cache} ({len(frames)} frames)")
-        else:
+            loaded = bc.load_frames(cache)
+            # 维度校验：帧里是编码后向量 → 必须与当前编码配置一致
+            ok_dim = (loaded and len(loaded[0].get("state_vec") or []) == sdim
+                      and len((loaded[0].get("feats_all") or [[]])[0]) == adim)
+            if len(loaded) >= min_frames and ok_dim:
+                frames = loaded
+                print(f"[bc] cache hit {cache} ({len(frames)} frames)")
+            elif not ok_dim:
+                raise SystemExit(
+                    f"BC 缓存 {cache} 的向量维度与当前编码配置不符"
+                    f"（应为 state={sdim}/action={adim}）→ 请换缓存名或删除重采。")
+            else:
+                print(f"[bc] ⚠ 缓存 {cache} 仅 {len(loaded)} 帧"
+                      f"（< {min_frames}）→ 判为无效，重新采集")
+        if frames is None:
             frames = bc.collect_demonstration(da, db, BaselineAI("bA"),
                                               BaselineAI("bB"),
                                               episodes=args.bc_episodes,
@@ -143,12 +181,15 @@ def main():
         torch.save(net.state_dict(), args.save)
 
     def _eval(tag):
-        r = trainer.eval_winrate(da, db, net, n=args.games,
-                                 opponent="baseline", device=args.device)
+        # **中途评估也用双盲**（交替先后手）：单侧口径会把先手优势（≈+6pp）
+        # 算进战绩，导致训练期曲线与终评口径不可比（历史上因此误判过进度）。
+        r = trainer.eval_winrate_blind(da, db, net, n=args.games,
+                                       opponent="baseline", device=args.device)
         curve["eval"].append({"tag": tag, **r})
         _save()
-        print(f"[k1:eval:{tag}] vs baseline win_rate={r['win_rate']:.3f} "
-              f"({r['wins']}/{r['n']}) [{time.time()-t_all:.0f}s]")
+        print(f"[k1:eval:{tag}] vs baseline 双盲 win_rate={r['win_rate']:.3f} "
+              f"({r['wins']}/{r['n']}, 参照线 {r.get('ref_first_winrate', 0):.3f})"
+              f" [{time.time()-t_all:.0f}s]")
 
     # ---- 阶段1：vs 规则基线（PPO）----
     if args.stage1_episodes > 0:
@@ -185,11 +226,20 @@ def main():
                 gamma=args.gamma, ent_coef=args.ent_coef,
                 lr_decay=args.lr_decay, lr_schedule=args.lr_schedule,
                 shaping=args.reward_shaping,
+                # ⚠ 与 stage1 同源：不接交替座位就**只训先手**，而 K1 有一半局是后手
+                # （实测后手 0.620 vs 先手 0.680 —— 后手就是主缺口，必须一起训）。
+                alternate_sides=not args.no_alternate,
                 seed=args.seed, device=args.device, save_path=args.save,
                 log_every=max(1, n // 4))
             ran += n
             _eval(f"stage2-{ran}")
-            print(f"[k1] stage2 +{n} vs frozen in {time.time()-t2:.0f}s")
+            # 分段快照：`--save` 只保留**最后**状态，而自对弈可能中途变好、
+            # 末尾漂移（实测自对弈段容易出现"越练越差"）。留下每段权重才能回选。
+            snap = args.save.replace(".pt", f"_s2{ran}.pt")
+            import torch as _t
+            _t.save(net.state_dict(), snap)
+            print(f"[k1] stage2 +{n} vs frozen in {time.time()-t2:.0f}s "
+                  f"→ 快照 {snap}")
     # ---- 阶段3：MCTS soft 蒸馏 ----
     if args.stage3_episodes > 0 and args.stage3_mcts_iters > 0:
         seg = max(1, args.stage3_episodes // 4)

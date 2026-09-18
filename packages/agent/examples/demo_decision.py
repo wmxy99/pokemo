@@ -18,7 +18,7 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.battle import Battle
-from agent.state_encoder import STATE_DIM, ACTION_DIM
+from agent.state_encoder import STATE_DIM, action_dim
 from agent.policy_net import make_net
 from agent.pipeline import decide
 
@@ -26,11 +26,11 @@ from agent.pipeline import decide
 def main(iters: int = 30):
     b = Battle(decklib.deck_lightning_demo(), decklib.deck_fire_demo(),
                seed=20260908)
-    net = make_net(STATE_DIM, ACTION_DIM)          # 未训练：均匀先验 + MCTS
+    net = make_net(STATE_DIM, action_dim())        # 未训练：均匀先验 + MCTS
     t0 = time.time()
     out = decide(b, policy=net, iters=iters, seed=20260908)
     dt = time.time() - t0
-    print(f"state_dim={STATE_DIM} action_dim={ACTION_DIM} iters={iters} "
+    print(f"state_dim={STATE_DIM} action_dim={action_dim()} iters={iters} "
           f"time={dt:.2f}s")
     print(f"turn={b.view()['turn']} current={b.players[b.current].name}")
     print("top3 候选（按先验）:")

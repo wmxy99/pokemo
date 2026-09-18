@@ -13,7 +13,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
-from .state_encoder import (encode_state, encode_action, ACTION_DIM,
+from .state_encoder import (encode_state, encode_action, action_dim,
                             legal_actions_from_view, encoder_dim)
 
 
@@ -39,12 +39,23 @@ def build_spread_plan(view: dict, action: dict) -> dict:
 
 
 class PolicyAgent:
-    """策略网络驱动的 Agent（共享网络，供自对弈双方复用实例）"""
+    """策略网络驱动的 Agent（共享网络，供自对弈双方复用实例）
+
+    ``net`` 可以是**单个网络**，也可以是**网络列表**（集成）：此时先验取各网络的
+    平均 —— 目的是降低单权重方差（本项目实测多个 seed 的权重双盲胜率都在
+    ±0.01 内浮动，平均先验常能稳住上限）。**注意所有网络必须共用同一套
+    状态/动作编码器**（legacy 51 维 与 full 59 维的权重不可混用）。
+    """
 
     def __init__(self, net=None, device: str = "cpu", name: str = "policy",
                  sample: bool = False, temperature: float = 1.0,
                  seed: Optional[int] = None):
-        self.net = net
+        if isinstance(net, (list, tuple)):
+            self.nets = [n for n in net if n is not None]
+            self.net = self.nets[0] if self.nets else None
+        else:
+            self.nets = [net] if net is not None else []
+            self.net = net
         self.device = device
         self.name = name
         self.sample = sample
@@ -55,9 +66,26 @@ class PolicyAgent:
         legal = legal_actions_from_view(view)
         if len(legal) == 1:
             return build_spread_plan(view, dict(legal[0]))
-        if self.net is None:
+        if not self.nets:
             pick = self.rng.randrange(len(legal))
             return build_spread_plan(view, dict(legal[pick]))
+        with torch.no_grad():
+            state = torch.tensor([encode_state(view)], dtype=torch.float32,
+                                 device=self.device)
+            feats = torch.tensor(
+                [[encode_action(view, a) for a in legal]],
+                dtype=torch.float32, device=self.device)
+            probs = None
+            for n in self.nets:                      # 集成：先验取平均
+                p = n.action_priors(state, feats,
+                                    temperature=self.temperature)[0]
+                probs = p if probs is None else probs + p
+            probs = probs / len(self.nets)
+        if self.sample:
+            idx = int(torch.multinomial(probs, 1).item())
+        else:
+            idx = int(probs.argmax().item())
+        return build_spread_plan(view, dict(legal[idx]))
         with torch.no_grad():
             state = torch.tensor([encode_state(view)], dtype=torch.float32,
                                  device=self.device)
@@ -76,7 +104,8 @@ class PolicyAgent:
 def load_policy(path: str, device: str = "cpu"):
     """加载训练产物 → 网络实例"""
     from .policy_net import SmallPolicyValueNet
-    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM).to(device)
+    # 动作维度随 cfg.action_features 变化 → 必须用 action_dim()（不能用常量）
+    net = SmallPolicyValueNet(encoder_dim(), action_dim()).to(device)
     net.load_state_dict(torch.load(path, map_location=device))
     net.eval()
     return net

@@ -26,7 +26,7 @@ for pkg in ("engine", "agent"):
 from engine import decklib
 from engine.agents import BaselineAI, RandomAgent
 from engine.battle import Battle
-from agent.state_encoder import STATE_DIM, ACTION_DIM
+from agent.state_encoder import STATE_DIM, action_dim
 from agent.policy_agent import PolicyAgent
 from agent.mcts import mcts_select_action
 

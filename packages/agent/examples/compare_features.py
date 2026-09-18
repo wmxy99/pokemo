@@ -24,7 +24,7 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.agents import BaselineAI
-from agent.state_encoder import (EncoderConfig, ACTION_DIM, encoder_dim,
+from agent.state_encoder import (EncoderConfig, action_dim, encoder_dim,
                                  set_active_encoder)
 from agent.policy_net import make_net
 from agent import bc, trainer
@@ -43,7 +43,7 @@ def run_feature(name: str, cfg, da, db, args):
                                       BaselineAI("bB"),
                                       episodes=args.bc_episodes,
                                       seed=args.seed)
-    net = make_net(encoder_dim(), ACTION_DIM, hidden=args.hidden,
+    net = make_net(encoder_dim(), action_dim(), hidden=args.hidden,
                    device=args.device)
     st_bc = bc.train_bc(net, frames, epochs=args.bc_epochs, lr=args.lr,
                         device=args.device, seed=args.seed)

@@ -17,7 +17,7 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.agents import BaselineAI, RandomAgent
-from agent.state_encoder import STATE_DIM, ACTION_DIM
+from agent.state_encoder import STATE_DIM, action_dim
 from agent.policy_net import make_net
 from agent import dqn, trainer
 
@@ -53,7 +53,7 @@ def main():
                                   device=args.device)
         print(f"eval: DQN vs {args.opponent} {ev}")
         return
-    net = make_net(STATE_DIM, ACTION_DIM, device=args.device)
+    net = make_net(STATE_DIM, action_dim(), device=args.device)
     opp = (BaselineAI("baseline") if args.opponent == "baseline"
            else RandomAgent("random", seed=0))
     t0 = time.time()

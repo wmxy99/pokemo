@@ -56,15 +56,32 @@ python -u examples/run_k1_longtrain.py --no-alternate
 | 1 | **训练必须交替先后手**（`--no-alternate` 关掉就只学会先手，而 K1 一半局是后手） | 本次为训练循环新增 `alternate_sides`（`trainer.train_ppo_vs_fixed`） |
 | 2 | **奖励塑造（`--reward-shaping`）负作用**：默认 0.05 时 4000 局训练胜率 0.64，设 0 后同配置 **0.67** | 4000 局对照实验（seed=5，其余同参） |
 | 3 | **长训会退化**：shaping=0.05 + 15k 局，训练胜率 0.69 → **0.61**，单侧评估 0.70 → 0.525 | 采用 **shaping=0** 后 20k 局期间稳定在 0.69（不再崩） |
-| 4 | **价值头 MCTS 不如预期**：iters 100 → 0.650，iters 300 → **0.525**（深搜放大价值头偏差） | 价值头以折扣回报为目标、未做胜率标定；当前不宜靠加迭代提强度 |
-| 5 | **MCTS(30) + 策略网 ≈ 网络本身**（0.65–0.73，n=20–30 噪声大），且 2–9 s/局 | 搜索不是当前瓶颈，**瓶颈在网络棋力** |
-| 6 | 单侧口径读数为双盲 **+6pp 左右**（0.67 双盲 ↔ 0.73 单侧） | 双盲 200 局 vs 单侧对照 |
-| 7 | 现有最佳权重：`artifacts/final_long.pt`（双盲 **0.670**，n=100，±0.092） | `k1_accept.py` |
+| 4 | ⭐ **动作特征缺"作用对象"是真正的瓶颈**：`--action-features rich`（14→31 维）使双盲 **0.695 → 0.790（+9.5pp）** | 同 seed 对照：rich 训练 10k 局时双盲 0.783 vs basic 同阶段 0.650；终评 n=200 |
+| 5 | **价值头必须做胜率标定**，否则 MCTS 越搜越差：iters=100 → 0.650，300 → 0.525 | 实测价值头**系统性乐观 ~12pp**（均值 0.29 vs 实际胜率 0.52）；标定后 Brier 0.164→0.146 |
+| 6 | **MCTS 必须多 ply**：1-ply 打不赢网络本身（0.665 vs 0.695）；**depth=2 → 0.700**；depth=3 → 0.685（更慢更差） | n=200 双盲 sweep（`k1_mcts_sweep.py`）—— 1-ply 时 63% 的"动作后局面"行动方仍是我方，信息增益≈0 |
+| 7 | **加训练量/加参数都不动**：full 状态特征、自对弈细化、宽网络 128、多权重集成、高熵低 LR —— 双盲全部落 **0.685–0.700**（±0.005，统计不可区分） | 各自 n=200 双盲；`K1_selfplay_snaps.md`、`k1_full20k.md`、`k1_wide128.md` 等 |
+| 8 | **不存在"结构性天花板"**：150 个 seed 中"坐哪都输"的比例 **0%** → 上限远高于 0.70 | 座位互换诊断（同 seed 跑两次先/后手） |
+| 9 | 单侧口径读数为双盲 **+4~6pp**（0.790 双盲 ↔ 0.830 单侧） | 双盲 200 局 vs 单侧对照 |
 
-## 四、想继续冲 0.70 的建议顺序
+## 四、当前最佳配置（已达 K1）
 
-1. **更多 `--reward-shaping 0` 的 vs 基线长训**（本次实测不再退化，是最有据的方向）
-2. **自对弈细化**（`--stage2-episodes` 与冻结快照，把"稳赢先手"变成"稳赢局面"）
-3. **MCTS soft 蒸馏**（`--stage3-*`）—— 但注意结论 #4：**先给价值头做胜率标定**，否则蒸馏的是有偏信号
-4. **特征升级**（`--features full`：手牌/元数据特征，59 维）—— 需重采 BC 缓存
-5. 每次改动都用 `examples/k1_accept.py --games 200` 复测；**只看双盲值**
+```bash
+# 训练（rich 动作特征必须**从头训练**，不能续跑 basic 权重）
+python examples/run_k1_longtrain.py \
+  --action-features rich --stage1-episodes 20000 --stage2-episodes 0 \
+  --lr 3e-4 --ent-coef 0.005 --clip 0.2 --reward-shaping 0.0 \
+  --eval-every 10000 --games 60 --final-games 200 --device cpu --seed 707 \
+  --save artifacts/k1_rich.pt --report artifacts/k1_rich.md
+
+# 验收（唯一判据：双盲 200 局）
+python examples/k1_accept.py artifacts/k1_rich.pt --games 200
+```
+
+**若还要更高，按此顺序**（都需先证净收益）：
+
+1. **rich 特征下的更长训练**（当前 20k 局；rich 明显未饱和 —— 10k 局时已达 0.783）
+2. **rich + full 状态特征组合**（59+31 维）
+3. **rich + MCTS depth 2**（搜索配置需为**该权重**重做标定：`calibrate_value.py`）
+4. 每次改动都用 `examples/k1_accept.py --games 200` 复测，**只看双盲值**；
+   并用 `--seed0 1000` 换一段独立 seed 复验（避免只在调参用的 seed 上生效）
+

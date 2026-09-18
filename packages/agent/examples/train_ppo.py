@@ -19,7 +19,7 @@ for pkg in ("engine", "agent"):
     sys.path.insert(0, str(_ROOT / "packages" / pkg))
 
 from engine import decklib
-from agent.state_encoder import STATE_DIM, ACTION_DIM
+from agent.state_encoder import STATE_DIM, action_dim
 from agent.policy_net import make_net
 from agent import trainer
 
@@ -51,7 +51,7 @@ def main():
                                   device=args.device)
         print(f"eval: policy vs {args.opponent} {st}")
         return
-    net = make_net(STATE_DIM, ACTION_DIM, device=args.device)
+    net = make_net(STATE_DIM, action_dim(), device=args.device)
     t0 = time.time()
     st = trainer.train_ppo(da, db, net, episodes=args.episodes,
                            ppo_epochs=args.epochs, seed=args.seed,

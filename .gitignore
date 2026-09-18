@@ -55,6 +55,32 @@ artifacts/
 # （后者是「P1-1 让黄金集 -6pp 是口径分歧而非变差」这一结论的唯一证据，必须留痕）
 !/artifacts/k2_local_eval_rerun.md
 !/artifacts/k2_local_eval_rerun.json
+# K1 达标证据（对规则基线双盲 200 局）—— rich 动作特征使 0.695 → 0.790
+# ⚠ 路径注意：这些产物由脚本以 cwd=packages/agent 写出 → 落在 **packages/agent/artifacts/**，
+#   根锚定的 `!/artifacts/...` 白名单**不覆盖**它（`artifacts/` 规则会先命中）。
+# 是「K1 PASS」的唯一凭据：正式验收 + 独立 seed 复验 + 同 seed 对照 + 搜索对照 + 标定
+!/packages/agent/artifacts/
+/packages/agent/artifacts/*
+!/packages/agent/artifacts/k1_rich.md
+!/packages/agent/artifacts/k1_basic707.md
+!/packages/agent/artifacts/k1_cont40k.md
+!/packages/agent/artifacts/k1_hi_ent.md
+!/packages/agent/artifacts/k1_wide128.md
+!/packages/agent/artifacts/K1_accept.md
+!/packages/agent/artifacts/K1_accept.json
+!/packages/agent/artifacts/K1_accept_rich.md
+!/packages/agent/artifacts/K1_accept_rich.json
+!/packages/agent/artifacts/K1_accept_rich_seed1000.md
+!/packages/agent/artifacts/K1_accept_rich_seed1000.json
+!/packages/agent/artifacts/K1_accept_rich_mcts.md
+!/packages/agent/artifacts/K1_accept_rich_mcts.json
+!/packages/agent/artifacts/K1_selfplay_snaps.md
+!/packages/agent/artifacts/K1_selfplay_snaps.json
+!/packages/agent/artifacts/k1_mcts_sweep.json
+!/packages/agent/artifacts/value_calib.md
+!/packages/agent/artifacts/value_calib.json
+!/packages/agent/artifacts/value_calib_rich.md
+!/packages/agent/artifacts/value_calib_rich.json
 !/artifacts/k2_report_llm.md
 !/artifacts/k2_report_llm.json
 !/artifacts/k2_report_llm_before.md

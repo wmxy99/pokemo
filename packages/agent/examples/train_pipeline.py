@@ -24,7 +24,7 @@ for pkg in ("engine", "agent"):
 
 from engine import decklib
 from engine.agents import BaselineAI, RandomAgent
-from agent.state_encoder import (STATE_DIM, ACTION_DIM, EncoderConfig,
+from agent.state_encoder import (STATE_DIM, action_dim, EncoderConfig,
                                  encoder_dim, set_active_encoder)
 from agent.policy_net import make_net
 from agent import bc, trainer, distill
@@ -118,7 +118,7 @@ def main():
                                           episodes=args.bc_episodes,
                                           seed=args.seed)
         bc.save_frames(frames, str(bc_path))
-    net = make_net(encoder_dim(), ACTION_DIM, hidden=args.hidden).to(args.device)
+    net = make_net(encoder_dim(), action_dim(), hidden=args.hidden).to(args.device)
     st = bc.train_bc(net, frames, epochs=args.bc_epochs, lr=args.lr,
                      device=args.device, seed=args.seed)
     print(f"[bc] frames={st['frames']} loss_tail={st['loss'][-1]:.4f} "

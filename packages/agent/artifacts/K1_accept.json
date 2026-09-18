@@ -1,0 +1,67 @@
+{
+ "rows": [
+  {
+   "n": 200,
+   "wins": 137,
+   "losses": 63,
+   "draws": 0,
+   "win_rate": 0.685,
+   "blind": true,
+   "ref_first_winrate": 0.64,
+   "ref_n": 50,
+   "as_first": 100,
+   "as_second": 100,
+   "one_sided": 0.715,
+   "secs": 2.1,
+   "weights": "artifacts/k1_nshaping.pt"
+  },
+  {
+   "n": 200,
+   "wins": 138,
+   "losses": 62,
+   "draws": 0,
+   "win_rate": 0.69,
+   "blind": true,
+   "ref_first_winrate": 0.64,
+   "ref_n": 50,
+   "as_first": 100,
+   "as_second": 100,
+   "one_sided": 0.725,
+   "secs": 2.1,
+   "weights": "artifacts/k1_polish_1e-4.pt"
+  },
+  {
+   "n": 200,
+   "wins": 137,
+   "losses": 63,
+   "draws": 0,
+   "win_rate": 0.685,
+   "blind": true,
+   "ref_first_winrate": 0.64,
+   "ref_n": 50,
+   "as_first": 100,
+   "as_second": 100,
+   "one_sided": 0.715,
+   "secs": 2.1,
+   "weights": "artifacts/k1_polish_5e-5.pt"
+  },
+  {
+   "n": 200,
+   "wins": 137,
+   "losses": 63,
+   "draws": 0,
+   "win_rate": 0.685,
+   "blind": true,
+   "ref_first_winrate": 0.64,
+   "ref_n": 50,
+   "as_first": 100,
+   "as_second": 100,
+   "one_sided": 0.715,
+   "secs": 2.0,
+   "weights": "artifacts/final_long.pt"
+  }
+ ],
+ "ref_first_winrate": 0.64,
+ "target": 0.7,
+ "passed": false
+}

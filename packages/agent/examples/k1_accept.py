@@ -50,10 +50,25 @@ def main() -> int:
     ap.add_argument("--seed0", type=int, default=0, help="起始 seed（可复现）")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--report", default=None, help="写 Markdown 报告")
+    ap.add_argument("--mcts-iters", type=int, default=0,
+                    help=">0 时用 MCTS 搜索决策（**而不是**网络 argmax）→ 评估搜索后的强度")
+    ap.add_argument("--max-depth", type=int, default=1,
+                    help="MCTS 搜索深度（ply）；1 = 历史行为（只给动作后局面估值）")
+    ap.add_argument("--mcts-calib", default=None,
+                    help="价值头胜率标定 JSON（examples/calibrate_value.py 产出）")
+    ap.add_argument("--c-puct", type=float, default=1.4)
     a = ap.parse_args()
 
     da = decklib.make_deck(a.decks)
     db = list(da)
+    calib = None
+    if a.mcts_iters and a.mcts_calib:
+        from agent.mcts import load_value_calib
+        calib = load_value_calib(a.mcts_calib)
+        if calib is None:
+            print(f"[k1-accept] 标定文件无效：{a.mcts_calib}", file=sys.stderr)
+            return 2
+        print(f"[k1-accept] 价值头标定 (a,b) = {calib}")
     rows = []
     ref = None
     for w in a.weights:
@@ -62,20 +77,29 @@ def main() -> int:
             return 2
         net = load_net(w, device=a.device)
         t0 = time.time()
-        r = trainer.eval_winrate_blind(da, db, net, n=a.games,
-                                       opponent="baseline",
-                                       device=a.device, seed0=a.seed0)
-        one = trainer.eval_winrate(da, db, net, n=a.games,
-                                   opponent="baseline", device=a.device)
-        r["one_sided"] = one["win_rate"]
+        if a.mcts_iters:
+            r = trainer.eval_winrate_blind_mcts(
+                da, db, net, n=a.games, iters=a.mcts_iters,
+                value_calib=calib, c_puct=a.c_puct, max_depth=a.max_depth,
+                opponent="baseline", device=a.device, seed0=a.seed0)
+            r["one_sided"] = float("nan")
+        else:
+            r = trainer.eval_winrate_blind(da, db, net, n=a.games,
+                                           opponent="baseline",
+                                           device=a.device, seed0=a.seed0)
+            one = trainer.eval_winrate(da, db, net, n=a.games,
+                                       opponent="baseline", device=a.device)
+            r["one_sided"] = one["win_rate"]
         r["secs"] = round(time.time() - t0, 1)
         r["weights"] = w
         rows.append(r)
         if ref is None:
             ref = r["ref_first_winrate"]
-        print(f"[k1-accept] {w}: 双盲 {r['win_rate']:.3f} "
+        cfg = (f"MCTS{a.mcts_iters}×d{a.max_depth}"
+               if a.mcts_iters else "网络 argmax")
+        print(f"[k1-accept] {w} [{cfg}]: 双盲 {r['win_rate']:.3f} "
               f"({r['wins']}/{r['n']}) ±{_ci(r['win_rate'], r['n']):.3f} | "
-              f"单侧 {one['win_rate']:.3f} | {r['secs']}s")
+              f"{r['secs']}s")
 
     best = max(rows, key=lambda x: x["win_rate"])
     passed = best["win_rate"] >= TARGET
@@ -84,14 +108,21 @@ def main() -> int:
          f"- 生成：{time.strftime('%Y-%m-%d %H:%M:%S')}",
          f"- 口径：**双盲 {a.games} 局**（交替先后手）· 镜像卡组 `{a.decks}` · "
          f"seed0={a.seed0} · device={a.device}",
+         f"- 决策配置：**{'MCTS iters=%d × depth=%d（价值头标定 %s）' % (a.mcts_iters, a.max_depth, a.mcts_calib or '未用') if a.mcts_iters else '网络 argmax（无搜索）'}**",
          f"- KPI：**K1 对规则基线胜率 ≥ {TARGET:.2f}**（PRD）", "",
          "## 结果", "",
-         "| 权重 | 双盲胜率 | n | 95%CI | 单侧胜率（对照） |",
-         "|---|---:|---:|---|---:|"]
+         "| 权重 | 决策 | 双盲胜率 | n | 95%CI | 单侧胜率（对照） | 耗时 |",
+         "|---|---|---:|---:|---|---:|---:|"]
+    import math as _m
     for r in rows:
         mark = " ✅" if r["win_rate"] >= TARGET else ""
-        L.append(f"| `{r['weights']}` | **{r['win_rate']:.3f}**{mark} | {r['n']} | "
-                 f"±{_ci(r['win_rate'], r['n']):.3f} | {r['one_sided']:.3f} |")
+        cfg = (f"MCTS{a.mcts_iters}×d{a.max_depth}"
+               if a.mcts_iters else "argmax")
+        one = ("—" if not _m.isfinite(r["one_sided"])
+               else f"{r['one_sided']:.3f}")
+        L.append(f"| `{r['weights']}` | {cfg} | **{r['win_rate']:.3f}**{mark} | "
+                 f"{r['n']} | ±{_ci(r['win_rate'], r['n']):.3f} | {one} | "
+                 f"{r['secs']}s |")
     L += ["",
           f"- **基线自对局先手参照**：{ref:.3f}"
           f"（说明该引擎先手优势约 {abs(ref - 0.5) * 100:.0f}pp；"

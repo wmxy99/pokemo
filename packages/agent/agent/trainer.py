@@ -201,7 +201,6 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
     shaping：局面得分中间奖励权重（配合 agent.reward.state_reward）。
     """
     from .policy_agent import build_spread_plan
-    from .state_encoder import STATE_DIM, ACTION_DIM as _AD
     rng = random.Random(seed)
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     stats = {"episodes": 0, "wins": 0, "losses": 0, "draws": 0,
@@ -390,17 +389,86 @@ def eval_winrate_blind(deck_a: list, deck_b: list, net,
             "as_first": (n + 1) // 2, "as_second": n // 2}
 
 
-def load_net(path: str, device: str = "cpu") -> SmallPolicyValueNet:
-    """加载策略网络；**宽度从 checkpoint 推断**（hidden 不再需要手填）
+def eval_winrate_blind_mcts(deck_a: list, deck_b: list, net,
+                            n: int = 100, iters: int = 24,
+                            value_calib: Optional[tuple] = None,
+                            c_puct: float = 1.4, opponent="baseline",
+                            device: str = "cpu", seed0: int = 0,
+                            max_depth: int = 1) -> dict:
+    """**K1 双盲口径**下的 **MCTS 搜索强度**评估（价值头叶评估）
 
-    历史：这里曾用默认 hidden=64 构造再 `load_state_dict` —— 对任何非默认宽度的
-    checkpoint（如长训产出的 hidden=128）**直接 size mismatch 报错**，
-    使用者只能手动改代码。现从 `ctx.0.weight` 的形状推断。
+    与 `eval_winrate_blind` 同口径（交替先后手 + 基线先手参照线），差别只在
+    我方用 MCTS 决策 → 这样"搜索是否真的提升了棋力"能和"网络单独"直接比。
+
+    为什么不能复用 `run_match`：MCTS 需要 **battle 对象**（深拷贝/推进），
+    而 view 接口的 Agent 拿不到 → 只能在引擎循环里手写（本函数即为此）。
     """
-    from .state_encoder import ACTION_DIM, encoder_dim
+    from engine.agents import BaselineAI, RandomAgent
+    from .mcts import mcts_select_action
+    if opponent == "baseline":
+        def make_opp(i):
+            return BaselineAI("baseline")
+    else:
+        def make_opp(i):
+            return RandomAgent("random", seed=1000 + i)
+
+    wins = losses = draws = 0
+    for i in range(n):
+        seed = seed0 + i
+        b = _fresh_battle(deck_a, deck_b, seed=seed)
+        me = 0 if i % 2 == 0 else 1
+        opp = make_opp(i)
+        guard = 0
+        while not b.finished and guard < 500:
+            guard += 1
+            if b.current == me:
+                act = mcts_select_action(
+                    b, iters=iters, c_puct=c_puct, policy=net, device=device,
+                    use_value_head=True, value_calib=value_calib,
+                    max_depth=max_depth, seed=seed * 997 + guard)
+            else:
+                act = opp.decide(b.view())
+            r = b.step(dict(act))
+            if not r["ok"]:
+                b.step({"verb": "pass"})
+        if b.winner is None:
+            draws += 1
+        elif b.winner == me:
+            wins += 1
+        else:
+            losses += 1
+    # 参照线（与 eval_winrate_blind 完全一致，保证两条曲线可比）
+    ref_wins = 0
+    ref_n = max(1, n // 4)
+    for i in range(ref_n):
+        from engine.simulator import run_match
+        b = run_match(deck_a, deck_b, BaselineAI("bA"), BaselineAI("bB"),
+                      seed=seed0 + i)
+        if b.winner == 0:
+            ref_wins += 1
+    return {"n": n, "wins": wins, "losses": losses, "draws": draws,
+            "win_rate": wins / n, "blind": True, "mcts_iters": iters,
+            "ref_first_winrate": ref_wins / ref_n, "ref_n": ref_n,
+            "as_first": (n + 1) // 2, "as_second": n // 2}
+
+
+def load_net(path: str, device: str = "cpu") -> SmallPolicyValueNet:
+    """加载策略网络；**宽度与编码配置都从 checkpoint 推断**
+
+    历史坑（都踩过）：
+    1. 用默认 hidden=64 构造再 `load_state_dict` → 非默认宽度的 checkpoint
+       （如 hidden=128）直接 size mismatch。→ 现从 `ctx.0.weight` 推断宽度。
+    2. 用**当前会话**的编码配置建网 → 拿 `--action-features rich`（action_dim=31）
+       的权重去评估时 `size mismatch`（31 vs 14）。→ 现从权重形状**反推并激活**
+       编码配置（`state_encoder.apply_config_from_state_dict`），
+       评估脚本（k1_accept / calibrate_value）无需额外参数。
+    """
+    from .state_encoder import (action_dim, apply_config_from_state_dict,
+                                encoder_dim)
     sd = torch.load(path, map_location=device)
     hidden = int(sd["ctx.0.weight"].shape[0]) if "ctx.0.weight" in sd else 64
-    net = SmallPolicyValueNet(encoder_dim(), ACTION_DIM,
+    apply_config_from_state_dict(sd)          # 可能为 None（= legacy/basic）
+    net = SmallPolicyValueNet(encoder_dim(), action_dim(),
                               hidden=hidden).to(device)
     net.load_state_dict(sd)
     net.eval()

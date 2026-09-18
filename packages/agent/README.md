@@ -7,7 +7,7 @@
 
 | 模块 | 职责 |
 |------|------|
-| `agent/state_encoder.py` | `view()` → 定长状态向量（**基础 51 维**）+ 动作特征（**14 维**）；`EncoderConfig`/`set_active_encoder` 特征域（hand/meta→59 维）|
+| `agent/state_encoder.py` | `view()` → 定长状态向量（**基础 51 维**）+ 动作特征（基础 **14 维**；`action_features="rich"` → **31 维**，额外编码"被作用实体"的属性）；`EncoderConfig`/`set_active_encoder`；`action_dim()`（构网用它，非常量）；`infer_config_from_state_dict()`（从权重反推编码配置）|
 | `agent/policy_net.py` | PyTorch 小策略-价值网络（MLP：共享躯干 + 每候选打分头 + 价值头） |
 | `agent/mcts.py` | 引擎内 MCTS：PUCT 选子 + 真实 rollout（随机/策略）；`mcts_with_stats` 审计 |
 | `agent/pipeline.py` | 决策流水线：纯编排 `decide()` 与 LangGraph `build_langgraph_pipeline()` 双形态，节点一致 |
@@ -132,10 +132,43 @@ python examples/eval_matrix.py --features full --weights artifacts/policy_full.p
 # 阶段2 课程实测（3500 vs baseline + 2000 vs 冻结快照，seed 21）：
 #   vs frozen 首段 win 0.70（新策略快速压过冻结旧策略 → 学习机制有效）；
 #   eval vs baseline 逐段 0.50→0.55→0.60→0.60；n=40 高置信：policy 0.625 vs 基线基准 0.600。
-#   ⇒ policy ≈ 略强于基线；K1 ≥70% 尚未达成（诚实结论），继续方向见 README「冲 70% 手册」。
+#   ⇒ policy ≈ 略强于基线；**K1 已于 2026-09-18 达标（双盲 0.790）**，见下节「K1 · 已达标」。
 # 用法：
 #   python examples/train_pipeline.py --ppo-episodes 3500 --stage2-episodes 2000 \
 #       --stage2-snapshot-every 500 --save artifacts/final_k1.pt
+```
+
+## K1 · 对规则基线胜率（**已达标**，2026-09-18）
+
+**判据（唯一）：双盲 200 局（交替先后手）= 0.790**（`artifacts/K1_accept_rich.md`，
+95%CI ±0.056，下界 0.734 > 0.70）。关键改动是 **`--action-features rich`**
+（动作特征 14 → 31 维）：
+
+| 权重 | 动作特征 | 双盲 n=200（seed0=0） | 独立 seed 段（seed0=1000） |
+|---|---|---:|---:|
+| `k1_cont40k` | basic 14 维 | 0.695 | 0.655 |
+| `k1_basic707`（**同 seed 对照**） | basic 14 维 | 0.695 | — |
+| **`k1_rich`** | **rich 31 维** | **0.790 ✅** | **0.775 ✅** |
+
+原 14 维里 `index/attack/target` 只是**原始下标归一化**，而下标与卡牌身份无关 ——
+同一局面 `attach` 的 5 个候选**只差一个下标位**，网络无从知道"能量该附给谁"。
+rich 块把「被作用实体」的公开属性（剩余 HP / 能量数 / 阶级 / 被打倒风险 / 招式伤害…）
+编码进去后，**同 seed 同超参下 +9.5pp**，换独立 seed 段复验仍 +12pp。
+
+**已成否定性结论（不必重复投入）**：加训练量、full 状态特征（59 维）、自对弈细化、
+宽网络 hidden=128、高熵低 LR、多权重集成 —— 双盲全部落 **0.685–0.700**（统计不可区分）；
+**搜索（MCTS）无增益**：价值头标定 + 多 ply 之后最好也只追平网络（0.700），
+rich 下甚至更低（0.780 < 0.790）→ 产品默认"网络直接出招"（延迟也最优）。
+详见 `examples/RUN_K1_LONG.md`（含全部实测表格与判据）。
+
+复现与验收：
+
+```bash
+python examples/run_k1_longtrain.py --action-features rich --stage1-episodes 20000 \
+    --reward-shaping 0.0 --eval-every 10000 --games 60 --final-games 200 \
+    --save artifacts/k1_rich.pt --report artifacts/k1_rich.md
+python examples/k1_accept.py artifacts/k1_rich.pt --games 200    # 只看双盲值
+python examples/k1_accept.py artifacts/k1_rich.pt --games 200 --seed0 1000   # 独立 seed 复验
 ```
 
 ## 与引擎的接入契约
@@ -151,15 +184,18 @@ python examples/eval_matrix.py --features full --weights artifacts/policy_full.p
 
 - **RL 收敛需长训**：`train_ppo` 提供可运行闭环（smoke 10 局 3.4s），实际强度需数百局
   量级自对弈 + 奖励/熵调参（脚本参数开放）；BC 预热（模仿 BaselineAI）为后续可选加速；
-- **冲 K1 ≥70% 手册（按投入排序）**：
-  1. 大样本评估降噪：eval n≥100（基线基准 ±0.05 噪声内勿下结论）；
-  2. 更久训练：`--ppo-episodes 10000+ --stage2-episodes 5000+`（CPU ~20ms/局，可后台数小时）；
-  3. 超参：lr 余弦衰减 / entropy 更高(0.05)防局部 / clip 0.3；
-  4. 容量：网络 hidden 64→128、状态编码补入更多特征（hand 构成统计等）；
-  5. 课程扩展：冻结快照刷新更频繁（AlphaZero 迭代式），阶段3 引入 MCTS 教练（stochastic
-     rollouts 指导）；
-  6. 验收口径对齐：K1 定义"vs 规则基线 ≥70%"需固定基线实现版本与 200 局双盲协议
-     （技术方案 §1），跨卡组须用公平对位（镜像/轮换先手）。
+- **K1 ≥70%（2026-09-18 已达标：双盲 0.790）** —— 上面这份"按投入排序"的清单已被实测
+  逐项验证，结论与当时的猜测并不一致（保留原文以便对照）：
+  1. 大样本评估降噪 ✅ 必要（且**必须双盲**：单侧口径会把先手优势算成战绩，虚高 4–6pp）；
+  2. 更久训练 ❌ 无效（20k→40k 局仍是 0.695，且 15k 局曾因 shaping 退化到 0.61）；
+  3. 超参 ❌ 无效（lr/entropy/clip 各组合双盲全落 0.685–0.700）；
+  4. 容量 ⚠️ 部分无效：hidden 64→128 无增益；**真正有效的是"动作特征"**
+     （`--action-features rich`，14→31 维，**+9.5pp**）—— 原清单只想到"状态特征"，
+     漏掉了"动作特征没给作用对象"这个更根本的缺口；
+  5. 课程扩展 ❌ 自对弈细化中性（7 个快照双盲 0.685–0.700）；
+  6. 验收口径 ✅ 已落地为 `examples/k1_accept.py`（双盲 200 局、退出码 0/1/2、
+     可 `--seed0` 换段复验，并支持 `--mcts-*` 评估搜索配置）。
+  完整实测表与判据见 `examples/RUN_K1_LONG.md`。
 - LangGraph 为可选依赖：纯编排 `decide()` 零依赖可本地跑；`pip install langgraph` 后可用
   StateGraph 形态（行为一致，有单测对齐）；
 - LLM（本地 Qwen3-4B 8bit / 云端 OpenAI 兼容）接入见 `prompts/`、`llmclient.py`

@@ -4,8 +4,8 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **213** 项）· 全仓 **522** 项测试全绿
-（engine 213 · agent 172 · api 130 · gym 7）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **221** 项）· 全仓 **536** 项测试全绿
+（engine 221 · agent 172 · api 131 · gym 12）
 
 | | |
 |---|---|
@@ -18,7 +18,7 @@
 
 ```bash
 # ① 引擎：无需三方依赖，装好 Python 3.12 即可
-cd packages/engine && python -m unittest discover -s tests      # 213 项
+cd packages/engine && python -m unittest discover -s tests      # 221 项
 
 # ② 平台（后端 = FastAPI，同时托管前端构建产物到 /app）
 pip install -r apps/api/requirements.txt
@@ -35,15 +35,23 @@ cd apps/cli && python run_demo.py batch 100
 > 运行数据落在 `~/.pokelab/`（可用 `POKELAB_DATA_DIR` 覆盖），**不在仓库内**，
 > 备份与 `.field_key` 注意事项见 `docs/architecture.md`。
 
+**一条命令本地复刻 CI 的全部 8 个 job**（CI 结果只能上 GitHub 看，而本机 conda 环境
+预装了 torch / cryptography / PyJWT，极易造成「本地假绿、CI 真红」）：
+
+```bash
+python scripts/ci_local.py              # 全部 job；缺依赖的 job 会明确 SKIP 并说明原因
+python scripts/ci_local.py engine api   # 只跑指定 job（--list 可看全部）
+```
+
 ## 仓库地图
 
 | 路径 | 内容 | 状态 | 许可 |
 |------|------|:---:|:---:|
-| `packages/engine` | 自研简化版对战规则引擎（回合状态机 / 裁判 / 结算闭环 / 事件日志 / 真实卡池） | v1.4 · 213 测 | Apache-2.0 |
+| `packages/engine` | 自研简化版对战规则引擎（回合状态机 / 裁判 / 结算闭环 / 事件日志 / 真实卡池） | v1.4 · 221 测 | Apache-2.0 |
 | `packages/card-db` | 卡牌数据管道 + 规则知识库（代码与 schema 可发布；**数据运行时本地导入**） | 1267 卡入库 | Apache-2.0 |
 | `packages/agent` | 决策链路（状态编码 → 策略网 → MCTS → LangGraph）+ RL 训练（BC→PPO）+ K2 提示词库 | 172 测 | Apache-2.0 |
-| `packages/gym` | 单智能体博弈环境（gymnasium 风格 `reset/step`，零运行时依赖，含对手 benchmark） | 7 测 | Apache-2.0 |
-| `apps/api` | FastAPI 后端：对战 / 批量 / 训练 / 卡组 / 卡库 / 统计 / 合规 / 模型配置（**43 路由 / 39 路径**） | 130 测 | Apache-2.0 |
+| `packages/gym` | 单智能体博弈环境（gymnasium 风格 `reset/step`，零运行时依赖，含对手 benchmark）+ 可选张量适配层（`pokegym.torch_obs`） | 12 测 | Apache-2.0 |
+| `apps/api` | FastAPI 后端：对战 / 批量 / 训练 / 卡组 / 卡库 / 统计 / 合规 / 模型配置（**43 路由 / 39 路径**） | 131 测 | Apache-2.0 |
 | `apps/web` | React 18 + Vite 前端：8 个页面（对战 / 批量 / 统计矩阵 / 卡组 / 卡库 / 合规 / 模型配置 / 后台） | 已实现 | Apache-2.0 |
 | `apps/cli` | 单局 / 批量对局命令行入口 | 可用 | Apache-2.0 |
 | `packages/content-pokemon` | 宝可梦内容样例（**自述转写，无官方图/原文**） | — | **PolyForm NC** |

@@ -1249,6 +1249,27 @@ class TestSequenceCommands(unittest.TestCase):
                 return st, c["label"]
         return st, None
 
+    def test_steps_carry_slim_player_view(self):
+        """每步带「该步执行后」的玩家视角局面（已精简掉 legal）→ 供前端逐帧演出
+
+        视角必须锚在玩家侧：若用引擎默认的 `view()`，在「结束回合」移交后会串成对手视角
+        （对手手牌泄露）。中间帧不带 `legal` 是有意的（控体积，回放期不用）。
+        """
+        h, bid = self._battle()
+        st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))
+        self.assertIsNotNone(lbl, f"应可用附能量：{st.get('commands')}")
+        side = st["view"]["me"]
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"command": f"{lbl} 然后 结束回合"})
+        self.assertEqual(r.status_code, 200, r.text)
+        steps = [s for s in r.json()["steps"] if s.get("ok")]
+        self.assertGreaterEqual(len(steps), 2, "应至少执行两步")
+        for s in steps:
+            self.assertIsInstance(s.get("view"), dict, f"步骤 {s['input']} 缺 view")
+            self.assertEqual(s["view"]["me"], side, "逐步局面视角错（会泄露对手手牌）")
+            self.assertNotIn("hand", s["view"]["opp_state"])
+            self.assertNotIn("legal", s["view"], "中间帧不应携带 legal")
+
     def test_two_step_command_string(self):
         h, bid = self._battle()
         st, lbl = self._first(h, bid, lambda x: x.startswith("附能量"))

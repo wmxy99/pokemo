@@ -113,7 +113,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       onMsg(`对局已创建 seed=${r.seed}`, 'ok')
       if (steps.length) {
         const ctx = actionContext(r.view)
-        await replayAiSteps(steps, (x) => verbLabel(x, ctx))
+        await replayFrames(steps, (x) => verbLabel(x, ctx))
         setState((s) => ({ ...s, view: r.view }))   // 收口到最终完整局面
       }
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
@@ -121,23 +121,28 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   }
 
   /**
-   * 逐帧回放 AI 动作：优先用接口的 ai_steps（带中间态，棋盘会真正动起来），
-   * 退化为只按节奏播报动作（无中间帧）。返回是否有中间帧（调用方一般无需关心）。
+   * 逐帧回放一串帧（`{action?, view?, note?}`）。
+   *
+   * - 带 `view` 的帧 → 应用为局面（棋盘真的动起来，伤害飘字跟着每帧走）
+   * - 不带 `view` → 退化为只按节奏播报 `action`（旧接口 / 无中间态时）
+   *
+   * 同一个循环既用于**对手动作**（`ai_steps`），也用于**我方多步指令**
+   * （`steps[*].view`，只带 view 不带 action —— 日志已在提交时批量写好）。
    */
-  async function replayAiSteps(steps, zh) {
-    if (!steps || steps.length === 0) return
-    const framed = steps.some((x) => x && x.view)
-    setFramedReplay(framed)
+  async function replayFrames(frames, zh) {
+    if (!frames || frames.length === 0) return
+    const framed = frames.some((x) => x && x.view)
+    if (framed) setFramedReplay(true)
     setReplaying(true)
     try {
-      for (const stp of steps) {
+      for (const f of frames) {
         await sleep(REPLAY_MS)
-        if (stp.note) { setLog((l) => [...l, `… ${stp.note}`]); continue }
-        const x = stp.action
+        if (f.note) { setLog((l) => [...l, `… ${f.note}`]); continue }
+        const x = f.action
         if (x) setLog((l) => [...l, `< AI：${x.verb === 'attack' ? '攻击' : zh(x)}`])
-        if (stp.view) {
+        if (f.view) {
           // 中间帧只更新局面，不碰 winner/finished —— 避免中途提前亮胜负
-          setState((s) => ({ ...s, view: stp.view }))
+          setState((s) => ({ ...s, view: f.view }))
         }
       }
     } finally {
@@ -167,7 +172,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       // ① 我方动作后的局面（回放第一帧，让玩家立刻看到自己的操作生效）
       if (r.player_view) setState((s) => ({ ...s, view: r.player_view }))
       // ② 对手动作逐帧回放（有中间态则棋盘跟着动，无则退化为只播报）
-      await replayAiSteps(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })), zh)
+      await replayFrames(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })), zh)
       // ③ 收口：最终完整局面（含 legal / 胜负）
       setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
       if (r.winner != null) {
@@ -216,9 +221,16 @@ export default function BattlePage({ onMsg, onGoDecks }) {
           ? `… 停止：${r.stopped || '已停止'}（剩余 ${r.remaining.length} 步：${r.remaining.join(' / ')}）`
           : null,
       ].filter(Boolean))
-      // 我方动作后的局面 → 对手逐帧回放 → 最终收口（与「点牌出牌」同一套演出）
-      if (r.player_view) setState((s) => ({ ...s, view: r.player_view }))
-      await replayAiSteps(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })),
+      // 我方多步指令也逐帧演出（steps[*].view，只带 view 不带 action —— 日志已写好），
+      // 随后接对手动作逐帧回放 → 最终收口（与「点牌出牌」同一套演出）。
+      // 单步（steps 长度 1）时直接用 player_view 立即呈现，不做 pacing（点一下就出牌的手感）。
+      const ownFrames = steps.filter((st) => st.ok && st.view).map((st) => ({ view: st.view }))
+      if (ownFrames.length > 1) {
+        await replayFrames(ownFrames, (x) => verbLabel(x, ctx))
+      } else if (r.player_view) {
+        setState((s) => ({ ...s, view: r.player_view }))
+      }
+      await replayFrames(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })),
         (x) => verbLabel(x, ctx))
       setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
       if (r.winner != null) {

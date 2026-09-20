@@ -462,7 +462,10 @@ class Battle:
                 break
             steps.append({"input": part, "ok": True,
                           "matched": res.get("matched"),
-                          "used_action": res["action"]})
+                          "used_action": res["action"],
+                          # 该步**执行后**的局面 → 供前端「我方多步指令」逐帧演出。
+                          # 视角必须显式给 actor（默认参数是"当前行动方"，回合移交后会串视角）。
+                          "view": self.view(actor)})
             if self.finished:
                 stopped = "对局已结束"
                 break

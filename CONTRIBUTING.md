@@ -16,11 +16,24 @@ cd apps/web && npm ci && npm run build && cd ..
 **测试命令（务必 `cd` 进包目录再 discover —— 从根目录跑会 import 失败）**
 
 ```bash
-cd packages/engine && python -m unittest discover -s tests      # 213 项
+cd packages/engine && python -m unittest discover -s tests      # 221 项
 cd packages/agent  && python -m unittest discover -s tests      # 172 项（需 torch）
-cd packages/gym    && PYTHONPATH=../engine python -m unittest discover -s tests  # 7 项（零依赖）
-cd apps/api        && python -m unittest discover -s tests      # 130 项
+cd packages/gym    && PYTHONPATH=../engine python -m unittest discover -s tests  # 12 项（零依赖；4 项需 torch 自动跳过）
+cd apps/api        && python -m unittest discover -s tests      # 131 项
 ```
+
+**本地复刻 CI（一条命令跑完 8 个 job）**
+
+```bash
+python scripts/ci_local.py              # 全部；缺依赖的 job 会 SKIP 并说明原因
+python scripts/ci_local.py engine api   # 只跑指定 job（--list 列出全部）
+```
+
+CI 结果只能在 GitHub 上看，且本机 conda 环境预装了 torch / cryptography / PyJWT
+（漏声明依赖在本地完全看不出来）→ **改完代码先本地复刻一遍再推**。
+注意 `scripts/ci_local.py` 的 carddb 步骤会把 `POKELAB_DB` 指向临时库，
+不会污染开发库（历史上 `seed_demo.py` 写进开发库曾让 api 的卡库检索断言失败）。
+
 
 **本地启动**（前后端一体）
 

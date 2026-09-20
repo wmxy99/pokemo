@@ -422,6 +422,26 @@ class TestStepSequence(unittest.TestCase):
                          ["附能量到战斗位", "结束回合"])
         self.assertNotEqual(b.current, actor, "结束回合后应移交对手")
 
+    def test_steps_carry_player_perspective_views(self):
+        """每步都带「该步执行后」的玩家视角局面（供前端逐帧演出我方多步指令）。
+
+        视角必须锚在 `actor`，且不得泄露对手手牌 —— 若用默认的 `view()`，
+        在「结束回合」导致回合移交后就会串成对手视角。
+        """
+        b = self._fresh()
+        _advance_until(b, lambda bt: bt.current == 0)
+        actor = b.current
+        r = b.step_sequence("附能量到战斗位 然后 结束回合", actor=actor)
+        self.assertEqual(r["executed"], 2)
+        for st in r["steps"]:
+            self.assertTrue(st["ok"])
+            v = st.get("view")
+            self.assertIsInstance(v, dict, f"步骤 {st['input']} 缺少 view")
+            self.assertEqual(v["me"], actor, "逐步局面的视角必须是本方")
+            self.assertIn("hand", v["me_state"])
+            self.assertNotIn("hand", v["opp_state"], "逐步局面不得泄露对手手牌")
+            self.assertIn("legal", v)
+
     def test_stops_at_turn_handover_and_reports_remaining(self):
         """结束回合后的步骤属于对手，不得代为执行"""
         b = self._fresh()

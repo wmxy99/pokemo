@@ -115,6 +115,19 @@ def _slim_view(view: dict) -> dict:
     return out
 
 
+def _slim_steps(steps: list) -> list:
+    """组合指令的逐步记录：把每步附带的中间态也精简掉 `legal`（控响应体积）。
+
+    注意保留逐步 `view` 本身 —— 前端要靠它把「我方多步指令」也逐帧演出来。
+    """
+    out = []
+    for st in steps or []:
+        if isinstance(st, dict) and isinstance(st.get("view"), dict):
+            st = {**st, "view": _slim_view(st["view"])}
+        out.append(st)
+    return out
+
+
 def _run_ai_until_human(bid: str) -> dict:
     """AI 侧自动步直至轮到玩家或对局结束。
 
@@ -238,7 +251,8 @@ def act(bid: str, req: schemas.ActionReq,
             "used_action": (seq["steps"][-1].get("used_action")
                             if seq.get("steps") else None),
             # 组合指令详情（单步时 steps 长度为 1，字段形状一致）
-            "steps": seq.get("steps", []),
+            # 每步带 view（该步执行后的中间态，已精简）→ 前端可逐帧演出我方多步指令
+            "steps": _slim_steps(seq.get("steps", [])),
             "executed": seq.get("executed", 0),
             "planned": seq.get("planned", 0),
             "remaining": seq.get("remaining", []),

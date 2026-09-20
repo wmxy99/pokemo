@@ -34,6 +34,19 @@ CI 结果只能在 GitHub 上看，且本机 conda 环境预装了 torch / crypt
 注意 `scripts/ci_local.py` 的 carddb 步骤会把 `POKELAB_DB` 指向临时库，
 不会污染开发库（历史上 `seed_demo.py` 写进开发库曾让 api 的卡库检索断言失败）。
 
+**读远程 CI 的真实结果**（本仓库是私有仓库：匿名读 `api.github.com` 一律 404，
+GitHub 连接器同样读不到 → 需要一个 PAT）
+
+```bash
+export GITHUB_TOKEN=<PAT>       # classic 的 repo 范围，或 fine-grained 的 Actions: Read
+python scripts/ci_remote.py             # 最近一次运行的全部 job 结论
+python scripts/ci_remote.py --watch     # 运行中则等待结束（15s 轮询，上限 30 分钟）
+python scripts/ci_remote.py --run <id>  # 指定某次运行
+```
+
+退出码：`0` 全部成功 · `1` 有失败 job · `2` 读不到（无 token / 无运行 / 网络失败）。
+`skipped` 计为 SKIP 而非失败（条件 job 的常态）。装了 `gh` 也可 `gh run list -R wmxy99/pokemo`。
+
 
 **本地启动**（前后端一体）
 

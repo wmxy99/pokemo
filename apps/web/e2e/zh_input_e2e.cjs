@@ -144,7 +144,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     await clickText('button', '开始对局')
     await sleep(3000)
     const board = await page.evaluate(() => {
-      const chips = [...document.querySelectorAll('.chip-name')].map((c) => c.textContent.trim())
+      const chips = [...document.querySelectorAll('.cf-name')].map((c) => c.textContent.trim())
       const acts = [...document.querySelectorAll('.acts button')].map((b) => b.textContent.trim())
       return { chips, acts: acts.slice(0, 6), turn: (document.querySelector('.zt') || {}).textContent || '' }
     })

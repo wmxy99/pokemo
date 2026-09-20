@@ -1,0 +1,211 @@
+/* ============================================================================
+   卡牌可视化样式（自绘卡面 · 不使用官方卡图 · 合规 C1/C5）
+   真实 TCG 卡牌比例 63×88mm ≈ 0.716 → aspect-ratio: 63/88
+   尺寸变体：zoom(详情) / field(战斗位) / hand(手牌) / bench(后备) / mini(极简)
+   ========================================================================== */
+
+.cfc,
+.cf {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 63 / 88;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+  font-size: 11px;
+  line-height: 1.25;
+  container-type: inline-size;
+}
+.cf.picked { outline: 3px solid var(--brand); outline-offset: 1px; }
+.cf.dim { opacity: .55; }
+.cf.empty { border-style: dashed; background: #fff; display: grid; place-items: center;
+  color: var(--muted); font-size: 11px; }
+.cf[role="button"] { cursor: pointer; }
+
+/* ---- 卡头：名称 + HP ---- */
+.cf-head { display: flex; align-items: center; gap: 4px; padding: 3px 5px;
+  border-bottom: 1px solid var(--line-2); }
+.cf-name { flex: 1; min-width: 0; font-weight: 700; font-size: 11px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cf-hp { display: inline-flex; align-items: baseline; gap: 2px; font-family: var(--mono);
+  font-weight: 800; font-size: 12px; }
+.cf-hp em { font-size: 9px; font-style: normal; font-weight: 600; opacity: .75; }
+.cf-hp.tone-full { color: #15803D; }
+.cf-hp.tone-low { color: #B45309; }
+.cf-hp.tone-ko { color: #B91C1C; }
+.cf-dmg { font-style: normal; font-size: 10px; background: #B91C1C; color: #fff;
+  border-radius: 999px; padding: 0 4px; margin-left: 2px; }
+
+/* ---- 卡面区（自绘：属性色底 + 属性汉字 + 徽标） ----
+   固定占卡高 34%（真实卡牌的艺术区比例），剩余空间留给招式区，避免出现大片空白 */
+.cf-art { position: relative; flex: 0 0 34%; min-height: 34px; display: grid; place-items: center;
+  border-bottom: 1px solid var(--line-2); overflow: hidden; }
+.cf-art.big .cf-art-glyph { font-size: 30px; }
+.cf-art-glyph { font-size: 24px; font-weight: 800; opacity: .5; letter-spacing: .05em; }
+.cf-art-glyph.trainer { font-size: 15px; color: #475569; opacity: .6; }
+.cf-badges { position: absolute; top: 3px; left: 3px; display: flex; flex-direction: column; gap: 2px; }
+.cf-badge { display: inline-flex; align-items: center; gap: 3px; border: 1px solid;
+  border-radius: 999px; padding: 0 5px; font-size: 9px; font-weight: 700; background: #fff; }
+.cf-badge em { font-style: normal; font-weight: 600; opacity: .8; }
+.cf-evo { position: absolute; bottom: 3px; left: 4px; font-size: 9px; color: var(--ink-2);
+  background: rgba(255, 255, 255, .82); border-radius: 4px; padding: 0 4px; }
+.cf-hpbar { position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: #EFF3F8; }
+.cf-hpbar > i { display: block; height: 100%; }
+.cf-hpbar > i.full { background: linear-gradient(90deg, #16A34A, #22C55E); }
+.cf-hpbar > i.low { background: linear-gradient(90deg, #B45309, #F59E0B); }
+.cf-hpbar > i.ko { background: #B91C1C; }
+.cf-warnmark { position: absolute; top: 3px; right: 3px; font-size: 9px; color: #92400E;
+  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 4px; padding: 0 4px; }
+
+/* ---- 卡身：特性 / 招式 ---- */
+.cf-body { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 3px 5px;
+  display: flex; flex-direction: column; gap: 3px; }
+.cf-ability { border: 1px solid var(--line-2); border-left: 2px solid #7C3AED; border-radius: 4px;
+  padding: 2px 4px; background: #FAF5FF; }
+.cf-ability.trainer { border-left-color: #0F766E; background: #F0FDFA; }
+.cf-ability.used { opacity: .5; }
+.cf-ability b { font-size: 10px; }
+.cf-ability p { margin: 1px 0 0; font-size: 9.5px; color: var(--ink-2); }
+.cf-ab-tag { display: inline-block; font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
+  background: #7C3AED; color: #fff; border-radius: 3px; padding: 0 3px; margin-right: 3px; }
+.cf-ability.trainer .cf-ab-tag { background: #0F766E; }
+.cf-attack { border-top: 1px dashed var(--line-2); padding-top: 3px; }
+.cf-atk-line { display: flex; align-items: center; gap: 4px; }
+.cf-atk-name { flex: 1; min-width: 0; font-size: 10.5px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.cf-atk-dmg { font-family: var(--mono); font-weight: 800; font-size: 13px; color: var(--ink); }
+.cf-atk-desc { margin: 1px 0 0; font-size: 9.5px; color: var(--ink-2); }
+.cf-empty { margin: 2px 0; font-size: 9.5px; color: var(--muted); }
+
+/* ---- 卡脚：弱点 / 抗性 / 撤退 ---- */
+.cf-foot { display: flex; gap: 6px; padding: 2px 5px; border-top: 1px solid var(--line-2);
+  background: #F8FAFC; font-size: 9px; color: var(--ink-2); }
+
+/* ---- 能量费用圆点 ---- */
+.edots { display: inline-flex; gap: 2px; align-items: center; }
+.edots.empty { width: 10px; }
+.edot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6); }
+.edots.lg .edot { width: 13px; height: 13px; }
+
+/* ---- 状态徽标 / 击倒 / 附着能量 ---- */
+.cf-ko-mark { position: absolute; inset: auto 0 40% 0; text-align: center;
+  background: rgba(15, 23, 42, .78); color: #fff; font-size: 10px; font-weight: 700;
+  letter-spacing: .18em; padding: 2px 0; }
+.cf.ko .cf-art { filter: grayscale(1); opacity: .6; }
+.cf-attached { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px;
+  border-radius: 999px; background: #B45309; color: #fff; font-size: 10px; font-weight: 800;
+  display: grid; place-items: center; border: 2px solid #fff; }
+.status-row { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; justify-content: center; }
+.st { font-size: 9.5px; border-radius: 999px; padding: 0 5px; border: 1px solid; }
+.st-poisoned { color: #6D28D9; border-color: #DDD6FE; background: #F5F3FF; }
+.st-burned { color: #B91C1C; border-color: #FECACA; background: #FEF2F2; }
+.st-asleep { color: #475569; border-color: #E2E8F0; background: #F8FAFC; }
+.st-paralyzed { color: #A16207; border-color: #FEF08A; background: #FEFCE8; }
+.st-confused { color: #BE185D; border-color: #FBCFE8; background: #FDF2F8; }
+
+/* ---- 尺寸变体 ---- */
+.cf.zoom { width: 236px; font-size: 13px; border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, .22); }
+.cf.zoom .cf-name { font-size: 14px; }
+.cf.zoom .cf-hp { font-size: 15px; }
+.cf.zoom .cf-art-glyph { font-size: 46px; }
+.cf.zoom .cf-attack { padding-top: 5px; }
+.cf.zoom .cf-atk-name { font-size: 12.5px; }
+.cf.zoom .cf-atk-desc { font-size: 11px; }
+.cf.zoom .cf-ability p { font-size: 11px; }
+.cf.zoom .cf-ab-tag { font-size: 10px; }
+.cf.zoom .cf-foot { font-size: 10.5px; }
+
+.cf.field { width: 100%; }
+.cf.hand { width: 116px; flex: 0 0 auto; }
+.cf.bench { width: 76px; font-size: 9.5px; }
+.cf.bench .cf-body, .cf.bench .cf-foot { display: none; }
+.cf.bench .cf-name { font-size: 9.5px; }
+.cf.bench .cf-hp { font-size: 10px; }
+.cf.bench .cf-art-glyph { font-size: 15px; }
+.cf.mini { width: 46px; border-radius: 6px; }
+.cf.mini .cf-head { padding: 1px 3px; }
+.cf.mini .cf-name { font-size: 8.5px; }
+.cf.mini .cf-hp { display: none; }
+.cf.mini .cf-art-glyph { font-size: 12px; }
+.cf.mini .cf-body, .cf.mini .cf-foot { display: none; }
+
+/* ---- 手牌：真实拿牌（叠压 + 微旋转 + hover 抬起） ---- */
+.hand-fan { display: flex; align-items: flex-end; padding: 22px 6px 6px; min-height: 176px;
+  overflow-x: auto; overflow-y: visible; }
+.hand-card { transform-origin: 50% 120%; transform: rotate(var(--rot, 0deg)) translateY(var(--lift, 0px));
+  transition: transform .16s ease, filter .16s ease; margin-left: -30px; }
+.hand-card:first-child { margin-left: 0; }
+.hand-card:hover, .hand-card:focus-within {
+  transform: rotate(0deg) translateY(-20px) scale(1.16);
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, .28));
+  z-index: 60 !important;
+}
+.hand-fan.empty-hand { min-height: 60px; align-items: center; }
+
+/* ---- 发牌 / 出牌 / 受伤动画 ---- */
+@keyframes deal-in {
+  from { opacity: 0; transform: translateY(26px) scale(.86) rotate(-3deg); }
+  to { opacity: 1; transform: none; }
+}
+.hand-card { animation: deal-in .26s ease both; }
+@keyframes play-out {
+  0% { opacity: 0; transform: translateY(-26px) scale(.9); }
+  60% { opacity: 1; }
+  100% { transform: none; }
+}
+.field-slot { animation: play-out .3s ease both; }
+@keyframes hit-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px) rotate(-1.2deg); }
+  40% { transform: translateX(5px) rotate(1.2deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.field-slot.hit { animation: hit-shake .36s ease; }
+.field-slot.hit .cf { border-color: #B91C1C; box-shadow: 0 0 0 2px rgba(185, 28, 28, .22); }
+
+/* ---- 详情浮层 ---- */
+.zoom-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, .55);
+  display: grid; place-items: center; z-index: 80; padding: 20px; }
+.zoom-body { display: flex; gap: 18px; background: #fff; border-radius: 14px; padding: 16px;
+  max-width: 720px; width: 100%; max-height: 88vh; overflow: auto;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, .35); }
+.zoom-side { flex: 1; min-width: 0; }
+.zoom-side h4 { margin: 0 0 8px; font-size: 17px; }
+.zoom-side h5 { margin: 12px 0 4px; font-size: 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em; }
+.zoom-side p { margin: 2px 0; font-size: 12.5px; color: var(--ink-2); }
+.zoom-kv { display: flex; gap: 8px; font-size: 12.5px; padding: 1px 0; }
+.zoom-kv > span { color: var(--muted); min-width: 88px; }
+.zoom-move { border-left: 3px solid var(--brand); background: #FCFCFD; border-radius: 0 8px 8px 0;
+  padding: 5px 9px; margin: 4px 0; }
+.zoom-move-head { display: flex; align-items: center; gap: 6px; }
+
+/* ---- 牌桌布局 ----
+   注意：.table-active 必须给出确定宽度 —— 否则 `.cf.field{width:100%}` 会与
+   「父容器宽度由内容决定」形成循环依赖，导致战斗位塌陷成几像素宽（踩过）。 */
+.table-side { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.table-active { flex: 0 0 auto; width: clamp(132px, 15vw, 172px); }
+.table-bench { flex: 1; min-width: 200px; }
+.bench-list-cards { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.field-slot { position: relative; }
+.side-opp .zone { background: linear-gradient(180deg, #FFF7F7, #fff); }
+.side-me .zone { background: linear-gradient(180deg, #F8FAFF, #fff); }
+
+/* 卡牌被抽到/打出时的入场节奏（多张依次略延迟，像逐张发牌） */
+.bench-list-cards .field-slot:nth-child(2) { animation-delay: .04s; }
+.bench-list-cards .field-slot:nth-child(3) { animation-delay: .08s; }
+.bench-list-cards .field-slot:nth-child(4) { animation-delay: .12s; }
+.bench-list-cards .field-slot:nth-child(5) { animation-delay: .16s; }
+
+@media (max-width: 900px) {
+  .cf.hand { width: 104px; }
+  .hand-fan { min-height: 158px; }
+  .zoom-body { flex-direction: column; }
+  .cf.zoom { width: 100%; max-width: 240px; margin: 0 auto; }
+}

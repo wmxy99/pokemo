@@ -112,8 +112,8 @@ export function ModelConfigPage({ onMsg, authed }) {
   if (!authed) {
     return (
       <section className="card">
-        <h3>后台 · 云端模型配置</h3>
-        <p className="sm muted">需要管理员登录后使用（配置含凭据，仅 admin 可读写）。</p>
+        <h3>需要管理员权限</h3>
+        <p className="sm muted">模型配置包含访问凭据，登录管理员账号后才能读取与修改。</p>
       </section>
     )
   }
@@ -122,7 +122,7 @@ export function ModelConfigPage({ onMsg, authed }) {
     <div className="llm-admin">
       <section className="card" style={{ marginBottom: 14 }}>
         <h3>
-          后台 · 云端模型配置
+          当前来源与连通状态
           {cfg && <Pill tone={SOURCE_TONE[cfg.source]?.tone || 'muted'}>
             当前来源：{SOURCE_TONE[cfg.source]?.text || cfg.source}
           </Pill>}
@@ -221,7 +221,7 @@ export function ModelConfigPage({ onMsg, authed }) {
       </section>
 
       <section className="card">
-        <h3>合规状态（6.2 · 与 /compliance 同源）</h3>
+        <h3>合规状态 <span className="pill sm">与合规声明页同源</span></h3>
         <table className="tbl">
           <tbody>
             <tr>

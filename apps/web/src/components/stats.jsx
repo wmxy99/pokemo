@@ -130,7 +130,7 @@ export function WinrateMatrix({ rows }) {
       </div>
       <p id="matrix-note" className="sm muted">
         hover / 聚焦单元格可查看 95%CI 与样本量；行=我方卡组视角（A 侧），列=对手。
-        n&lt;30 时置信区间较宽、底色更淡，勿据此下结论（PRD §7.1 K1 口径）。
+        n&lt;30 时置信区间较宽、底色更淡，请勿据此下结论。
       </p>
     </div>
   )

@@ -130,3 +130,34 @@ export function useToasts() {
   }, [])
   return [items, push]
 }
+
+/**
+ * 页面头部：统一的「标题 + 一句话说明 + 标签」结构
+ *
+ * 为什么统一：此前各页面有的用 h2、有的用 h3，且把 PRD 内部编号（F2/M6/K1）
+ * 直接写进标题，访客看不懂。现在把标题层级收敛到 h2，内部编号一律降级为
+ * 次级标签（title 里给全称），说明文字统一 12px 灰色。
+ */
+export function PageHead({ title, desc, tags = [], right }) {
+  return (
+    <div className="page-head">
+      <div className="ph-main">
+        <h2>{title}</h2>
+        {tags.length > 0 && (
+          <span className="ph-tags">
+            {tags.map((x, i) => (
+              <Pill key={i} tone="muted" title={x.title || x.label || x}>{x.label || x}</Pill>
+            ))}
+          </span>
+        )}
+      </div>
+      {desc && <p className="page-desc">{desc}</p>}
+      {right && <div className="ph-right">{right}</div>}
+    </div>
+  )
+}
+
+/** 卡片内的小节说明（统一 12px 灰字，与 PageHead 的 desc 呼应） */
+export function Hint({ children }) {
+  return <p className="hint">{children}</p>
+}

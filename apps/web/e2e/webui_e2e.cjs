@@ -90,7 +90,7 @@ const log = (name, ok, extra = {}) => { steps.push({ name, ok, ...extra }) }
   await sleep(2500)
   const board = await page.evaluate(() => ({
     acts: document.querySelectorAll('.act').length,
-    chips: document.querySelectorAll('.chip').length,
+    chips: document.querySelectorAll('.zone .cf').length,
     seed: (document.querySelector('.pill.mono') || {}).textContent || '',
     zones: document.querySelectorAll('.zone').length,
     err: (document.querySelector('.alert.err') || {}).textContent || '',

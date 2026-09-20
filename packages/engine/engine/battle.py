@@ -1511,10 +1511,30 @@ class Battle:
         pi = self.current if pi is None else pi
         me, opp = self.players[pi], self.players[1 - pi]
 
+        def atk(a):
+            """招式序列化（场上与手牌共用，保证卡面数据一致）"""
+            return {"name": a.name, "name_zh": a.name_zh,
+                    "display": a.name_zh or a.name,
+                    "cost": a.cost_total,
+                    "cost_map": list(a.cost), "damage": a.damage,
+                    "tags": list(a.effects),
+                    "desc": a.desc, "desc_zh": a.desc_zh,
+                    "display_desc": a.display_desc}
+
+        def abil(a):
+            """特性序列化（场上与手牌共用）"""
+            return {"name": a.name, "name_zh": a.name_zh,
+                    "display": a.name_zh or a.name,
+                    "tag": a.tag, "location": a.location,
+                    "desc": a.desc, "desc_zh": a.desc_zh,
+                    "display_desc": a.display_desc}
+
         def pkmn(fp: Optional[FieldPokemon]):
             if fp is None:
                 return None
             d = fp.summary()
+            d["type"] = "pokemon"                 # 显式类型：前端据此选择卡面渲染分支
+            d["ptype"] = fp.pdef.ptype            # 属性：卡面配色与筛选依据
             d["weakness"] = fp.pdef.weakness
             d["resistance"] = fp.pdef.resistance
             d["retreat"] = fp.pdef.retreat
@@ -1524,39 +1544,29 @@ class Battle:
             # i18n：英文名保留（数据键），新增 name_zh / display（中文展示，前端优先用）
             d["name_zh"] = fp.pdef.name_zh
             d["display"] = fp.pdef.display
-            d["abilities"] = [{"name": a.name, "name_zh": a.name_zh,
-                               "display": a.name_zh or a.name,
-                               "tag": a.tag, "location": a.location,
-                               "desc": a.desc, "desc_zh": a.desc_zh,
-                               "display_desc": a.display_desc}
-                              for a in fp.pdef.abilities]
-            d["attacks"] = [{"name": a.name, "name_zh": a.name_zh,
-                             "display": a.name_zh or a.name,
-                             "cost": a.cost_total,
-                             "cost_map": list(a.cost), "damage": a.damage,
-                             "tags": list(a.effects),
-                             "desc": a.desc, "desc_zh": a.desc_zh,
-                             "display_desc": a.display_desc}
-                            for a in fp.pdef.attacks]
+            d["abilities"] = [abil(a) for a in fp.pdef.abilities]
+            d["attacks"] = [atk(a) for a in fp.pdef.attacks]
             return d
 
         hand = []
         for c in me.hand:
             if isinstance(c, PokeRef):
+                # 手牌同样带**完整卡面数据**（属性/招式/弱点/撤退）：前端按真实卡牌渲染，
+                # 印在卡面上的信息不该因为「牌还在手上」而缺失
                 hand.append({"type": "pokemon", "name": c.pdef.name,
                              "name_zh": c.pdef.name_zh,
                              "display": c.pdef.display,
                              "hp": c.pdef.hp, "stage": c.pdef.stage,
+                             "ptype": c.pdef.ptype,
+                             "weakness": c.pdef.weakness,
+                             "resistance": c.pdef.resistance,
+                             "retreat": c.pdef.retreat,
+                             "ex": c.pdef.is_ex,
                              "evolves_from_zh": _evolves_from_zh(
                                  c.pdef.evolves_from),
                              "evolves_from": c.pdef.evolves_from,
-                             "abilities": [{"name": a.name, "name_zh": a.name_zh,
-                                            "display": a.name_zh or a.name,
-                                            "tag": a.tag,
-                                            "location": a.location,
-                                            "desc": a.desc, "desc_zh": a.desc_zh,
-                                            "display_desc": a.display_desc}
-                                           for a in c.pdef.abilities]})
+                             "abilities": [abil(a) for a in c.pdef.abilities],
+                             "attacks": [atk(a) for a in c.pdef.attacks]})
             elif isinstance(c, EnergyRef):
                 hand.append({"type": "energy", "name": c.edef.name,
                              "name_zh": c.edef.name_zh,

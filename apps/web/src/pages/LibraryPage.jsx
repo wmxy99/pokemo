@@ -224,9 +224,8 @@ export default function LibraryPage({ onMsg }) {
   }
 
   return (
-    <div className="area">
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2 style={{ margin: 0 }}>卡库 <span className="pill sm">PRD F2 / M1</span></h2>
+    <div>
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
         <Pill tone="warn">{t('tip.unofficial')}</Pill>
       </div>
 

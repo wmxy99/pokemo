@@ -70,7 +70,7 @@ export default function StatsPage({ onMsg, onGoBatch }) {
       </div>
 
       <div className="card">
-        <h3>导出报告 <span className="pill sm">三格式一致（PRD F7）</span></h3>
+        <h3>导出报告 <span className="pill sm">三种格式内容一致</span></h3>
         <ExportBar n={sel ? (jobs.find((j) => j.id === sel.id) || {}).result?.n : undefined}
           onExport={exportAs} preview={preview} />
         {!preview && <EmptyState text="选择下方任务后点「报告 md」预览，或直接导出 CSV/MD/JSON"

@@ -3,6 +3,7 @@ import { VERBS, verbLabel } from '../verbs.js'
 import { disp } from '../names.js'
 import { splitSequence, sequenceTip } from '../sequences.js'
 import { t } from '../i18n.js'
+import { HandFan, FieldPokemon } from './card.jsx'
 
 function VerbIcon({ verb, size = 16 }) {
   const d = (VERBS[verb] || {}).icon || VERBS.pass.icon
@@ -14,81 +15,50 @@ function VerbIcon({ verb, size = 16 }) {
 }
 
 /**
- * 文字棋盘与动作面板（UI 规范 §5.1/§5.2 · §4.1.1）
- * - chip 52×64 / 后备 40×50；HP 血条 8px，满血绿、低血（>50% 伤害）红
- * - aria-label="<牌名> HP x/y"；血条 role=progressbar
+ * 区域（我方 / 对手）：战斗位 + 后备 + 手牌（UI 规范 §5.1/§5.2）
+ *
+ * 视觉：自绘卡面（components/card.jsx），不使用官方卡图（合规 C1/C5）。
+ * 手牌用「真实拿牌」布局：叠压 + 微旋转，hover 抬起放大，点击弹出完整卡面。
+ * 双方手牌均只显示我方内容（对手手牌数可见、内容不可见，PRD F5）。
  */
 
-export function PokeChip({ p, small }) {
-  if (!p) return <div className={`chip chip-empty ${small ? 'sm' : ''}`} aria-label="空位"><span className="muted sm">—</span></div>
-  const hp = p.hp ?? 0
-  const dmg = p.dmg ?? 0
-  const left = Math.max(0, hp - dmg)
-  const ko = left === 0
-  return (
-    <div className={`chip ${small ? 'sm' : ''} ${ko ? 'ko' : ''}`}
-      title={`${disp(p)} HP ${left}/${hp}`}
-      aria-label={`${disp(p)} HP ${left}/${hp}`}>
-      <span className="chip-name">{disp(p)}</span>
-    </div>
-  )
-}
-
-export function HPRow({ p, compact }) {
-  if (!p) return null
-  const hp = p.hp ?? 0
-  const dmg = p.dmg ?? 0
-  const left = Math.max(0, hp - dmg)
-  const pct = hp ? Math.round((left / hp) * 100) : 0
-  const low = hp ? dmg / hp > 0.5 : false
-  return (
-    <div className="hprow">
-      <div className="bar" role="progressbar" aria-valuenow={left} aria-valuemin="0"
-        aria-valuemax={hp} aria-label={`HP ${left}/${hp}`}>
-        <i className={low ? 'low' : 'full'} style={{ width: pct + '%' }} />
-      </div>
-      <span className="mono sm">{left}/{hp}{p.energy != null ? ` · 能 ${p.energy}` : ''}</span>
-      {!compact && (p.status || []).length > 0 && (
-        <span className="sm muted">{(p.status || []).join('/')}</span>
-      )}
-    </div>
-  )
-}
-
-export function Zone({ title, st, side, showHand }) {
+export function Zone({ title, st, side, onPickCard, pickedIdx, hitName }) {
   if (!st) return null
   const bench = st.bench || []
+  const hand = st.hand || []
   return (
-    <section className="zone" aria-label={title}>
+    <section className={`zone side-${side}`} aria-label={title}>
       <header className="zt">
         <span>{title}</span>
         <span className="mono">
           奖赏 {st.prizes_left ?? '-'} · 牌库 {st.deck_count ?? '-'} · 弃牌 {st.discard_count ?? '-'}
-          {showHand ? ` · 手牌 ${st.hand_count ?? (st.hand || []).length}` : ''}
+          {' · '}手牌 {side === 'me' ? (st.hand_count ?? hand.length) : (st.hand_count ?? '?')}
         </span>
       </header>
-      <div className="board-row">
-        <div>
-          <div className="chip-wrap"><PokeChip p={st.active} /></div>
-          <HPRow p={st.active} />
+      <div className="table-side">
+        <div className="table-active">
+          <FieldPokemon p={st.active} size="field"
+            onClick={onPickCard ? () => onPickCard(st.active) : undefined} />
         </div>
-        <div className="bench">
+        <div className="table-bench">
           <span className="sm muted">后备 {bench.length}</span>
-          <div className="bench-list">
-            {bench.slice(0, 5).map((b, i) => (
-              <div key={i} className="bench-item">
-                <PokeChip p={b} small />
+          <div className="bench-list-cards">
+            {bench.map((b, i) => (
+              <div key={`${b.name}-${i}`}
+                className={`field-slot ${hitName && b.name === hitName ? 'hit' : ''}`}>
+                <FieldPokemon p={b} size="bench"
+                  onClick={onPickCard ? () => onPickCard(b) : undefined} />
               </div>
             ))}
             {bench.length === 0 && <span className="sm muted">（空）</span>}
           </div>
         </div>
       </div>
-      {side === 'me' && (st.hand || []).length > 0 && (
-        <div className="hand sm muted">
-          手牌：{(st.hand || []).map((c) => disp(c)).join('、')}
-        </div>
-      )}
+      {side === 'me' && (<>
+        <HandFan cards={hand} onPick={onPickCard} pickedIdx={pickedIdx} />
+        {/* 无障碍 + 既有 e2e 游标：手牌的文字化摘要（视觉隐藏） */}
+        <span className="sr hand">手牌：{hand.map((c) => disp(c)).join('、')}</span>
+      </>)}
     </section>
   )
 }

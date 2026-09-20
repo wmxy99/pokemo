@@ -128,7 +128,7 @@ export default function BatchPage({ onMsg }) {
             <button role="tab" aria-selected={mode === 'pair'}
               onClick={() => setMode('pair')}>单对位</button>
             <button role="tab" aria-selected={mode === 'pool'}
-              onClick={() => setMode('pool')}>卡组池矩阵 F7</button>
+              onClick={() => setMode('pool')}>卡组池矩阵</button>
           </div>
         </h3>
         <QuotaHint used={quotaUsed} />
@@ -184,7 +184,7 @@ export default function BatchPage({ onMsg }) {
           </div>
         </>)}
 
-        <p className="sm muted">先后手由引擎按 seed 交替决定；正式验收建议 200 局样本（PRD §7.1）</p>
+        <p className="sm muted">先后手由引擎按 seed 交替决定，以消除先手优势对胜率的干扰；正式验收建议使用 200 局样本。</p>
         <div className="row">
           <button className="primary" disabled={busy} onClick={submit}>{t('btn.submit')}</button>
           <button className="ghost" onClick={() => {

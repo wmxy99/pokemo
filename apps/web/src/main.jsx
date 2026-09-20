@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
+import './cards.css'
 import { api, token } from './api.js'
 import { t } from './i18n.js'
-import { Toast, useToasts } from './components/ui.jsx'
+import { Toast, useToasts, PageHead } from './components/ui.jsx'
 import BattlePage from './pages/BattlePage.jsx'
 import BatchPage from './pages/BatchPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
@@ -22,11 +23,36 @@ const FRONT = [
   { key: 'compliance', label: t('nav.compliance') },
 ]
 const ADMIN = [
-  { key: 'dash', label: '仪表盘 M6' },
+  { key: 'dash', label: '仪表盘' },
   { key: 'training', label: 'RL 训练' },
   { key: 'model', label: '模型配置' },
-  { key: 'users', label: '用户管理 M5' },
+  { key: 'users', label: '用户管理' },
 ]
+
+// 页面头部元信息：标题 + 一句话说明（统一由 main.jsx 渲染，避免各页面各写一套）
+// 说明文案面向使用者而非内部读者：不出现「F2 / M6 / PRD §7」这类编号。
+const PAGE_META = {
+  battle: { title: '对战', tags: ['人机对局', '同 seed 可复现'],
+    desc: '与规则基线或 MCTS AI 对局。左侧选择双方卡组与 AI 强度；中间是牌桌 —— 点击任意卡牌可查看完整卡面（招式费用、伤害与效果文本）；底部可直接输入中文指令。' },
+  batch: { title: '批量对战', tags: ['平衡性统计'],
+    desc: '提交成批对局用于平衡性分析：统计先后手胜率与平均回合数，并导出报告。任务可随时中断，已完成的对局会保留。' },
+  stats: { title: '统计报告', tags: ['胜率矩阵', '三格式导出'],
+    desc: '汇总批量任务的对位胜率矩阵，并对异常对局给出看门狗提示；报告可导出为 Markdown / CSV / JSON。' },
+  decks: { title: '卡组管理', tags: ['60 张校验'],
+    desc: '导入并校验 60 张卡组（Limitless 文本格式），查看起手模拟结果与预设对手池的可执行率（未建模的卡会明确标注为占位）。' },
+  library: { title: '卡库', tags: ['中 / 英 / 日检索'],
+    desc: '检索收录卡牌的名称与招式效果，并按「引擎是否可对战」筛选，便于判断某张卡在模拟中的可用程度。' },
+  compliance: { title: '合规声明', tags: ['非商用', '权利方标注'],
+    desc: '本项目的非商用范围、权利方标注要求、数据隐私与 AI 生成内容的标识说明（含实现状态自述）。' },
+  dash: { title: '仪表盘', tags: ['近 7 日'],
+    desc: '近 7 日批量对局与训练任务汇总，以及关键指标看门狗（达标情况如实标注）。' },
+  training: { title: 'RL 训练', tags: ['BC → PPO'],
+    desc: '启动与管理强化学习训练任务：BC 预训练 → 对基线 PPO → 自对弈与蒸馏；可实时查看日志与收益曲线。' },
+  model: { title: '模型配置', tags: ['本地 / 云端'],
+    desc: '配置用于卡牌效果解析与对战解说的模型端点。密钥加密存储，调用前对敏感信息脱敏。' },
+  users: { title: '用户管理', tags: ['管理员'],
+    desc: '查看注册用户、角色与状态；首个注册账号自动成为管理员。' },
+}
 
 function LoginBar({ user, setUser, onMsg, push }) {
   const [open, setOpen] = useState(false)
@@ -98,6 +124,7 @@ function App() {
       </header>
 
       <main className="area">
+        <PageHead {...(PAGE_META[page] || {})} />
         {zone === 'front' && (<>
           {page === 'battle' && <BattlePage onMsg={onMsg} onGoDecks={() => setPage('decks')} />}
           {page === 'batch' && <BatchPage onMsg={onMsg} />}

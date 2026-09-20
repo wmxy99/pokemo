@@ -145,4 +145,7 @@ def watchdog(p: Principal = Depends(current_user)):
          "status": "pass"},
     ]
     return {"rows": rows, "k1_detail": k1,
-            "disclaimer": "N7 诚实标注：K1 尚未达成，README「冲 70% 手册」已就位"}
+            # 说明文案不写死达标状态（K1 会随训练与评估更新）：
+            # 状态一律由上表按实测值判定，口径与复现步骤见 README 与 artifacts/ 下的验收报告
+            "disclaimer": "达标情况按上表实测值判定，未达标会如实标注；"
+                          "K1 的评估口径（双盲 200 局）与复现步骤见 README 与 artifacts/ 下的验收报告"}

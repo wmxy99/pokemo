@@ -113,8 +113,8 @@ export default function DecksPage({ onMsg, onGoBattle }) {
           <button className="ghost" onClick={() => { setText(''); setRes(null) }}>清空</button>
         </div>
         <p className="sm muted">
-          校验规则（PRD F3）：60 张上限 · 同名 ≤4（基本能量豁免）· 必须含基础宝可梦；
-          未收录卡进灰名单（C5 差异透明）并标记「不可对战」。
+          校验规则：60 张上限 · 同名不超过 4 张（基本能量豁免）· 必须包含基础宝可梦；
+          未收录的卡会进入灰名单并标记「不可对战」，差异如实展示。
           <br />卡名既可用<b>中文</b>（多龙巴鲁托ex / 高级球 / 基本超能量），也可用<b>英文规范名</b>
           （Dragapult ex / Ultra Ball）；中英混写同一张卡按同一张合并计数。
         </p>
@@ -216,7 +216,7 @@ export default function DecksPage({ onMsg, onGoBattle }) {
           </tbody>
         </table>
 
-        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10 · M1 真实卡表</span></h3>
+        <h3 style={{ marginTop: 16 }}>预设对手池 <span className="pill sm">真实 60 张卡表</span></h3>
         <div className="preset-row">
           {presets.map((p) => (
             <button key={p.id} className={`preset ${pd && pd.id === p.id ? 'on' : ''}`}
@@ -233,7 +233,7 @@ export default function DecksPage({ onMsg, onGoBattle }) {
         </div>
         <p className="sm muted">
           {presets.length
-            ? '真实卡名 + 引擎映射数值（M1 卡池补齐）：点开可看逐卡「可映射 / 近似 / 占位」状态，差异透明（C5）。'
+            ? '真实卡名 + 引擎映射数值。点开可查看逐卡状态：可映射 / 近似 / 占位，差异如实展示。'
             : '加载中…'}
         </p>
 

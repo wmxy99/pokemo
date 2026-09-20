@@ -32,7 +32,7 @@ export function DashboardPage({ onMsg }) {
       {err && <ErrBar code={err.code} message={err.message} onRetry={() => window.location.reload()} />}
 
       <div className="card">
-        <h3>仪表盘 · 统计报表（M6）</h3>
+        <h3>关键指标概览</h3>
         <div className="stats">
           <StatCard n={k.total_games ?? '—'} label="累计对局（本人）" />
           <StatCard n={users ? users.length : '—'} label="注册用户" />
@@ -41,7 +41,7 @@ export function DashboardPage({ onMsg }) {
       </div>
 
       <div className="card">
-        <h3>K1–K4 看门狗 <Pill tone="warn">诚实标注：K1 未达成，手册已就位</Pill></h3>
+        <h3>K1–K4 看门狗 <Pill tone="muted">按实测值判定，未达标会如实标注</Pill></h3>
         <table className="tbl">
           <thead><tr><th scope="col">指标</th><th scope="col">阈值</th><th scope="col">当前</th><th scope="col">状态</th></tr></thead>
           <tbody>
@@ -73,9 +73,9 @@ export function DashboardPage({ onMsg }) {
           {!sum && <span className="sm muted">加载中…</span>}
         </div>
         <div className="row" style={{ marginTop: 10 }}>
-          <button className="ghost sm" disabled title="F16 能力预留（P1）">导出 CSV（beta · F16 预留）</button>
-          <button className="ghost sm" disabled title="F16 能力预留（P1）">导出 MD（beta）</button>
-          <button className="ghost sm" disabled title="F16 能力预留（P1）">导出 JSON（beta）</button>
+          <button className="ghost sm" disabled title="导出能力预留，后续版本提供">导出 CSV（开发中）</button>
+          <button className="ghost sm" disabled title="导出能力预留，后续版本提供">导出 MD（开发中）</button>
+          <button className="ghost sm" disabled title="导出能力预留，后续版本提供">导出 JSON（开发中）</button>
         </div>
       </div>
     </div>
@@ -131,7 +131,7 @@ export function TrainingPage({ onMsg, authed }) {
     <div className="grid cols-2">
       <div className="card">
         <h3>RL 训练任务（PPO 课程） <Pill>BC → vs 基线 → 冻结快照 → MCTS 蒸馏</Pill></h3>
-        {!authed && <div className="alert warn" role="alert">训练管理需登录账号（F13/M5）：guest 提交将被拒绝（403）。</div>}
+        {!authed && <div className="alert warn" role="alert">训练管理需要登录账号：未登录提交会被拒绝（403）。</div>}
         <div className="row">
           <div><label htmlFor="s1">阶段1 vs 基线（局）</label>
             <input id="s1" type="number" value={form.stage1_episodes} style={{ width: 120 }}
@@ -208,8 +208,8 @@ export function UsersPage() {
   useEffect(() => { load() }, [])
   return (
     <div className="card">
-      <h3>用户管理（M5 · F13）
-        <Pill>JWT 鉴权 + 资源按 owner 隔离（越权访问被拒 · PRD §5.2）</Pill></h3>
+      <h3>用户管理
+        <Pill>登录鉴权 + 资源按所有者隔离，越权访问会被拒绝</Pill></h3>
       {err && <ErrBar code={err.code} message={err.message} onRetry={load} />}
       <table className="tbl">
         <thead><tr><th scope="col">用户</th><th scope="col">角色</th><th scope="col">日配额</th><th scope="col">创建时间</th><th scope="col">操作</th></tr></thead>

@@ -3,6 +3,7 @@ import { api, DECKS } from '../api.js'
 import { t } from '../i18n.js'
 import { verbLabel } from '../verbs.js'
 import { Zone, ActionPanel, CommandBar, TurnLog, SeedBar } from '../components/battle.jsx'
+import { CardZoom } from '../components/card.jsx'
 import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
 import { KvTable } from '../components/stats.jsx'
@@ -24,12 +25,34 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [commands, setCommands] = useState([])     // 引擎指令清单（中文）
   const [lastMatched, setLastMatched] = useState(null)
   const [cmdErr, setCmdErr] = useState(null)       // 指令解析失败（含歧义候选）
+  const [zoomCard, setZoomCard] = useState(null)   // 点击手牌 → 详情大卡
+  const [hitName, setHitName] = useState(null)     // 本回合受伤的宝可梦（抖动提示）
+  const prevDmg = useRef(new Map())
   const slowTimer = useRef(null)
 
   useEffect(() => {
     api.deckPresets().then((r) => setPresets(r.presets || [])).catch(() => {})
     api.myDecks().then((r) => setMyDecks(r.decks || [])).catch(() => {})
   }, [])
+
+  // 受伤提示：对比上一帧伤害值，让刚受伤的宝可梦抖一下（纯视觉，不改数据）
+  useEffect(() => {
+    const v = state?.view
+    if (!v) return undefined
+    const cur = new Map()
+    const all = [v.me_state?.active, v.opp_state?.active,
+      ...(v.me_state?.bench || []), ...(v.opp_state?.bench || [])]
+    all.filter(Boolean).forEach((p) => cur.set(p.name, p.dmg || 0))
+    let hit = null
+    cur.forEach((dmg, name) => {
+      if ((prevDmg.current.get(name) ?? 0) < dmg) hit = name
+    })
+    prevDmg.current = cur
+    if (!hit) return undefined
+    setHitName(hit)
+    const tm = setTimeout(() => setHitName(null), 420)
+    return () => clearTimeout(tm)
+  }, [state])
 
   async function create(deckAVal = deckA, deckBVal = deckB) {
     setBusy(true); setErr(null)
@@ -151,7 +174,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
           {state && <SeedBar seed={state.seed} onCopied={(s) => onMsg(`已复制 seed ${s}`)} />}
         </div>
 
-        <h3 style={{ marginTop: 16 }}>预设 Meta 对手池 <span className="pill sm">PRD §10 · M1 真实卡表</span></h3>
+        <h3 style={{ marginTop: 16 }}>预设对手池 <span className="pill sm">真实 60 张卡表</span></h3>
         <div className="preset-row">
           {presets.map((p) => (
             <button key={p.id} className={`preset ${deckB === p.id ? 'on' : ''}`}
@@ -187,9 +210,16 @@ export default function BattlePage({ onMsg, onGoDecks }) {
 
         {view && (<>
           <div className="grid" style={{ gap: 10 }}>
-            <Zone title="对手（AI）" st={view.opp_state} side="opp" />
-            <Zone title="我方" st={view.me_state} side="me" showHand />
+            <Zone title="对手（AI）" st={view.opp_state} side="opp" hitName={hitName}
+              onPickCard={(c) => setZoomCard(c)} />
+            <Zone title="我方" st={view.me_state} side="me" hitName={hitName}
+              onPickCard={(c) => setZoomCard(c)} />
           </div>
+          <p className="sm muted" style={{ margin: '4px 2px' }}>
+            点击任意卡牌（手牌 / 场上 / 后备）查看完整卡面：招式费用、伤害与效果文本。
+            卡面为自绘示意图，不使用官方卡图（合规 C1/C5）。
+          </p>
+          <CardZoom card={zoomCard} onClose={() => setZoomCard(null)} />
           <CommandBar commands={commands} disabled={finished} busy={busy}
             onSubmit={submitCommand} lastMatched={lastMatched} error={cmdErr} />
           <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
@@ -208,8 +238,8 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         <h3 style={{ marginTop: 12 }}>规则要点</h3>
         <ul className="sm muted" style={{ paddingLeft: 18 }}>
           <li>{t('tip.legal')}</li>
-          <li>只显示我方手牌（对手手牌不可见，PRD F5）</li>
-          <li>同 seed 可复现同一对局（PRD §7.2 可复现性）</li>
+          <li>只显示我方手牌 —— 对手手牌数量可见、内容不可见</li>
+          <li>同一 seed 可复现同一对局，便于复盘与公平比较</li>
           <li>K3 兜底：决策 &gt; 2s 提示，必要时降级 argmax（引擎侧策略）</li>
           <li>对局会话驻留服务内存，服务重启后需重开</li>
         </ul>

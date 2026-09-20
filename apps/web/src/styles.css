@@ -274,3 +274,28 @@ button.linklike:hover{color:var(--brand-deep)}
 .commentary details{margin-top:8px}
 .commentary summary{font-size:12px;color:var(--muted);cursor:pointer}
 .commentary pre{white-space:pre-wrap;word-break:break-word}
+
+/* ============================================================================
+   排版统一：页面头部（PageHead）/ 说明文字 / 卡片标题层级
+   此前各页面标题层级不一致（h2/h3 混用）且把 PRD 内部编号写进标题，此处收敛。
+   ========================================================================== */
+.page-head{margin:0 0 14px}
+.ph-main{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.page-head h2{margin:0;font-size:19px;font-weight:800;letter-spacing:.01em}
+.ph-tags{display:inline-flex;gap:6px;flex-wrap:wrap}
+.page-desc{margin:6px 0 0;font-size:12.5px;color:var(--muted);max-width:1180px;line-height:1.65}
+.ph-right{margin-top:8px}
+.hint{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.6}
+
+/* 卡片标题统一：加下分隔线形成层级（首个子元素不留上边距） */
+.card>h3:first-child{margin-top:0}
+.card>h3{padding-bottom:8px;border-bottom:1px solid var(--line-2)}
+.card>h3+.hint{margin-top:-4px;margin-bottom:8px}
+
+/* 页面内的分节（比卡片 h3 低一级） */
+.sub-h{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:13px;
+  font-weight:700;color:var(--ink-2)}
+
+/* 统一「首屏提示条」：页面顶部的一句话引导 */
+.lead{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line-2);border-left:3px solid var(--brand);
+  border-radius:0 10px 10px 0;background:#FCFCFD;font-size:12.5px;color:var(--ink-2);line-height:1.65}

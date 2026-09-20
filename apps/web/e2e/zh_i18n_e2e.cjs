@@ -77,7 +77,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     await clickText('button', '开始对局')
     await sleep(3500)
     const board = await page.evaluate(() => {
-      const chips = [...document.querySelectorAll('.chip-name')].map((c) => c.textContent.trim())
+      const chips = [...document.querySelectorAll('.cf-name')].map((c) => c.textContent.trim())
       const hand = (document.querySelector('.hand') || {}).textContent || ''
       const acts = [...document.querySelectorAll('.acts .act')].map((b) => b.textContent.trim())
       return { chips, hand: hand.replace(/^手牌：/, '').slice(0, 80), acts: acts.slice(0, 6) }

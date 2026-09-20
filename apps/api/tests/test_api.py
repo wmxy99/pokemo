@@ -295,7 +295,10 @@ class TestStats(unittest.TestCase):
         self.assertIn("Unofficial", s["declaration"])
         w = client.get("/stats/watchdog", headers=h).json()
         self.assertEqual([r["id"] for r in w["rows"]], ["K1", "K2", "K3", "K4"])
-        self.assertIn("诚实标注", w["disclaimer"])
+        # 说明文案不得写死达标状态（K1 会随训练更新，写死必然过期）：
+        # 只断言「如实标注」的口径存在，以及不复现历史措辞
+        self.assertIn("如实标注", w["disclaimer"])
+        self.assertNotIn("尚未达成", w["disclaimer"])
 
 
 @unittest.skipUnless(importlib.util.find_spec("torch"),

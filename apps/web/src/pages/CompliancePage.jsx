@@ -330,10 +330,9 @@ export default function CompliancePage() {
     <div className="compliance-wrap">
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={{ margin: '0 0 6px' }}>合规声明与自查（F9）</h2>
           <p className="sm muted" style={{ margin: 0 }}>
-            内容合规 6.1 · 数据隐私 6.2 · 红线 C1–C5 —— 本页展示后端同源声明与
-            <b>当前实现状态</b>，与页脚、卡库、报告导出一致（避免文案漂移）。
+            本页展示与后端接口同源的声明与<b>当前实现状态</b>，并与页脚、卡库、报告导出保持一致，
+            避免多处文案漂移。
           </p>
         </div>
         <div className="row">

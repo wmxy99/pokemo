@@ -237,6 +237,50 @@
 .cmd-drawer[open] > summary::before { content: "▾ "; }
 .cmd-drawer[open] { background: #fff; }
 
+/* ============================================================================
+   对战演出：卡片飞行 / 伤害飘字 / 奖赏卡堆 / 对手回放提示
+   动画节点由 anim.js 挂到 document.body（与 React 渲染解耦）
+   ========================================================================== */
+
+.fly-card { pointer-events: none; z-index: 900; border-radius: 8px;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 12px 22px rgba(15, 23, 42, .32)); }
+
+.float-text { position: fixed; transform: translate(-50%, -50%);
+  font-family: var(--mono); font-weight: 800; font-size: 22px;
+  pointer-events: none; z-index: 950;
+  text-shadow: 0 2px 0 #fff, 0 0 8px rgba(255, 255, 255, .9);
+  animation: float-up 1.05s cubic-bezier(.2, .8, .3, 1) forwards; }
+.float-text.dmg { color: #B91C1C; }
+.float-text.heal { color: #15803D; }
+.float-text.ko { color: #7F1D1D; font-size: 14px; letter-spacing: .12em; }
+.float-text.info { color: #B45309; font-size: 14px; }
+@keyframes float-up {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); }
+  18% { opacity: 1; transform: translate(-50%, -55%) scale(1.18); }
+  45% { transform: translate(-50%, -75%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(.95); }
+}
+
+/* 奖赏卡堆（背面朝上）；被取走时逐张翻转离场 */
+.prize-stack { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px;
+  vertical-align: middle; }
+.prize-card { width: 13px; height: 18px; border-radius: 3px; border: 1px solid #B91C1C;
+  background: repeating-linear-gradient(45deg, #DC2626 0 3px, #B91C1C 3px 6px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .25); transition: transform .3s ease, opacity .3s ease; }
+.prize-card.taken { animation: prize-flip .55s ease forwards; }
+@keyframes prize-flip {
+  0% { transform: rotateY(0) translateY(0); opacity: 1; }
+  55% { transform: rotateY(90deg) translateY(-6px) scale(1.15); opacity: .9; }
+  100% { transform: rotateY(180deg) translateY(-16px) scale(.7); opacity: 0; }
+}
+.prize-count { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* 对手行动回放中的提示条 */
+.replay-bar { display: flex; align-items: center; gap: 8px; margin: 8px 0 0;
+  padding: 7px 12px; border-radius: 10px; border: 1px solid #FDE68A;
+  background: #FFFBEB; color: #92400E; font-size: 12.5px; }
+
 @media (max-width: 900px) {
   .cf.hand { width: 104px; }
   .hand-fan { min-height: 158px; }

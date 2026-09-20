@@ -205,6 +205,7 @@ export function CardFace({ card, size = 'hand', state = {}, onClick, picked, dim
   return (
     <div className={cls} onClick={onClick} role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-name={card.name || card.display}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
       aria-label={`${card.display || card.name_zh || card.name}${max0(card, dmg)}`}>
       {kind === 'pokemon' && <PokemonFace c={card} size={size} dmg={dmg} used={used} />}

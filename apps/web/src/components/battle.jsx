@@ -15,6 +15,38 @@ function VerbIcon({ verb, size = 16 }) {
 }
 
 /**
+ * 奖赏卡堆：背面朝上的小卡，数量 = prizes_left
+ * 数量减少时，**被取走的那几张**逐张翻转离场（先渲染「旧的张数」，其中减少的带 taken 动画，
+ * 动画结束后回到真实张数）—— 让「对手拿走 1 张奖赏」这件事看得见。
+ */
+function PrizeStack({ n }) {
+  const [taken, setTaken] = React.useState(0)
+  const prev = React.useRef(n)
+  React.useEffect(() => {
+    if (n < prev.current) {
+      const drop = prev.current - n
+      setTaken(drop)
+      prev.current = n
+      const t = setTimeout(() => setTaken(0), 620)
+      return () => clearTimeout(t)
+    }
+    prev.current = n
+    return undefined
+  }, [n])
+  const total = Math.max(0, Math.min(12, taken > 0 ? n + taken : n))
+  if (total === 0 && n === 0) {
+    return <span className="prize-stack" aria-hidden="true"><span className="prize-count">已取完</span></span>
+  }
+  return (
+    <span className="prize-stack" aria-hidden="true">
+      {Array.from({ length: total }).map((_, i) => (
+        <i key={i} className={`prize-card ${taken > 0 && i >= n ? 'taken' : ''}`} />
+      ))}
+    </span>
+  )
+}
+
+/**
  * 区域（我方 / 对手）：战斗位 + 后备 + 手牌（UI 规范 §5.1/§5.2）
  *
  * 视觉：自绘卡面（components/card.jsx），不使用官方卡图（合规 C1/C5）。
@@ -35,12 +67,14 @@ export function Zone({ title, st, side, onPickCard, onPickHand, pickedIdx, hitNa
       <header className="zt">
         <span>{title}</span>
         <span className="mono">
-          奖赏 {st.prizes_left ?? '-'} · 牌库 {st.deck_count ?? '-'} · 弃牌 {st.discard_count ?? '-'}
+          奖赏 {st.prizes_left ?? '-'}
+          <PrizeStack n={st.prizes_left ?? 0} />
+          {' · '}牌库 {st.deck_count ?? '-'} · 弃牌 {st.discard_count ?? '-'}
           {' · '}手牌 {side === 'me' ? (st.hand_count ?? hand.length) : (st.hand_count ?? '?')}
         </span>
       </header>
       <div className="table-side">
-        <div className="table-active">
+        <div className={`table-active field-slot ${hitName === `${side}-0` ? 'hit' : ''}`}>
           <FieldPokemon p={st.active} size="field" highlight={hl(0)} dim={dmp(0)}
             onClick={onPickCard ? () => onPickCard(st.active, 0, side) : undefined} />
         </div>
@@ -49,7 +83,7 @@ export function Zone({ title, st, side, onPickCard, onPickHand, pickedIdx, hitNa
           <div className="bench-list-cards">
             {bench.map((b, i) => (
               <div key={`${b.name}-${i}`}
-                className={`field-slot ${hitName && b.name === hitName ? 'hit' : ''}`}>
+                className={`field-slot ${hitName === `${side}-${i + 1}` ? 'hit' : ''}`}>
                 <FieldPokemon p={b} size="bench" highlight={hl(i + 1)} dim={dmp(i + 1)}
                   onClick={onPickCard ? () => onPickCard(b, i + 1, side) : undefined} />
               </div>

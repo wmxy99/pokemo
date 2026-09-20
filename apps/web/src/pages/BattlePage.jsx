@@ -7,10 +7,13 @@ import { CardZoom } from '../components/card.jsx'
 import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
 import { planForHand, passAction } from '../plays.js'
+import { flyCard, floatText, fieldSlotEl, handCardEl } from '../anim.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 
 const K3_MS = 2000   // K3 兜底下限：>2s 禁用动作 + 提示（UI 规范 §4.1.1）
+const REPLAY_MS = 520  // 对手每个动作的回放停留时长（太短看不清、太长拖沓）
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export default function BattlePage({ onMsg, onGoDecks }) {
   const [deckA, setDeckA] = useState('lightning')
@@ -30,6 +33,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [hitName, setHitName] = useState(null)     // 本回合受伤的宝可梦（抖动提示）
   const [selHand, setSelHand] = useState(-1)       // 选中的手牌索引（出牌用）
   const [pending, setPending] = useState(null)     // 等待选目标的动作
+  const [replaying, setReplaying] = useState(false) // 对手动作回放中
   const prevDmg = useRef(new Map())
   const slowTimer = useRef(null)
 
@@ -38,21 +42,46 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     api.myDecks().then((r) => setMyDecks(r.decks || [])).catch(() => {})
   }, [])
 
-  // 受伤提示：对比上一帧伤害值，让刚受伤的宝可梦抖一下（纯视觉，不改数据）
+  // 战损演出：对比上一帧，让刚受伤的宝可梦抖一下**并飘出伤害数字**；
+  // 血量归零则额外飘「已倒下」。纯视觉，不改数据。
+  //
+  // ⚠ 身份必须用**位置**（side + pos）而不是卡名：同一套牌里常有同名宝可梦
+  //   （例如对手场上两只「火苗兽」），用 name 当 key 会互相覆盖，
+  //   导致伤害比较错乱、飘字丢失（踩过）。
   useEffect(() => {
     const v = state?.view
     if (!v) return undefined
     const cur = new Map()
-    const all = [v.me_state?.active, v.opp_state?.active,
-      ...(v.me_state?.bench || []), ...(v.opp_state?.bench || [])]
-    all.filter(Boolean).forEach((p) => cur.set(p.name, p.dmg || 0))
-    let hit = null
-    cur.forEach((dmg, name) => {
-      if ((prevDmg.current.get(name) ?? 0) < dmg) hit = name
+    const list = [
+      ['me', 0, v.me_state?.active], ['opp', 0, v.opp_state?.active],
+      ...(v.me_state?.bench || []).map((p, i) => ['me', i + 1, p]),
+      ...(v.opp_state?.bench || []).map((p, i) => ['opp', i + 1, p]),
+    ]
+    list.forEach(([side, pos, p]) => {
+      if (p) cur.set(`${side}-${pos}`, { dmg: p.dmg || 0, hp: p.hp || 0 })
+    })
+    let hitKey = null
+    cur.forEach((now, key) => {
+      const before = prevDmg.current.get(key)
+      if (!before) return
+      const i = key.indexOf('-')
+      const side = key.slice(0, i)
+      const pos = Number(key.slice(i + 1))
+      if (before.dmg < now.dmg) {
+        hitKey = key
+        const el = fieldSlotEl(side, pos)
+        if (el) floatText(el, `-${now.dmg - before.dmg}`, 'dmg')
+      }
+      if (before.hp - before.dmg > 0 && now.hp - now.dmg <= 0) {
+        setTimeout(() => {
+          const el = fieldSlotEl(side, pos)
+          if (el) floatText(el, '已倒下', 'ko')
+        }, 320)
+      }
     })
     prevDmg.current = cur
-    if (!hit) return undefined
-    setHitName(hit)
+    if (!hitKey) return undefined
+    setHitName(hitKey)
     const tm = setTimeout(() => setHitName(null), 420)
     return () => clearTimeout(tm)
   }, [state])
@@ -74,24 +103,55 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     finally { setBusy(false) }
   }
 
-  async function act(a) {
+  // 一次动作的完整演出：① 出牌飞行 → ② 应用新局面（触发战损飘字）→ ③ 对手动作逐条回放
+  async function act(a, srcHandIdx = -1) {
     if (!state || busy) return
+    // ① 飞行必须在 setState **之前**发起：视图更新后手牌会重排，源卡位置就取不到了
+    if (srcHandIdx >= 0) {
+      const src = handCardEl(srcHandIdx)
+      const dst = targetElFor(a)
+      if (src && dst) flyCard(src, dst)
+    }
     setBusy(true); setErr(null)
     setSlow(false)
     slowTimer.current = setTimeout(() => setSlow(true), K3_MS)
     try {
       const r = await api.act(state.id, a)
-      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
-      setCommands(r.commands || [])
       const ctx = actionContext(state.view)          // 提交前的局面（含中文名）
       const zh = (x) => verbLabel(x, ctx)
-      setLog((l) => [...l,
-        `> 我方：${zh(a)}`,
-        ...(r.ai_actions || []).map((x) => `< AI：${x.verb === 'attack' ? '攻击' : verbLabel(x)}`),
-        r.winner != null ? `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==` : null,
-      ].filter(Boolean))
+      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
+      setCommands(r.commands || [])
+      setLog((l) => [...l, `> 我方：${zh(a)}`])
+      const ai = r.ai_actions || []
+      if (ai.length > 0) {
+        // ③ 逐条回放对手动作。引擎一次只返回**最终局面**（没有中间态），
+        //    所以这里按节奏逐条播报动作本身，让玩家看清 AI 做了什么；
+        //    回放期间 busy 未释放，我方操作保持禁用。
+        setReplaying(true)
+        for (let i = 0; i < ai.length; i += 1) {
+          await sleep(REPLAY_MS)
+          const x = ai[i]
+          setLog((l) => [...l, `< AI：${x.verb === 'attack' ? '攻击' : zh(x)}`])
+        }
+        setReplaying(false)
+      }
+      if (r.winner != null) {
+        setLog((l) => [...l,
+          `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==`])
+      }
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
-    finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false) }
+    finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false); setReplaying(false) }
+  }
+
+  /** 动作的目标落点（出牌飞行用）：按 verb / tag 判断打到哪张卡上 */
+  function targetElFor(a) {
+    if (a.target === undefined) {
+      // 无目标（上后备 / 一次性支援者）→ 落到我方后备区
+      return document.querySelector('.zone.side-me .bench-list-cards')
+        || document.querySelector('.zone.side-me')
+    }
+    const side = (a.verb === 'trainer' && a.tag === 'boss') ? 'opp' : 'me'
+    return fieldSlotEl(side, a.target) || document.querySelector('.zone.side-me')
   }
 
   // 自由文本指令：中文招式名 / 卡名 / 位置（如「幻影俯冲」「附能量到后备1」）
@@ -167,7 +227,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       setPending(null)
       const to = plan.autoTarget ? `（目标：${plan.autoTarget.label}）` : ''
       onMsg(`出牌：${card.display || card.name_zh || card.name}${to}`)
-      act(plan.action)
+      act(plan.action, idx)      // 带手牌索引 → 播放「从手牌飞到场上」
       return
     }
     setSelHand(idx)
@@ -175,9 +235,10 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   }
 
   function doTarget(t) {
+    const src = selHand                     // 飞行起点 = 刚才点的那张手牌
     setPending(null)
     setSelHand(-1)
-    act(t.action)
+    act(t.action, src)
   }
 
   function matchesSide(where, side) {
@@ -274,6 +335,13 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         )}
 
         {view && (<>
+          {replaying && (
+            <div className="replay-bar" role="status" aria-live="polite">
+              <i className="dot" aria-hidden="true" />
+              对手正在行动 —— 逐个动作回放中（回放结束前你的操作会暂时锁定）
+            </div>
+          )}
+
           {pending && (
             <div className="target-bar" role="region" aria-label="选择目标">
               <b className="sm">选择目标：</b>

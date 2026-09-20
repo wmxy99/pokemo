@@ -17,7 +17,7 @@ cd apps/web && npm ci && npm run build && cd ..
 
 ```bash
 cd packages/engine && python -m unittest discover -s tests      # 213 项
-cd packages/agent  && python -m unittest discover -s tests      # 148 项（需 torch）
+cd packages/agent  && python -m unittest discover -s tests      # 172 项（需 torch）
 cd apps/api        && python -m unittest discover -s tests      # 126 项
 ```
 
@@ -53,7 +53,8 @@ cd apps/web && npm run dev
 ## 4. 平台 · apps/api + apps/web（专业）
 - 后端：`apps/api/app/`（FastAPI，8 个 router）；改接口 → 补 `apps/api/tests/test_api.py` 用例
 - 前端：`apps/web/src/`（React + Vite）；界面文案改动 → **同步 `src/i18n.js` 的 zh/en 两份键**
-- 端到端脚本：`apps/web/e2e/*.cjs`（Playwright 风格，需后端与前端已启动）
+- 端到端脚本：`apps/web/e2e/*.cjs`（**puppeteer-core + CDP** 驱动本机 Chrome，非 Playwright；
+  需后端与前端已启动，依赖见 `apps/web/package.json` devDependencies，用法见 `apps/web/e2e/README.md`）
 
 ## 流程
 1. Fork → 分支 `feat/xxx`

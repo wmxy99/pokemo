@@ -78,9 +78,11 @@ jobs:
       - name: Data-redline guard (文件内容：本地绝对路径 / 凭据)
         run: |
           # 只扫**跟踪的文本文件**的内容（历史上的守卫只看文件名，漏掉了 README 里的本地路径）。
+          # 排除运行产物：根 artifacts/ **以及各包内的 packages/*/artifacts/**（训练产物会记录
+          #   本机绝对路径，原先只锚定根级 artifacts/，导致 packages/agent/artifacts/ 被误扫 → 守卫误报）。
           # 例外：脱敏测试本身就需要「假路径 / 假密钥」作为夹具 → 白名单放行。
           FILES=$(git ls-files '*.md' '*.py' '*.js' '*.jsx' '*.json' '*.yml' '*.txt' '*.cjs' \
-                  | grep -v -E '^(apps/api/data/|artifacts/)' \
+                  | grep -v -E '^(apps/api/data/|artifacts/|packages/[^/]+/artifacts/)' \
                   | grep -v -E '^packages/agent/tests/test_privacy\.py$' || true)
           fail=0
           # 个人目录 / 常见本机环境目录（Program Files 等标准安装位置不算）

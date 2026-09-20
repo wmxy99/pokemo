@@ -82,6 +82,15 @@ def load(quant: Optional[str] = None, max_gpu: Optional[str] = None,
 
     quant: ``8bit``（默认，LLM.int8）· ``4bit``（NF4 + 双量化，省显存用）· ``bf16``（参考/调试）
     """
+    # 零依赖的前置校验**必须排在 import 之前**：
+    #   ① 目录不存在时不该先付 2GB 的 torch/transformers 加载代价；
+    #   ② 若放在 import 之后，本模块的「目录缺失必须明确报错」用例在**无 torch 的环境**
+    #      （例如只装了 apps/api/requirements.txt 的 CI）会先抛 ModuleNotFoundError，
+    #      变成一个恒失败的假红测试。
+    path = model_path()
+    if not Path(path).exists():
+        raise SystemExit(f"[qwen] 模型目录不存在：{path}")
+
     import torch
     from transformers import (AutoModelForCausalLM, AutoTokenizer,
                               BitsAndBytesConfig)
@@ -94,9 +103,6 @@ def load(quant: Optional[str] = None, max_gpu: Optional[str] = None,
     # 输入转 fp16 做 int8 矩阵乘），无需每次提示，故提到 ERROR。
     logging.getLogger("bitsandbytes.autograd._functions").setLevel(logging.ERROR)
 
-    path = model_path()
-    if not Path(path).exists():
-        raise SystemExit(f"[qwen] 模型目录不存在：{path}")
     quant = (quant or quant_mode()).lower()
     gpu = max_gpu or os.environ.get("POKELAB_QWEN_MAX_GPU", "5.2GB")
 

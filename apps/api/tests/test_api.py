@@ -7,6 +7,7 @@
 注意：train 用例会真实启动子进程跑最小课程（约 15–40s）。
 """
 from __future__ import annotations
+import importlib.util
 import os
 import sys
 import tempfile
@@ -297,6 +298,9 @@ class TestStats(unittest.TestCase):
         self.assertIn("诚实标注", w["disclaimer"])
 
 
+@unittest.skipUnless(importlib.util.find_spec("torch"),
+                     "训练子进程需要 torch：CI 的 api job 只装 apps/api/requirements.txt，"
+                     "未装 torch；本地装有 torch 时本用例正常执行")
 class TestTrain(unittest.TestCase):
     def test_train_minimal_run(self):
         r = client.post("/train/jobs", headers=user_headers(), json={

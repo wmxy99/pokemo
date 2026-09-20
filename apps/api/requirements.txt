@@ -3,6 +3,10 @@
 fastapi>=0.110
 uvicorn>=0.29
 pydantic>=2.5
+# 认证：app/auth.py 模块级 `import jwt`（注册/登录签发与校验 token），缺失会导致整个 app 无法导入
+PyJWT>=2.8
+# 密钥加密：app/crypto.py 惰性 import cryptography.fernet（模型配置页密钥落库必需）
+cryptography>=42
 # 测试
 httpx>=0.27
 # 说明：engine / agent / card-db 为仓库本地包（apps.api.app.main 启动时注入路径）

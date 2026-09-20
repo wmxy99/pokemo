@@ -11,8 +11,7 @@ v1 编码设计（实测 STATE_DIM=51 / ACTION_DIM=14，以模块常量推断值
     对「不可知细节」（对手手牌）一律不编码 → 保证仅用公开信息。
 """
 from __future__ import annotations
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 ENGINE_TYPES = ("grass", "fire", "water", "lightning", "psychic", "fighting",

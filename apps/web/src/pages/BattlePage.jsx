@@ -34,6 +34,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [selHand, setSelHand] = useState(-1)       // 选中的手牌索引（出牌用）
   const [pending, setPending] = useState(null)     // 等待选目标的动作
   const [replaying, setReplaying] = useState(false) // 对手动作回放中
+  const [framedReplay, setFramedReplay] = useState(false) // 回放是否带真实中间帧（逐帧）
   const prevDmg = useRef(new Map())
   const slowTimer = useRef(null)
 
@@ -49,12 +50,13 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   //   （例如对手场上两只「火苗兽」），用 name 当 key 会互相覆盖，
   //   导致伤害比较错乱、飘字丢失（踩过）。
   //
-  // ⚠ 回放期间必须挂起：引擎一次只返回最终局面，若当帧就飘字，会出现
-  //   「伤害先跳、AI 动作后播」的错序。等回放结束（replaying → false）再比对，
-  //   此时 prevDmg 仍是动作前的值，差值依然正确。
+  // ⚠ 回放期间必须挂起**除非是逐帧回放**：无中间帧时（旧接口/退化路径）引擎一次只返回
+  //   最终局面，若当帧就飘字会出现「伤害先跳、AI 动作后播」的错序——那种情况等回放结束
+  //   （replaying → false）再比对，prevDmg 仍是动作前的值，差值依然正确。
+  //   有中间帧（framedReplay）时则**不要挂起**：让伤害飘字跟着每一帧走，棋盘真正动起来。
   useEffect(() => {
     const v = state?.view
-    if (!v || replaying) return undefined
+    if (!v || (replaying && !framedReplay)) return undefined
     const cur = new Map()
     const list = [
       ['me', 0, v.me_state?.active], ['opp', 0, v.opp_state?.active],
@@ -88,7 +90,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     setHitName(hitKey)
     const tm = setTimeout(() => setHitName(null), 420)
     return () => clearTimeout(tm)
-  }, [state, replaying])
+  }, [state, replaying, framedReplay])
 
   async function create(deckAVal = deckA, deckBVal = deckB) {
     setBusy(true); setErr(null)
@@ -100,14 +102,48 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       if (String(deckBVal).startsWith('deck_')) payload.deck_b_id = deckBVal
       else payload.deck_b = deckBVal
       const r = await api.createBattle(payload)
-      setState(r); setLog([]); setCommands(r.commands || [])
+      const steps = r.ai_steps || []
+      // 开局若 AI 先手，把它的动作逐帧放出来（先展示第一帧，避免「先闪终局再回退」）
+      setState({ ...r, view: (steps[0] && steps[0].view) || r.view })
+      setLog([]); setCommands(r.commands || [])
       setLastMatched(null); setCmdErr(null)
       setPending(null); setSelHand(-1); setZoomCard(null)
-      setReplaying(false); setHitName(null)
+      setReplaying(false); setHitName(null); setFramedReplay(false)
       prevDmg.current = new Map()   // 新对局必须清空战损基线，否则会出现错误伤害数
       onMsg(`对局已创建 seed=${r.seed}`, 'ok')
+      if (steps.length) {
+        const ctx = actionContext(r.view)
+        await replayAiSteps(steps, (x) => verbLabel(x, ctx))
+        setState((s) => ({ ...s, view: r.view }))   // 收口到最终完整局面
+      }
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
     finally { setBusy(false) }
+  }
+
+  /**
+   * 逐帧回放 AI 动作：优先用接口的 ai_steps（带中间态，棋盘会真正动起来），
+   * 退化为只按节奏播报动作（无中间帧）。返回是否有中间帧（调用方一般无需关心）。
+   */
+  async function replayAiSteps(steps, zh) {
+    if (!steps || steps.length === 0) return
+    const framed = steps.some((x) => x && x.view)
+    setFramedReplay(framed)
+    setReplaying(true)
+    try {
+      for (const stp of steps) {
+        await sleep(REPLAY_MS)
+        if (stp.note) { setLog((l) => [...l, `… ${stp.note}`]); continue }
+        const x = stp.action
+        if (x) setLog((l) => [...l, `< AI：${x.verb === 'attack' ? '攻击' : zh(x)}`])
+        if (stp.view) {
+          // 中间帧只更新局面，不碰 winner/finished —— 避免中途提前亮胜负
+          setState((s) => ({ ...s, view: stp.view }))
+        }
+      }
+    } finally {
+      setReplaying(false)
+      setFramedReplay(false)
+    }
   }
 
   // 一次动作的完整演出：① 出牌飞行 → ② 应用新局面（触发战损飘字）→ ③ 对手动作逐条回放
@@ -126,28 +162,20 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       const r = await api.act(state.id, a)
       const ctx = actionContext(state.view)          // 提交前的局面（含中文名）
       const zh = (x) => verbLabel(x, ctx)
-      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
       setCommands(r.commands || [])
       setLog((l) => [...l, `> 我方：${zh(a)}`])
-      const ai = r.ai_actions || []
-      if (ai.length > 0) {
-        // ③ 逐条回放对手动作。引擎一次只返回**最终局面**（没有中间态），
-        //    所以这里按节奏逐条播报动作本身，让玩家看清 AI 做了什么；
-        //    回放期间 busy 未释放，我方操作保持禁用。
-        setReplaying(true)
-        for (let i = 0; i < ai.length; i += 1) {
-          await sleep(REPLAY_MS)
-          const x = ai[i]
-          setLog((l) => [...l, `< AI：${x.verb === 'attack' ? '攻击' : zh(x)}`])
-        }
-        setReplaying(false)
-      }
+      // ① 我方动作后的局面（回放第一帧，让玩家立刻看到自己的操作生效）
+      if (r.player_view) setState((s) => ({ ...s, view: r.player_view }))
+      // ② 对手动作逐帧回放（有中间态则棋盘跟着动，无则退化为只播报）
+      await replayAiSteps(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })), zh)
+      // ③ 收口：最终完整局面（含 legal / 胜负）
+      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
       if (r.winner != null) {
         setLog((l) => [...l,
           `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==`])
       }
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
-    finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false); setReplaying(false) }
+    finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false); setReplaying(false); setFramedReplay(false) }
   }
 
   /** 动作的目标落点（出牌飞行用）：按归一化后的区域 + 槽位判断打到哪张卡上 */
@@ -174,7 +202,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     try {
       const before = state.view
       const r = await api.actCommand(state.id, text)
-      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
       setCommands(r.commands || [])
       setLastMatched(r.matched || text)
       const ctx = actionContext(before)
@@ -188,9 +215,16 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         (r.remaining || []).length
           ? `… 停止：${r.stopped || '已停止'}（剩余 ${r.remaining.length} 步：${r.remaining.join(' / ')}）`
           : null,
-        ...(r.ai_actions || []).map((x) => `< AI：${x.verb === 'attack' ? '攻击' : verbLabel(x)}`),
-        r.winner != null ? `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==` : null,
       ].filter(Boolean))
+      // 我方动作后的局面 → 对手逐帧回放 → 最终收口（与「点牌出牌」同一套演出）
+      if (r.player_view) setState((s) => ({ ...s, view: r.player_view }))
+      await replayAiSteps(r.ai_steps || (r.ai_actions || []).map((x) => ({ action: x })),
+        (x) => verbLabel(x, ctx))
+      setState((s) => ({ ...s, view: r.view, winner: r.winner, finished: r.winner != null }))
+      if (r.winner != null) {
+        setLog((l) => [...l,
+          `== 终局：${r.winner === (state.player_side ?? 0) ? '我方胜' : 'AI 胜'} ==`])
+      }
     } catch (e) {
       // 歧义/无法识别 → 展示候选（引擎结构化 detail）
       const d = e.detail
@@ -201,7 +235,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         setCmdErr({ message: e.message, candidates: [] })
       }
       setLog((l) => [...l, `! 指令「${text}」未执行：${(d && d.error) || e.message}`])
-    } finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false) }
+    } finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false); setReplaying(false); setFramedReplay(false) }
   }
 
   const view = state?.view

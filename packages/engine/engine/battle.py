@@ -13,8 +13,8 @@ from __future__ import annotations
 import random
 import re
 from typing import Optional
-from .cards import (CardRef, PokeRef, EnergyRef, TrainerRef, FieldPokemon,
-                    make_pokemon, COLORLESS)
+from .cards import (PokeRef, EnergyRef, TrainerRef, FieldPokemon,
+                    make_pokemon)
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield)

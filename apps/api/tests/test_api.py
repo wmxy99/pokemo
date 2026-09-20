@@ -117,6 +117,106 @@ class TestBattles(unittest.TestCase):
         self.assertTrue(isinstance(j["seed"], int))
 
 
+class TestBattleViewPerspective(unittest.TestCase):
+    """视角守卫：接口返回的 `view` 必须是**玩家视角**。
+
+    历史缺陷：`battle.view()` 不带参数时取 `battle.current`；对局若在 AI 回合结束
+    （结束时 current 仍是 AI），返回里 `me` 指向 AI、`me_state.hand` 装的是**对手手牌**，
+    且前端会左右互换棋盘。合成复现率 10/83。**这是信息泄露，不只是显示问题。**
+    """
+
+    def _assert_perspective(self, payload, player_side, where):
+        v = payload["view"]
+        self.assertEqual(v["me"], player_side,
+                         f"{where}: view.me={v['me']}，不是玩家侧 {player_side}（视角泄露）")
+        self.assertIn("hand", v["me_state"], f"{where}: 我方应带手牌明细")
+        self.assertIn("hand_count", v["opp_state"], f"{where}: 对手应带手牌**数量**")
+        self.assertNotIn("hand", v["opp_state"],
+                         f"{where}: 对手不得带手牌明细（泄露）")
+
+    def test_perspective_all_the_way_to_game_over(self):
+        """玩家只 pass（最坏路径）打到终局，**每一次响应**都校验视角。"""
+        r = client.post("/battles", json={"deck_a": "lightning", "deck_b": "fire",
+                                          "ai_iters": 0, "player_side": 0})
+        self.assertEqual(r.status_code, 201, r.text)
+        j = r.json()
+        bid, side = j["id"], j["player_side"]
+        self._assert_perspective(j, side, "create")
+        finished = False
+        for i in range(1, 201):
+            st = client.get(f"/battles/{bid}").json()
+            self._assert_perspective(st, side, f"get_state#{i}")
+            if st.get("finished"):
+                finished = True
+                break
+            legal = (st["view"] or {}).get("legal") or []
+            act = next((a for a in legal if a.get("verb") == "pass"), None) \
+                or (legal[0] if legal else {"verb": "pass"})
+            ar = client.post(f"/battles/{bid}/actions", json={"action": act})
+            self.assertEqual(ar.status_code, 200, ar.text)
+            aj = ar.json()
+            self._assert_perspective(aj, side, f"act#{i}")
+            if aj["winner"] is not None:
+                finished = True
+                break
+        self.assertTrue(finished, "对局未在 200 步内结束（测试前提失效）")
+
+    def test_finished_on_ai_turn_returns_player_view(self):
+        """确定性覆盖「AI 打完最后一击 → 对局结束且 current 仍是 AI」这一态。"""
+        r = client.post("/battles", json={"deck_a": "lightning", "deck_b": "fire",
+                                          "ai_iters": 0, "player_side": 0})
+        bid, side = r.json()["id"], r.json()["player_side"]
+        b = store.battle_sessions[bid]["battle"]
+        b.finished = True                 # 复刻：对局在 AI 回合结束
+        b.current = 1 - side              # 此时行动方仍是 AI 侧
+        self._assert_perspective(client.get(f"/battles/{bid}").json(), side,
+                                 "get_state(finished on AI turn)")
+
+    def test_ai_steps_carry_intermediate_views(self):
+        """AI 回应需带逐步中间态（供前端逐帧回放）；中间态不含 legal（控体积）。"""
+        r = client.post("/battles", json={"deck_a": "lightning", "deck_b": "fire",
+                                          "ai_iters": 0, "player_side": 0})
+        bid = r.json()["id"]
+        seen = False
+        for _ in range(60):
+            st = client.get(f"/battles/{bid}").json()
+            if st.get("finished"):
+                break
+            legal = (st["view"] or {}).get("legal") or []
+            act = next((a for a in legal if a.get("verb") == "pass"), None) \
+                or (legal[0] if legal else {"verb": "pass"})
+            aj = client.post(f"/battles/{bid}/actions", json={"action": act}).json()
+            self.assertIn("ai_steps", aj)
+            self.assertIn("player_view", aj)
+            # 旧字段与新字段必须一致（避免两套说法漂移）
+            self.assertEqual([x["action"] for x in aj["ai_steps"]], aj["ai_actions"])
+            pv = aj["player_view"]
+            self.assertEqual(pv["me"], aj["view"]["me"])
+            self.assertNotIn("legal", pv, "player_view 是中间帧，不应携带 legal")
+            for stp in aj["ai_steps"]:
+                if stp["view"] is not None:
+                    seen = True
+                    self.assertNotIn("legal", stp["view"], "中间态不应携带 legal")
+                    self.assertEqual(stp["view"]["me"], aj["view"]["me"],
+                                     "中间态也必须用玩家视角（否则泄露对手手牌）")
+            if aj["winner"] is not None:
+                break
+        self.assertTrue(seen, "整局都没拿到 AI 中间态（逐帧回放会退化成只播报日志）")
+
+    def test_api_layer_has_no_bare_view_call(self):
+        """静态守卫：接口层不得出现不带视角参数的 `battle.view()`。
+
+        唯一例外是 AI 决策（`ai.decide(battle.view())`）——它本就该拿自己的视角。
+        """
+        import inspect
+        from apps.api.app import battles as mod
+        bad = [ln.strip() for ln in inspect.getsource(mod).splitlines()
+               if ".view()" in ln and "decide(" not in ln
+               and not ln.strip().startswith("#")]
+        self.assertEqual(bad, [],
+                         f"接口层存在不带视角的 view() 调用（会泄露对手手牌）：{bad}")
+
+
 class TestAuthZ(unittest.TestCase):
     """真 JWT/RBAC：guest 禁训练 · 跨用户越权 403 · admin 用户管理"""
 

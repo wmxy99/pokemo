@@ -18,7 +18,7 @@ from fastapi.responses import PlainTextResponse
 
 from . import store, schemas, auth
 from .auth import Principal, current_user, ensure_owner
-from .labels import deck_label_zh, card_display
+from .labels import deck_label_zh
 from .sse import sse_response, FINAL, parse_last_event_id as sse_parse_last
 
 router = APIRouter(prefix="/batch", tags=["batch"])

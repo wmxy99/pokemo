@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .llmclient import LLMConfigError, chat as _chat, config as _config, source as _source
+from .llmclient import LLMConfigError, chat as _chat, config as _config
 
 AI_NOTICE = ("本内容由 AI 自动生成，仅供研究参考；可能不完全准确，"
              "以官方规则与卡面原文为准。")

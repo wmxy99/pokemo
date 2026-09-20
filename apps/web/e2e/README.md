@@ -40,6 +40,7 @@ node e2e/shoot_pages.cjs http://127.0.0.1:8000 dist/shots
 | `check_i18n.cjs` | zh/en 键一致性守卫（**CI 会跑，无需浏览器**） | 否 |
 | `plays_check.cjs` | `plays.js` 目标语义对账（引擎 target 语义 ↔ UI 高亮/文案）+ 训练家/特性 tag 文案覆盖（**CI 会跑，无需浏览器**） | 否 |
 | `battle_target_check.cjs` | 目标语义端到端：点「老大的指令」→ 高亮的卡必须就是实际换上场的卡 | 是 |
+| `replay_frames_check.cjs` | 逐帧回放：回放窗口内对手区指纹去重数 ≈ AI 动作数 + 1（旧实现最多 2） | 是 |
 | `check_render.cjs` | `/app/` 渲染自检：控制台/网络/运行时错误收集 + 截图 | 是 |
 | `webui_e2e.cjs` | F3→F5：注册登录 → 卡组校验 → 建局 → 合法动作按钮 | 是 |
 | `library_e2e.cjs` | F2 卡库：统计条 / 搜索（EN·中文·归一）/ 筛选 / 翻页 / 详情 | 是 |

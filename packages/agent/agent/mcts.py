@@ -13,7 +13,7 @@ import copy
 import math
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Optional
 
 from .state_encoder import encode_state, encode_action

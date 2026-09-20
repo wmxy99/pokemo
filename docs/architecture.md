@@ -16,10 +16,10 @@ graph TD
   end
   subgraph 智能
     AGT[packages/agent<br/>状态编码 · 策略网 · MCTS<br/>LangGraph · K2 提示词]
-    GYM[packages/gym<br/>占位 · P3]
+    GYM[packages/gym<br/>单智能体环境 · 零依赖]
   end
   subgraph 平台
-    API[apps/api<br/>FastAPI · 8 router · 42 路由]
+    API[apps/api<br/>FastAPI · 8 router · 43 路由]
     WEB[apps/web<br/>React + Vite · 8 页面]
     CLI[apps/cli<br/>单局/批量 CLI]
   end

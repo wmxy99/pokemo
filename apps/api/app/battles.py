@@ -9,7 +9,6 @@
 from __future__ import annotations
 import copy
 import random
-import time
 
 from fastapi import APIRouter, HTTPException, Depends
 
@@ -87,35 +86,73 @@ def create_battle(req: schemas.BattleCreateReq,
             "ai_iters": req.ai_iters,
             "player_side": req.player_side, "owner": p.name,
         }
-    view = battle.view()
-    ai_first = []
+    # ⚠ 视角必须显式指定为**玩家侧**：battle.view() 默认取 `battle.current`，
+    #   而对局可能在 AI 回合结束（此时 current 仍是 AI）→ 会把 AI 的手牌当"我方手牌"返回，
+    #   同时棋盘左右互换。这是信息泄露 + 显示错乱（有回归测试守着）。
+    view = battle.view(req.player_side)
+    opening = {"steps": [], "stopped": None}
     if battle.current != req.player_side and not battle.finished:
-        ai_first = _run_ai_until_human(bid)     # 对手先手则自动走至人类回合
-        view = battle.view()
+        opening = _run_ai_until_human(bid)      # 对手先手则自动走至人类回合
+        view = battle.view(req.player_side)
     return {"id": bid, "seed": seed, "player_side": req.player_side,
             "turn": view["turn"], "phase": view["phase"],
-            "winner": None, "ai_auto_first": ai_first,
+            "winner": None,
+            # 开局对手动作：ai_steps 带中间态（供逐帧回放）；ai_auto_first 保留旧形态
+            "ai_steps": opening["steps"],
+            "ai_auto_first": [x["action"] for x in opening["steps"] if x["action"]],
+            "ai_stopped": opening["stopped"],
             "commands": battle.command_catalog(), "view": view}
 
 
-def _run_ai_until_human(bid: str):
-    """AI 侧自动步直至轮到玩家或对局结束；返回本轮回合计（含 AI 日志动作）"""
+def _slim_view(view: dict) -> dict:
+    """回放用的**中间态**：剔除只对"当前可操作方"有意义的字段（legal 等）。
+
+    AI 一轮可能有 5–10 步，每步都带一份 view；去掉 legal 可显著压小响应体积，
+    且回放期间前端本就锁定操作（`busy`），不会用到 legal。
+    """
+    out = dict(view)
+    out.pop("legal", None)
+    return out
+
+
+def _run_ai_until_human(bid: str) -> dict:
+    """AI 侧自动步直至轮到玩家或对局结束。
+
+    返回 `{"steps": [...], "stopped": str|None}`，其中每个 step 是
+    `{"action": {...} | None, "view": {...} | None, "note": str | None}`：
+      - `action` 为该步**实际生效**的动作（AI 给非法动作而改走 pass 时记录 pass，
+        不会回放"没有真正发生"的动作）
+      - `view` 为该步执行**之后**的局面（已精简）→ 前端据此**逐帧回放**
+      - `note` 用于「因防死循环而中止」这类非动作事件
+    """
     s = store.battle_sessions.get(bid)
     if not s:
         raise HTTPException(404, "对局不存在或已过期（服务重启后需重开）")
     battle = s["battle"]
     player_side = s["player_side"]
     ai = _opp_agent(battle, s["ai_iters"], s["seed"])
-    ai_actions = []
+    steps = []
     guard = 0
     while not battle.finished and battle.current != player_side and guard < 500:
         guard += 1
         act = ai.decide(battle.view())
-        ai_actions.append(copy.deepcopy(act))
         res = battle.step(copy.deepcopy(act))
         if not res["ok"]:
-            battle.step({"verb": "pass"})
-    return ai_actions
+            # AI 给出非法动作：改走 pass。若连 pass 都不被接受，则退出（避免死循环）
+            fallback = battle.step({"verb": "pass"})
+            if not fallback["ok"]:
+                steps.append({"action": None, "view": None,
+                              "note": "AI 连续给出非法动作，已中止本轮自动步进"})
+                break
+            act = {"verb": "pass"}
+        steps.append({"action": copy.deepcopy(act),
+                      "view": _slim_view(battle.view(player_side))})
+    stopped = None
+    if guard >= 500:
+        stopped = "guard"
+        steps.append({"action": None, "view": None,
+                      "note": "自动步进达到 500 步上限，已中止"})
+    return {"steps": steps, "stopped": stopped}
 
 
 @router.post("/{bid}/actions")
@@ -130,8 +167,9 @@ def act(bid: str, req: schemas.ActionReq,
         raise HTTPException(409, "对局已结束")
     if battle.current != s["player_side"]:
         raise HTTPException(409, "当前不是你的回合")
-    legal = battle.view().get("legal") or []
     side = s["player_side"]
+    # 此处 current == side（上面已校验），但显式传 side 以免日后默认值含义变化时又出问题
+    legal = battle.view(side).get("legal") or []
 
     # ---- 情况 A：直接给引擎动作（保持 F5 严格 1:1，支持名称补全） ----
     if req.action is not None:
@@ -188,8 +226,9 @@ def act(bid: str, req: schemas.ActionReq,
             if x.get("ok")) or None
 
     # AI 回应（玩家回合结束/移交后才会有 AI 动作）
-    ai_actions = _run_ai_until_human(bid)
-    view = battle.view()
+    player_view = _slim_view(battle.view(side))   # 我方动作后的局面 = 回放第一帧
+    ai = _run_ai_until_human(bid)
+    view = battle.view(side)                      # 显式玩家视角（勿用默认=当前行动方）
     store.update_battle(bid, status="finished" if battle.finished else "open",
                         payload={"winner": battle.winner})
     my_turn = (not battle.finished and battle.current == side)
@@ -205,7 +244,11 @@ def act(bid: str, req: schemas.ActionReq,
             "remaining": seq.get("remaining", []),
             "stopped": seq.get("stopped"),
             "sequence_hint": sequence_hint(),
-            "ai_actions": ai_actions,
+            # AI 回应：ai_steps 带逐步中间态（供逐帧回放）；ai_actions 保留旧形态
+            "player_view": player_view,
+            "ai_steps": ai["steps"],
+            "ai_actions": [x["action"] for x in ai["steps"] if x["action"]],
+            "ai_stopped": ai["stopped"],
             "commands": battle.command_catalog() if my_turn else [],
             "view": view}
 
@@ -234,7 +277,7 @@ def get_state(bid: str, p: Principal = Depends(current_user)):
         raise HTTPException(404, "对局不存在或已过期")
     ensure_owner(s.get("owner", "guest"), p)
     battle = s["battle"]
-    view = battle.view()
+    view = battle.view(s["player_side"])          # 显式玩家视角（勿用默认=当前行动方）
     my_turn = (not battle.finished
                and battle.current == s["player_side"])
     return {"id": bid, "seed": s["seed"], "turn": view["turn"],

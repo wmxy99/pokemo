@@ -18,7 +18,8 @@ cd apps/web && npm ci && npm run build && cd ..
 ```bash
 cd packages/engine && python -m unittest discover -s tests      # 213 项
 cd packages/agent  && python -m unittest discover -s tests      # 172 项（需 torch）
-cd apps/api        && python -m unittest discover -s tests      # 126 项
+cd packages/gym    && PYTHONPATH=../engine python -m unittest discover -s tests  # 7 项（零依赖）
+cd apps/api        && python -m unittest discover -s tests      # 130 项
 ```
 
 **本地启动**（前后端一体）

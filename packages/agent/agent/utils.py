@@ -5,7 +5,6 @@
 否则回退 CPU 并打印原因。小策略网络显存占用 <200MB，6GB 卡可安心并行。
 """
 from __future__ import annotations
-from typing import Optional
 
 
 def resolve_device(name: str = "auto", min_free_gb: float = 1.2,

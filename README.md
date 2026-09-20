@@ -4,8 +4,8 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **213** 项）· 全仓 **511** 项测试全绿
-（engine 213 · agent 172 · api 126）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **213** 项）· 全仓 **522** 项测试全绿
+（engine 213 · agent 172 · api 130 · gym 7）
 
 | | |
 |---|---|
@@ -42,8 +42,8 @@ cd apps/cli && python run_demo.py batch 100
 | `packages/engine` | 自研简化版对战规则引擎（回合状态机 / 裁判 / 结算闭环 / 事件日志 / 真实卡池） | v1.4 · 213 测 | Apache-2.0 |
 | `packages/card-db` | 卡牌数据管道 + 规则知识库（代码与 schema 可发布；**数据运行时本地导入**） | 1267 卡入库 | Apache-2.0 |
 | `packages/agent` | 决策链路（状态编码 → 策略网 → MCTS → LangGraph）+ RL 训练（BC→PPO）+ K2 提示词库 | 172 测 | Apache-2.0 |
-| `packages/gym` | 博弈智能教学环境 | **占位（P3 规划）** | Apache-2.0 |
-| `apps/api` | FastAPI 后端：对战 / 批量 / 训练 / 卡组 / 卡库 / 统计 / 合规 / 模型配置（**43 路由 / 39 路径**） | 126 测 | Apache-2.0 |
+| `packages/gym` | 单智能体博弈环境（gymnasium 风格 `reset/step`，零运行时依赖，含对手 benchmark） | 7 测 | Apache-2.0 |
+| `apps/api` | FastAPI 后端：对战 / 批量 / 训练 / 卡组 / 卡库 / 统计 / 合规 / 模型配置（**43 路由 / 39 路径**） | 130 测 | Apache-2.0 |
 | `apps/web` | React 18 + Vite 前端：8 个页面（对战 / 批量 / 统计矩阵 / 卡组 / 卡库 / 合规 / 模型配置 / 后台） | 已实现 | Apache-2.0 |
 | `apps/cli` | 单局 / 批量对局命令行入口 | 可用 | Apache-2.0 |
 | `packages/content-pokemon` | 宝可梦内容样例（**自述转写，无官方图/原文**） | — | **PolyForm NC** |

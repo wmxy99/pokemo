@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pokelab-gym"
+version = "0.1.0"
+description = "PokéLab AI · 宝可梦 TCG 单智能体博弈环境（gymnasium 风格最小接口，零运行时依赖）"
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+
+[tool.setuptools.packages.find]
+include = ["pokegym*"]

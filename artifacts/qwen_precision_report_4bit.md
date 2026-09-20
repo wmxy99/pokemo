@@ -1,6 +1,6 @@
 # Qwen3-4B 量化精度对照报告
 
-- 模型：`D:\pokemo\qwen3-4b\moxing`（Qwen3-4B）
+- 模型：`POKELAB_QWEN_PATH`（Qwen3-4B）
 - 硬件：RTX 4050 Laptop 6GB · torch 2.13.0+cu130
 - 量化档位：**4bit**
 - 生成时间：2026-09-15 11:30:13

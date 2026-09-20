@@ -26,5 +26,5 @@
 
 **结论：未达 0.70（差 0.005）—— 继续长训或调参（见 examples/RUN_K1_LONG.md）**
 - 口径：双盲 n=200（100 先手 / 100 后手）· 95%CI ±0.064 · **PRD 要求 200 局**（已达协议局数）
-- 权重：D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_basic707.pt
-- 曲线：D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_basic707_curve.json 已由各阶段输出
+- 权重：packages/agent/artifacts/k1_basic707.pt
+- 曲线：packages/agent/artifacts/k1_basic707_curve.json 已由各阶段输出

@@ -881,6 +881,6 @@
     "verdict": "完全一致"
   },
   "torch": "2.13.0+cu130",
-  "model_path": "D:\\pokemo\\qwen3-4b\\moxing",
+  "model_path": "POKELAB_QWEN_PATH",
   "elapsed_s": 196.1
 }

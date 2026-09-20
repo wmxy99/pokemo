@@ -483,7 +483,7 @@ def write_report(payload: dict, tag: str | None = None) -> None:
                   encoding="utf-8")
 
     L = ["# Qwen3-4B 量化精度对照报告", "",
-         f"- 模型：`{LQ.model_path()}`（Qwen3-4B）",
+         f"- 模型：Qwen3-4B 本地权重（路径来自 `POKELAB_QWEN_PATH`，**不入库**）",
          f"- 硬件：RTX 4050 Laptop 6GB · torch {payload.get('torch','?')}",
          f"- 量化档位：**{payload.get('quant')}**",
          f"- 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}", ""]
@@ -688,7 +688,7 @@ def compare_report() -> int:
         return d if d is not None else default
 
     L = ["# Qwen3-4B 量化档位对照（8bit vs 4bit）", "",
-         f"- 模型：`{LQ.model_path()}`（Qwen3-4B）",
+         f"- 模型：Qwen3-4B 本地权重（路径来自 `POKELAB_QWEN_PATH`，**不入库**）",
          "- 硬件：RTX 4050 Laptop 6GB · 同一份固定样本（跨档可比）",
          f"- 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}",
          "- 参考口径：两档都对照**同一个 bf16 参考**（CPU offload，计算精度仍 bf16）",
@@ -875,7 +875,10 @@ def main() -> int:
     import torch
     quant = (a.quant or LQ.quant_mode()).lower()
     payload = {"quant": quant, "layer1": None, "layer2": None, "layer3": None,
-               "torch": torch.__version__, "model_path": LQ.model_path()}
+               "torch": torch.__version__,
+               # 产物**不落本机模型路径**：权重是使用者本地资产（不入库），
+               # 写绝对路径会让产物绑定某台机器（见 agent/paths.py 的同类约定）
+               "model_path": "POKELAB_QWEN_PATH"}
 
     t0 = time.time()
     if a.layer in ("1", "all"):

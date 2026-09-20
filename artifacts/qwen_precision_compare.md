@@ -1,6 +1,6 @@
 # Qwen3-4B 量化档位对照（8bit vs 4bit）
 
-- 模型：`D:\pokemo\qwen3-4b\moxing`（Qwen3-4B）
+- 模型：`POKELAB_QWEN_PATH`（Qwen3-4B）
 - 硬件：RTX 4050 Laptop 6GB · 同一份固定样本（跨档可比）
 - 生成时间：2026-09-15 11:34:11
 - 参考口径：两档都对照**同一个 bf16 参考**（CPU offload，计算精度仍 bf16）

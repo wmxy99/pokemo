@@ -28,14 +28,24 @@ jobs:
           cd packages/card-db
           python scripts/seed_demo.py
 
-  agent-compile:
+  agent:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: Static compile (torch 依赖在本地运行测试)
+      - name: Install CPU torch + optional deps
+        run: |
+          # CPU 版 torch：测试只跑极小规模训练，不需要 GPU（也避免拖入 ~800MB CUDA 轮子）
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          # langgraph：agent 的可选编排形态；装上才能跑满 172 项（未装会有 2 项 skip）
+          pip install langgraph
+      - name: Static compile（快速失败前置）
         run: python -m py_compile packages/agent/agent/*.py
+      - name: Run agent tests
+        run: |
+          cd packages/agent
+          python -m unittest discover -s tests -v
 
   api:
     runs-on: ubuntu-latest
@@ -51,6 +61,43 @@ jobs:
           python -m unittest discover -s tests -v
       - name: Backup script smoke test (--check 不应崩溃)
         run: python apps/api/scripts/backup_data.py --check || test $? -eq 2
+
+  decl-check:
+    name: 依赖声明完整性（干净环境导入入口）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 只安装“已声明”的依赖（api + card-db；刻意不装 torch）
+        run: |
+          pip install -r apps/api/requirements.txt
+          pip install -r packages/card-db/requirements.txt
+      - name: api 入口必须能在“无 torch”环境导入
+        run: |
+          # 专治「本地环境恰好齐全 → 依赖漏声明看不出来」：
+          #   apps/api 的启动路径会 import agent 包；若 agent/__init__ 顶层拉 torch，
+          #   只装 api requirements 的部署就整包不可导入（历史真 bug，见 agent/__init__.py）。
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from apps.api.app.main import app
+          methods = ("get", "post", "put", "patch", "delete")
+          n = sum(1 for v in app.openapi()["paths"].values() for m in v if m in methods)
+          print(f"OK: api 入口导入成功，路由操作数 {n}")
+          PY
+      - name: agent 轻量模块必须能在“无 torch”环境导入
+        run: |
+          cd packages/agent
+          python - <<'PY'
+          import agent
+          from agent import llmclient, effects, privacy, mcts   # noqa: F401
+          print("OK: agent 轻量模块导入成功（torch 系模块保持惰性）")
+          PY
+      - name: engine 必须零三方依赖可导入
+        run: |
+          cd packages/engine
+          python -c "import engine; print('OK: engine 导入成功（零三方依赖）')"
 
   web-build:
     runs-on: ubuntu-latest
@@ -78,11 +125,12 @@ jobs:
       - name: Data-redline guard (文件内容：本地绝对路径 / 凭据)
         run: |
           # 只扫**跟踪的文本文件**的内容（历史上的守卫只看文件名，漏掉了 README 里的本地路径）。
-          # 排除运行产物：根 artifacts/ **以及各包内的 packages/*/artifacts/**（训练产物会记录
-          #   本机绝对路径，原先只锚定根级 artifacts/，导致 packages/agent/artifacts/ 被误扫 → 守卫误报）。
-          # 例外：脱敏测试本身就需要「假路径 / 假密钥」作为夹具 → 白名单放行。
+          # **产物目录 artifacts/ 一律不豁免**：训练/评测产物里的权重与模型路径已统一写成
+          #   仓内相对路径（packages/agent/examples/* 走 agent/paths.py 的 portable_path；
+          #   本机模型目录只记来源变量 POKELAB_QWEN_PATH），所以产物也必须过这条线 ——
+          #   今后若有人再写回本机绝对路径，CI 立刻拦住（历史教训：产物曾带 D:/xxx 绝对路径）。
+          # 例外：仅脱敏测试本身需要「假路径 / 假密钥」作为夹具 → 白名单放行。
           FILES=$(git ls-files '*.md' '*.py' '*.js' '*.jsx' '*.json' '*.yml' '*.txt' '*.cjs' \
-                  | grep -v -E '^(apps/api/data/|artifacts/|packages/[^/]+/artifacts/)' \
                   | grep -v -E '^packages/agent/tests/test_privacy\.py$' || true)
           fail=0
           # 个人目录 / 常见本机环境目录（Program Files 等标准安装位置不算）

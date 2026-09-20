@@ -13,7 +13,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 3.0,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_cont40k.pt"
+   "weights": "packages/agent/artifacts/k1_cont40k.pt"
   },
   {
    "n": 200,
@@ -28,7 +28,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 3.3,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s25000.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s25000.pt"
   },
   {
    "n": 200,
@@ -43,7 +43,7 @@
    "as_second": 100,
    "one_sided": 0.725,
    "secs": 3.3,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s27500.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s27500.pt"
   },
   {
    "n": 200,
@@ -58,7 +58,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 3.5,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s210000.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s210000.pt"
   },
   {
    "n": 200,
@@ -73,7 +73,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 3.2,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s212500.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s212500.pt"
   },
   {
    "n": 200,
@@ -88,7 +88,7 @@
    "as_second": 100,
    "one_sided": 0.725,
    "secs": 3.3,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s215000.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s215000.pt"
   },
   {
    "n": 200,
@@ -103,7 +103,7 @@
    "as_second": 100,
    "one_sided": 0.725,
    "secs": 3.2,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_selfplay_s217500.pt"
+   "weights": "packages/agent/artifacts/k1_selfplay_s217500.pt"
   }
  ],
  "ref_first_winrate": 0.64,

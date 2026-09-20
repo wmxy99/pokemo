@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine import decklib                                   # noqa: E402
 from agent import trainer                                    # noqa: E402
 from agent.trainer import load_net                           # noqa: E402
+from agent.paths import portable_path                        # noqa: E402
 
 TARGET = 0.70
 
@@ -91,7 +92,7 @@ def main() -> int:
                                        opponent="baseline", device=a.device)
             r["one_sided"] = one["win_rate"]
         r["secs"] = round(time.time() - t0, 1)
-        r["weights"] = w
+        r["weights"] = portable_path(w)      # 产物可移植：不落本机绝对路径
         rows.append(r)
         if ref is None:
             ref = r["ref_first_winrate"]
@@ -104,11 +105,12 @@ def main() -> int:
     best = max(rows, key=lambda x: x["win_rate"])
     passed = best["win_rate"] >= TARGET
 
+    calib_note = portable_path(a.mcts_calib) if a.mcts_calib else "未用"
     L = ["# PokéLab AI · K1 验收报告（对规则基线 · 双盲协议）", "",
          f"- 生成：{time.strftime('%Y-%m-%d %H:%M:%S')}",
          f"- 口径：**双盲 {a.games} 局**（交替先后手）· 镜像卡组 `{a.decks}` · "
          f"seed0={a.seed0} · device={a.device}",
-         f"- 决策配置：**{'MCTS iters=%d × depth=%d（价值头标定 %s）' % (a.mcts_iters, a.max_depth, a.mcts_calib or '未用') if a.mcts_iters else '网络 argmax（无搜索）'}**",
+         f"- 决策配置：**{'MCTS iters=%d × depth=%d（价值头标定 %s）' % (a.mcts_iters, a.max_depth, calib_note) if a.mcts_iters else '网络 argmax（无搜索）'}**",
          f"- KPI：**K1 对规则基线胜率 ≥ {TARGET:.2f}**（PRD）", "",
          "## 结果", "",
          "| 权重 | 决策 | 双盲胜率 | n | 95%CI | 单侧胜率（对照） | 耗时 |",

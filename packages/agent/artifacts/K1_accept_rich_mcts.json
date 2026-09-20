@@ -14,7 +14,7 @@
    "as_second": 100,
    "one_sided": NaN,
    "secs": 121.6,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_rich.pt"
+   "weights": "packages/agent/artifacts/k1_rich.pt"
   }
  ],
  "ref_first_winrate": 0.64,

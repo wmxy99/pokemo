@@ -13,7 +13,7 @@
    "as_second": 100,
    "one_sided": 0.895,
    "secs": 1.6,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_fire_rich.pt"
+   "weights": "packages/agent/artifacts/k1_fire_rich.pt"
   },
   {
    "n": 200,
@@ -28,7 +28,7 @@
    "as_second": 100,
    "one_sided": 0.785,
    "secs": 1.6,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_fire_basic.pt"
+   "weights": "packages/agent/artifacts/k1_fire_basic.pt"
   }
  ],
  "ref_first_winrate": 0.68,

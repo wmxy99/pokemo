@@ -26,5 +26,5 @@
 
 **结论：PASS ✅**
 - 口径：双盲 n=200（100 先手 / 100 后手）· 95%CI ±0.062 · **PRD 要求 200 局**（已达协议局数）
-- 权重：D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_fire_basic.pt
-- 曲线：D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_fire_basic_curve.json 已由各阶段输出
+- 权重：packages/agent/artifacts/k1_fire_basic.pt
+- 曲线：packages/agent/artifacts/k1_fire_basic_curve.json 已由各阶段输出

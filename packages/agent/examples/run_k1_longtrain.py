@@ -45,6 +45,7 @@ from agent.state_encoder import (EncoderConfig, action_dim, encoder_dim,
 from agent.policy_net import make_net
 from agent import bc, trainer, distill
 from agent.utils import resolve_device
+from agent.paths import portable_path
 
 
 def main():
@@ -321,8 +322,8 @@ def main():
               f"**PRD 要求 200 局**"
               + ("（已达协议局数）" if ev_blind["n"] >= 200
                  else f"（当前 {ev_blind['n']} 局，未达协议）"),
-              f"- 权重：{args.save}",
-              f"- 曲线：{args.report.replace('.md', '_curve.json')} 已由各阶段输出"]
+              f"- 权重：{portable_path(args.save)}",
+              f"- 曲线：{portable_path(args.report.replace('.md', '_curve.json'))} 已由各阶段输出"]
     Path(args.report).write_text("\n".join(lines), encoding="utf-8")
     (Path(args.report).parent / "curve.json").write_text(
         json.dumps(curve, ensure_ascii=False, indent=1), encoding="utf-8")

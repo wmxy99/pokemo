@@ -13,7 +13,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 2.1,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_cont40k.pt"
+   "weights": "packages/agent/artifacts/k1_cont40k.pt"
   },
   {
    "n": 200,
@@ -28,7 +28,7 @@
    "as_second": 100,
    "one_sided": 0.83,
    "secs": 2.2,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_rich.pt"
+   "weights": "packages/agent/artifacts/k1_rich.pt"
   },
   {
    "n": 200,
@@ -43,7 +43,7 @@
    "as_second": 100,
    "one_sided": 0.735,
    "secs": 2.1,
-   "weights": "D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_basic707.pt"
+   "weights": "packages/agent/artifacts/k1_basic707.pt"
   }
  ],
  "ref_first_winrate": 0.64,

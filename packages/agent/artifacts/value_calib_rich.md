@@ -1,6 +1,6 @@
 # 价值头胜率标定（K1 攻坚）
 
-- 权重：`D:/pokemo/pokelab-ai/packages/agent/artifacts/k1_rich.pt` · games=120 · opponent=baseline · seed=0
+- 权重：`packages/agent/artifacts/k1_rich.pt` · games=120 · opponent=baseline · seed=0
 - 生成：2026-09-18 10:25:56
 
 > 目的：`mcts._value_of` 用 `(v+1)/2` 把价值头输出当胜率，隐含「量纲=胜率区间」与「线性映射」两个**未检验假设**。

@@ -50,6 +50,7 @@ from engine.agents import BaselineAI, RandomAgent             # noqa: E402
 from agent.trainer import load_net                            # noqa: E402
 from agent.value_calib import fit_platt, calibration_metrics  # noqa: E402
 from agent.policy_agent import PolicyAgent                    # noqa: E402
+from agent.paths import portable_path                         # noqa: E402
 
 
 def _make_opp(name: str, seed: int = 0):
@@ -159,7 +160,7 @@ def main():
                    seed0=a.seed, max_actions=a.max_actions, device=a.device)
     print(f"[calib] 采样完成 {time.time()-t0:.0f}s")
 
-    out = {"weights": a.weights, "games": a.games, "opponent": a.opponent,
+    out = {"weights": portable_path(a.weights), "games": a.games, "opponent": a.opponent,
            "seed": a.seed, "groups": {},
            "actor_is_opponent_share": round(data.get("_actor_is_opponent_share", 0), 3)}
     # 汇总组（MCTS 标定要用的就是它）：所有**行动方视角**样本
@@ -167,7 +168,7 @@ def main():
     ally = [y for g in ("own", "leaf_opp", "leaf_same") for y in data[g][1]]
     data["pooled"] = (allv, ally)
     L = ["# 价值头胜率标定（K1 攻坚）", "",
-         f"- 权重：`{a.weights}` · games={a.games} · "
+         f"- 权重：`{portable_path(a.weights)}` · games={a.games} · "
          f"opponent={a.opponent} · seed={a.seed}",
          f"- 生成：{time.strftime('%Y-%m-%d %H:%M:%S')}", "",
          "> 目的：`mcts._value_of` 用 `(v+1)/2` 把价值头输出当胜率，"

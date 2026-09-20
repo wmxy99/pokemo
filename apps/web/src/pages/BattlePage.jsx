@@ -6,7 +6,7 @@ import { Zone, ActionPanel, CommandBar, TurnLog, SeedBar } from '../components/b
 import { CardZoom } from '../components/card.jsx'
 import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
-import { planForHand, passAction } from '../plays.js'
+import { planForHand, passAction, describeActionTarget, isFieldTarget, targetSide } from '../plays.js'
 import { flyCard, floatText, fieldSlotEl, handCardEl } from '../anim.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
@@ -48,9 +48,13 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   // ⚠ 身份必须用**位置**（side + pos）而不是卡名：同一套牌里常有同名宝可梦
   //   （例如对手场上两只「火苗兽」），用 name 当 key 会互相覆盖，
   //   导致伤害比较错乱、飘字丢失（踩过）。
+  //
+  // ⚠ 回放期间必须挂起：引擎一次只返回最终局面，若当帧就飘字，会出现
+  //   「伤害先跳、AI 动作后播」的错序。等回放结束（replaying → false）再比对，
+  //   此时 prevDmg 仍是动作前的值，差值依然正确。
   useEffect(() => {
     const v = state?.view
-    if (!v) return undefined
+    if (!v || replaying) return undefined
     const cur = new Map()
     const list = [
       ['me', 0, v.me_state?.active], ['opp', 0, v.opp_state?.active],
@@ -84,7 +88,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     setHitName(hitKey)
     const tm = setTimeout(() => setHitName(null), 420)
     return () => clearTimeout(tm)
-  }, [state])
+  }, [state, replaying])
 
   async function create(deckAVal = deckA, deckBVal = deckB) {
     setBusy(true); setErr(null)
@@ -98,6 +102,9 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       const r = await api.createBattle(payload)
       setState(r); setLog([]); setCommands(r.commands || [])
       setLastMatched(null); setCmdErr(null)
+      setPending(null); setSelHand(-1); setZoomCard(null)
+      setReplaying(false); setHitName(null)
+      prevDmg.current = new Map()   // 新对局必须清空战损基线，否则会出现错误伤害数
       onMsg(`对局已创建 seed=${r.seed}`, 'ok')
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
     finally { setBusy(false) }
@@ -143,15 +150,19 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     finally { clearTimeout(slowTimer.current); setSlow(false); setBusy(false); setReplaying(false) }
   }
 
-  /** 动作的目标落点（出牌飞行用）：按 verb / tag 判断打到哪张卡上 */
+  /** 动作的目标落点（出牌飞行用）：按归一化后的区域 + 槽位判断打到哪张卡上 */
   function targetElFor(a) {
     if (a.target === undefined) {
-      // 无目标（上后备 / 一次性支援者）→ 落到我方后备区
+      // 无目标（上基础宝可梦到后备 / 一次性道具）→ 落到我方后备区
       return document.querySelector('.zone.side-me .bench-list-cards')
         || document.querySelector('.zone.side-me')
     }
-    const side = (a.verb === 'trainer' && a.tag === 'boss') ? 'opp' : 'me'
-    return fieldSlotEl(side, a.target) || document.querySelector('.zone.side-me')
+    const info = describeActionTarget(a, view)
+    if (isFieldTarget(info.where)) {
+      const side = targetSide(info.where)
+      return fieldSlotEl(side, info.slot) || document.querySelector(`.zone.side-${side}`)
+    }
+    return document.querySelector('.zone.side-me')   // 弃牌堆 / 牌库：退化为本区
   }
 
   // 自由文本指令：中文招式名 / 卡名 / 位置（如「幻影俯冲」「附能量到后备1」）
@@ -200,19 +211,16 @@ export default function BattlePage({ onMsg, onGoDecks }) {
 
   // ── 点牌出牌 ──────────────────────────────────────────────
   // 规则：**能出的牌单击即出**（无需再输入指令）；不能出的牌单击看详情。
-  // 需要选目标的动作（进化对象 / 附能量目标 / 拉对手后备）进入「待选目标」态，
-  // 场上可选位置高亮，点它即完成 —— 与真实打牌的「点牌 → 指目标」一致。
-  const myHighlight = pending
-    ? pending.targets.filter((t) => t.where === 'my-active' || t.where === 'my-bench')
-      .map((t) => t.pos)
-    : []
-  const oppHighlight = pending
-    ? pending.targets.filter((t) => t.where === 'opp-bench').map((t) => t.pos)
-    : []
+  // 需要选目标的动作（进化对象 / 附能量目标 / 拉对手后备 / 手牌特性）进入
+  // 「待选目标」态，场上可选位置高亮，点它即完成 —— 与真实打牌的「点牌 → 指目标」一致。
+  //
+  // ⚠ 高亮 / 点选一律用归一化后的 `slot`（0 = 战斗位，i+1 = 后备 i），
+  //   与 Zone 的槽位一致；引擎的原始 target 只在提交动作时使用。
+  const fieldTargets = pending ? pending.targets.filter((t) => isFieldTarget(t.where)) : []
+  const myHighlight = fieldTargets.filter((t) => targetSide(t.where) === 'me').map((t) => t.slot)
+  const oppHighlight = fieldTargets.filter((t) => targetSide(t.where) === 'opp').map((t) => t.slot)
   // 弃牌堆 / 牌库 这类目标不在场上，用按钮列表选
-  const listedTargets = pending
-    ? pending.targets.filter((t) => t.where === 'discard' || t.where === 'deck')
-    : []
+  const listedTargets = pending ? pending.targets.filter((t) => !isFieldTarget(t.where)) : []
 
   function pickHand(card, idx) {
     if (!view || busy || finished) return
@@ -241,17 +249,11 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     act(t.action, src)
   }
 
-  function matchesSide(where, side) {
-    if (where === 'my-active' || where === 'my-bench') return side === 'me'
-    if (where === 'opp-bench') return side === 'opp'
-    return false
-  }
-
   // 场上卡：待选目标时点是执行；否则看详情
-  function pickField(card, pos, side) {
+  function pickField(card, slot, side) {
     if (!card) return
     if (pending) {
-      const hit = pending.targets.find((t) => t.pos === pos && matchesSide(t.where, side))
+      const hit = pending.targets.find((t) => t.slot === slot && targetSide(t.where) === side)
       if (hit) { doTarget(hit); return }
       onMsg('这里不是可选目标', 'err')
       return
@@ -367,7 +369,8 @@ export default function BattlePage({ onMsg, onGoDecks }) {
 
           <p className="sm muted" style={{ margin: '4px 2px' }}>
             <b>直接点手牌出牌</b>：能出的牌带绿色角标，单击立即执行；
-            需要指定对象的（进化 / 附能量 / 拉对手后备）会提示你点选场上高亮的目标。
+            需要指定对象的（进化 / 附能量 / 拉对手后备 / 手牌特性）会提示你点选场上高亮的目标，
+            高亮的正是这张牌**实际会作用到**的那只宝可梦。
             点击不可用的牌或场上的牌可查看完整卡面（自绘示意图，不使用官方卡图 · 合规 C1/C5）。
           </p>
           <CardZoom card={zoomCard} onClose={() => setZoomCard(null)} />

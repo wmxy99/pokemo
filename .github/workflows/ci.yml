@@ -112,6 +112,8 @@ jobs:
           npm run build
       - name: i18n key parity (zh/en 键必须一致)
         run: node apps/web/e2e/check_i18n.cjs
+      - name: plays.js 目标语义（引擎 target 语义 ↔ UI 高亮/文案对账）
+        run: node apps/web/e2e/plays_check.cjs
 
   redline:
     runs-on: ubuntu-latest

@@ -38,6 +38,8 @@ node e2e/shoot_pages.cjs http://127.0.0.1:8000 dist/shots
 | 脚本 | 覆盖内容 | 需真实浏览器 |
 |---|---|:---:|
 | `check_i18n.cjs` | zh/en 键一致性守卫（**CI 会跑，无需浏览器**） | 否 |
+| `plays_check.cjs` | `plays.js` 目标语义对账（引擎 target 语义 ↔ UI 高亮/文案）+ 训练家/特性 tag 文案覆盖（**CI 会跑，无需浏览器**） | 否 |
+| `battle_target_check.cjs` | 目标语义端到端：点「老大的指令」→ 高亮的卡必须就是实际换上场的卡 | 是 |
 | `check_render.cjs` | `/app/` 渲染自检：控制台/网络/运行时错误收集 + 截图 | 是 |
 | `webui_e2e.cjs` | F3→F5：注册登录 → 卡组校验 → 建局 → 合法动作按钮 | 是 |
 | `library_e2e.cjs` | F2 卡库：统计条 / 搜索（EN·中文·归一）/ 筛选 / 翻页 / 详情 | 是 |
@@ -55,7 +57,18 @@ node e2e/shoot_pages.cjs http://127.0.0.1:8000 dist/shots
 
 ## 与 CI 的关系
 
-CI（`.github/workflows/ci.yml` 的 `web-build` job）**只执行 `check_i18n.cjs`**
-（纯 Node 文本检查，不装浏览器、不依赖被测服务）。其余脚本是本地/手动验证工具：
-CI 环境没有本机 Chrome，且这些脚本需要前后端同时在线，因此不纳入自动流水线。
-改动 UI 时请在本地跑一遍受影响的脚本，并把结论写进 PR 描述。
+CI（`.github/workflows/ci.yml` 的 `web-build` job）执行 **`check_i18n.cjs` 与
+`plays_check.cjs`** 两个纯 Node 文本/逻辑检查（不装浏览器、不依赖被测服务）。
+其余脚本是本地/手动验证工具：CI 环境没有本机 Chrome，且这些脚本需要前后端同时在线，
+因此不纳入自动流水线。改动 UI 时请在本地跑一遍受影响的脚本，并把结论写进 PR 描述。
+
+## 写脚本时的两个坑（都踩过）
+
+1. **`(async () => {})()` 前必须留分号**（写成 `;(async () => {}()`）。上一行是箭头函数
+   表达式时，缺分号会让 ASI 把 IIFE 解析成「对上一表达式求值结果的调用」，
+   脚本**退出码 0、零输出**，极难排查。
+2. **受控 `<select>` 驱动不了 React 状态**：`page.select()` 或「原生 value setter +
+   `dispatchEvent`」都只会改 DOM，React state 不变（表现为建局请求里仍是默认卡组）。
+   可靠做法是取元素上的 `__reactProps$` 句柄直接调用 `onChange`，见
+   `battle_target_check.cjs` 的 `setReactSelect`。
+   另外**顺序很重要**：应用默认停在对战页，要先选卡组再点建局。

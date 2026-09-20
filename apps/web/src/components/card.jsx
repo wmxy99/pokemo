@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   cc, typeColor, typeLabel, stageLabel, trainerKindLabel,
-  trainerDesc, abilityDesc, statusLabel,
+  trainerDesc, abilityDesc, statusLabel, cardKind, isTrainerCard,
 } from '../cardtext.js'
 import { handUsable } from '../plays.js'
 
@@ -193,12 +193,9 @@ export function CardFace({ card, size = 'hand', state = {}, onClick, picked, dim
     return <div className={`cf ${size} empty`} aria-label="空位"><span>—</span></div>
   }
   const { dmg = 0, used = [], ko = false, attached = 0 } = state
-  // 类型判定：优先用显式 type；若缺 type（历史数据或其它数据源），以「有招式/阶段/HP」
-  // 兜底识别为宝可梦 —— 否则会被降级渲染成训练家（曾因此把战斗位画成灰卡）
-  const kind = (card.type === 'pokemon'
-    || (!card.type && (card.attacks || card.stage !== undefined || card.hp !== undefined)))
-    ? 'pokemon'
-    : card.type === 'energy' ? 'energy' : 'trainer'
+  // 类型判定统一走 cardtext.cardKind（含缺 type 时的兜底；曾因把 supporter/item
+  // 误判为训练家之外的类别，把战斗位画成灰卡）
+  const kind = cardKind(card)
   const cls = ['cf', size, kind, ko ? 'ko' : '', picked ? 'picked' : '', dim ? 'dim' : '',
     usable ? 'usable' : '', highlight ? 'highlight' : '']
     .filter(Boolean).join(' ')
@@ -300,7 +297,7 @@ export function CardZoom({ card, onClose }) {
               ))}
             </>
           )}
-          {card.type === 'trainer' && (
+          {isTrainerCard(card) && (
             <>
               <h5>卡牌效果</h5>
               <p>{trainerDesc(card.tag)}</p>

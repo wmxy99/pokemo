@@ -87,25 +87,17 @@ export function floatAt(x, y, text, kind = 'info', ms = 1050) {
   setTimeout(() => d.remove(), ms)
 }
 
-/**
- * 找场上某张卡（按**英文名**匹配 —— 卡面的 data-name 存的是数据键 name）
+/** 找场上的位置元素（side: 'me'|'opp'，slot: 0=战斗位，1..=后备 i）
  *
- * 注意：不能用 `.cf-name` 的文本匹配 —— 那里显示的是**中文展示名**（display），
- * 而引擎事件里给的是英文数据键，两者对不上（曾因此飘字完全不出现）。
+ * 用**槽位**而不是卡名/英文名匹配：卡面显示的是中文展示名，引擎给的是英文数据键，
+ * 两者对不上（曾因此飘字完全不出现）；而且同名宝可梦会有多张（踩过）。
  */
-export function findFieldCard(name) {
-  if (!name) return null
-  const esc = (window.CSS && CSS.escape) ? CSS.escape(name) : name.replace(/"/g, '\\"')
-  return document.querySelector(`.zone .cf[data-name="${esc}"]`)
-}
-
-/** 找场上的位置元素（side: 'me'|'opp'，pos: 0=战斗位，1..=后备） */
-export function fieldSlotEl(side, pos) {
+export function fieldSlotEl(side, slot) {
   const zone = document.querySelector(`.zone.side-${side}`)
   if (!zone) return null
-  if (pos === 0) return zone.querySelector('.table-active .cf')
+  if (slot === 0) return zone.querySelector('.table-active .cf')
   const items = zone.querySelectorAll('.bench-list-cards .cf')
-  return items[pos - 1] || null
+  return items[slot - 1] || null
 }
 
 /** 找手牌第 idx 张的 DOM */

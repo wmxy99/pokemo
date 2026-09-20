@@ -69,24 +69,65 @@ export const TRAINER_KIND = {
 }
 export const trainerKindLabel = (k) => cc(TRAINER_KIND[k] || { zh: k || '训练家', en: k || 'Trainer' })
 
+// ⚠ 引擎手牌序列化给训练家卡的 `type` 就是 `tdef.kind`（item / supporter / stadium / tool），
+//   **不是**字符串 'trainer'。曾用 `card.type === 'trainer'` 判断，分支永不命中
+//   （症状：不可用原因退化成通用文案、详情浮层的「卡牌效果」整段不渲染）。
+export const TRAINER_KINDS = Object.keys(TRAINER_KIND)
+export const isTrainerCard = (c) => !!c && TRAINER_KINDS.includes(c.type)
+
+/** 卡牌大类：'pokemon' | 'energy' | 'trainer'（含缺 type 时的兜底识别） */
+export const cardKind = (c) => {
+  if (!c) return 'trainer'
+  if (c.type === 'pokemon' || c.type === 'energy') return c.type
+  if (isTrainerCard(c)) return 'trainer'
+  // 缺 type（历史数据或其它数据源）：有招式/阶段/HP 字段则视作宝可梦
+  if (c.attacks !== undefined || c.stage !== undefined || c.hp !== undefined) return 'pokemon'
+  return 'trainer'
+}
+
 // ---------------- 训练师效果说明 ----------------
-// 与 packages/engine/engine/cards.py 的 TrainerDef.tag 全集一一对应
+// 与 packages/engine/engine/cards.py 的 TrainerDef.tag 全集一一对应。
+//
+// ⚠ tag 有**两种形态**：不带参数的（boss / switch_self / candy …）与带参数的
+//   （research:7 / recover:1:any / search_pokemon:3 …）。卡池里 49 张训练师卡中有 38 张
+//   是带参数的 —— 若只按完整 tag 做字典查找，这些卡的卡面与详情都会显示
+//   「（该效果暂无说明）」（踩过）。因此带参数的族用**函数**，把参数代入文案。
+const argOf = (a) => (/^\d+$/.test(String(a || '')) ? String(a) : 'n')
+const RECOVER_KIND = { any: '任意卡', energy: '能量卡', pokemon: '宝可梦', trainer: '训练家卡' }
+
 export const TRAINER_TAG_DESC = {
   poffin: { zh: '从牌库中检索 2 张基础宝可梦，放置到后备。', en: 'Search your deck for 2 Basic Pokémon and put them on the Bench.' },
   ultra_ball: { zh: '弃置 2 张手牌，从牌库检索 1 张宝可梦加入手牌。', en: 'Discard 2 cards, then search your deck for a Pokémon.' },
   hammer: { zh: '抛硬币；若为正面，弃置对手战斗宝可梦身上的 1 个能量。', en: 'Flip a coin. If heads, discard an Energy from the opponent’s Active Pokémon.' },
   boss: { zh: '将对手的 1 只后备宝可梦换到战斗位（需指定目标）。', en: 'Switch in 1 of your opponent’s Benched Pokémon (requires a target).' },
-  research: { zh: '弃置全部手牌，然后抽 n 张牌。（n 由卡牌决定）', en: 'Discard your hand and draw n cards.' },
-  shuffle_draw: { zh: '将手牌洗回牌库，然后抽 n 张牌。（n 由卡牌决定）', en: 'Shuffle your hand into your deck and draw n cards.' },
   switch_self: { zh: '将己方战斗宝可梦与 1 只后备交换（不消耗撤退能量；需指定目标）。', en: 'Switch your Active Pokémon with 1 Benched Pokémon (no Retreat cost; needs a target).' },
-  recover: { zh: '从弃牌堆回收 n 张卡加入手牌。（n 与卡种由卡牌决定）', en: 'Put n cards from your discard pile into your hand.' },
-  discard_search_energy: { zh: '弃置 1 张手牌，从牌库检索 n 个基本能量加入手牌。', en: 'Discard 1 card, then search your deck for n Basic Energy.' },
-  search_energy: { zh: '从牌库检索 n 个基本能量加入手牌。', en: 'Search your deck for n Basic Energy cards.' },
   candy: { zh: '跳过一阶：直接由基础宝可梦进化为二阶形态。', en: 'Skip Stage 1: evolve a Basic directly into a Stage 2.' },
   unsupported: { zh: '该卡效果尚未在引擎中建模（以占位方式参与对局，如实标注）。', en: 'Effect not yet modeled by the engine (participates as a placeholder).' },
+  // ---- 带参数族（arg 为卡面参数，缺省显示 n）----
+  research: (a) => ({ zh: `弃置全部手牌，然后抽 ${argOf(a)} 张牌。`, en: `Discard your hand and draw ${argOf(a)} cards.` }),
+  shuffle_draw: (a) => ({ zh: `将手牌洗回牌库，然后抽 ${argOf(a)} 张牌。`, en: `Shuffle your hand into your deck and draw ${argOf(a)} cards.` }),
+  recover: (a, kind) => ({
+    zh: `从弃牌堆回收 ${argOf(a)} 张${RECOVER_KIND[kind] || '卡'}加入手牌。`,
+    en: `Put ${argOf(a)} card(s) from your discard pile into your hand.`,
+  }),
+  discard_search_energy: (a) => ({ zh: `弃置 1 张手牌，从牌库检索 ${argOf(a)} 个基本能量加入手牌。`, en: `Discard 1 card, then search your deck for ${argOf(a)} Basic Energy.` }),
+  search_energy: (a) => ({ zh: `从牌库检索 ${argOf(a)} 个基本能量加入手牌。`, en: `Search your deck for ${argOf(a)} Basic Energy cards.` }),
+  search_pokemon: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张宝可梦加入手牌。`, en: `Search your deck for ${argOf(a)} Pokémon.` }),
+  search_trainer: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张训练家卡加入手牌。`, en: `Search your deck for ${argOf(a)} Trainer cards.` }),
+  search_any: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张任意卡加入手牌。`, en: `Search your deck for ${argOf(a)} cards.` }),
 }
-export const trainerDesc = (tag) => cc(TRAINER_TAG_DESC[tag]
-  || { zh: '（该效果暂无说明）', en: '(no description yet)' })
+
+/**
+ * 训练师效果文案：先按「族名」（首个冒号前）查，再回退到完整 tag；带参数族代入参数。
+ * @param {string} tag 引擎的 TrainerDef.tag，如 'boss' / 'recover:1:any'
+ */
+export function trainerDesc(tag) {
+  const parts = String(tag || '').split(':')
+  const [head, arg, extra] = parts
+  const entry = TRAINER_TAG_DESC[head] || TRAINER_TAG_DESC[tag]
+  if (!entry) return { zh: '（该效果暂无说明）', en: '(no description yet)' }
+  return cc(typeof entry === 'function' ? entry(arg, extra) : entry)
+}
 
 // ---------------- 特性效果说明 ----------------
 // 与 AbilityDef.tag 全集一一对应（前缀参数形如 recon:2 / cursed:13）

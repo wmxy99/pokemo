@@ -72,34 +72,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     await clickText('button', '开始对局')
     await sleep(1800)
 
-    let best = { aiSteps: 0, distinct: 0, sawReplayBar: false, turn: 0 }
-    for (let turn = 1; turn <= 8; turn += 1) {
+    let best = { aiSteps: 0, framesDuringReplay: 0, framesTotal: 0, sawReplayBar: false, turn: 0 }
+    for (let turn = 1; turn <= 10; turn += 1) {
       const p0 = await probe()
       if (!p0.endTurn) { log(`第 ${turn} 轮：对局已结束，停止采样`, true, { turn }); break }
-      const frames = new Set([p0.fp])
-      let maxAi = p0.ai
-      let sawReplayBar = false
+      const samples = []
       await clickText('button', '结束回合')
-      for (let i = 0; i < 70; i += 1) {
-        await sleep(120)
+      let sawReplayBar = false
+      for (let i = 0; i < 80; i += 1) {
+        await sleep(100)
         const p = await probe()
-        frames.add(p.fp)
-        maxAi = Math.max(maxAi, p.ai)
+        samples.push(p)
         if (p.replay) sawReplayBar = true
-        if (sawReplayBar && !p.replay) break
-        if (!sawReplayBar && i > 12) break      // 本轮没有 AI 动作
+        if (sawReplayBar && !p.replay) break     // 回放结束
+        if (!sawReplayBar && i > 15) break        // 本轮没有 AI 动作
       }
+      const maxAi = Math.max(p0.ai, ...samples.map((s) => s.ai))
       const aiSteps = maxAi - p0.ai
-      const distinct = frames.size
-      console.log(`rframes: turn${turn} aiSteps=${aiSteps} distinctFrames=${distinct} replayBar=${sawReplayBar}`)
-      if (distinct > best.distinct) best = { aiSteps, distinct, sawReplayBar, turn }
-      // 找到「AI 至少 2 个动作且中间态数 >= 动作数+1」的窗口即可判定
-      if (aiSteps >= 2 && distinct >= aiSteps + 1) break
+      // 关键指标：**回放条可见期间**对手区出现过几个不同状态
+      const during = new Set(samples.filter((s) => s.replay).map((s) => s.fp))
+      const total = new Set([p0.fp, ...samples.map((s) => s.fp)])
+      const cur = { aiSteps, framesDuringReplay: during.size, framesTotal: total.size,
+        sawReplayBar, turn }
+      console.log(`rframes: turn${turn} aiSteps=${aiSteps} framesDuringReplay=${during.size}`
+        + ` framesTotal=${total.size} replayBar=${sawReplayBar}`)
+      if (cur.framesDuringReplay > best.framesDuringReplay) best = cur
+      // 判据：AI 真的动了 ≥1 步，且回放条可见期间棋盘发生了变化 ≥2 次
+      if (aiSteps >= 1 && during.size >= 2) break
     }
 
-    log('逐帧回放：棋盘经过的中间态数与 AI 动作数匹配',
-      best.aiSteps >= 2 && best.distinct >= best.aiSteps + 1,
-      best)
+    log('逐帧回放：回放条可见期间棋盘真的在变（旧实现此时最多 1 个状态）',
+      best.aiSteps >= 1 && best.framesDuringReplay >= 2, best)
     try { await page.screenshot({ path: path.join(OUTDIR, 'rframes_final.png') }) } catch { /* 忽略 */ }
   } catch (e) {
     log('脚本异常', false, { error: String(e).slice(0, 200) })

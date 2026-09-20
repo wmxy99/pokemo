@@ -171,8 +171,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     console.log('btgt: diag =', JSON.stringify(diag))
     log('对局已创建（棋盘与手牌存在）', diag.hasMe && diag.hasOpp, diag)
 
+    // 「老大的指令」需要对手**有后备**才可用；镜像对局偶尔出现双方都不建后备的退化局面，
+    // 因此最多重开 3 局来找可验证场景（避免测试因运气而假失败）。
     let verified = false
     let tried = 0
+    for (let attempt = 1; attempt <= 3 && !verified; attempt += 1) {
+    console.log(`btgt: === 第 ${attempt} 局 ===`)
     for (let turn = 0; turn < 26 && !verified; turn += 1) {
       const b0 = await board()
       if (!b0) { log('棋盘读取失败', false, { turn }); break }
@@ -215,7 +219,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
         } else {
           // 只有 1 个后备 → 自动执行，校验提示文案与结果一致
           const toast = await page.evaluate(() =>
-            ((document.body.innerText.match(/出牌：[^\n]*/) || [])[0] || '').trim())
+            ([...document.querySelectorAll('.toast')].map((x) => x.textContent.trim())
+              .find((x) => x.startsWith('出牌：')) || ''))
           await sleep(1200)
           const b2 = await board()
           const newActive = b2 && b2.opp && b2.opp.active && b2.opp.active.name
@@ -225,16 +230,41 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
         }
       }
       if (!verified) {
+        const hasEndTurn = await page.evaluate(() =>
+          [...document.querySelectorAll('button')].some((b) => b.textContent.includes('结束回合')))
+        if (!hasEndTurn) break      // 对局已结束 → 本局没机会了，交给下一局
         await clickText('button', '结束回合')
         await sleep(1500)
       }
     }
-    if (!verified) log('未能在 26 回合内取到「老大的指令」可用的局面', false, { tried })
+    if (!verified && attempt < 3) {
+      // 本局对手始终没建后备（或对局提前结束）→ 重开一局再找可验证场景
+      await clickText('button', '重开对局')
+      await sleep(2200)
+    }
+    }
+    if (!verified) {
+      log('3 局内均未取到「老大的指令」可用的局面（对手始终无后备 / 对局过早结束）',
+        false, { tried })
+    }
 
     // 训练家卡详情浮层：应出现「卡牌效果」段（此前 card.type==='trainer' 判断永假 → 整段不渲染）
-    // 注意：**可用的**训练家卡点击即出牌（不会开浮层），必须找一张当前不可用的训练家卡。
+    // 注意 ①：**可用的**训练家卡点击即出牌（不会开浮层），必须找一张当前不可用的训练家卡。
+    // 注意 ②：回放/思考期间 `busy=true`，此时点手牌会被直接忽略（`pickHand` 有 busy 守卫）
+    //         → 必须先等到空闲，否则会误判「点不开浮层」（踩过）。
+    const waitIdle = async (maxMs = 10000) => {
+      const t0 = Date.now()
+      while (Date.now() - t0 < maxMs) {
+        const busyNow = await page.evaluate(() =>
+          !!document.querySelector('.spin') || !!document.querySelector('.replay-bar'))
+        if (!busyNow) { await sleep(150); return true }
+        await sleep(150)
+      }
+      return false
+    }
     let zoomText = null
     for (let i = 0; i < 10 && !zoomText; i += 1) {
+      await waitIdle()
       const opened = await page.evaluate(() => {
         const cand = [...document.querySelectorAll('.zone.side-me .hand-card .cf')]
           .find((c) => !c.classList.contains('pokemon') && !c.classList.contains('energy')

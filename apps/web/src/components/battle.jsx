@@ -22,10 +22,14 @@ function VerbIcon({ verb, size = 16 }) {
  * 双方手牌均只显示我方内容（对手手牌数可见、内容不可见，PRD F5）。
  */
 
-export function Zone({ title, st, side, onPickCard, pickedIdx, hitName }) {
+export function Zone({ title, st, side, onPickCard, onPickHand, pickedIdx, hitName, legal = [],
+                       highlightPos = [], dimOthers = false }) {
   if (!st) return null
   const bench = st.bench || []
   const hand = st.hand || []
+  // highlightPos 用引擎的 target 语义：0 = 战斗位，1.. = 后备
+  const hl = (pos) => highlightPos.includes(pos)
+  const dmp = (pos) => dimOthers && !hl(pos)
   return (
     <section className={`zone side-${side}`} aria-label={title}>
       <header className="zt">
@@ -37,8 +41,8 @@ export function Zone({ title, st, side, onPickCard, pickedIdx, hitName }) {
       </header>
       <div className="table-side">
         <div className="table-active">
-          <FieldPokemon p={st.active} size="field"
-            onClick={onPickCard ? () => onPickCard(st.active) : undefined} />
+          <FieldPokemon p={st.active} size="field" highlight={hl(0)} dim={dmp(0)}
+            onClick={onPickCard ? () => onPickCard(st.active, 0, side) : undefined} />
         </div>
         <div className="table-bench">
           <span className="sm muted">后备 {bench.length}</span>
@@ -46,8 +50,8 @@ export function Zone({ title, st, side, onPickCard, pickedIdx, hitName }) {
             {bench.map((b, i) => (
               <div key={`${b.name}-${i}`}
                 className={`field-slot ${hitName && b.name === hitName ? 'hit' : ''}`}>
-                <FieldPokemon p={b} size="bench"
-                  onClick={onPickCard ? () => onPickCard(b) : undefined} />
+                <FieldPokemon p={b} size="bench" highlight={hl(i + 1)} dim={dmp(i + 1)}
+                  onClick={onPickCard ? () => onPickCard(b, i + 1, side) : undefined} />
               </div>
             ))}
             {bench.length === 0 && <span className="sm muted">（空）</span>}
@@ -55,7 +59,7 @@ export function Zone({ title, st, side, onPickCard, pickedIdx, hitName }) {
         </div>
       </div>
       {side === 'me' && (<>
-        <HandFan cards={hand} onPick={onPickCard} pickedIdx={pickedIdx} />
+        <HandFan cards={hand} onPick={onPickHand || onPickCard} pickedIdx={pickedIdx} legal={legal} />
         {/* 无障碍 + 既有 e2e 游标：手牌的文字化摘要（视觉隐藏） */}
         <span className="sr hand">手牌：{hand.map((c) => disp(c)).join('、')}</span>
       </>)}

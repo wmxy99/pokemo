@@ -3,6 +3,7 @@ import {
   cc, typeColor, typeLabel, stageLabel, trainerKindLabel,
   trainerDesc, abilityDesc, statusLabel,
 } from '../cardtext.js'
+import { handUsable } from '../plays.js'
 
 /**
  * 卡牌可视化组件（自绘卡面 · 不使用任何官方卡图 —— 合规 C1/C5）
@@ -186,7 +187,8 @@ function TrainerFace({ c, size }) {
  * 单张卡面
  * state: { dmg, used, ko, attached } —— 场上卡才需要
  */
-export function CardFace({ card, size = 'hand', state = {}, onClick, picked, dim }) {
+export function CardFace({ card, size = 'hand', state = {}, onClick, picked, dim,
+                          usable, highlight }) {
   if (!card) {
     return <div className={`cf ${size} empty`} aria-label="空位"><span>—</span></div>
   }
@@ -197,7 +199,8 @@ export function CardFace({ card, size = 'hand', state = {}, onClick, picked, dim
     || (!card.type && (card.attacks || card.stage !== undefined || card.hp !== undefined)))
     ? 'pokemon'
     : card.type === 'energy' ? 'energy' : 'trainer'
-  const cls = ['cf', size, kind, ko ? 'ko' : '', picked ? 'picked' : '', dim ? 'dim' : '']
+  const cls = ['cf', size, kind, ko ? 'ko' : '', picked ? 'picked' : '', dim ? 'dim' : '',
+    usable ? 'usable' : '', highlight ? 'highlight' : '']
     .filter(Boolean).join(' ')
   return (
     <div className={cls} onClick={onClick} role={onClick ? 'button' : undefined}
@@ -226,7 +229,7 @@ function max0(card, dmg) {
  * - hover / focus：抬起并放大（CSS 处理），z-index 提升到最上层
  * - 点击：打开详情大卡（由调用方处理）
  */
-export function HandFan({ cards = [], onPick, pickedIdx = -1 }) {
+export function HandFan({ cards = [], onPick, pickedIdx = -1, legal = [] }) {
   const n = cards.length
   return (
     <div className="hand-fan" role="group" aria-label={`手牌 ${n} 张`}>
@@ -234,10 +237,13 @@ export function HandFan({ cards = [], onPick, pickedIdx = -1 }) {
         const mid = (n - 1) / 2
         const rot = n <= 1 ? 0 : (i - mid) * Math.min(2.2, 14 / n)
         const lift = n <= 1 ? 0 : Math.abs(i - mid) * 2.5
+        // 「现在就能出」的牌加一个可见标记 —— 玩家不必逐个点开试
+        const usable = handUsable(i, c, legal)
         return (
           <div key={i} className="hand-card"
             style={{ '--rot': `${rot}deg`, '--lift': `${lift}px`, zIndex: i + 1 }}>
-            <CardFace card={c} size="hand" picked={pickedIdx === i} onClick={() => onPick && onPick(c, i)} />
+            <CardFace card={c} size="hand" usable={usable} picked={pickedIdx === i}
+              onClick={() => onPick && onPick(c, i)} />
           </div>
         )
       })}
@@ -316,7 +322,7 @@ function Kv({ label, value }) {
 }
 
 /** 场上宝可梦（带附着能量与特殊状态） */
-export function FieldPokemon({ p, size = 'field', onClick, picked, dim }) {
+export function FieldPokemon({ p, size = 'field', onClick, picked, dim, highlight }) {
   if (!p) {
     return (
       <div className={`cf ${size} empty slot`}><span>空位</span></div>
@@ -331,7 +337,8 @@ export function FieldPokemon({ p, size = 'field', onClick, picked, dim }) {
   const status = (p.status || [])
   return (
     <div className="field-pk">
-      <CardFace card={p} size={size} state={st} onClick={onClick} picked={picked} dim={dim} />
+      <CardFace card={p} size={size} state={st} onClick={onClick} picked={picked}
+        dim={dim} highlight={highlight} />
       {status.length > 0 && (
         <div className="status-row" aria-label="特殊状态">
           {status.map((s) => <span key={s} className={`st st-${s}`}>{statusLabel(s)}</span>)}

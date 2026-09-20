@@ -65,7 +65,12 @@ const log = (name, ok, extra = {}) => { steps.push({ name, ok, ...extra }) }
   await sleep(800)
   await page.evaluate((txt) => {
     const ta = document.querySelector('textarea#dt')
-    ta.value = txt; ta.dispatchEvent(new Event('input', { bubbles: true }))
+    // React 受控组件：必须走原型上的 native setter 才能让 React 收到变更，
+    // 直接 `ta.value = x` 只改 DOM 属性、React state 不变（此前两项断言因此恒失败）
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype, 'value').set
+    setter.call(ta, txt)
+    ta.dispatchEvent(new Event('input', { bubbles: true }))
   }, deckText)
   await click('button', '解析并校验')
   await sleep(1600)

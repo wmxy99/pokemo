@@ -6,6 +6,7 @@ import { Zone, ActionPanel, CommandBar, TurnLog, SeedBar } from '../components/b
 import { CardZoom } from '../components/card.jsx'
 import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
+import { planForHand, passAction } from '../plays.js'
 import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 
@@ -25,8 +26,10 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [commands, setCommands] = useState([])     // 引擎指令清单（中文）
   const [lastMatched, setLastMatched] = useState(null)
   const [cmdErr, setCmdErr] = useState(null)       // 指令解析失败（含歧义候选）
-  const [zoomCard, setZoomCard] = useState(null)   // 点击手牌 → 详情大卡
+  const [zoomCard, setZoomCard] = useState(null)   // 详情大卡（点不可用的牌 / 场上卡）
   const [hitName, setHitName] = useState(null)     // 本回合受伤的宝可梦（抖动提示）
+  const [selHand, setSelHand] = useState(-1)       // 选中的手牌索引（出牌用）
+  const [pending, setPending] = useState(null)     // 等待选目标的动作
   const prevDmg = useRef(new Map())
   const slowTimer = useRef(null)
 
@@ -133,6 +136,68 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const view = state?.view
   const legal = view?.legal || []
   const finished = state?.finished || state?.winner != null
+  const pass = passAction(legal)
+
+  // ── 点牌出牌 ──────────────────────────────────────────────
+  // 规则：**能出的牌单击即出**（无需再输入指令）；不能出的牌单击看详情。
+  // 需要选目标的动作（进化对象 / 附能量目标 / 拉对手后备）进入「待选目标」态，
+  // 场上可选位置高亮，点它即完成 —— 与真实打牌的「点牌 → 指目标」一致。
+  const myHighlight = pending
+    ? pending.targets.filter((t) => t.where === 'my-active' || t.where === 'my-bench')
+      .map((t) => t.pos)
+    : []
+  const oppHighlight = pending
+    ? pending.targets.filter((t) => t.where === 'opp-bench').map((t) => t.pos)
+    : []
+  // 弃牌堆 / 牌库 这类目标不在场上，用按钮列表选
+  const listedTargets = pending
+    ? pending.targets.filter((t) => t.where === 'discard' || t.where === 'deck')
+    : []
+
+  function pickHand(card, idx) {
+    if (!view || busy || finished) return
+    const plan = planForHand(idx, card, view.legal || [], view)
+    if (plan.kind === 'none') {
+      onMsg(plan.reason || '这张牌当前不可用', 'err')
+      setZoomCard(card)          // 不可用 → 给玩家看完整卡面，而不是静默无反应
+      return
+    }
+    if (plan.kind === 'instant') {
+      setSelHand(idx)
+      setPending(null)
+      const to = plan.autoTarget ? `（目标：${plan.autoTarget.label}）` : ''
+      onMsg(`出牌：${card.display || card.name_zh || card.name}${to}`)
+      act(plan.action)
+      return
+    }
+    setSelHand(idx)
+    setPending(plan)
+  }
+
+  function doTarget(t) {
+    setPending(null)
+    setSelHand(-1)
+    act(t.action)
+  }
+
+  function matchesSide(where, side) {
+    if (where === 'my-active' || where === 'my-bench') return side === 'me'
+    if (where === 'opp-bench') return side === 'opp'
+    return false
+  }
+
+  // 场上卡：待选目标时点是执行；否则看详情
+  function pickField(card, pos, side) {
+    if (!card) return
+    if (pending) {
+      const hit = pending.targets.find((t) => t.pos === pos && matchesSide(t.where, side))
+      if (hit) { doTarget(hit); return }
+      onMsg('这里不是可选目标', 'err')
+      return
+    }
+    setZoomCard(card)
+  }
+
   const info = view ? [
     ['回合 / 阶段', `${view.turn} · ${view.phase}`],
     ['我方奖赏 / 牌库', `${view.me_state?.prizes_left ?? '-'} / ${view.me_state?.deck_count ?? '-'}`],
@@ -209,23 +274,60 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         )}
 
         {view && (<>
+          {pending && (
+            <div className="target-bar" role="region" aria-label="选择目标">
+              <b className="sm">选择目标：</b>
+              {listedTargets.length === 0 && (
+                <span className="sm muted">点击场上高亮的卡牌即可完成</span>
+              )}
+              {listedTargets.map((t, i) => (
+                <button key={i} className="chip-btn" onClick={() => doTarget(t)}>{t.label}</button>
+              ))}
+              <span className="sm muted">（也可点击手牌改选其它牌）</span>
+              <button className="ghost sm"
+                onClick={() => { setPending(null); setSelHand(-1) }}>取消</button>
+            </div>
+          )}
+
           <div className="grid" style={{ gap: 10 }}>
             <Zone title="对手（AI）" st={view.opp_state} side="opp" hitName={hitName}
-              onPickCard={(c) => setZoomCard(c)} />
+              onPickCard={pickField} highlightPos={oppHighlight} dimOthers={!!pending} />
             <Zone title="我方" st={view.me_state} side="me" hitName={hitName}
-              onPickCard={(c) => setZoomCard(c)} />
+              onPickCard={pickField} onPickHand={pickHand} pickedIdx={selHand}
+              legal={legal} highlightPos={myHighlight} dimOthers={!!pending} />
           </div>
+
           <p className="sm muted" style={{ margin: '4px 2px' }}>
-            点击任意卡牌（手牌 / 场上 / 后备）查看完整卡面：招式费用、伤害与效果文本。
-            卡面为自绘示意图，不使用官方卡图（合规 C1/C5）。
+            <b>直接点手牌出牌</b>：能出的牌带绿色角标，单击立即执行；
+            需要指定对象的（进化 / 附能量 / 拉对手后备）会提示你点选场上高亮的目标。
+            点击不可用的牌或场上的牌可查看完整卡面（自绘示意图，不使用官方卡图 · 合规 C1/C5）。
           </p>
           <CardZoom card={zoomCard} onClose={() => setZoomCard(null)} />
-          <CommandBar commands={commands} disabled={finished} busy={busy}
-            onSubmit={submitCommand} lastMatched={lastMatched} error={cmdErr} />
-          <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
-            ctx={actionContext(view)}
-            onAct={act}
-            hint={finished ? '对局已结束' : '（等待对手 / 无可用动作）'} />
+          {/* 结束回合：真实对战的节奏锚点，放在最显眼处 */}
+          {pass && (
+            <div className="row" style={{ marginTop: 12 }}>
+              <button className="primary" disabled={busy || finished}
+                onClick={() => act(pass)}>
+                结束回合（交给对手）
+              </button>
+              <span className="sm muted">也可直接点上方手牌出牌</span>
+            </div>
+          )}
+
+          {/* 指令输入与完整动作表：作为备选入口收起，主交互是「点牌出牌」 */}
+          <details className="cmd-drawer">
+            <summary>指令输入（可选：直接输入中文招式名 / 卡名）</summary>
+            <CommandBar commands={commands} disabled={finished} busy={busy}
+              onSubmit={submitCommand} lastMatched={lastMatched} error={cmdErr} />
+          </details>
+
+          <details className="cmd-drawer">
+            <summary>全部合法动作（{legal.length} 项，可点牌出牌的备选入口）</summary>
+            <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
+              ctx={actionContext(view)}
+              onAct={act}
+              hint={finished ? '对局已结束' : '（等待对手 / 无可用动作）'} />
+          </details>
           <CommentaryPanel battleId={state.id} turn={view.turn} onMsg={onMsg} />
           <TurnLog lines={log} />
         </>)}

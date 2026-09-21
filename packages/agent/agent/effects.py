@@ -376,6 +376,64 @@ _EN_MODIFY_RE = re.compile(r"weakness|resistance|prevents? all damage|"
                            re.I)
 _EN_BENCH_RE = re.compile(r"bench(?:ed)?\s+pok|onto your bench", re.I)
 _EN_HAND_RE = re.compile(r"(?:into|to)\s+your\s+hand", re.I)
+# 冠词型能量弃置：「Discard an Energy from this Pokémon.」——**不写数字**，
+# 故 `_EN_DISCARD_ENERGY_RE`（要求 \d+）匹配不到。⚠ 只认「来自自身」的写法：
+# 引擎 `discard_energy:N` 的语义是**弃自己战斗位（无则手牌）的能量**，
+# 对「弃对手的能量」「弃手牌能量」都会弃错对象 → 那些一律不映射（保持未建模）。
+_EN_DISCARD_SELF_ENERGY_RE = re.compile(
+    r"discard\s+(?:an?|1)\s+(?:basic\s+|special\s+)?(?:\{\s*[A-Za-z]\s*\}\s*)?"
+    r"energy(?:\s+card)?\s+from\s+(?:this|your\s+active|1\s+of\s+your)\s*pok",
+    re.I)
+# 冠词型「弃**对手**战斗位能量」→ discard_energy:1:opp（引擎已支持该变体，
+# 否则会退化成"弃自身"——4 张真实卡曾因此静默弃错对象）
+_EN_DISCARD_OPP_ENERGY_RE = re.compile(
+    r"discard\s+(?:an?|1)\s+(?:basic\s+|special\s+)?(?:\{\s*[A-Za-z]\s*\}\s*)?"
+    r"energy(?:\s+card)?\s+from\s+your\s+opponent",
+    re.I)
+# 条件加伤：英文条件 → 引擎 `dmg_plus:N:if:<cond>` 的合法条件（白名单内才映射）
+_CONDITION_PHRASES = (
+    (r"if your opponent has any benched", "opp_has_bench"),
+    (r"if you have any benched", "own_has_bench"),
+    (r"if you have more prize cards? remaining", "own_behind_prizes"),
+    (r"if you have all (?:of )?your prize cards", "own_prizes_full"),
+)
+
+def _discard_target_of(text: str, m) -> str:
+    """弃牌动作的目标 —— **只看向「弃牌子句」本身**，不看全文
+
+    为什么必须限定子句（真实反例）：Regice ex 的 Ice Prison =
+    「Discard 2 Energy **from this Pokémon**, and your opponent's Active Pokémon
+    is now Paralyzed.」——弃的是**自身**，但同一句里提到了对手。早期用全文的
+    `opponent` 检查判目标 → 判成"弃对手能量"，引擎就去扣对手的能量（静默算错）。
+    修法：从匹配处截到**第一个句读**（, . ;），只看这一小段。
+    """
+    seg = re.split(r"[.,;]", text[m.start():], maxsplit=1)[0].lower()
+    if "opponent" in seg:
+        return "active_opponent"
+    if "from your hand" in seg:
+        return "hand"
+    return "self"
+
+
+def _in_coin_branch(text: str, pos: int) -> bool:
+    """位置 ``pos`` 是否落在「If heads/tails, …」的**同一分支**内
+
+    为什么需要：抛币分支里的子效果由 coin 层产出（`coin:heads:<sub>`）。
+    若解析器**再产出一次无条件动作**，效果就从「正面才生效」变成「必定生效」——
+    属实质性加强（口径错误）。护盾早已有同类守卫，弃能量此前没有。
+
+    判据：向前找最近的 `if heads|if tails`，若它与 ``pos`` 之间**没有句号**，
+    说明同属一个分支从句。
+    """
+    head = text[:pos]
+    last = None
+    for m in re.finditer(r"if\s+(heads|tails)\b", head, re.I):
+        last = m
+    if last is None:
+        return False
+    return "." not in head[last.end():]
+
+
 _EN_OPP_RE = re.compile(r"opponent[\u2019']?s?\b", re.I)
 
 # 能量符号单字母 → 引擎色（数据集的 {G}/{P}… 记号）
@@ -468,25 +526,30 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
     if _EN_DISCARD_ALL_RE.search(t):
         actions.append(act("discard", None, "hand", {"all": True}))
+    elif (_m := _EN_DISCARD_OPP_ENERGY_RE.search(t)) and not _in_coin_branch(t, _m.start()):
+        # 冠词型「弃对手战斗位能量」——必须带 target，否则 tag 会退化成弃自身。
+        # ⚠ 落在 `If heads, …` 分支内时**不在这里产出**（否则从"正面才弃"变成"必定弃"）
+        actions.append(act("discard", 1, "active_opponent",
+                           {"card_type": "energy"}))
+    elif (_m := _EN_DISCARD_SELF_ENERGY_RE.search(t)) and not _in_coin_branch(t, _m.start()):
+        # 冠词型「弃自身能量」（无数字）——引擎语义即「弃自己战斗位能量」，可精确对应
+        actions.append(act("discard", 1, "self", {"card_type": "energy"}))
     elif _EN_DISCARD_ALL_ENERGY_RE.search(t):
         actions.append(act("discard", None, "self", {"card_type": "energy",
                                                      "all": True}))
-    elif _EN_DISCARD_UPTO_ENERGY_RE.search(t):
-        n = int(_EN_DISCARD_UPTO_ENERGY_RE.search(t).group(1))
-        # 「from your hand」→ 弃手牌能量；否则弃自身 / 对手身上的能量
-        if "from your hand" in t.lower():
-            actions.append(act("discard", n, "hand", {"card_type": "energy"}))
-        else:
-            tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
-            actions.append(act("discard", n, tgt, {"card_type": "energy"}))
-    elif _EN_DISCARD_ENERGY_RE.search(t):
-        n = int(_EN_DISCARD_ENERGY_RE.search(t).group(1))
-        tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
-        actions.append(act("discard", n, tgt, {"card_type": "energy"}))
-    elif _EN_DISCARD_RE.search(t):
-        n = int(_EN_DISCARD_RE.search(t).group(1))
-        tgt = "opponent_hand" if ("opponent" in lower and "hand" in lower) \
-            else "hand"
+    elif (_m := _EN_DISCARD_UPTO_ENERGY_RE.search(t)):
+        n = int(_m.group(1))
+        actions.append(act("discard", n, _discard_target_of(t, _m),
+                           {"card_type": "energy"}))
+    elif (_m := _EN_DISCARD_ENERGY_RE.search(t)):
+        n = int(_m.group(1))
+        actions.append(act("discard", n, _discard_target_of(t, _m),
+                           {"card_type": "energy"}))
+    elif (_m := _EN_DISCARD_RE.search(t)):
+        n = int(_m.group(1))
+        # 弃牌（非能量）：同样只看子句 —— 对手手牌 vs 自己手牌
+        seg = re.split(r"[.,;]", t[_m.start():], maxsplit=1)[0].lower()
+        tgt = "opponent_hand" if ("opponent" in seg and "hand" in seg) else "hand"
         actions.append(act("discard", n, tgt))
 
     m = _EN_SEARCH_TOP_RE.search(t)
@@ -640,6 +703,7 @@ _COIN_COVERED_NOTES = ("自身放置伤害指示物",)
 # ---------- v1.4 修正器识别（抛币 / 伤害缩放 / 护盾 / 被动） ----------
 _RULE_PLACEHOLDER_NOTES = ("静态/未建模（英文）",
                            "静态规则修改（弱点/抗性/伤害减免/限制）",
+                           "条件伤害缩放：条件未识别",
                            "静态/未建模")
 
 # 抛币分支已覆盖的兜底 note：这些 note 描述的正是抛币某分支里的子效果，
@@ -693,6 +757,7 @@ _SHIELD_PREVENT_RE = re.compile(
     r"[^.]*?(?:done\s+)?to\s+this\s+pok[eé]mon", re.I)
 # 条件：上回合被击倒
 _KO_LAST_TURN_RE = re.compile(
+
     r"knocked\s+out[^.]*?opponent'?s?\s+last\s+turn", re.I)
 # 招式内进化
 _EVOLVE_FROM_DECK_RE = re.compile(
@@ -701,33 +766,21 @@ _EVOLVE_FROM_DECK_RE = re.compile(
 # 抽到指定手牌数
 _DRAW_UNTIL_RE = re.compile(r"draw cards until you have (\d+) cards?", re.I)
 
-# 缩放计数源：短语（小写）→ 引擎计数源；**按顺序**匹配，先具体后笼统
+# 兜底计数短语：**只放「不可能指对手」的措辞**。
+#
+# 历史教训（2026-09-21 审计）：本表原是一张「纯子串表」，同时收了我方与对手侧的
+# 笼统措辞（`benched pok` / `prize card` / `card in your discard pile` …），
+# 结果 `for each of **your** Benched Pokémon` 命中 `benched pok` → 被算成**对手后备数**；
+# `Prize card … has taken` 命中 `prize card` → 被算成**剩余**奖赏卡。
+# 实测池内 48 条缩放招式里 10 条映射错（阵营反转 / 口径反转 / 子集当总数）。
+# → 现在一切有阵营歧义的措辞都走 `_CONCEPT_TABLE` + `_phrase_side`，
+#   本表只保留语义上**必然属于我方**的「in this way」「you placed」句式。
 _COUNTER_PHRASES = (
-    ("energy attached to this pok", "own_active_energy"),
-    ("energy attached to your opponent", "opp_active_energy"),
-    ("energy attached to both active", "both_active_energy"),
-    ("energy attached to your active", "own_active_energy"),
-    ("energy attached to all of your pok", "own_all_energy"),
-    ("energy attached to all pok", "both_active_energy"),
-    ("damage counter on this pok", "own_active_counters"),
-    ("damage counter on your opponent's active", "opp_active_counters"),
-    ("damage counter on all of your benched", "own_bench_counters"),
-    ("damage counter on all of your", "own_bench_counters"),
-    ("damage counter on your benched", "own_bench_counters"),
     ("damage counter you placed", "own_discarded_this_turn"),
     ("energy card you discarded in this way", "own_discarded_energy_this_turn"),
     ("energy card discarded in this way", "own_discarded_energy_this_turn"),
     ("card you discarded in this way", "own_discarded_this_turn"),
     ("card discarded in this way", "own_discarded_this_turn"),
-    ("energy card in your discard pile", "own_discard_energy"),
-    ("energy in your discard pile", "own_discard_energy"),
-    ("card in your discard pile", "own_discard_count"),
-    ("card in your hand", "own_hand"),
-    ("stage 2 pok", "own_bench_stage2"),
-    ("benched pok", "opp_bench"),
-    ("of your pokémon in play", "own_field"),
-    ("of your pokemon in play", "own_field"),
-    ("prize card", "opp_prizes_left"),
 )
 
 # 「带限定词 = 只数某个子集」的短语特征：类别词 + 具名/条件修饰。
@@ -742,31 +795,149 @@ _EN_SYMBOL_COLOR = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
                     "Y": "psychic"}
 
 
+# 专名所有格（Cynthia’s / Iono’s / Ethan’s / Team Rocket’s）→ 「某一小类」而非总数
+# 大小写不敏感：短语可能来自小写化的文本，但专名判定不能因此失效。
+_SUBSET_NAME_RE = re.compile(r"\b[A-Za-z][A-Za-z\u2019']+[\u2019']s\b")
+# 这些所有格**不是**子集限定（限定的是「谁的东西」，双方语义已由阵营判定处理）
+_SUBSET_NAME_ALLOWED = ("Your", "You", "Opponent", "The", "This", "Its", "Their",
+                        "Defending", "Active", "Benched", "Each", "Both",
+                        "Pokémon", "Pokemon", "Attack", "Attack’s")
+_SUBSET_STEM_ALLOWED = {s.lower() for s in _SUBSET_NAME_ALLOWED}
+# Pokémon 前的类别限定词 → 子集（stage N 单独处理：可表达为 own_bench_stage2）
+_SUBSET_POKE_ADJ_RE = re.compile(
+    r"\b(ancient|future|tera|rule\s*box|evolution|basic|ex|v|vmax|vstar)\b", re.I)
+# 颜色符号 + Pokémon（如 {F} Pokémon）→ 子集（能量颜色可表达，宝可梦颜色不可）
+_SUBSET_COLOR_POKE_RE = re.compile(r"\{[A-Za-z]\}\s*pok[eé]mon", re.I)
+
+
+def _phrase_side(low: str) -> Optional[str]:
+    """短语的阵营：``opp`` / ``own`` / None（判不出 → 调用方**不得猜**）
+
+    只看短语里有没有 ``opponent``：卡面凡涉及对手必写 "your opponent's"，
+    而 "your"/"you"/"this Pokémon" 归我方。两者都不出现时返回 None —— 例如光秃秃的
+    "Benched Pokémon" 无法判断是谁的，早期按 opp 兜底，导致
+    「for each of **your** Benched Pokémon」被算成对手后备数（实测 3 张卡受影响）。
+
+    ⚠ ``you`` 与 ``your`` 都算我方：卡面常见 "card **you** discarded" /
+    "Prize card **you** have taken"，只认 ``your`` 会把这类判成"无阵营"而放弃。
+    """
+    if "opponent" in low:
+        return "opp"
+    if re.search(r"\byour?\b", low) or "this pok" in low:
+        return "own"
+    return None
+
+
+def _is_subset_phrase(raw: str, low: str) -> bool:
+    """是否在数「某一小类」（子集）→ 不可按总数映射（否则系统性多算）
+
+    三类特征（均为实测踩坑）：
+      · 具名所有格：``Cynthia’s Pokémon`` / ``Iono’s Pokémon`` / ``Ethan’s Adventure card``
+      · 类别限定：``Ancient`` / ``Future`` / ``Tera`` / ``Rule Box`` / ``Basic`` …
+        （``Stage 2`` 例外：引擎有 ``own_bench_stage2``，可精确表达）
+      · 颜色符号 + 宝可梦：``{F} Pokémon``（能量颜色可表达，宝可梦颜色不可）
+    """
+    for m in _SUBSET_NAME_RE.finditer(raw):
+        # 比的必须是**词干**（去掉 ’s）：否则 `opponent’s`（我方/对手的合法所有格）
+        # 会因为带上了 ’s 而不等于白名单里的 `opponent`，被误判成专名子集。
+        stem = re.split(r"[\u2019']", m.group(0))[0].strip().lower()
+        if stem and stem not in _SUBSET_STEM_ALLOWED:
+            return True
+    if _SUBSET_COLOR_POKE_RE.search(raw):
+        return True
+    if _SUBSET_POKE_ADJ_RE.search(low) and not re.search(r"stage\s*2", low):
+        return True
+    return False
+
+
+# 「伤害指示物」计数：按**部位**细分（总数与部位不可混用）
+_COUNTER_ON_PHRASES = (
+    ("damage counter on this pok", "own_active_counters"),
+    ("damage counter on your active", "own_active_counters"),
+    ("damage counter on your opponent's active", "opp_active_counters"),
+    ("damage counter on your opponent", "opp_active_counters"),
+    ("damage counter on all of your benched", "own_bench_counters"),
+    ("damage counter on your benched", "own_bench_counters"),
+)
+
+# 阵营感知的概念表：正则 → (我方计数源, 对手计数源)。对手侧为 None = 引擎无此源
+# （如「对手手牌数」不可见、「对手弃牌堆」引擎未建），**如实返回 None 而非硬套我方值**。
+_CONCEPT_TABLE = (
+    (r"benched pok", "own_bench", "opp_bench"),
+    (r"pok[eé]mon in play", "own_field", "opp_field"),
+    (r"pok[eé]mon in play|on your field", "own_field", "opp_field"),
+    (r"stage 2 pok", "own_bench_stage2", None),
+    (r"card in your hand|cards in your hand", "own_hand", None),
+    (r"card in your discard pile|cards in your discard pile",
+     "own_discard_count", None),
+    (r"energy in your discard pile|energy card in your discard pile",
+     "own_discard_energy", None),
+    (r"prize card", None, None),          # 统一走下表的 taken/left 细分
+)
+# 奖赏卡：**「已取得」与「剩余」口径相反**，必须分开
+_PRIZE_TAKEN_RE = re.compile(r"prize cards?[^.]{0,24}?\b(taken|took)\b", re.I)
+_PRIZE_LEFT_RE = re.compile(r"prize cards?[^.]{0,24}?\b(remaining|left)\b", re.I)
+
+
 def _counter_from_phrase(phrase: str) -> Optional[str]:
     """英文短语 → 引擎计数源（未识别 → None，调用方如实标注不支持）
 
-    **反假映射守卫**：``card in your discard pile`` 这类笼统短语若前面带**类别限定词**
-    （Ancient / Pokémon / Trainer / Item / Supporter / Stadium / Tool / Stage n / Tera…），
-    语义是「弃牌堆中某一小类的数量」，与「弃牌堆总卡数」不等——若笼统映射会**系统性多算**
-    伤害（60 条以上卡面受影响）。这类一律返回 None，登记为未建模，绝不猜。
+    **三条硬约束**（每条都由实测的错映射换来的）：
+      ① **阵营**：用 `_phrase_side` 定 own/opp；判不出就 None，绝不兜底成某一方；
+      ② **子集**：具名/类别/颜色限定 → None（总数 ≠ 子集，笼统映射会系统性多算）；
+      ③ **口径**：「已取得奖赏卡」≠「剩余奖赏卡」，分别映射到 `*_prizes_taken`
+         / `*_prizes_left`（早期按 left 映射导致伤害随对手取卡而**反向变化**）。
     （``energy card in your discard pile`` 例外：限定词就是能量本身，等价于总能量数。）
     """
     raw = _norm_apostrophe(phrase)
     low = raw.lower()
-    if _FILTERED_DISCARD_RE.search(low) and "energy" not in low:
+    side = _phrase_side(low)
+
+    # ③ 奖赏卡：先判口径（taken/left），再按阵营取源
+    if "prize card" in low:
+        # 「上一回合取走的奖赏卡」是**回合范围内**的计数，引擎无此口径 → 如实放弃
+        if re.search(r"(last|previous|their|your)\s+turn", low):
+            return None
+        if _PRIZE_TAKEN_RE.search(low):
+            return {"own": "own_prizes_taken", "opp": "opp_prizes_taken"}.get(side)
+        if _PRIZE_LEFT_RE.search(low):
+            return {"own": "own_prizes_left", "opp": "opp_prizes_left"}.get(side)
         return None
-    if _FILTER_QUALIFIER_RE.search(low):
-        return None           # 「…that has “X”」「…with a Rule Box」= 子集，不可按总数算
-    # 带能量颜色限定（{W} Energy attached to this Pokémon）→ <zone>_energy_<color>
+
+    # ② 子集限定 → 不可按总数算
+    if _is_subset_phrase(raw, low):
+        return None
+    if _FILTERED_DISCARD_RE.search(low) and "energy" not in low and \
+            "discard" in low:
+        return None
+
+    # 能量相关：颜色限定可表达（<zone>_energy_<color>）
     mcolor = re.search(r"\{([A-Za-z])\}\s*energy", raw, re.I)
     if "energy attached" in low or "energy card" in low:
         zone = _energy_zone_from_phrase(low)
         color = _EN_SYMBOL_COLOR.get((mcolor.group(1).upper() if mcolor else ""))
         if zone == "own_discard":
-            # 弃牌堆能量：指定颜色 = 子集 → 不可按总能量数算
             return None if color else "own_discard_energy"
         if zone:
             return f"{zone}_energy" + (f"_{color}" if color else "")
+
+    # 伤害指示物：按部位
+    for needle, counter in _COUNTER_ON_PHRASES:
+        if needle in low:
+            return counter
+
+    # 通用概念表（阵营感知）
+    for pat, own, opp in _CONCEPT_TABLE:
+        if re.search(pat, low):
+            got = {"own": own, "opp": opp}.get(side)
+            if got:
+                return got
+            break
+
+    # 兜底：**天然属于我方**的句式（不含阵营歧义）。
+    # ⚠ 这里只允许放「不可能指对手」的措辞（"you discarded" / "you placed"）——
+    #   任何可能被对手侧使用的措辞（benched pok / prize card / card in discard pile…）
+    #   都必须走上面的阵营感知分支，否则会重演「your Benched → opp_bench」的错映射。
     for needle, counter in _COUNTER_PHRASES:
         if needle in low:
             return counter
@@ -774,13 +945,22 @@ def _counter_from_phrase(phrase: str) -> Optional[str]:
 
 
 def _energy_zone_from_phrase(low: str) -> Optional[str]:
-    """能量计数短语 → 引擎能量 zone（未识别 → None）"""
+    """能量计数短语 → 引擎能量 zone（未识别 → None）
+
+    ⚠ **顺序即语义**：``attached to all of your opponent's Pokémon`` 同时含有
+    ``attached to all of your``，若先判我方会把对手侧算成我方（实测 Leafeon ex /
+    Delcatty 两张卡因此按我方能量数加伤）。故**所有 opponent 分支必须排在前面**。
+    """
     if "attached to this pok" in low or "attached to your active" in low:
         return "own_active"
-    if "attached to your opponent" in low:
+    if "attached to your opponent's active" in low:
+        return "opp_active"
+    if "attached to your opponent" in low:       # 泛指对手（active 之外）
         return "opp_active"
     if "attached to both active" in low:
         return "both_active"
+    if "attached to all of your opponent" in low or "attached to all opponent" in low:
+        return "opp_all"
     if "attached to all of your" in low:
         return "own_all"
     if "attached to all pok" in low:
@@ -803,6 +983,19 @@ def _norm_apostrophe(s: str) -> str:
     表现为「明明写了识别规则却识别不出来」——这类问题在英文卡面语料上极易踩。
     """
     return str(s or "").replace("\u2019", "'").replace("\u2018", "'")
+
+
+def _condition_from_text(text: str) -> Optional[str]:
+    """英文条件从句 → 引擎 `dmg_plus:N:if:<cond>` 的合法条件（未识别 → None）
+
+    只在 `_CONDITION_PHRASES` 白名单内映射；引擎没有的条件（场地/曾打出某卡/
+    对手宝可梦属性…）一律返回 None，由调用方登记为未建模。
+    """
+    low = _norm_apostrophe(text).lower()
+    for pat, cond in _CONDITION_PHRASES:
+        if re.search(pat, low):
+            return cond
+    return None
 
 
 def _detect_modifiers(text: str, kind: str, name: str) -> list:
@@ -836,11 +1029,26 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
         else:
             out.append(act("rule", None, "active_opponent",
                            {"note": f"条件伤害缩放：计数源未识别（{phrase.strip()[:30]}）"}))
-    elif _KO_LAST_TURN_RE.search(t) or re.search(r"were\s+knocked\s+out", t, re.I):
-        add = re.search(r"does\s+(\d+)\s+more\s+damage", t, re.I)
-        if add and _KO_LAST_TURN_RE.search(t):
-            out.append(act("damage_mod", int(add.group(1)), "active_opponent",
+    elif not _COIN_RE.search(t) and re.search(r"does\s+(\d+)\s+more\s+damage", t,
+                                              re.I):
+        # 「If <条件>, this attack does N more damage」——**只在条件落到引擎白名单时映射**。
+        # ⚠ 条件不在白名单（场地在场上 / 曾打出某张卡 / 对手宝可梦的属性 …）时必须放弃：
+        #   若退化成无条件的 `dmg_plus:N` 会凭空加伤，属**静默算错**，比"未建模"更糟。
+        # ⚠ 文本含抛币时必须让位（「Flip a coin. If heads, … does N more damage」
+        #   已由 `_detect_coin` 产出 `coin:heads:dmg_plus:N`；此处再报一次"条件未识别"
+        #   会变成重复计入未建模 —— 实测 test_coin_heads_plus_damage 因此失败）。
+        n = int(re.search(r"does\s+(\d+)\s+more\s+damage", t, re.I).group(1))
+        cond = _condition_from_text(t)
+        if cond:
+            out.append(act("damage_mod", n, "active_opponent",
+                           {"mode": "plus_if", "cond": cond}))
+        elif _KO_LAST_TURN_RE.search(t) or re.search(r"were\s+knocked\s+out", t,
+                                                    re.I):
+            out.append(act("damage_mod", n, "active_opponent",
                            {"mode": "plus_if", "cond": "opp_ko_last_turn"}))
+        else:
+            out.append(act("rule", None, "active_opponent",
+                           {"note": "条件伤害缩放：条件未识别（引擎无该条件）"}))
 
     # 2) 抛币
     if _COIN_RE.search(t):
@@ -920,9 +1128,13 @@ def _detect_coin(text: str, low: str) -> list:
         out.append(act("coin_flip", None, "active_opponent",
                        {"side": "tails", "mode": "single", "sub": "dmg_zero"}))
     if _COIN_HEADS_DISCARD_ENERGY_RE.search(text):
+        # 目标是**对手**时用 `:opp` 变体（引擎会弃对手战斗位能量）；
+        # 不带目标信息的 `discard_energy:N` 语义是「弃自身」，会弃错对象。
+        opp = bool(_EN_OPP_RE.search(text))
         out.append(act("coin_flip", None, "active_opponent",
                        {"side": "heads", "mode": "single",
-                        "sub": "discard_energy", "sub_amount": 1}))
+                        "sub": "discard_energy_opp" if opp else "discard_energy",
+                        "sub_amount": 1}))
     if _COIN_HEADS_PREVENT_RE.search(text):
         out.append(act("coin_flip", None, "self",
                        {"side": "heads", "mode": "single",
@@ -1456,6 +1668,10 @@ def _coin_sub_tag(sub: str, amount) -> str:
         return "dmg_zero"
     if sub == "discard_energy":
         return f"discard_energy:{n or 1}"
+    if sub == "discard_energy_opp":
+        # 弃对手战斗位能量（`:opp` 变体）——卡面「…discard an Energy from your
+        # opponent's Active Pokémon」若落成普通 discard_energy 会弃到自己头上
+        return f"discard_energy:{n or 1}:opp"
     if sub in ("self", "spread_free", "heal", "draw"):
         return sub if not n else f"{sub}:{n}"
     if sub == "shield_prevent_all":
@@ -1562,11 +1778,16 @@ def to_engine_tags(specs: list) -> dict:
             elif t == "discard":
                 n = int(amt) if amt is not None else 1
                 is_energy = extra.get("card_type") == "energy"
+                # 弃能量的**对象**必须带进 tag：引擎的 `discard_energy:N` 是「弃自身」，
+                # 弃对手战斗位能量是 `discard_energy:N:opp`。若不带对象，卡面写
+                # 「discard an Energy from your opponent's Active Pokémon」会被结算成
+                # 弃自己（4 张真实卡曾因此静默算错）。
+                side = ":opp" if str(tgt or "") == "active_opponent" else ""
                 if extra.get("all"):
-                    tags.append("discard_energy:all" if is_energy
+                    tags.append("discard_energy:all" + side if is_energy
                                 else "discard:all")
                 elif is_energy:
-                    tags.append(f"discard_energy:{n}")
+                    tags.append(f"discard_energy:{n}{side}")
                 else:
                     tags.append(f"discard:{n}")
             elif t == "move_damage":

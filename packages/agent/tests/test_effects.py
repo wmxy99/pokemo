@@ -288,9 +288,91 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("coin:tails:dmg_zero", r["tags"])
 
     def test_coin_heads_discard_energy(self):
+        """弃对手战斗位能量 → `:opp` 变体，且**只能在正面分支**里
+
+        两处修正（2026-09-21，均由审计真实卡池发现）：
+          ① 卡面写「from your **opponent’s** Active Pokémon」，而引擎 `discard_energy:N`
+             的语义是「弃自身」→ 曾把自家能量丢掉、对手毫发无损
+             （Gastly / Larvitar / Accelgor / Croconaw 4 张卡受影响）→ 加 `:opp` 变体；
+          ② 该动作属抛币分支，**不得**再产出无条件版本（从"正面才弃"变"必定弃"）。
+        """
         r = self._tags("Flip a coin. If heads, discard an Energy from your "
                        "opponent\u2019s Active Pok\u00e9mon.")
-        self.assertIn("coin:heads:discard_energy:1", r["tags"])
+        self.assertIn("coin:heads:discard_energy:1:opp", r["tags"])
+        self.assertNotIn("discard_energy:1:opp", r["tags"],
+                         "抛币分支内的动作不得同时产出无条件版本")
+
+    def test_discard_target_from_clause_not_whole_text(self):
+        """弃牌目标只看**子句**，不看全文（真实反例：Regice ex·Ice Prison）
+
+        原文「Discard 2 Energy **from this Pokémon**, and your opponent's Active
+        Pokémon is now Paralyzed.」——弃的是自身，但同一句里提到了对手。
+        早期用全文的 opponent 检查判目标 → 判成"弃对手能量"，引擎去扣对手的能量
+        （静默算错）。修法：从匹配处截到第一个句读，只看这一小段。
+        """
+        r = self._tags("Discard 2 Energy from this Pok\u00e9mon, and your "
+                       "opponent\u2019s Active Pok\u00e9mon is now Paralyzed.")
+        self.assertIn("discard_energy:2", r["tags"])
+        self.assertNotIn("discard_energy:2:opp", r["tags"],
+                         "子句说的是自身，不得被全文的 opponent 带偏")
+        self.assertIn("paralyze", r["tags"])
+
+    def test_discard_energy_self_vs_opponent(self):
+        """冠词型弃能量：自身 / 对手必须落到不同 tag（引擎语义不同）"""
+        own = self._tags("Discard an Energy from this Pok\u00e9mon.")
+        self.assertIn("discard_energy:1", own["tags"])
+        self.assertNotIn("discard_energy:1:opp", own["tags"])
+        opp = self._tags("Discard a Special Energy from your opponent\u2019s "
+                         "Active Pok\u00e9mon.")
+        self.assertIn("discard_energy:1:opp", opp["tags"])
+
+    def test_counter_side_is_not_reversed(self):
+        """计数源阵营不得反转（your ↔ opponent's）
+
+        实测：`for each of **your** Benched Pokémon` 曾命中笼统的 `benched pok`
+        被映射成 **opp_bench** → 按对手后备数算伤害（Terapagos ex / Tapu Koko ex /
+        Cinccino 三张卡受影响）。口径反转同理：`Prize card … has taken` 曾按
+        `*_prizes_left`（剩余）映射，方向相反。
+        """
+        own = self._tags("This attack does 20 more damage for each of your "
+                         "Benched Pok\u00e9mon.")
+        self.assertIn("dmg_plus:20:per:own_bench", own["tags"])
+        opp = self._tags("This attack does 20 more damage for each of your "
+                         "opponent\u2019s Benched Pok\u00e9mon.")
+        self.assertIn("dmg_plus:20:per:opp_bench", opp["tags"])
+        taken = self._tags("This attack does 50 more damage for each Prize card "
+                           "your opponent has taken.")
+        self.assertIn("dmg_plus:50:per:opp_prizes_taken", taken["tags"],
+                      "「已取得」不得映射成「剩余」")
+
+    def test_subset_phrase_not_mapped_to_total(self):
+        """子集措辞（具名/类别/颜色限定）不得按总数映射（否则系统性多算）"""
+        for text in (
+            "This attack does 30 more damage for each damage counter on all of "
+            "your opponent\u2019s Pok\u00e9mon.",          # 部位：非"后备"也不是"active"
+            "This attack does 30 more damage for each damage counter on all of "
+            "your Benched Cynthia\u2019s Pok\u00e9mon.",   # 具名子集
+            "This attack does 30 more damage for each damage counter on all of "
+            "your Benched {F} Pok\u00e9mon.",              # 颜色子集
+        ):
+            r = self._tags(text)
+            self.assertEqual(r["tags"], [],
+                             f"子集措辞不得映射出 tag：{text[:50]}")
+            self.assertTrue(r["unsupported"], "应如实登记为未建模")
+
+    def test_unmappable_condition_not_emitted_as_flat_bonus(self):
+        """条件无法表达时**不得**退化成无条件加伤（凭空加伤 = 静默算错）"""
+        r = self._tags("If a Stadium is in play, this attack does 60 more "
+                       "damage. Then, discard that Stadium.")
+        self.assertEqual(r["tags"], [], "条件未知却产出了加伤 tag")
+        self.assertTrue(r["unsupported"])
+
+    def test_condition_mappable_to_engine_whitelist(self):
+        """条件在引擎白名单内时才映射为 `dmg_plus:N:if:<cond>`"""
+        r = self._tags("If your opponent has any Benched Pok\u00e9mon, this "
+                       "attack does 30 more damage.")
+        self.assertIn("dmg_plus:30:if:opp_has_bench", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_coin_heads_shield_not_unconditional(self):
         """护盾写在抛币分支内 → 只能有 coin:heads:…，不得再产出无条件 shield

@@ -432,5 +432,80 @@ class TestEvolveFromDeck(unittest.TestCase):
         self.assertEqual(p.active.damage, 30)
 
 
+class TestDiscardEnergyTarget(unittest.TestCase):
+    """`discard_energy:N:opp` —— 弃**对手**战斗位能量（2026-09-21 新增）
+
+    背景：卡面常见的「Discard an Energy from your opponent's Active Pokémon」
+    早期只能映射成 `discard_energy:N`（语义 = 弃自身）→ 4 张真实卡在真实对局里
+    把自家能量丢掉、对手毫发无损（静默算错）。这里锁定修正后的语义。
+    """
+
+    def _run(self, tag, own_e=2, opp_e=2):
+        b = _arena()
+        # 先 _equip（它会**替换** players[0].active），再给新的 active 加能量 ——
+        # 顺序反了会拿到旧对象（本测试第一版就踩了这个，断言看起来"引擎没弃"）
+        me = _equip(b, (tag,), owner=0)
+        foe = b.players[1].active
+        me.add_energy("fire", own_e)
+        foe.add_energy("water", opp_e)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        return b, me, foe
+
+    def test_opp_variant_discards_from_opponent(self):
+        _, me, foe = self._run("discard_energy:1:opp")
+        self.assertEqual(foe.total_energy(), 1, "应弃掉对手 1 个能量")
+        self.assertEqual(me.total_energy(), 2, "自身能量不得被动到")
+
+    def test_own_variant_discards_from_self(self):
+        _, me, foe = self._run("discard_energy:1")
+        self.assertEqual(me.total_energy(), 1, "应弃掉自身 1 个能量")
+        self.assertEqual(foe.total_energy(), 2, "对手能量不得被动到")
+
+    def test_opp_variant_logs_side(self):
+        b, _, _ = self._run("discard_energy:2:opp")
+        ev = [e for e in b.events if e.get("type") == "discard_energy"]
+        self.assertTrue(ev, "应记录 discard_energy 事件")
+        self.assertEqual(ev[-1].get("side"), "opp")
+        self.assertEqual(ev[-1].get("n"), 2)
+
+    def test_opp_variant_handles_empty_opp_energy(self):
+        """对手无能量时不得抛错、不得转去弃自家能量"""
+        b = _arena()
+        me = _equip(b, ("discard_energy:1:opp",), owner=0)
+        me.add_energy("fire", 2)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.total_energy(), 2, "对手没能量时不能改弃自家")
+
+
+class TestPrizesTakenCounters(unittest.TestCase):
+    """`own/opp_prizes_taken` —— 「已取得」奖赏卡数（与 `*_prizes_left` 口径相反）
+
+    背景：`for each Prize card your opponent has taken` 早期被映射成 prizes_left
+    （剩余）→ 伤害随对手取卡而**减少**，方向反了（4 张真实卡受影响）。
+    """
+
+    def _dmg_with(self, counter, taken):
+        b = _arena()
+        _equip(b, (f"dmg_plus:10:per:{counter}",), owner=0, damage=0)
+        # 让对手已取得 `taken` 张奖赏卡（prizes_left 相应减少）
+        b.players[1].prizes_left = b.cfg.prizes - taken
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        return b.players[1].active.damage
+
+    def test_opp_prizes_taken_increases_with_taken(self):
+        self.assertEqual(self._dmg_with("opp_prizes_taken", 0), 0)
+        self.assertEqual(self._dmg_with("opp_prizes_taken", 3), 30)
+
+    def test_opp_prizes_left_decreases_with_taken(self):
+        """对照：left 口径方向相反（这正是不能混用的原因）"""
+        total = _arena().cfg.prizes
+        self.assertEqual(self._dmg_with("opp_prizes_left", 0), total * 10)
+        self.assertEqual(self._dmg_with("opp_prizes_left", 3),
+                         (total - 3) * 10)
+
+
 if __name__ == "__main__":
     unittest.main()

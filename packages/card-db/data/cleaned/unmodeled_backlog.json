@@ -1,6 +1,6 @@
 {
- "snapshot": "after",
- "generated_at": "2026-09-14 14:38:12",
+ "snapshot": "current",
+ "generated_at": "2026-09-21 11:46:00",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,11 +11,13 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 812,
-  "unsupported": 695,
-  "cards_with_unsupported": 589,
-  "cards_fully_mapped": 530,
-  "cards_with_supported_tag": 684
+  "engine_tags": 839,
+  "unsupported": 677,
+  "cards_with_unsupported": 576,
+  "cards_fully_mapped": 543,
+  "cards_with_supported_tag": 700,
+  "cards_engine_ready": 443,
+  "cards_ready_no_specs": 0
  },
  "deck_baseline": [
   {
@@ -84,7 +86,7 @@
    "groups": 1,
    "entries": 25,
    "cards": 25,
-   "share": 0.036
+   "share": 0.0369
   },
   {
    "id": "B3",
@@ -92,10 +94,10 @@
    "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索）",
    "priority": 3,
-   "groups": 18,
-   "entries": 128,
-   "cards": 128,
-   "share": 0.1842
+   "groups": 20,
+   "entries": 117,
+   "cards": 117,
+   "share": 0.1728
   },
   {
    "id": "B4",
@@ -103,10 +105,10 @@
    "goal": "需要条件表达式 / RNG 钩子 / 静态修正层等新机制，不属本轮",
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
-   "groups": 9,
-   "entries": 54,
-   "cards": 54,
-   "share": 0.0777
+   "groups": 12,
+   "entries": 58,
+   "cards": 58,
+   "share": 0.0857
   },
   {
    "id": "B5",
@@ -114,10 +116,10 @@
    "goal": "真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）",
    "fix": "永久登记在差异透明清单（C5），不做实现",
    "priority": 5,
-   "groups": 23,
-   "entries": 488,
-   "cards": 456,
-   "share": 0.7022
+   "groups": 22,
+   "entries": 477,
+   "cards": 460,
+   "share": 0.7046
   }
  ],
  "items": [
@@ -159,42 +161,6 @@
   },
   {
    "batch": "B3",
-   "sub": "attach",
-   "desc": "附能量（attach … energy）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 31,
-   "cards": 31,
-   "samples": [
-    {
-     "card": "Shiftry",
-     "name_zh": "",
-     "text": "Put an Energy attached to this Pokémon into your hand."
-    },
-    {
-     "card": "Galvantula",
-     "name_zh": "",
-     "text": "If this Pokémon has any {L} Energy attached, this attack does 80 more damage."
-    },
-    {
-     "card": "Archaludon",
-     "name_zh": "",
-     "text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost."
-    },
-    {
-     "card": "Zarude",
-     "name_zh": "",
-     "text": "You may put all Energy attached to this Pokémon into your hand to have this attack do 80 more damage."
-    },
-    {
-     "card": "Alolan Exeggutor ex",
-     "name_zh": "",
-     "text": "You may attach any number of Basic Energy cards from your hand to your Pokémon in any way you like."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
    "sub": "discard_self",
    "desc": "弃自身/弃手牌（含对手）",
    "action_type": "rule",
@@ -231,37 +197,37 @@
   },
   {
    "batch": "B3",
-   "sub": "discard_energy_self",
-   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 13,
-   "cards": 13,
+   "entries": 21,
+   "cards": 21,
    "samples": [
     {
-     "card": "Deerling",
+     "card": "Shiftry",
      "name_zh": "",
-     "text": "Discard a {G} Energy from this Pokémon."
+     "text": "Put an Energy attached to this Pokémon into your hand."
     },
     {
-     "card": "Charcadet",
+     "card": "Archaludon",
      "name_zh": "",
-     "text": "Discard an Energy from this Pokémon."
+     "text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost."
     },
     {
-     "card": "Slaking ex",
+     "card": "Zarude",
      "name_zh": "",
-     "text": "Discard an Energy from this Pokémon."
+     "text": "You may put all Energy attached to this Pokémon into your hand to have this attack do 80 more damage."
     },
     {
-     "card": "Ethan's Cyndaquil",
+     "card": "Alolan Exeggutor ex",
      "name_zh": "",
-     "text": "Discard an Energy from this Pokémon."
+     "text": "You may attach any number of Basic Energy cards from your hand to your Pokémon in any way you like."
     },
     {
-     "card": "Team Rocket's Moltres ex",
+     "card": "Chien-Pao",
      "name_zh": "",
-     "text": "Discard a Team Rocket’s Energy from this Pokémon. If you do, discard your opponent’s Active Pokémon and all attached cards."
+     "text": "Put an Energy attached to this Pokémon into your hand."
     }
    ]
   },
@@ -334,6 +300,42 @@
      "card": "Blaziken",
      "name_zh": "",
      "text": "Discard 2 Energy from this Pokémon. This attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
+   "entries": 10,
+   "cards": 10,
+   "samples": [
+    {
+     "card": "Galvantula",
+     "name_zh": "",
+     "text": "If this Pokémon has any {L} Energy attached, this attack does 80 more damage."
+    },
+    {
+     "card": "Electivire ex",
+     "name_zh": "",
+     "text": "If this Pokémon has at least 2 extra Energy attached (in addition to this attack’s cost), this attack does 100 more damage."
+    },
+    {
+     "card": "Team Rocket's Articuno",
+     "name_zh": "",
+     "text": "If this Pokémon has any Team Rocket’s Energy attached, this attack does 60 more damage."
+    },
+    {
+     "card": "Abomasnow",
+     "name_zh": "",
+     "text": "If this Pokémon has 2 or more {G} Energy attached, this attack does 120 more damage."
+    },
+    {
+     "card": "Team Rocket's Zapdos",
+     "name_zh": "",
+     "text": "If this Pokémon has any Team Rocket’s Energy attached, this attack does 60 more damage."
     }
    ]
   },
@@ -553,6 +555,22 @@
   },
   {
    "batch": "B3",
+   "sub": "discard_energy_self",
+   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Hearthflame Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "If your opponent’s Active Pokémon is an Evolution Pokémon, this attack does 140 more damage, and discard all Energy from this Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
    "sub": "discard_self",
    "desc": "弃自身/弃手牌（含对手）",
    "action_type": "rule",
@@ -564,6 +582,22 @@
      "card": "Misty's Gyarados",
      "name_zh": "",
      "text": "Discard the top 7 cards of your deck, and this attack does 70 damage for each Misty’s Pokémon that you discarded in this way."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "discard_energy_self",
+   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Team Rocket's Moltres ex",
+     "name_zh": "",
+     "text": "Discard a Team Rocket’s Energy from this Pokémon. If you do, discard your opponent’s Active Pokémon and all attached cards."
     }
    ]
   },
@@ -657,8 +691,8 @@
    "desc": "抛币判定（Flip a coin）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 14,
-   "cards": 14,
+   "entries": 13,
+   "cards": 13,
    "samples": [
     {
      "card": "Sylveon",
@@ -671,11 +705,6 @@
      "text": "Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon."
     },
     {
-     "card": "LugiaEX",
-     "name_zh": "",
-     "text": "Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon."
-    },
-    {
      "card": "Ethan's Sudowoodo",
      "name_zh": "",
      "text": "Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack."
@@ -684,6 +713,11 @@
      "card": "Shiftry",
      "name_zh": "",
      "text": "Flip a coin. If heads, choose 1 of your opponent’s Pokémon. Shuffle that Pokémon and all attached cards into their deck."
+    },
+    {
+     "card": "Grafaiai",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, choose a Special Condition. Your opponent’s Active Pokémon is now affected by that Special Condition."
     }
    ]
   },
@@ -754,6 +788,32 @@
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
+   "reason": "条件伤害缩放：计数源未识别（damage counter on all of your ）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Azelf",
+     "name_zh": "",
+     "text": "This attack does 10 more damage for each damage counter on all of your opponent’s Pokémon."
+    },
+    {
+     "card": "Cynthia's Spiritomb",
+     "name_zh": "",
+     "text": "This attack does 10 damage for each damage counter on all of your Benched Cynthia’s Pokémon. This attack’s damage isn’t affected by Weakness."
+    },
+    {
+     "card": "Gigalith",
+     "name_zh": "",
+     "text": "This attack does 20 damage for each damage counter on all of your Benched {F} Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "scaling_damage",
+   "desc": "条件伤害缩放（for each …）",
+   "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Ancient card in your discard p）",
    "entries": 1,
    "cards": 1,
@@ -770,14 +830,30 @@
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
-   "reason": "条件伤害缩放：计数源未识别（Stage 2 Pokémon on your Bench）",
+   "reason": "条件伤害缩放：计数源未识别（{L} Energy attached to all of ）",
    "entries": 1,
    "cards": 1,
    "samples": [
     {
-     "card": "Mamoswine ex",
+     "card": "Iono’s Voltorb",
      "name_zh": "",
-     "text": "This attack does 40 more damage for each Stage 2 Pokémon on your Bench."
+     "text": "This attack does 20 more damage for each {L} Energy attached to all of your Iono’s Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "scaling_damage",
+   "desc": "条件伤害缩放（for each …）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：计数源未识别（Ethan's Adventure card in your）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Ethan's Typhlosion",
+     "name_zh": "",
+     "text": "This attack does 60 more damage for each Ethan’s Adventure card in your discard pile."
     }
    ]
   },
@@ -815,6 +891,22 @@
   },
   {
    "batch": "B4",
+   "sub": "scaling_damage",
+   "desc": "条件伤害缩放（for each …）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：计数源未识别（Prize card your opponent took ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Okidogi",
+     "name_zh": "",
+     "text": "This attack does 60 more damage for each Prize card your opponent took during their last turn."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "coin_flip",
    "desc": "抛币判定（Flip a coin）",
    "action_type": "rule",
@@ -835,8 +927,8 @@
    "desc": "未分类（需人工判定）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 365,
-   "cards": 336,
+   "entries": 285,
+   "cards": 271,
    "samples": [
     {
      "card": "Boomerang Energy",
@@ -871,8 +963,8 @@
    "desc": "未分类（需人工判定）",
    "action_type": "rule",
    "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 87,
-   "cards": 84,
+   "entries": 83,
+   "cards": 80,
    "samples": [
     {
      "card": "Hippowdon",
@@ -898,6 +990,42 @@
      "card": "Iron Crown ex",
      "name_zh": "",
      "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "unclassified",
+   "desc": "未分类（需人工判定）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
+   "entries": 78,
+   "cards": 78,
+   "samples": [
+    {
+     "card": "Team Rocket's Kangaskhan ex",
+     "name_zh": "",
+     "text": "If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage."
+    },
+    {
+     "card": "Chi-Yu",
+     "name_zh": "",
+     "text": "If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium."
+    },
+    {
+     "card": "Enamorus",
+     "name_zh": "",
+     "text": "If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage."
+    },
+    {
+     "card": "Bronzor",
+     "name_zh": "",
+     "text": "If your opponent’s Active Pokémon is a {P} Pokémon, this attack does 30 more damage."
+    },
+    {
+     "card": "Slugma",
+     "name_zh": "",
+     "text": "If your opponent’s Active Pokémon is Burned, this attack does 40 more damage."
     }
    ]
   },
@@ -970,37 +1098,6 @@
      "card": "Rotom",
      "name_zh": "",
      "text": "This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
-   "action_type": "rule",
-   "reason": "条件伤害缩放：计数源未识别（of your Pokémon in play that h）",
-   "entries": 4,
-   "cards": 4,
-   "samples": [
-    {
-     "card": "Tympole",
-     "name_zh": "",
-     "text": "This attack does 20 damage for each of your Pokémon in play that has the Round attack."
-    },
-    {
-     "card": "Palpitoad",
-     "name_zh": "",
-     "text": "This attack does 40 damage for each of your Pokémon in play that has the Round attack."
-    },
-    {
-     "card": "Seismitoad",
-     "name_zh": "",
-     "text": "This attack does 70 damage for each of your Pokémon in play that has the Round attack."
-    },
-    {
-     "card": "Wigglytuff",
-     "name_zh": "",
-     "text": "This attack does 40 damage for each of your Pokémon in play that has the Round attack."
     }
    ]
   },
@@ -1149,22 +1246,6 @@
      "card": "Team Rocket's Spidops",
      "name_zh": "",
      "text": "This attack does 30 damage for each of your Team Rocket’s Pokémon in play."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
-   "action_type": "rule",
-   "reason": "条件伤害缩放：计数源未识别（Pokémon in play that has “Koff）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Team Rocket's Weezing",
-     "name_zh": "",
-     "text": "This attack does 40 damage for each Pokémon in play that has “Koffing” or “Weezing” in its name (both yours and your opponent’s)."
     }
    ]
   },

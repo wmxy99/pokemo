@@ -1345,18 +1345,36 @@ class Battle:
                 _, k = tag.split(":")
                 self._safe_draw(self.current, int(k), source="attack_effect")
             elif tag.startswith("discard_energy:"):
-                raw = tag.split(":")[1]
+                parts = tag.split(":")
+                raw = parts[1]
                 n = 999 if raw == "all" else int(raw)
-                # 优先弃自身 active；无 active 则弃手牌能量
-                done = 0
-                if p.active is not None:
-                    avail = min(n, p.active.total_energy())
-                    if avail and p.active.remove_any(avail):
-                        done = avail
-                if done < n:
-                    done += _discard_hand_energy(self, p, n - done)
-                self._log("discard_energy", {"player": self.current,
-                                             "target": attacker.name, "n": done})
+                # `:opp` = 弃**对手**战斗位的能量。
+                # 为什么要有：卡面常见「Discard an Energy from your opponent's Active
+                # Pokémon」，而早期只有"弃自身"一种语义 → 解析只能映射成弃自身，
+                # 4 张真实卡（Gastly/Larvitar/Accelgor/Croconaw）在真实对局里**弃错对象**
+                # （把自家能量丢掉、对手毫发无损）。这是**静默算错**，必须修。
+                if len(parts) > 2 and parts[2] == "opp":
+                    done = 0
+                    if opp.active is not None:
+                        avail = min(n, opp.active.total_energy())
+                        if avail and opp.active.remove_any(avail):
+                            done = avail
+                    self._log("discard_energy",
+                              {"player": self.current,
+                               "target": (opp.active.name if opp.active else None),
+                               "n": done, "side": "opp"})
+                else:
+                    # 优先弃自身 active；无 active 则弃手牌能量
+                    done = 0
+                    if p.active is not None:
+                        avail = min(n, p.active.total_energy())
+                        if avail and p.active.remove_any(avail):
+                            done = avail
+                    if done < n:
+                        done += _discard_hand_energy(self, p, n - done)
+                    self._log("discard_energy", {"player": self.current,
+                                                 "target": attacker.name, "n": done,
+                                                 "side": "own"})
             elif tag.startswith("discard:"):
                 raw = tag.split(":")[1]
                 n = len(p.hand) if raw == "all" else int(raw)
@@ -1935,6 +1953,12 @@ _COUNTERS = {
     "own_hand": lambda b, p, o: len(p.hand),
     "own_prizes_left": lambda b, p, o: p.prizes_left,
     "opp_prizes_left": lambda b, p, o: o.prizes_left,
+    # 「已取得」奖赏卡数 —— 与 `*_prizes_left`（剩余）**口径相反**，不可混用。
+    # 为什么单列：卡面常见 "for each Prize card your opponent has taken"，
+    # 早期解析把它按 prizes_left（剩余）映射 → 伤害随对手取卡而**减少**（方向反了）。
+    # 二者数量上互补，但语义相反，混用是**静默算错**（本轮审计发现 4 张卡受影响）。
+    "own_prizes_taken": lambda b, p, o: b.cfg.prizes - p.prizes_left,
+    "opp_prizes_taken": lambda b, p, o: b.cfg.prizes - o.prizes_left,
     "own_field": lambda b, p, o: len(p.all_field()),
     "opp_field": lambda b, p, o: len(o.all_field()),
     "own_bench_stage2": lambda b, p, o: sum(1 for fp in p.bench if fp.pdef.stage == 2),

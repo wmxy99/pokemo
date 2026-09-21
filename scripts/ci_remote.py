@@ -94,14 +94,26 @@ def call(path: str, token: str) -> tuple[int, object]:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(API + path, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return r.status, json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "replace")[:200]
-        return e.code, body
-    except Exception as e:                       # 网络层失败
-        return 0, f"{type(e).__name__}: {e}"
+    # 重试：api.github.com 偶发连接超时（实测遇到过 WinError 10060），5xx 同理。
+    # 只对**网络层失败与 5xx** 重试；4xx 是确定性结论，直接返回。
+    last = "未知错误"
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status, json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:200]
+            if e.code >= 500 and attempt < 2:
+                last = f"HTTP {e.code}"
+                time.sleep(2 * (attempt + 1))
+                continue
+            return e.code, body
+        except Exception as e:                       # 网络层失败
+            last = f"{type(e).__name__}: {e}"
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+    return 0, last
 
 
 def load_runs(repo: str, token: str, limit: int) -> tuple[list, str | None]:

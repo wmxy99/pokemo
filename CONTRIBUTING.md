@@ -38,14 +38,25 @@ CI 结果只能在 GitHub 上看，且本机 conda 环境预装了 torch / crypt
 GitHub 连接器同样读不到 → 需要一个 PAT）
 
 ```bash
-export GITHUB_TOKEN=<PAT>       # classic 的 repo 范围，或 fine-grained 的 Actions: Read
+# ① 给 token：写进文件最安全（不被自动探测以外的任何地方读取，脚本也不回显它）
+mkdir -p ~/.workbuddy/secrets
+printf '%s' '<PAT>' > ~/.workbuddy/secrets/gh_pat.txt     # 该路径会被自动探测
+# 也可用：export GITHUB_TOKEN=<PAT> · --token-file <路径> · --token <PAT>（最不推荐）
+
+# ② 读结果
 python scripts/ci_remote.py             # 最近一次运行的全部 job 结论
 python scripts/ci_remote.py --watch     # 运行中则等待结束（15s 轮询，上限 30 分钟）
 python scripts/ci_remote.py --run <id>  # 指定某次运行
 ```
 
+PAT 最小权限：**fine-grained**（Settings → Developer settings → Personal access tokens →
+Fine-grained tokens）→ Repository access 选 `Only select repositories` + `wmxy99/pokemo`；
+Permissions → **Actions: Read-only**（`Metadata: Read-only` 会自动带上）。
+classic PAT 则勾 **`repo`**（权限更大，能不用就不用）。**用完即撤销**（Revoke）。
+
 退出码：`0` 全部成功 · `1` 有失败 job · `2` 读不到（无 token / 无运行 / 网络失败）。
 `skipped` 计为 SKIP 而非失败（条件 job 的常态）。装了 `gh` 也可 `gh run list -R wmxy99/pokemo`。
+仓库根 `.gitignore` 已兜底忽略 `gh_pat.txt` / `.gh_token` / `.github_token` / `*_pat.txt`。
 
 
 **本地启动**（前后端一体）

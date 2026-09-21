@@ -8,9 +8,14 @@
 
 用法：
 
-    # ① 有 token 的两种给法（任选其一）
-    export GITHUB_TOKEN=github_pat_xxx          # 环境变量（推荐，不进 shell 历史）
-    python scripts/ci_remote.py --token ghp_xxx # 或命令行参数
+    # ① 给 token：推荐写进文件（不进命令行历史、不进对话记录）
+    mkdir -p ~/.workbuddy/secrets
+    printf '%s' '<你的 PAT>' > ~/.workbuddy/secrets/gh_pat.txt   # 该路径会被自动探测
+
+    # 也可以显式指定位置或走环境变量
+    python scripts/ci_remote.py --token-file D:/somewhere/pat.txt
+    export GITHUB_TOKEN=<你的 PAT>
+    python scripts/ci_remote.py --token <你的 PAT>      # 会留在命令行历史，最不推荐
 
     # ② 看最近一次运行的全部 job 结论
     python scripts/ci_remote.py
@@ -24,8 +29,11 @@
 
 退出码：0 = 全部成功 · 1 = 有失败 · 2 = 读不到（无 token / 无运行 / 网络失败）
 
-Token 需要的最小权限：私有仓库读 Actions 用 classic PAT 的 `repo`，或 fine-grained
-PAT 的 `Actions: Read` + `Contents: Read`。
+Token 需要的最小权限（两种任选）：
+  · fine-grained PAT：Repository access 选 Only select repositories → wmxy99/pokemo；
+    Permissions → Actions: Read-only（Metadata: Read-only 会自动带上）
+  · classic PAT：勾 `repo`
+脚本**从不回显 token 本身**，只打印来源（命令行 / 文件路径 / 环境变量名）。
 """
 from __future__ import annotations
 
@@ -35,9 +43,11 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 API = "https://api.github.com"
 OK = "success"
@@ -46,6 +56,15 @@ OK = "success"
 SKIP = {"skipped", "neutral"}
 BAD = {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}
 RUNNING = {"in_progress", "queued", "requested", "waiting", "pending"}
+
+# 未显式给 token 时按序探测这些位置（**都不在仓库内**，避免误提交）。
+# 推荐把 PAT 写进第一个：mkdir -p ~/.workbuddy/secrets && 写入 gh_pat.txt
+TOKEN_FILES = (
+    Path.home() / ".workbuddy" / "secrets" / "gh_pat.txt",
+    Path.home() / ".workbuddy" / "gh_pat.txt",
+    Path.home() / ".github_token",
+    Path(tempfile.gettempdir()) / "github_token.txt",
+)
 
 
 def repo_from_git() -> str | None:
@@ -106,6 +125,40 @@ def jobs_of(repo: str, token: str, run_id: int) -> list:
     return data.get("jobs") or []
 
 
+def read_token_file(path: Path) -> str | None:
+    """读 token 文件：取第一行「非空且非注释」，去掉首尾引号。不存在/为空 → None"""
+    try:
+        raw = path.read_text(encoding="utf-8-sig")
+    except OSError:
+        return None
+    for line in raw.splitlines():
+        line = line.strip().strip("'\"")
+        if line and not line.startswith("#"):
+            return line
+    return None
+
+
+def resolve_token(explicit: str | None, token_file: str | None) -> tuple[str, str]:
+    """解析 token 来源，返回 (token, 来源说明)。**任何分支都不回显 token 本身**
+
+    优先级：命令行 > 指定文件 > 环境变量 > 常见位置（TOKEN_FILES）
+    """
+    if explicit:
+        return explicit.strip(), "命令行 --token"
+    if token_file:
+        p = Path(token_file).expanduser()
+        t = read_token_file(p)
+        return (t, f"文件 {p}") if t else ("", f"指定文件 {p}（不存在或为空）")
+    for var in ("GITHUB_TOKEN", "GH_TOKEN"):
+        if os.environ.get(var):
+            return os.environ[var].strip(), f"环境变量 {var}"
+    for p in TOKEN_FILES:
+        t = read_token_file(p.expanduser())
+        if t:
+            return t, f"文件 {p}"
+    return "", "未提供"
+
+
 def fmt(concl: str | None) -> str:
     """把 GitHub 的 conclusion 归到四类；**skipped 归 SKIP，不算失败**"""
     if not concl:
@@ -159,13 +212,15 @@ def show(repo: str, token: str, run: dict, verbose: bool) -> tuple[int, dict]:
             names = [st.get("name") for st in (j.get("steps") or []) if st.get("name")]
             print(f"         步骤：{' | '.join(names)}")
     return worst, counts
-    return worst
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="读取 GitHub Actions 的真实运行结果")
     ap.add_argument("--repo", help="owner/repo（默认从 git origin 推断）")
-    ap.add_argument("--token", help="PAT；也可用环境变量 GITHUB_TOKEN / GH_TOKEN")
+    ap.add_argument("--token", help="PAT（注意：会留在命令行历史里，优先用 --token-file）")
+    ap.add_argument("--token-file",
+                    help="从文件读 PAT（取第一行非空非注释）；不给时会自动探测 "
+                         + " / ".join(str(p) for p in TOKEN_FILES))
     ap.add_argument("--run", type=int, help="指定 run id（默认最近一次）")
     ap.add_argument("--limit", type=int, default=1, help="显示最近 N 次运行（默认 1）")
     ap.add_argument("--watch", action="store_true", help="运行中则等待结束")
@@ -177,12 +232,16 @@ def main() -> int:
         print("✗ 无法确定仓库：请在仓库目录内运行，或显式传 --repo owner/repo")
         return 2
 
-    token = a.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
-    print(f"仓库 {repo} · token {'已提供' if token else '未提供（按匿名访问，仅公开仓库可用）'}")
+    token, src = resolve_token(a.token, a.token_file)
+    print(f"仓库 {repo} · token 来源：{src}")
 
     HINT = ("\n  本仓库是**私有**仓库，匿名读 api.github.com 一律 404。请任选其一：\n"
-            "    export GITHUB_TOKEN=<你的 PAT>      # 需要 repo（classic）或 Actions: Read\n"
-            "    python scripts/ci_remote.py --token <你的 PAT>\n"
+            "    ① 写入文件（推荐，不进命令行历史）：\n"
+            "       mkdir -p ~/.workbuddy/secrets && "
+            "printf '%s' '<你的 PAT>' > ~/.workbuddy/secrets/gh_pat.txt\n"
+            "       然后直接 python scripts/ci_remote.py（会自动探测该路径）\n"
+            "    ② export GITHUB_TOKEN=<你的 PAT>   # 需要 repo（classic）或 Actions: Read\n"
+            "    ③ python scripts/ci_remote.py --token <你的 PAT>\n"
             "  或安装 gh CLI 后：gh run list -R " + repo)
 
     if a.run:

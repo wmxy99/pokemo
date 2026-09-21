@@ -179,3 +179,9 @@ apps/web/batch_*.json
 apps/web/modelcfg_*.json
 # 兜底：E2E 结果 JSON 一律以 _e2e.json 结尾（新增脚本无需再逐条登记）
 apps/web/*_e2e.json
+
+# 凭据兜底：任何被临时丢进仓库目录的 token 文件都不许入库（配合 scripts/ci_remote.py）
+gh_pat.txt
+.gh_token
+.github_token
+*_pat.txt

@@ -75,6 +75,16 @@ def build_jobs() -> list:
     except OSError:
         pass
     env_carddb = {"POKELAB_DB": str(probe_db)}
+    # ⚠ api 的卡库类测试需要**真实卡库**（1267 张）。CI 上是全新 checkout → 库不存在，
+    #   所以 ci.yml 的 api job 会先离线建库。这里同样复刻该步骤，只是把库落到临时路径
+    #   并用 POKELAB_CARD_DB 指过去 —— 语义等价（都是从入库的 cards_challenge.json 重建），
+    #   但不覆盖开发库。
+    #   ⚠ 历史教训：api job 曾经「本地全绿、CI 必红」，就是因为本地有开发库兜着。
+    api_db = Path(tempfile.gettempdir()) / "pokelab_ci_local_api.db"
+    try:
+        api_db.unlink()
+    except OSError:
+        pass
     npm = shutil.which("npm") or "npm"
     return [
         Job("engine", [Step("Settlement & mechanics tests", [PY, "-m", "unittest",
@@ -91,8 +101,19 @@ def build_jobs() -> list:
         ]),
         Job("agent", [Step("Agent tests (need torch)", [PY, "-m", "unittest",
             "discover", "-s", "tests"], _p("packages", "agent"), needs="torch")]),
-        Job("api", [Step("API tests", [PY, "-m", "unittest", "discover", "-s",
-            "tests"], _p("apps", "api"), needs="fastapi")]),
+        Job("api", [
+            Step("Prepare card library DB (schema)", [PY, "-c",
+                 "import sys; sys.path.insert(0,'.')\n"
+                 "from pokelab.db import init_db\n"
+                 "print('[db] 建表数:', init_db(r'%s'))" % api_db],
+                 _p("packages", "card-db"), needs="pydantic"),
+            Step("Prepare card library DB (离线灌入已清洗卡表)",
+                 [PY, "scripts/import_challenge_dataset.py", "--db-only",
+                  "--db", str(api_db)], _p("packages", "card-db")),
+            Step("API tests（指向全新离线卡库）", [PY, "-m", "unittest", "discover", "-s",
+                 "tests"], _p("apps", "api"), {"POKELAB_CARD_DB": str(api_db)},
+                 needs="fastapi"),
+        ]),
         Job("decl-check", [
             Step("api 入口可在无 torch 环境导入", [PY, "-c",
                  "import sys; sys.path.insert(0,'.');\n"

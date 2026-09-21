@@ -66,7 +66,17 @@ jobs:
         with: { python-version: "3.12" }
       - name: Install deps
         run: pip install -r apps/api/requirements.txt
-      - name: Run API tests (126)
+      # ⚠ 卡库类测试需要**真实卡库**（1267 张）。`data/db/pokelab.db` 是 gitignored 的
+      #   运行产物，全新 checkout 上并不存在 → 之前 api job 在 CI 上必红
+      #   （「卡库为空：请先运行 import_challenge_dataset.py」→ 503）。
+      #   已清洗的 `data/cleaned/cards_challenge.json` **是入库的**，所以能完全离线重建。
+      #   只建表 + 灌库，不重跑解析、不回写 JSON/报告（那是 --reparse-only 的职责）。
+      - name: Prepare card library DB (离线重建：卡库类测试的前置)
+        run: |
+          cd packages/card-db
+          python -c "import sys; sys.path.insert(0,'.'); from pokelab.db import init_db; print('[db] 建表数:', init_db())"
+          python scripts/import_challenge_dataset.py --db-only
+      - name: Run API tests (131)
         run: |
           cd apps/api
           python -m unittest discover -s tests -v

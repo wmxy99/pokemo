@@ -868,6 +868,28 @@ def _now() -> str:
     return _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _db_only(args) -> int:
+    """**仅灌库**：从 --in-json 读已清洗卡表 → 写 SQLite，不重跑解析、不回写 JSON/报告
+
+    为什么需要这个模式：`data/db/pokelab.db` 是 gitignored 的运行产物，
+    而新机器 / CI 上并不存在 → 卡库类测试会因「卡库为空」(503) 失败。
+    已清洗的 `data/cleaned/cards_challenge.json` **是入库的**，因此可以完全离线地
+    重建同一份库；相比 `--reparse-only`，这里刻意**不碰解析链与产物**：
+    解析链升级要走 `--reparse-only`（那才会刷新 JSON/报告并留痕）。
+    """
+    src = Path(args.in_json)
+    if not src.exists():
+        raise SystemExit(f"--in-json 不存在：{src}")
+    payload = json.loads(src.read_text(encoding="utf-8"))
+    cards = payload.get("cards") or []
+    if not cards:
+        raise SystemExit(f"--in-json 里没有 cards：{src}")
+    res = load_sqlite(cards, args.db)
+    print(f"[db-only] 卡 {len(cards)} → {args.db}"
+          f"（新增 {res['new']} · 更新 {res['updated']} · 清占位 {res['removed_demo']}）")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="清洗并导入卡牌数据集")
     ap.add_argument("--zip", type=Path, help="数据集 zip 路径")
@@ -883,9 +905,15 @@ def main() -> int:
     ap.add_argument("--reparse-only", action="store_true",
                     help="**仅重跑解析**：从 --in-json 读取已清洗卡表，重跑 K2 解析后"
                          "回写 JSON/报告/DB（无需原始 CSV，供解析链升级后刷新产物）")
+    ap.add_argument("--db-only", action="store_true",
+                    help="**仅灌库**：从 --in-json 读取已清洗卡表，只写 SQLite"
+                         "（不重跑解析、不回写 JSON/报告）—— 供 CI / 新机器离线重建卡库")
     ap.add_argument("--in-json", type=Path, default=OUT_JSON,
-                    help="--reparse-only 时的输入（已清洗 JSON）")
+                    help="--reparse-only / --db-only 时的输入（已清洗 JSON）")
     args = ap.parse_args()
+
+    if args.db_only:
+        return _db_only(args)
 
     if args.reparse_only:
         return _reparse_only(args)

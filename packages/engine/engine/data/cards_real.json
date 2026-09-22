@@ -16,7 +16,7 @@
         "confuse",
         "spread_free:N",
         "spread:N:per",
-        "spread:all:per",
+        "snipe:<scope>:<per>:<count>",
         "heal:N",
         "self:N",
         "draw:N",
@@ -28,6 +28,7 @@
         "attach:N[:type][:zone]",
         "move_damage:N|all",
         "recover:N[:kind=pokemon|energy|any|trainer|supporter|item]",
+        "mill:N[:opp]",
         "evolve_from_deck",
         "dmg_plus:N[:per:<counter>][:if:<cond>]",
         "dmg_zero",
@@ -37,7 +38,9 @@
         "shield:prevent_all",
         "coin:heads:<tag>",
         "coin:tails:<tag>",
-        "coin_each:N|<counter>:<side>:<tag>"
+        "coin_each:N|<counter>:<side>:<tag>",
+        "dmg_plus:N:if:own_active_energy_type:<color>（带参条件）",
+        "dmg_plus:N:if:own_active_energy_at_least:<n>（带参条件）"
       ],
       "abilities": [
         "recon:N (field, 每回合一次)",
@@ -48,7 +51,8 @@
         "ko_draw:N (被动 · 被击倒时)",
         "evolve_attach:N[:type][:zone] (被动 · 进化时)",
         "weak_change:<type>[:<filter>] (被动 · 静态)",
-        "passive:bench_immune (被动 · 后备时免疫招式伤害与效果)"
+        "passive:bench_immune (被动 · 后备时免疫招式伤害与效果)",
+        "search_pokemon|trainer|any|energy:N (全牌库检索；与 recon 语义不同)"
       ],
       "trainers": [
         "poffin",

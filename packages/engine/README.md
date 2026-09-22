@@ -44,7 +44,7 @@ python run_demo.py dump 20260908
 | 文件 | 内容 |
 |---|---|
 | `engine/data/cards_real.json` | **人工池**：40 张（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注，逐卡人工校对）|
-| `engine/data/cards_pool_ext.json` | **扩展池**：376 条目 / 352 唯一名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）|
+| `engine/data/cards_pool_ext.json` | **扩展池**：397 条目 / 371 唯一名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）|
 | `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta）|
 | `engine/reallib.py` | 加载器与组装：`catalog()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
 
@@ -52,9 +52,9 @@ python run_demo.py dump 20260908
 
 | 项 | 数值 |
 |---|---|
-| `catalog()` 可加载卡 | **392 张**（人工 40 + 扩展 376 条目；扩展池内 22 个重名条目＝同卡不同印刷批次，按名去重）|
-| 数据文件条目合计 | 416（40 + 376）|
-| 库内「引擎可对战」 | **483 / 1267**（`mapped` 36 + `approximated` 447，见 `GET /cards/stats`）|
+| `catalog()` 可加载卡 | **411 张**（人工 40 + 扩展 397 条目；扩展池内重名条目＝同卡不同印刷批次，按名去重）|
+| 数据文件条目合计 | 437（40 + 397）|
+| 库内「引擎可对战」 | **508 / 1267**（`mapped` 36 + `approximated` 472，见 `GET /cards/stats`）|
 
 > **近似 ≠ 等价**：扩展池条目标为 `approximated`（解析链推导、未逐卡校对），
 > 与人工池的 `mapped` 在 C5 差异透明口径下**必须区分**，不可混为一谈。
@@ -122,7 +122,7 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 严禁逐字复制官方文案），基本能量亦补「提供 N 点X能量」。
 
 > **中文覆盖的诚实口径（重要）**：中文名/中文效果**只有人工池有**。
-> 扩展池 376 条目的 `name_zh` / `desc_zh` 为**空**——源数据集
+> 扩展池 397 条目的 `name_zh` / `desc_zh` 为**空**——源数据集
 > （`pokemon-tcg-ai-battle-challenge-strategy`）本身是英文，我们没有第二份中文语料，
 > 因此**不把英文塞进中文字段**冒充翻译。展示层按「中文优先、回退英文原文」处理
 > （`display` / `display_desc`），卡库页对扩展池卡会显示英文原名与英文效果。

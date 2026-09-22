@@ -55,16 +55,18 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
     "poison", "burn", "sleep", "paralyze", "confuse", "spread_free:", "spread:",
-    "heal:", "self:", "draw:", "draw_to:", "discard:", "discard_energy:",
-    "switch_self", "gust", "attach", "move_damage:", "recover:",
-    "dmg_plus:", "dmg_zero", "ignore_weakness", "ignore_resistance",
-    "coin:", "coin_each:", "shield:", "evolve_from_deck",
+    "snipe:", "heal:", "self:", "draw:", "draw_to:", "discard:",
+    "discard_energy:", "switch_self", "gust", "attach", "move_damage:",
+    "recover:", "dmg_plus:", "dmg_zero", "ignore_weakness", "ignore_resistance",
+    "coin:", "coin_each:", "shield:", "evolve_from_deck", "mill:",
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
 ABILITY_TAG_PREFIXES = (
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:",
+    # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
+    "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",
 )
 
 

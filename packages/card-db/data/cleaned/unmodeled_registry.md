@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），不是待办列表。
 > 凡列于此的卡面机制，本引擎**不实现**（或明确留待后续批次）；对应卡牌会被如实标记为 `engine_ready=false` / `engine_status=approximated`，**绝不静默降级或假装支持**。
 
-- 生成时间：2026-09-22 09:20:27
+- 生成时间：2026-09-22 21:45:10
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **675** 条 · 已映射 tag 891 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：483 张**
-- 解析层面「无未建模动作」卡：547 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **627** 条 · 已映射 tag 925 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：508 张**
+- 解析层面「无未建模动作」卡：569 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -21,74 +21,45 @@
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
 | B4 | static_lock | `rule` | 27 | 27 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B4 | coin_flip | `rule` | 13 | 13 | 静态/未建模（英文） |
-| B4 | extra_damage_target | `damage` | 5 | 5 | 附加伤害目标未建模（opp_bench_one：does 30 damage to 1 of your opponent’s Benched Pokémon） |
+| B4 | coin_flip | `rule` | 11 | 11 | 静态/未建模（英文） |
 | B4 | static_lock | `rule` | 4 | 4 | 静态/未建模（英文） |
-| B4 | extra_damage_target | `damage` | 4 | 4 | 附加伤害目标未建模（opp_bench_one：does 50 damage to 1 of your opponent’s Benched Pokémon） |
 | B4 | scaling_damage | `rule` | 4 | 4 | 静态/未建模（英文） |
-| B4 | extra_damage_target | `damage` | 3 | 3 | 附加伤害目标未建模（opp_n：does 50 damage to 2 of your opponent’s Pokémon） |
+| B4 | extra_damage_target | `damage` | 3 | 3 | 附加伤害目标未建模（itself） |
 | B4 | scaling_damage | `rule` | 3 | 3 | 条件伤害缩放：计数源未识别（damage counter on all of your ） |
-| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（opp_bench_one：does 20 damage to 1 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（opp_n：does 120 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（opp_n：does 60 damage to each of 2 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（own_bench_all：does 30 damage to each of your Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（both_bench_all：does 40 damage to each Benched Pokémon that has any damage c） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（own_bench_one：does 10 damage to 1 of your Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 120 damage to 2 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_all_conditional：does 30 damage to each of your opponent’s Benched Pokémon, a） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 60 damage to 1 of your opponent’s Benched Pokémon {ex} ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（self_conditional：does 10 damage to itself for each damage counter on it） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n_conditional：does 60 damage to 1 of your opponent’s Pokémon for each Ener） |
+| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy attached to thi） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each Benched Pokémon that has any damage counters on it） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Benched Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（itself for each damage counter on it） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy card you discar） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Ancient card in your discard p） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one_conditional：does 120 damage to 1 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（self_conditional：does 30 damage to itself） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 100 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 110 damage to 3 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 180 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n_conditional：does 30 damage to 1 of your opponent’s Pokémon for each Ener） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_all：does 100 damage to each of your opponent’s Pokémon {ex} and ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（unknown_conditional：does 120 damage to 2 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（unknown：does 130 damage to 2 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_all：does 60 damage to each of your opponent’s Pokémon {ex}） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 90 damage to 1 of your opponent’s Benched Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（2 of your opponent’s Benched Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex}） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（{L} Energy attached to all of ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（own_bench_all：does 20 damage to each of your Benched Pokémon） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Ethan's Adventure card in your） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（unknown：does 30 damage to 2 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（self_conditional：does 50 damage to itself） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（own_bench_one：does 40 damage to 1 of your Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 210 damage to 1 of your opponent’s Benched Pokémon {ex}） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 120 damage to 1 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_all：does 30 damage to each of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one_conditional：does 20 damage to 1 of your opponent’s Benched Pokémon for e） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（self_conditional：does 90 damage to itself） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_all_conditional：does 10 damage to each of your opponent’s Benched Pokémon fo） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex}） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon for each damage counter） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Benched Pokémon for each Prize card ） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Evolution Pokémon in p） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 60 damage to 1 of your opponent’s Benched Pokémon that ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（own_bench_all：does 10 damage to each of your Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 70 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n_conditional：does 20 damage to 1 of your opponent’s Pokémon for each Ener） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 40 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_all：does 20 damage to each of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（both_bench_all：does 20 damage to each Benched Pokémon ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n_conditional：does 20 damage to 1 of your opponent’s Pokémon for each {G} ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_bench_one：does 70 damage to 1 of your opponent’s Benched Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n_conditional：does 140 damage to 1 of your opponent’s Pokémon） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon that has any damage cou） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each {G} Energy attached to） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Prize card your opponent took ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 280 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 50 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 90 damage to 1 of your opponent’s Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（dynamic_conditional：does 150 damage to that Pokémon） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（opp_n：does 220 damage to 1 of your opponent’s Pokémon） |
-| B5 | unclassified | `rule` | 311 | 295 | 静态/未建模（英文） |
+| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
+| B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
+| B5 | unclassified | `rule` | 303 | 287 | 静态/未建模（英文） |
 | B5 | unclassified | `rule` | 78 | 78 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | unclassified | `rule` | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | unclassified | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | B5 | unclassified | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
+| B5 | unclassified | `rule` | 4 | 4 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
 | B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
 | B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
 | B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
 | B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
+| B5 | unclassified | `rule` | 2 | 2 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
@@ -96,11 +67,14 @@
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
+| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
+| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
+| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
 | B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
@@ -111,29 +85,17 @@
 - `Farigiraf ex`：Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.
 - `Cornerstone Mask Ogerpon ex`：Prevent all damage from attacks done to this Pokémon by your opponent’s Pokémon that have an Ability.
 
-**B4 · coin_flip**（13 条）
+**B4 · coin_flip**（11 条）
 
 - `Sylveon`：Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.
 - `Alolan Exeggutor ex`：Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon.
 - `Ethan's Sudowoodo`：Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.
-
-**B4 · extra_damage_target**（5 条）
-
-- `Farigiraf ex`：This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Glaceon ex`：This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Hop’s Zacian ex`：This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
 **B4 · static_lock**（4 条）
 
 - `Iron Thorns ex`：As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (P
 - `Flutter Mane`：As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.
 - `Gastrodon`：As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.
-
-**B4 · extra_damage_target**（4 条）
-
-- `Hop’s Corviknight`：This attack also does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Lopunny`：This attack does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Larry's Staraptor`：Discard 2 Energy from this Pokémon, and this attack also does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benche
 
 **B4 · scaling_damage**（4 条）
 
@@ -143,9 +105,9 @@
 
 **B4 · extra_damage_target**（3 条）
 
-- `Iron Crown ex`：This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon.
-- `Electivire ex`：This attack does 50 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Steven's Skarmory`：This attack does 50 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
+- `Gurdurr`：You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.
+- `Dondozo ex`：You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself.
+- `Team Rocket's Raticate`：Flip 2 coins. If both of them are tails, this Pokémon also does 90 damage to itself.
 
 **B4 · scaling_damage**（3 条）
 
@@ -155,35 +117,12 @@
 
 **B4 · extra_damage_target**（2 条）
 
-- `Stonjourner`：This attack also does 20 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Glastrier`：This attack also does 20 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（2 条）
-
-- `Honchkrow`：Discard 2 Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Cramorant`：Discard all Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.
-
-**B4 · extra_damage_target**（2 条）
-
-- `Ambipom`：Discard 2 Energy from this Pokémon, and this attack does 60 damage to each of 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pok
-- `Mega Eelektross ex`：This attack does 60 damage to each of 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（2 条）
-
-- `Centiskorch`：This attack also does 30 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-- `Diggersby`：This attack also does 30 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
+- `Raging Bolt`：This attack does 30 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
+- `Ferrothorn`：This attack does 20 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
 **B4 · extra_damage_target**（1 条）
 
 - `Hippowdon`：This attack also does 40 damage to each Benched Pokémon that has any damage counters on it (both yours and your opponent’s). (Don’t apply Weakness and Resistanc
-
-**B4 · extra_damage_target**（1 条）
-
-- `Girafarig`：This attack also does 10 damage to 1 of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Greninja ex`：Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
 **B4 · extra_damage_target**（1 条）
 
@@ -211,26 +150,6 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Gurdurr`：You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Fezandipiti ex`（吉雉鸡ex）：This attack does 100 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Kyurem`：Discard all Energy from this Pokémon. This attack does 110 damage to 3 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Cinderace ex`：This attack does 180 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Raging Bolt`：This attack does 30 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Flygon ex`：This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance.
 
 **B4 · extra_damage_target**（1 条）
@@ -239,23 +158,11 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Hydreigon ex`：This attack also does 130 damage to 2 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Vaporeon ex`：This attack does 60 damage to each of your opponent’s Pokémon {ex}. This attack’s damage isn’t affected by Weakness or Resistance.
-
-**B4 · extra_damage_target**（1 条）
-
-- `N’s Darmanitan`：Discard all Energy from this Pokémon, and this attack also does 90 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benc
 
 **B4 · scaling_damage**（1 条）
 
 - `Iono’s Voltorb`：This attack does 20 more damage for each {L} Energy attached to all of your Iono’s Pokémon.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Hop’s Sandaconda`：This attack also does 20 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
 **B4 · scaling_damage**（1 条）
 
@@ -263,35 +170,11 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Cynthia's Milotic`：This attack also does 30 damage to 2 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Dondozo ex`：You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Manectric`：This attack also does 40 damage to 1 of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Zeraora`：Discard all Energy from this Pokémon, and this attack does 210 damage to 1 of your opponent’s Benched Pokémon {ex}. (Don’t apply Weakness and Resistance for Ben
 
 **B4 · extra_damage_target**（1 条）
 
-- `Blaziken`：Discard 2 Energy from this Pokémon. This attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched P
-
-**B4 · extra_damage_target**（1 条）
-
-- `Team Rocket's Arbok`：This attack does 30 damage to each of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Team Rocket's Sneasel`：This attack does 20 damage to 1 of your opponent’s Benched Pokémon for each damage counter on that Pokémon. (Don’t apply Weakness and Resistance for Benched Pok
-
-**B4 · extra_damage_target**（1 条）
-
-- `Team Rocket's Raticate`：Flip 2 coins. If both of them are tails, this Pokémon also does 90 damage to itself.
 
 **B4 · extra_damage_target**（1 条）
 
@@ -307,35 +190,7 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Landorus`：This attack also does 10 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Sigilyph`：This attack does 70 damage to 1 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Ferrothorn`：This attack does 20 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Raboot`：This attack does 40 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Frosmoth`：This attack does 20 damage to each of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.) Your opponent’s Active Pokémon is now 
-
-**B4 · extra_damage_target**（1 条）
-
-- `Gloom`：This attack also does 20 damage to each Benched Pokémon (both yours and your opponent’s). (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Genesect`：This attack does 20 damage to 1 of your opponent’s Pokémon for each {G} Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémo
-
-**B4 · extra_damage_target**（1 条）
-
-- `Prinplup`：This attack does 70 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
 **B4 · extra_damage_target**（1 条）
 
@@ -347,25 +202,13 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Mega Charizard Y ex`：Discard 3 Energy from this Pokémon, and this attack does 280 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Mandibuzz ex`：This attack does 50 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
-- `Dartrix`：Discard all Energy from this Pokémon, and this attack does 90 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Mega Zygarde ex`：For each of your opponent’s Pokémon, flip a coin. If heads, this attack does 150 damage to that Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémo
 
-**B4 · extra_damage_target**（1 条）
+**B4 · coin_flip**（1 条）
 
-- `Mega Skarmory ex`：Shuffle all Energy attached to this Pokémon into your deck, and this attack does 220 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistanc
+- `Team Rocket's Venture Bomb`：Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon.
 
-**B5 · unclassified**（311 条）
+**B5 · unclassified**（303 条）
 
 - `Boomerang Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
 - `Neo Upper Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy b
@@ -395,6 +238,12 @@
 - `Mow Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 - `Heat Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 
+**B5 · unclassified**（4 条）
+
+- `Spiky Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If the Pokémon this card is attached to is in the Active Spot and is damaged by an attac
+- `Spiritomb`：If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the 
+- `Mega Scrafty ex`：If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on
+
 **B5 · unclassified**（2 条）
 
 - `Chandelure`：This attack does 30 damage for each card in your opponent’s hand.
@@ -414,6 +263,11 @@
 
 - `Team Rocket's Porygon2`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
 - `Team Rocket's Porygon-Z`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
+
+**B5 · unclassified**（2 条）
+
+- `Team Rocket's Dugtrio`：Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.
+- `Risky Ruins`：Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.
 
 **B5 · unclassified**（1 条）
 
@@ -445,6 +299,10 @@
 
 **B5 · unclassified**（1 条）
 
+- `Alakazam`：Place 2 damage counters on your opponent’s Active Pokémon for each card in your hand.
+
+**B5 · unclassified**（1 条）
+
 - `Paldean Tauros`：This attack does 40 damage for each of your Pokémon that has “Tauros” in its name that has any damage counters on it.
 
 **B5 · unclassified**（1 条）
@@ -457,6 +315,10 @@
 
 **B5 · unclassified**（1 条）
 
+- `Mismagius`：If your opponent’s Active Pokémon is affected by a Special Condition, place 6 damage counters on 1 of your opponent’s Benched Pokémon.
+
+**B5 · unclassified**（1 条）
+
 - `Erika's Victreebel`：This attack does 40 damage for each of your Erika’s Pokémon in play.
 
 **B5 · unclassified**（1 条）
@@ -465,11 +327,15 @@
 
 **B5 · unclassified**（1 条）
 
+- `Haunter`：Place 3 damage counters on your opponent’s Active Pokémon.
+
+**B5 · unclassified**（1 条）
+
 - `Doublade`：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
 
 ## 3. 与「已建模」的边界（避免误读）
 
-- **已建模**：招式的伤害/费用/状态/放置指示物/抽弃/检索/回收/换位/附能/移动指示物/抛币/条件与计数伤害修正/护盾与被动免疫/**反伤（`self:N`）**/**对对手全体后备的固定伤害（`spread:all:N`）**；特性的检视牌库、每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、后备免疫；训练家的检索/回收（`recover:N:pokemon|energy|any|trainer|supporter|item`）/换位/跳阶进化等（完整清单见 `packages/engine/engine/data/cards_real.json` → `meta.engine_tags`）。
+- **已建模**：招式的伤害/费用/状态/放置指示物/抽弃/检索/回收/换位/附能/移动指示物/抛币/条件与计数伤害修正（含**带参能量条件**）/护盾与被动免疫/**反伤（`self:N`）**/**选定与全体目标的附加伤害（`snipe:<scope>:<per>:<count>`）**/**磨牌（`mill:N[:opp]`）**；特性的检视牌库顶（`recon:N`）、**全牌库检索（`search_pokemon|trainer|any|energy:N`）**、每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、后备免疫；训练家的检索/回收（`recover:N:pokemon|energy|any|trainer|supporter|item`）/换位/跳阶进化等（完整清单见 `packages/engine/engine/data/cards_real.json` → `meta.engine_tags`）。
 - **未建模**：本清单 §1 全部条目。受影响卡牌**可浏览、可组卡、不可对战**（标为 `approximated` 时以近似规则参战）。
 - **近似（approximated）**：卡牌可对战但个别副作用未建模（例：「附能并抽 1」只实现了附能）。此类差异逐卡记录在卡池条目的 `note` 字段。
 

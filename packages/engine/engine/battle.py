@@ -299,6 +299,11 @@ class Battle:
                     continue
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
+                # 全牌库检索（`search_pokemon:N` / `search_trainer:N` /
+                # `search_any:N` / `search_energy:N`）—— 牌库无对应类别则不可发动
+                if ab.tag.startswith("search_"):
+                    if not _zone_search_available(p, ab.tag):
+                        continue
                 if ab.tag.startswith("draw:") and not p.deck:
                     continue
                 if ab.tag.startswith("attach_energy:"):
@@ -656,6 +661,18 @@ class Battle:
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": f"draw {n}",
                                       "drew": got})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("search_"):
+                # 特性侧**全牌库检索**（2026-09-22 新增）
+                # 与 `recon:N` 的区别：recon 只能从牌库顶 N 张里**随机**拿 1 张；
+                # 这里是「从整副牌库检索指定类别」——两者语义不同，早期被混用，
+                # 16 条真实特性因此把「想搜什么搜什么」变成"从牌堆顶碰运气"。
+                if tag.startswith("search_energy:"):
+                    detail = self._trainer_search_energy(p, tag)
+                else:
+                    detail = self._trainer_search_kind(p, tag)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("move_damage:"):
                 # 移动伤害指示物：自身 → 对手 active（Munkidori「肾上腺素脑」）
@@ -1082,7 +1099,10 @@ class Battle:
                 raise ValueError(f"{tag}：缺少计数源（per:<counter>）")
             out["plus"] += n * _eval_counter(self, counter)
         elif kind == "if":
-            cond = parts[3] if len(parts) > 3 else ""
+            # ⚠ 用 `":".join(parts[3:])` 而不是 `parts[3]`：**带参数条件**（如
+            #   `if:own_active_energy_type:lightning`）本身含冒号，只取 parts[3]
+            #   会把颜色丢掉 → 变成查不到的 `own_active_energy_type` 而抛错。
+            cond = ":".join(parts[3:]) if len(parts) > 3 else ""
             if not cond:
                 raise ValueError(f"{tag}：缺少条件（if:<cond>）")
             if _eval_condition(self, cond):
@@ -1200,7 +1220,7 @@ class Battle:
         tag 家族（v1.3 扩展 · v1.4 续扩，见 cards_real.json meta.engine_tags）：
           · 状态：poison / burn / sleep / paralyze / confuse
           · 放置：spread_free:N（任意分配）· spread:N:per（随机 n 只各 per 点）·
-            spread:all:per（对手**全部**后备各 per 点 · 2026-09-22 新增）
+            snipe:<scope>:<per>[:<count>]（**选定**目标各 per 点 · 2026-09-22 新增）
           · 自伤 / 回复：self:N（含卡面反伤「does N damage to itself」）· heal:N
           · 抽牌：draw:N · draw_to:N（抽到指定手牌数）
           · 弃牌：discard:N（弃自身手牌）· discard_energy:N（弃自身 active 能量）
@@ -1312,14 +1332,8 @@ class Battle:
                 _, n, per = tag.split(":")
                 per = int(per)
                 targets = [fp for fp in opp.bench if not _is_bench_immune(fp)]
-                if n == "all":
-                    # 「does N damage to **each of** your opponent's Benched Pokémon」
-                    # → 对手**全部**后备各 per 点（2026-09-22 新增）。
-                    # 与 spread:N:per（**随机** n 只）语义不同，不可互相代用。
-                    picked = targets
-                else:
-                    self.rng.shuffle(targets)
-                    picked = targets[:int(n)]
+                self.rng.shuffle(targets)
+                picked = targets[:int(n)]
                 killed = []
                 for fp in picked:
                     fp.damage += per
@@ -1333,6 +1347,26 @@ class Battle:
                     self._resolve_ko(1 - self.current, fp)
                     if self.finished:
                         return
+            elif tag.startswith("snipe:"):
+                if self._apply_snipe(tag, action):
+                    return
+            elif tag.startswith("mill:"):
+                # 磨牌：牌库顶 N 张进弃牌堆（2026-09-22 新增）。
+                # 牌库被磨空**不立即判负** —— 与官方一致：判负发生在「该抽牌却抽不到」时
+                # （见 `_safe_draw` 的 deckout 分支），所以这里允许磨到 0。
+                parts = tag.split(":")
+                k = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+                victim = 1 - self.current if (len(parts) > 2 and parts[2] == "opp") \
+                    else self.current
+                vp = self.players[victim]
+                moved = 0
+                for _ in range(k):
+                    if not vp.deck:
+                        break
+                    self._to_discard(vp, vp.deck.pop())
+                    moved += 1
+                self._log("mill", {"player": victim, "n": moved,
+                                   "left": len(vp.deck)})
             elif tag.startswith("heal:"):
                 _, amt = tag.split(":")
                 amt = int(amt)
@@ -1454,6 +1488,86 @@ class Battle:
                                           "to": dst.name if dst else None})
                 if dst is not None and dst.is_ko:
                     self._resolve_ko(1 - self.current, dst)
+
+    # ---------- 选定目标伤害（snipe） ----------
+    def _snipe_candidates(self, scope: str) -> list:
+        """``snipe`` 的候选目标 → ``[(位置码, FieldPokemon)]``
+
+        位置码约定（与 `attach.target` 一致）：
+          ``opp``        0 = 对手战斗位；1..k = 对手后备 (i-1)
+          ``opp_bench``  i = 对手后备 i
+          ``own_bench``  i = 己方后备 i
+          ``both_bench`` 0..len(己方后备)-1 = 己方后备；其后 = 对手后备
+        """
+        p = self.players[self.current]
+        opp = self.players[1 - self.current]
+        if scope == "opp":
+            out = []
+            if opp.active is not None:
+                out.append((0, opp.active))
+            out += [(i + 1, fp) for i, fp in enumerate(opp.bench)]
+            return out
+        if scope == "opp_bench":
+            return [(i, fp) for i, fp in enumerate(opp.bench)]
+        if scope == "own_bench":
+            return [(i, fp) for i, fp in enumerate(p.bench)]
+        if scope == "both_bench":
+            base = len(p.bench)
+            return ([(i, fp) for i, fp in enumerate(p.bench)]
+                    + [(base + i, fp) for i, fp in enumerate(opp.bench)])
+        raise ValueError(f"未知 snipe scope：{scope}")
+
+    def _apply_snipe(self, tag: str, action: Optional[dict]) -> bool:
+        """``snipe:<scope>:<per>[:<count>]`` —— 选定目标各受 per 点伤害
+
+        count：``1``（默认）| ``<n>`` | ``all``。
+        目标选择：动作里带 ``snipe``（位置码列表，见 `_snipe_candidates`）时按其指定；
+        否则取候选表前 ``n`` 个（**确定性默认**，与 `switch_self` 的 `bench` 同思路）。
+        「对手」侧的候选受护盾 / 后备免疫拦截；「己方」侧不拦（那是自己的效果）。
+
+        返回 ``True`` 表示对局已结束（调用方直接 return）。
+        """
+        parts = tag.split(":")
+        scope = parts[1] if len(parts) > 1 else ""
+        per = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+        raw = parts[3] if len(parts) > 3 and parts[3] else "1"
+        cands = self._snipe_candidates(scope)
+        if not cands:
+            self._log("no_effect", {"tag": tag, "reason": "无可选目标"})
+            return False
+        n = len(cands) if raw == "all" else max(1, int(raw))
+        want = action.get("snipe") if isinstance(action, dict) else None
+        if isinstance(want, (list, tuple)) and want:
+            wanted = {int(x) for x in want}
+            picked = [fp for pos, fp in cands if pos in wanted]
+            if not picked:                       # 指定了非法位置 → 退回默认
+                picked = [fp for _, fp in cands[:n]]
+        else:
+            picked = [fp for _, fp in cands[:n]]
+        opp = self.players[1 - self.current]
+        opp_ids = {id(x) for x in opp.all_field()}
+        killed = []
+        for fp in picked:
+            if id(fp) in opp_ids:
+                owner = 1 - self.current
+                on_bench = fp is not opp.active
+                if fp.shield_prevent_all or (on_bench
+                                             and _is_bench_immune(fp)):
+                    self._log("blocked", {"target": fp.name,
+                                          "by": "prevent_all"})
+                    continue
+            else:
+                owner = self.current
+            fp.damage += per
+            self._log("damage", {"target": fp.name, "player": owner,
+                                 "dmg": per, "base": per, "snipe": scope})
+            if fp.is_ko:
+                killed.append((owner, fp))
+        for owner, fp in killed:
+            self._resolve_ko(owner, fp)
+            if self.finished:
+                return True
+        return False
 
     # ---------- 静态效果（弱点改写） ----------
     def _weakness_override(self, attacker: FieldPokemon,
@@ -1803,6 +1917,14 @@ def _deck_has_kind(p: PlayerState, kind: str) -> bool:
     return any(_kind_matches(c, kind) for c in p.deck)
 
 
+def _zone_search_available(p: PlayerState, tag: str) -> bool:
+    """特性侧全牌库检索 tag 是否可发动（牌库里有对应类别）"""
+    if tag.startswith("search_energy:"):
+        from .cards import EnergyRef
+        return any(isinstance(c, EnergyRef) for c in p.deck)
+    return _deck_has_kind(p, _search_kind_of(tag))
+
+
 def _take_kind_from_deck(p: PlayerState, n: int, kind: str) -> int:
     """从牌库检索 n 张指定类别卡入手 → 实际入手数（洗牌由调用方执行）"""
     got = 0
@@ -2060,14 +2182,32 @@ def _eval_counter(battle, counter: str) -> int:
 
 
 def _eval_condition(battle, cond: str) -> bool:
-    """条件求值（未知 → 抛错，禁止静默 False）"""
-    fn = _CONDITIONS.get(cond)
-    if fn is None:
-        raise ValueError(
-            f"未知条件 {cond}（可用：{'、'.join(sorted(_CONDITIONS))}）")
+    """条件求值（未知 → 抛错，禁止静默 False）
+
+    **带参数条件**（2026-09-22 新增）：条件名后可接参数，用冒号分隔 ——
+      ``own_active_energy_type:<color>``   自身战斗位有该色能量（≥1 个）
+      ``own_active_energy_at_least:<n>``   自身战斗位能量总数 ≥ n
+    对应卡面「If this Pokémon has any {L} Energy attached, this attack does 80
+    more damage」一类 —— 引擎此前的条件是无参白名单，这类只能落进未建模。
+    """
     p = battle.players[battle.current]
     o = battle.players[1 - battle.current]
-    return bool(fn(battle, p, o))
+    fn = _CONDITIONS.get(cond)
+    if fn is not None:
+        return bool(fn(battle, p, o))
+    if cond.startswith("own_active_energy_type:"):
+        color = cond.split(":", 1)[1]
+        return _eval_counter(battle, f"own_active_energy_{color}") >= 1
+    if cond.startswith("own_active_energy_at_least:"):
+        try:
+            n = int(cond.split(":", 1)[1])
+        except ValueError as e:                              # noqa: F841
+            raise ValueError(f"条件参数非整数：{cond}") from None
+        return _eval_counter(battle, "own_active_energy") >= n
+    raise ValueError(
+        f"未知条件 {cond}（可用：{'、'.join(sorted(_CONDITIONS))}；"
+        f"带参形式：own_active_energy_type:<color> / "
+        f"own_active_energy_at_least:<n>）")
 
 
 def _is_bench_immune(fp: Optional[FieldPokemon]) -> bool:

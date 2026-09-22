@@ -259,12 +259,29 @@ class TestValidateAndMap(unittest.TestCase):
             [E.act("recover", 1, "discard", {"kind": "any"})])])
         self.assertIn("recover:1:any", r["tags"])
 
-    def test_ability_search_maps_to_recon(self):
+    def test_ability_deck_search_is_not_recon(self):
+        """特性侧「search your deck for …」**不是** `recon:N`
+
+        引擎的 `recon:N` = 「检视牌库顶 N 张取 1」（且是**随机**取 1）——
+        与「从整副牌库检索指定类别」语义不同。早期一律映射成 recon，
+        实测池内 **16 条**特性因此把"想搜什么搜什么"变成"从牌堆顶碰运气"。
+        """
         specs = [E.spec("ability", "侦察指令", "static",
                         [E.act("search", 2, "deck")],
-                        [{"field": "limit", "op": "eq", "value": "once_per_turn"}])]
+                        [{"field": "limit", "op": "eq",
+                          "value": "once_per_turn"}])]
         r = E.to_engine_tags(specs)
-        self.assertIn("recon:2", r["tags"])
+        self.assertIn("search_any:2", r["tags"])
+        self.assertNotIn("recon:2", r["tags"])
+
+    def test_ability_look_top_still_recon(self):
+        """「look at the top N cards」才是 recon"""
+        specs = [E.spec("ability", "侦察", "static",
+                        [E.act("search", 1, "deck", {"look_top": 3})],
+                        [{"field": "limit", "op": "eq",
+                          "value": "once_per_turn"}])]
+        r = E.to_engine_tags(specs)
+        self.assertIn("recon:3", r["tags"])
 
 
 class TestV14Modifiers(unittest.TestCase):
@@ -478,13 +495,13 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
         self.assertNotIn("self:30", r["tags"])
         self.assertTrue(r["unsupported"], "应如实登记为未建模")
 
-    def test_bench_all_maps_to_spread_all(self):
-        """「to each of your opponent's Benched Pokémon」→ `spread:all:per`"""
+    def test_bench_all_maps_to_snipe(self):
+        """「to each of your opponent's Benched Pokémon」→ `snipe:opp_bench:N:all`"""
         r = self._tags("This attack does 50 damage to each of your "
                        "opponent\u2019s Benched Pok\u00e9mon. "
                        "(Don\u2019t apply Weakness and Resistance for "
                        "Benched Pok\u00e9mon.)")
-        self.assertIn("spread:all:50", r["tags"])
+        self.assertIn("snipe:opp_bench:50:all", r["tags"])
         self.assertEqual(r["unsupported"], [])
 
     def test_scaling_bench_all_not_flattened(self):
@@ -509,28 +526,74 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
         self.assertNotIn("spread:all:30", r["tags"])
         self.assertTrue(r["unsupported"])
 
-    def test_benched_one_target_is_not_silently_active(self):
-        """「to 1 of your opponent's Benched Pokémon」**不得**当成打战斗位
+    def test_benched_one_maps_to_snipe_not_active(self):
+        """「to 1 of your opponent's Benched Pokémon」→ `snipe:opp_bench:N:1`
 
-        引擎无法表达「选定 1 只后备」→ 必须如实登记未建模，
-        否则含其它 tag 的招式会进池并静默丢掉这段伤害。
+        ⚠ 关键是**不能**再记成打战斗位（早期行为），也不能静默丢掉。
         """
         r = self._tags("Discard 2 Energy from this Pok\u00e9mon. This attack "
                        "does 90 damage to 1 of your opponent\u2019s Benched "
                        "Pok\u00e9mon. (Don\u2019t apply Weakness and "
                        "Resistance for Benched Pok\u00e9mon.)")
         self.assertIn("discard_energy:2", r["tags"])
-        self.assertTrue(any("附加伤害目标未建模" in u["reason"]
-                            for u in r["unsupported"]), r["unsupported"])
+        self.assertIn("snipe:opp_bench:90:1", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
-    def test_own_bench_damage_is_flagged(self):
-        """打**我方**后备的伤害同样不得当成打对手战斗位"""
+    def test_own_bench_damage_maps_to_own_scope(self):
+        """打**我方**后备的伤害 → `snipe:own_bench:N:1`（不得当成打对手）"""
         r = self._tags("This attack also does 10 damage to 1 of your Benched "
                        "Pok\u00e9mon. (Don\u2019t apply Weakness and "
                        "Resistance for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["snipe:own_bench:10:1"])
+
+    def test_subset_target_still_unmodeled(self):
+        """带子集限定的目标（`{ex}` / `that has …`）仍**不可**映射
+
+        `snipe` 只能表达「任意 1 只 / 全部」，无法表达「只打 ex」这类筛选。
+        """
+        r = self._tags("This attack does 60 damage to 1 of your opponent\u2019s "
+                       "Benched Pok\u00e9mon {ex} or Benched Pok\u00e9mon {V}. "
+                       "(Don\u2019t apply Weakness and Resistance for "
+                       "Benched Pok\u00e9mon.)")
         self.assertEqual(r["tags"], [])
         self.assertTrue(any("附加伤害目标未建模" in u["reason"]
                             for u in r["unsupported"]), r["unsupported"])
+
+    def test_selected_n_target_maps(self):
+        """「to 2 of your opponent's Pokémon」（含战斗位）→ `snipe:opp:N:2`"""
+        r = self._tags("This attack does 50 damage to 2 of your "
+                       "opponent\u2019s Pok\u00e9mon. (Don\u2019t apply "
+                       "Weakness and Resistance for Benched Pok\u00e9mon.)")
+        self.assertIn("snipe:opp:50:2", r["tags"])
+
+    def test_counters_placement_uses_clause_target(self):
+        """「put N damage counters on <目标>」必须按子句判目标
+
+        历史缺陷：整句按 `spread:N:per`（**随机** n 只对手后备）映射 →
+        「on **1 of your opponent's Pokémon**」（含战斗位、由玩家选定）算错。
+        """
+        one = self._tags("Put 2 damage counters on 1 of your opponent\u2019s "
+                         "Pok\u00e9mon. (Don\u2019t apply Weakness and "
+                         "Resistance for Benched Pok\u00e9mon.)")
+        self.assertIn("snipe:opp:20:1", one["tags"])
+        each = self._tags("Put 2 damage counters on each of your opponent\u2019s "
+                          "Pok\u00e9mon.")
+        self.assertIn("snipe:opp:20:all", each["tags"])
+        self.assertNotIn("spread:2:10", one["tags"] + each["tags"],
+                         "不得退化成「随机 2 只后备」")
+
+    def test_free_distribution_only_when_bench_only(self):
+        """「in any way you like」只在**仅后备**时可用 `spread_free`
+
+        含战斗位时引擎的 spread_free（只覆盖后备）不可代用 → 必须登记未建模。
+        """
+        bench = self._tags("Put 6 damage counters on your opponent\u2019s "
+                           "Benched Pok\u00e9mon in any way you like.")
+        self.assertIn("spread_free:60", bench["tags"])
+        anyp = self._tags("Put 4 damage counters on your opponent\u2019s "
+                          "Pok\u00e9mon in any way you like.")
+        self.assertEqual(anyp["tags"], [])
+        self.assertTrue(anyp["unsupported"])
 
 
 class TestRulesParenIsNotAnEffect(unittest.TestCase):
@@ -678,6 +741,110 @@ class TestDiscardPileRecovery(unittest.TestCase):
         """回收数量判不出（抛币决定）→ 绝不兜底成 1"""
         r = self._tags("Flip 3 coins. Put a number of cards up to the number "
                        "of heads from your discard pile into your hand.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestEvolveTriggerFalsePositive(unittest.TestCase):
+    """触发时机从句里的 `evolve` **不是**进化效果（2026-09-22 修复）
+
+    卡面：`When you play this Pokémon from your hand to evolve 1 of your Pokémon, …`
+    这句说的是**何时生效**。早期未区分 → 给整条特性塞一条 evolve 动作 →
+    落成「招式/特性驱动的进化需卡级 tag」→ **整卡不进池**。
+    实测 **25 张卡全部栽在这一条上**，是本轮最大的单一假阳性。
+    """
+
+    @staticmethod
+    def _tags(text, kind="ability", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_trigger_clause_does_not_produce_evolve(self):
+        r = self._tags(
+            "Once during your turn, when you play this Pok\u00e9mon from your "
+            "hand to evolve 1 of your Pok\u00e9mon, you may use this Ability. "
+            "Draw 2 cards.")
+        self.assertIn("draw:2", r["tags"])
+        self.assertEqual(r["unsupported"], [],
+                         "触发从句不得产生 evolve 未建模条")
+
+    def test_opponent_trigger_clause_too(self):
+        r = self._tags(
+            "Whenever your opponent plays a Pok\u00e9mon from their hand to "
+            "evolve 1 of their Pok\u00e9mon, put 2 damage counters on that "
+            "Pok\u00e9mon.")
+        self.assertFalse(any("进化" in u["reason"] for u in r["unsupported"]),
+                         r["unsupported"])
+
+    def test_real_evolve_effect_still_detected(self):
+        """真的进化效果仍须被识别（不得因修假阳性而漏真效果）"""
+        r = self._tags(
+            "When you play this Pok\u00e9mon from your hand to evolve 1 of "
+            "your Pok\u00e9mon during your turn, you may search your deck for "
+            "a card that evolves from this Pok\u00e9mon and put it onto this "
+            "Pok\u00e9mon to evolve it.")
+        self.assertIn("evolve_from_deck", r["tags"])
+
+
+class TestMillMapping(unittest.TestCase):
+    """磨牌（Discard the top N cards of your / your opponent's deck）→ `mill:N[:opp]`"""
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_own_deck(self):
+        self.assertIn("mill:3", self._tags(
+            "Discard the top 3 cards of your deck.")["tags"])
+
+    def test_opponent_deck(self):
+        self.assertIn("mill:1:opp", self._tags(
+            "Discard the top card of your opponent\u2019s deck.")["tags"])
+
+    def test_article_form(self):
+        self.assertIn("mill:1", self._tags(
+            "Discard the top card of your deck.")["tags"])
+
+    def test_mill_plus_scaling_mill_still_mapped(self):
+        """「磨 6 张 + 每张<子集>加伤」：磨牌必须映射
+
+        缩放侧带**子集限定**（只数 Basic {W} Energy）而引擎只有「本回合弃的能量总数」
+        → 缩放如实留未建模（宁缺勿错），但**磨牌本身不能因此丢掉**。
+        """
+        r = self._tags("Discard the top 6 cards of your deck, and this attack "
+                       "does 100 damage for each Basic {W} Energy card that "
+                       "you discarded in this way.")
+        self.assertIn("mill:6", r["tags"])
+        self.assertTrue(r["unsupported"], "子集限定的缩放应如实登记未建模")
+
+
+class TestParameterizedEnergyCondition(unittest.TestCase):
+    """带参数条件：「If this Pokémon has any {L} Energy attached …」（2026-09-22）"""
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_has_energy_of_color(self):
+        r = self._tags("If this Pok\u00e9mon has any {L} Energy attached, "
+                       "this attack does 80 more damage.")
+        self.assertIn("dmg_plus:80:if:own_active_energy_type:lightning",
+                      r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_extra_energy_condition_is_not_approximated(self):
+        """「at least N **extra** Energy (in addition to this attack's cost)」
+        ——条件含招式费用，用「总数 ≥ N」会**提前触发**（静默加强）→ 必须不映射
+        """
+        r = self._tags("If this Pok\u00e9mon has at least 2 extra Energy "
+                       "attached (in addition to this attack\u2019s cost), "
+                       "this attack does 100 more damage.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_special_energy_condition_is_not_approximated(self):
+        """「any Special Energy attached」—— 引擎无「特殊能量」计数源 → 不映射"""
+        r = self._tags("If this Pok\u00e9mon has any Special Energy attached, "
+                       "this attack does 100 more damage.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 

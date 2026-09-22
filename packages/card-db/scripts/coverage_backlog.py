@@ -538,12 +538,14 @@ def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
         L.append("")
     L += ["## 3. 与「已建模」的边界（避免误读）", "",
           "- **已建模**：招式的伤害/费用/状态/放置指示物/抽弃/检索/回收/换位/附能/"
-          "移动指示物/抛币/条件与计数伤害修正/护盾与被动免疫/"
-          "**反伤（`self:N`）**/**对对手全体后备的固定伤害（`spread:all:N`）**；"
-          "特性的检视牌库、每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、"
-          "后备免疫；训练家的检索/回收（`recover:N:pokemon|energy|any|trainer|"
-          "supporter|item`）/换位/跳阶进化等（完整清单见 "
-          "`packages/engine/engine/data/cards_real.json` → `meta.engine_tags`）。",
+          "移动指示物/抛币/条件与计数伤害修正（含**带参能量条件**）/护盾与被动免疫/"
+          "**反伤（`self:N`）**/**选定与全体目标的附加伤害（`snipe:<scope>:<per>:"
+          "<count>`）**/**磨牌（`mill:N[:opp]`）**；特性的检视牌库顶（`recon:N`）、"
+          "**全牌库检索（`search_pokemon|trainer|any|energy:N`）**、每回合抽牌、附能、"
+          "被击倒抽牌、进化触发、弱点改写、后备免疫；训练家的检索/回收"
+          "（`recover:N:pokemon|energy|any|trainer|supporter|item`）/换位/跳阶进化等"
+          "（完整清单见 `packages/engine/engine/data/cards_real.json` → "
+          "`meta.engine_tags`）。",
           "- **未建模**：本清单 §1 全部条目。受影响卡牌**可浏览、可组卡、不可对战**"
           "（标为 `approximated` 时以近似规则参战）。",
           "- **近似（approximated）**：卡牌可对战但个别副作用未建模（例："

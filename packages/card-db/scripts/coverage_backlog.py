@@ -61,10 +61,11 @@ BATCHES = [
      "priority": 2},
     {"id": "B3", "name": "解析召回补齐（英文卡面）",
      "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
-     "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索）",
+     "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/"
+            "附能/检索/附加伤害目标子句）",
      "priority": 3},
     {"id": "B4", "name": "需新引擎机制（P1 登记）",
-     "goal": "需要条件表达式 / RNG 钩子 / 静态修正层等新机制，不属本轮",
+     "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
      "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
      "priority": 4},
     {"id": "B5", "name": "不建模登记",
@@ -199,7 +200,11 @@ def load_parse_gaps() -> dict:
                 for s in it.get("specs", []):
                     src = s.get("source_text") or src
                     break
-                if t == "rule":
+                override = next((v for pf, v in _REASON_BATCH
+                                 if reason.startswith(pf)), None)
+                if override is not None:
+                    batch, sub, desc = override
+                elif t == "rule":
                     batch, sub, desc = _classify_rule(src)
                 else:
                     batch, sub, desc = _TYPE_BATCH.get(
@@ -233,6 +238,18 @@ _TYPE_BATCH = {
     "heal": ("B2", "heal_unknown", "回复量未识别"),
     "damage": ("B2", "damage_meta", "伤害元数据（无需 tag）"),
 }
+
+# 按**未建模原因前缀**覆盖归属（优先级高于 _TYPE_BATCH）。
+# 为什么需要（2026-09-22）：解析链新增「附加伤害目标未建模」后，这些条目
+# `type=damage` 会被 `_TYPE_BATCH["damage"]` 归到 B2「伤害元数据（无需 tag）」——
+# 语义恰好相反（它们**恰恰需要**新引擎机制），会误导排期。
+_REASON_BATCH = (
+    ("附加伤害目标未建模",
+     ("B4", "extra_damage_target",
+      "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择")),
+    ("弃牌堆回收：",
+     ("B3", "recover_from_discard", "弃牌堆回收入手（数量/类别/子集未识别）")),
+)
 
 
 # ---------------- 报告组装 ----------------
@@ -521,9 +538,11 @@ def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
         L.append("")
     L += ["## 3. 与「已建模」的边界（避免误读）", "",
           "- **已建模**：招式的伤害/费用/状态/放置指示物/抽弃/检索/回收/换位/附能/"
-          "移动指示物/抛币/条件与计数伤害修正/护盾与被动免疫；特性的检视牌库、"
-          "每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、后备免疫；训练家的"
-          "检索/回收/换位/跳阶进化等（完整清单见 "
+          "移动指示物/抛币/条件与计数伤害修正/护盾与被动免疫/"
+          "**反伤（`self:N`）**/**对对手全体后备的固定伤害（`spread:all:N`）**；"
+          "特性的检视牌库、每回合抽牌、附能、被击倒抽牌、进化触发、弱点改写、"
+          "后备免疫；训练家的检索/回收（`recover:N:pokemon|energy|any|trainer|"
+          "supporter|item`）/换位/跳阶进化等（完整清单见 "
           "`packages/engine/engine/data/cards_real.json` → `meta.engine_tags`）。",
           "- **未建模**：本清单 §1 全部条目。受影响卡牌**可浏览、可组卡、不可对战**"
           "（标为 `approximated` 时以近似规则参战）。",
@@ -583,10 +602,15 @@ def main() -> int:
     mp = out / f"unmodeled_backlog{suffix}.md"
     jp.write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     mp.write_text(to_markdown(rep), encoding="utf-8")
-    # 始终刷新「当前」快照，便于前端/API 读取
+    # 始终刷新「当前」快照（**json 与 md 都要**）——前端/API 读 json，
+    # 人读与文档引用读 md。⚠ 只刷 json 会让 `unmodeled_backlog.md` **静默过期**：
+    # 用带后缀的快照跑完，仓库里留下的是上一轮的 md，与 json 口径不一致
+    # （2026-09-22 实测踩到：json 已是本轮，md 还是 09-21 的）。
     if suffix:
         (out / "unmodeled_backlog.json").write_text(
             json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+        (out / "unmodeled_backlog.md").write_text(to_markdown(rep),
+                                                  encoding="utf-8")
     t = rep["parse_totals"]
     print(f"[ok] {jp.name} / {mp.name}")
     print(f"     未建模条目 {t['unsupported']} · 已映射 tag {t['engine_tags']} · "

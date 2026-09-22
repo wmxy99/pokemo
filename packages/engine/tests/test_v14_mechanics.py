@@ -26,7 +26,7 @@ import unittest
 from engine import decklib as dl
 from engine.battle import Battle
 from engine.cards import (AbilityDef, AttackDef, EnergyDef, EnergyRef, PokeRef,
-                          PokemonDef, make_pokemon)
+                          PokemonDef, TrainerDef, TrainerRef, make_pokemon)
 from engine.state import GameConfig, PlayerState
 
 E_FIRE = EnergyDef("fire", name_zh="基本火能量")
@@ -505,6 +505,147 @@ class TestPrizesTakenCounters(unittest.TestCase):
         self.assertEqual(self._dmg_with("opp_prizes_left", 0), total * 10)
         self.assertEqual(self._dmg_with("opp_prizes_left", 3),
                          (total - 3) * 10)
+
+
+class TestSpreadAllBench(unittest.TestCase):
+    """`spread:all:per` —— 对**对手全部后备**各 per 点（2026-09-22 新增）
+
+    背景：卡面「This attack does N damage to **each of** your opponent's Benched
+    Pokémon」此前无法表达（只能落进 unsupported），且**不可**与 `spread:N:per`
+    （**随机** n 只）混用 —— 后者会把"打全体"变成"随机打几只"。
+    """
+
+    def test_all_bench_targets_every_benched(self):
+        b = _arena()
+        bench = _bench(b, 1, 4)
+        _equip(b, ("spread:all:50",), owner=0, damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([fp.damage for fp in bench], [50, 50, 50, 50])
+
+    def test_all_bench_excludes_active(self):
+        b = _arena()
+        bench = _bench(b, 1, 2)
+        _equip(b, ("spread:all:50",), owner=0, damage=0)
+        foe_active = b.players[1].active
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(foe_active.damage, 0, "战斗位不应被 spread 命中")
+        self.assertEqual([fp.damage for fp in bench], [50, 50])
+
+    def test_all_bench_empty_is_not_an_error(self):
+        """对手后备为空 → 无效果，不得抛错（真实对局常见）"""
+        b = _arena()
+        _equip(b, ("spread:all:50",), owner=0, damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+
+    def test_all_bench_respects_bench_immune(self):
+        b = _arena()
+        ab = AbilityDef("Guard", name_zh="后备护盾",
+                        tag="passive:bench_immune", location="field")
+        shielded = make_pokemon(PokemonDef("Shielded", hp=100,
+                                           ptype="colorless", attacks=(),
+                                           abilities=(ab,)))
+        plain = make_pokemon(PokemonDef("Plain", hp=100, ptype="colorless",
+                                        attacks=()))
+        b.players[1].bench.extend([shielded, plain])
+        _equip(b, ("spread:all:30",), owner=0, damage=0)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(shielded.damage, 0)
+        self.assertEqual(plain.damage, 30)
+
+    def test_random_spread_still_bounded(self):
+        """对照：`spread:N:per` 仍是**随机** n 只（不得被 all 语义污染）"""
+        b = _arena()
+        bench = _bench(b, 1, 4)
+        _equip(b, ("spread:2:30",), owner=0, damage=0)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(sum(1 for fp in bench if fp.damage == 30), 2)
+
+
+class TestRecoilSelfDamage(unittest.TestCase):
+    """`self:N` 由**卡面反伤**产出的路径（2026-09-22）
+
+    背景：「This Pokémon does N damage to itself.」全库 49 条，
+    早期被读成「打对手战斗位」→ 反伤**静默消失**。
+    """
+
+    def test_recoil_hits_attacker_not_defender(self):
+        b = _arena()
+        me = _equip(b, ("self:20",), owner=0, damage=40)
+        foe = b.players[1].active
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.damage, 20, "反伤应落在攻击者自身")
+        self.assertEqual(foe.damage, 40, "对手只受招式伤害")
+
+    def test_recoil_can_self_ko(self):
+        b = _arena()
+        me = _equip(b, ("self:210",), owner=0, damage=0, hp=200)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r.get("ok", True))
+        self.assertTrue(me.is_ko, "反伤超过剩余 HP 应自爆")
+
+
+class TestRecoverKinds(unittest.TestCase):
+    """`recover:N[:kind]` 的 kind 家族（2026-09-22 新增 trainer / supporter / item）
+
+    背景：真实卡面有「Put a **Trainer** card from your discard pile into your
+    hand.」（Dedenne）与「Put up to 2 **Supporter** cards …」（Miracle Headset）
+    两类写法，此前只能登记未建模 —— 而引擎本来就有 TrainerRef。
+    """
+
+    @staticmethod
+    def _state():
+        p = PlayerState(name="A", prizes_left=6)
+        p.discard_refs = [
+            PokeRef(PokemonDef("P1", hp=60, ptype="colorless", attacks=())),
+            EnergyRef(E_FIRE),
+            TrainerRef(TrainerDef("ultra_ball", kind="item", name="item_a")),
+            TrainerRef(TrainerDef("boss", kind="supporter", name="sup_a")),
+        ]
+        return p
+
+    def test_pokemon_kind(self):
+        from engine.battle import _recover_candidates
+        state = self._state()
+        idx = _recover_candidates(state, "recover:5:pokemon")
+        self.assertEqual([type(state.discard_refs[i]).__name__ for i in idx],
+                         ["PokeRef"])
+
+    def test_energy_kind(self):
+        from engine.battle import _recover_candidates
+        state = self._state()
+        idx = _recover_candidates(state, "recover:5:energy")
+        self.assertEqual([type(state.discard_refs[i]).__name__ for i in idx],
+                         ["EnergyRef"])
+
+    def test_trainer_kind_takes_both_item_and_supporter(self):
+        from engine.battle import _recover_candidates
+        state = self._state()
+        idx = _recover_candidates(state, "recover:5:trainer")
+        self.assertEqual([type(state.discard_refs[i]).__name__ for i in idx],
+                         ["TrainerRef", "TrainerRef"])
+
+    def test_supporter_kind_filters(self):
+        from engine.battle import _recover_candidates
+        state = self._state()
+        idx = _recover_candidates(state, "recover:5:supporter")
+        self.assertEqual(len(idx), 1)
+        self.assertEqual(state.discard_refs[idx[0]].tdef.kind, "supporter")
+
+    def test_any_kind_does_not_cross_into_trainers(self):
+        """`any` 对应「宝可梦或基本能量」，**不得**把训练家也捞进来（多算）"""
+        from engine.battle import _recover_candidates
+        state = self._state()
+        idx = _recover_candidates(state, "recover:5:any")
+        kinds = {type(state.discard_refs[i]).__name__ for i in idx}
+        self.assertEqual(kinds, {"PokeRef", "EnergyRef"})
+
+    def test_count_is_respected(self):
+        from engine.battle import _recover_candidates
+        state = self._state()
+        self.assertEqual(len(_recover_candidates(state, "recover:1:any")), 1)
 
 
 if __name__ == "__main__":

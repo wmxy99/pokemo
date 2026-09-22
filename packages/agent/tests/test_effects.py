@@ -446,6 +446,242 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertTrue(all("coin" not in t for t in r["tags"]), r["tags"])
 
 
+class TestExtraDamageClauseTargets(unittest.TestCase):
+    """附加伤害子句的**目标形态**（2026-09-22 审计修复）
+
+    背景：早期 `_EN_DAMAGE_RE` 只取**第一个** `does N damage` 且**恒定**标为
+    `active_opponent`，而 `damage` 动作不产 tag → 效果在引擎里**完全消失**：
+      · 「does N damage to itself」（反伤，全库 49 处）读成打对手战斗位
+      · 「to 1 of your opponent's Benched Pokémon」读成打战斗位
+    —— 若该招式还有别的 tag，卡会进池并**静默丢效果**（实测 12 张卡命中）。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_recoil_maps_to_self_tag(self):
+        """「This Pokémon does N damage to itself」→ 引擎 `self:N`（精确对应）"""
+        r = self._tags("This attack does 30 damage to your opponent\u2019s "
+                       "Active Pok\u00e9mon, and this Pok\u00e9mon also does "
+                       "20 damage to itself.")
+        self.assertIn("self:20", r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_conditional_recoil_not_emitted(self):
+        """条件性反伤（抛币/条件从句）不得产出无条件 `self:N`
+
+        否则从「两面都是反面才自伤」变成「必定自伤」，属实质性加强。
+        """
+        r = self._tags("Flip 2 coins. If both of them are tails, this "
+                       "Pok\u00e9mon also does 30 damage to itself.")
+        self.assertNotIn("self:30", r["tags"])
+        self.assertTrue(r["unsupported"], "应如实登记为未建模")
+
+    def test_bench_all_maps_to_spread_all(self):
+        """「to each of your opponent's Benched Pokémon」→ `spread:all:per`"""
+        r = self._tags("This attack does 50 damage to each of your "
+                       "opponent\u2019s Benched Pok\u00e9mon. "
+                       "(Don\u2019t apply Weakness and Resistance for "
+                       "Benched Pok\u00e9mon.)")
+        self.assertIn("spread:all:50", r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_scaling_bench_all_not_flattened(self):
+        """带缩放（for each …）的全体后备伤害**不得**按固定值映射
+
+        否则会静默低估（Kyurem ex：「10 damage to each Benched for each Prize
+        card your opponent has taken」）。
+        """
+        r = self._tags("This attack also does 10 damage to each of your "
+                       "opponent\u2019s Benched Pok\u00e9mon for each Prize "
+                       "card your opponent has taken. "
+                       "(Don\u2019t apply Weakness and Resistance for "
+                       "Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_conditional_bench_all_not_emitted(self):
+        """句首带条件的全体后备伤害不得产出无条件 tag（Ting-Lu）"""
+        r = self._tags("If a Stadium is in play, this attack also does 30 "
+                       "damage to each of your opponent\u2019s Benched "
+                       "Pok\u00e9mon, and discard that Stadium.")
+        self.assertNotIn("spread:all:30", r["tags"])
+        self.assertTrue(r["unsupported"])
+
+    def test_benched_one_target_is_not_silently_active(self):
+        """「to 1 of your opponent's Benched Pokémon」**不得**当成打战斗位
+
+        引擎无法表达「选定 1 只后备」→ 必须如实登记未建模，
+        否则含其它 tag 的招式会进池并静默丢掉这段伤害。
+        """
+        r = self._tags("Discard 2 Energy from this Pok\u00e9mon. This attack "
+                       "does 90 damage to 1 of your opponent\u2019s Benched "
+                       "Pok\u00e9mon. (Don\u2019t apply Weakness and "
+                       "Resistance for Benched Pok\u00e9mon.)")
+        self.assertIn("discard_energy:2", r["tags"])
+        self.assertTrue(any("附加伤害目标未建模" in u["reason"]
+                            for u in r["unsupported"]), r["unsupported"])
+
+    def test_own_bench_damage_is_flagged(self):
+        """打**我方**后备的伤害同样不得当成打对手战斗位"""
+        r = self._tags("This attack also does 10 damage to 1 of your Benched "
+                       "Pok\u00e9mon. (Don\u2019t apply Weakness and "
+                       "Resistance for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(any("附加伤害目标未建模" in u["reason"]
+                            for u in r["unsupported"]), r["unsupported"])
+
+
+class TestRulesParenIsNotAnEffect(unittest.TestCase):
+    """规则提醒括号 `(Don't apply Weakness and Resistance …)` **不是**卡面效果
+
+    它是官方规则复述，却会被 `_EN_MODIFY_RE` 命中 "Resistance" →
+    给整条效果塞一条 rule 未建模 → **整卡不可对战**。
+    实测全库 133 张卡含此类条目，其中 84 张纯属该括号假阳性。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_paren_alone_does_not_trigger_modify(self):
+        r = self._tags("This attack does 50 damage to each of your "
+                       "opponent\u2019s Benched Pok\u00e9mon. "
+                       "(Don\u2019t apply Weakness and Resistance for "
+                       "Benched Pok\u00e9mon.)")
+        self.assertFalse(any("静态规则修改" in u["reason"]
+                             for u in r["unsupported"]), r["unsupported"])
+
+    def test_before_applying_paren_does_not_trigger_modify(self):
+        r = self._tags("Attacks used by this Pok\u00e9mon do 50 more damage "
+                       "to your opponent\u2019s Active Pok\u00e9mon {ex} "
+                       "(before applying Weakness and Resistance).",
+                       kind="item", name="Belt")
+        self.assertFalse(any("静态规则修改" in u["reason"]
+                             for u in r["unsupported"]), r["unsupported"])
+
+    def test_real_weakness_change_still_detected(self):
+        """真的改写弱点/抗性的效果仍须被识别（不得因修假阳性而漏真效果）"""
+        r = self._tags("The Weakness of your opponent\u2019s Active "
+                       "Pok\u00e9mon is now {G}.")
+        self.assertTrue(any("静态规则修改" in u["reason"]
+                            for u in r["unsupported"]), r["unsupported"])
+
+    def test_source_text_keeps_original(self):
+        """卡面原文照旧落库（差异透明 C5）——只影响语义判定，不改写文本"""
+        text = ("This attack does 50 damage to each of your opponent\u2019s "
+                "Benched Pok\u00e9mon. (Don\u2019t apply Weakness and "
+                "Resistance for Benched Pok\u00e9mon.)")
+        spec = E.parse_rule(text, kind="attack", name="X")
+        self.assertIn("Don\u2019t apply Weakness", spec["source_text"])
+
+
+class TestClauseScopedTargets(unittest.TestCase):
+    """目标判定**只看子句**，不看全文（2026-09-22：检索目标 / 多选项卡换位）"""
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_search_target_from_for_clause(self):
+        """「Search your deck for an **Energy** card and attach it to 1 of your
+        Benched {G} **Pokémon**」——检索的是能量卡，此前因全文出现 Pokémon
+        被映射成 `search_pokemon`（引擎去拿宝可梦，**静默拿错东西**）。
+        全库 28 条此类误判。
+        """
+        r = self._tags("Search your deck for an Energy card and attach it to "
+                       "1 of your Benched {G} Pok\u00e9mon. Then, shuffle "
+                       "your deck.")
+        self.assertIn("search_energy:1", r["tags"])
+        self.assertNotIn("search_pokemon:1", r["tags"])
+
+    def test_search_target_pokemon_still_works(self):
+        r = self._tags("Search your deck for up to 2 Pok\u00e9mon with {F} "
+                       "Resistance, reveal them, and put them into your hand. "
+                       "Then, shuffle your deck.")
+        self.assertIn("search_pokemon:2", r["tags"])
+
+    def test_choose_one_switch_is_self_not_gust(self):
+        """`Choose 1:` 多选项卡：换位目标只看换位子句
+
+        真实反例 Kieran：「• Switch your Active Pokémon with 1 of your Benched
+        Pokémon. • …do 30 more damage to your opponent's Active Pokémon {ex}…」
+        早期用全文判 → 因**另一条**选项提到 opponent 而判成 gust，
+        把对手后备拉上前台（我方换位变成干扰对手，完全反了）。
+        """
+        r = self._tags(
+            "Choose 1:\n\n• Switch your Active Pok\u00e9mon with 1 of your "
+            "Benched Pok\u00e9mon.\n• During this turn, attacks used by your "
+            "Pok\u00e9mon do 30 more damage to your opponent\u2019s Active "
+            "Pok\u00e9mon {ex} and Active Pok\u00e9mon {V} (before applying "
+            "Weakness and Resistance).", kind="supporter", name="Kieran")
+        self.assertIn("switch_self", r["tags"])
+        self.assertNotIn("gust", r["tags"])
+
+    def test_gust_still_detected(self):
+        r = self._tags("Switch in 1 of your opponent\u2019s Benched "
+                       "Pok\u00e9mon to the Active Spot.", kind="item",
+                       name="Boss")
+        self.assertIn("gust", r["tags"])
+
+
+class TestDiscardPileRecovery(unittest.TestCase):
+    """弃牌堆回收（`recover:N[:kind]`）——B3 解析召回补齐（2026-09-22）
+
+    引擎早有 `recover:N[:kind]`，但正则要求「数字 + 固定名词序」，
+    真实卡面最常见的冠词型与组合型全部漏掉（B3 的 8 条）。
+    """
+
+    @staticmethod
+    def _tags(text, kind="item", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_article_form(self):
+        r = self._tags("Put a Pok\u00e9mon from your discard pile into your "
+                       "hand.")
+        self.assertIn("recover:1:pokemon", r["tags"])
+
+    def test_trainer_kind(self):
+        r = self._tags("Put a Trainer card from your discard pile into your "
+                       "hand.")
+        self.assertIn("recover:1:trainer", r["tags"])
+
+    def test_supporter_kind(self):
+        r = self._tags("Put up to 2 Supporter cards from your discard pile "
+                       "into your hand.")
+        self.assertIn("recover:2:supporter", r["tags"])
+
+    def test_any_combination(self):
+        r = self._tags("Put up to 5 in any combination of Pok\u00e9mon and "
+                       "Basic Energy cards from your discard pile into your "
+                       "hand.")
+        self.assertIn("recover:5:any", r["tags"])
+
+    def test_pokemon_or_basic_energy(self):
+        r = self._tags("Put a Pok\u00e9mon or a Basic Energy card from your "
+                       "discard pile into your hand.")
+        self.assertIn("recover:1:any", r["tags"])
+
+    def test_subset_qualifier_not_mapped(self):
+        """子集限定（「that don't have a Rule Box」/「{F} Pokémon」）不映射
+
+        引擎只能按大类回收 → 映射出去会从弃牌堆取到**超出卡面范围**的卡。
+        """
+        r = self._tags("Put up to 3 in any combination of Pok\u00e9mon that "
+                       "don\u2019t have a Rule Box and Basic Energy cards "
+                       "from your discard pile into your hand.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_unknown_count_not_guessed(self):
+        """回收数量判不出（抛币决定）→ 绝不兜底成 1"""
+        r = self._tags("Flip 3 coins. Put a number of cards up to the number "
+                       "of heads from your discard pile into your hand.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
 class TestExtractJson(unittest.TestCase):
     """LLM 输出容错：围栏 / 前后缀 / thinking 残留"""
 

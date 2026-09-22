@@ -98,6 +98,8 @@ def build_jobs() -> list:
             Step("Offline demo (self-authored data only, 临时库)",
                  [PY, "scripts/seed_demo.py"], _p("packages", "card-db"),
                  env_carddb, needs="pydantic"),
+            Step("卡池解析对账（卡面 ↔ 引擎 tag）",
+                 [PY, "packages/card-db/scripts/audit_pool_alignment.py"], REPO),
         ]),
         Job("agent", [Step("Agent tests (need torch)", [PY, "-m", "unittest",
             "discover", "-s", "tests"], _p("packages", "agent"), needs="torch")]),
@@ -152,6 +154,8 @@ def build_jobs() -> list:
                  "r=subprocess.run(cmd,capture_output=True,text=True,cwd=r'%s')\n"
                  "print('违规行:', r.stdout[:400]) if r.returncode==0 else print('OK: 本机路径守卫通过')\n"
                  "sys.exit(0 if r.returncode!=0 else 1)" % REPO], REPO),
+            Step("文档计数守卫（计数类文档必须实证）", [PY,
+                 "scripts/check_doc_counts.py"], REPO),
         ]),
     ]
 

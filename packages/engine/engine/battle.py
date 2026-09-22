@@ -1199,8 +1199,9 @@ class Battle:
 
         tag 家族（v1.3 扩展 · v1.4 续扩，见 cards_real.json meta.engine_tags）：
           · 状态：poison / burn / sleep / paralyze / confuse
-          · 放置：spread_free:N（任意分配）· spread:N:per（随机 n 只各 per 点）
-          · 自伤 / 回复：self:N · heal:N
+          · 放置：spread_free:N（任意分配）· spread:N:per（随机 n 只各 per 点）·
+            spread:all:per（对手**全部**后备各 per 点 · 2026-09-22 新增）
+          · 自伤 / 回复：self:N（含卡面反伤「does N damage to itself」）· heal:N
           · 抽牌：draw:N · draw_to:N（抽到指定手牌数）
           · 弃牌：discard:N（弃自身手牌）· discard_energy:N（弃自身 active 能量）
           · 换位：switch_self（自己换下）· gust（把对手后备拉为 active）
@@ -1309,11 +1310,18 @@ class Battle:
                         return
             elif tag.startswith("spread:"):
                 _, n, per = tag.split(":")
-                n, per = int(n), int(per)
+                per = int(per)
                 targets = [fp for fp in opp.bench if not _is_bench_immune(fp)]
-                self.rng.shuffle(targets)
+                if n == "all":
+                    # 「does N damage to **each of** your opponent's Benched Pokémon」
+                    # → 对手**全部**后备各 per 点（2026-09-22 新增）。
+                    # 与 spread:N:per（**随机** n 只）语义不同，不可互相代用。
+                    picked = targets
+                else:
+                    self.rng.shuffle(targets)
+                    picked = targets[:int(n)]
                 killed = []
-                for fp in targets[:n]:
+                for fp in picked:
                     fp.damage += per
                     self._log("damage", {"target": fp.name,
                                          "player": 1 - self.current,
@@ -1874,10 +1882,16 @@ def _zone_energy_available(p: PlayerState, etype: Optional[str],
 def _recover_candidates(p: PlayerState, tag: str) -> list:
     """弃牌堆回收候选（recover:N[:kind]）→ 弃牌堆下标列表（最多 N 个）
 
-    kind：``pokemon`` | ``energy`` | ``any``（默认 any，对应 Night Stretcher 的
-    「宝可梦或基本能量」）。仅返回**类型化层**中存在的卡（文本层不参与判定）。
+    kind：``pokemon`` | ``energy`` | ``trainer`` | ``supporter`` | ``item`` |
+    ``any``（默认 any，对应 Night Stretcher 的「宝可梦或基本能量」）。
+    仅返回**类型化层**中存在的卡（文本层不参与判定）。
+
+    ``trainer``/``supporter``/``item`` 为 2026-09-22 新增：真实卡面有
+    「Put a **Trainer** card from your discard pile into your hand.」（Dedenne）、
+    「Put up to 2 **Supporter** cards …」（Miracle Headset）两类写法。
+    此前只能登记为未建模 —— 而引擎本来就有 TrainerRef，补三个分支即可精确表达。
     """
-    from .cards import EnergyRef, PokeRef
+    from .cards import EnergyRef, PokeRef, TrainerRef
     parts = tag.split(":")
     n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
     kind = parts[2] if len(parts) > 2 and parts[2] else "any"
@@ -1885,10 +1899,21 @@ def _recover_candidates(p: PlayerState, tag: str) -> list:
     for i, c in enumerate(p.discard_refs):
         if len(out) >= n:
             break
-        if kind in ("any", "pokemon") and isinstance(c, PokeRef):
-            out.append(i)
-        elif kind in ("any", "energy") and isinstance(c, EnergyRef):
-            out.append(i)
+        if isinstance(c, PokeRef):
+            if kind in ("any", "pokemon"):
+                out.append(i)
+        elif isinstance(c, EnergyRef):
+            if kind in ("any", "energy"):
+                out.append(i)
+        elif isinstance(c, TrainerRef):
+            # ⚠ `kind` 在 `TrainerRef.tdef` 上（TrainerRef 本身没有该字段）——
+            #   直接 `getattr(c, "kind", "")` 会永远拿到空串，使 supporter/item
+            #   过滤静默失效（全当"不是该类别"）。用 tdef.kind。
+            sub = str(getattr(getattr(c, "tdef", None), "kind", "") or "")
+            if kind == "trainer":
+                out.append(i)
+            elif kind in ("supporter", "item") and sub == kind:
+                out.append(i)
     return out
 
 

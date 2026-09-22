@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-09-21 11:46:00",
+ "generated_at": "2026-09-22 09:20:50",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 839,
-  "unsupported": 677,
-  "cards_with_unsupported": 576,
-  "cards_fully_mapped": 543,
-  "cards_with_supported_tag": 700,
-  "cards_engine_ready": 443,
+  "engine_tags": 891,
+  "unsupported": 675,
+  "cards_with_unsupported": 572,
+  "cards_fully_mapped": 547,
+  "cards_with_supported_tag": 744,
+  "cards_engine_ready": 483,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,29 +86,29 @@
    "groups": 1,
    "entries": 25,
    "cards": 25,
-   "share": 0.0369
+   "share": 0.037
   },
   {
    "id": "B3",
    "name": "解析召回补齐（英文卡面）",
    "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
-   "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索）",
+   "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
-   "groups": 20,
-   "entries": 117,
-   "cards": 117,
-   "share": 0.1728
+   "groups": 17,
+   "entries": 93,
+   "cards": 93,
+   "share": 0.1378
   },
   {
    "id": "B4",
    "name": "需新引擎机制（P1 登记）",
-   "goal": "需要条件表达式 / RNG 钩子 / 静态修正层等新机制，不属本轮",
+   "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
-   "groups": 12,
-   "entries": 58,
-   "cards": 58,
-   "share": 0.0857
+   "groups": 60,
+   "entries": 119,
+   "cards": 119,
+   "share": 0.1763
   },
   {
    "id": "B5",
@@ -117,9 +117,9 @@
    "fix": "永久登记在差异透明清单（C5），不做实现",
    "priority": 5,
    "groups": 22,
-   "entries": 477,
-   "cards": 460,
-   "share": 0.7046
+   "entries": 438,
+   "cards": 422,
+   "share": 0.6489
   }
  ],
  "items": [
@@ -201,13 +201,18 @@
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 21,
-   "cards": 21,
+   "entries": 22,
+   "cards": 22,
    "samples": [
     {
      "card": "Shiftry",
      "name_zh": "",
      "text": "Put an Energy attached to this Pokémon into your hand."
+    },
+    {
+     "card": "Okidogi",
+     "name_zh": "",
+     "text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
     },
     {
      "card": "Archaludon",
@@ -223,11 +228,6 @@
      "card": "Alolan Exeggutor ex",
      "name_zh": "",
      "text": "You may attach any number of Basic Energy cards from your hand to your Pokémon in any way you like."
-    },
-    {
-     "card": "Chien-Pao",
-     "name_zh": "",
-     "text": "Put an Energy attached to this Pokémon into your hand."
     }
    ]
   },
@@ -269,42 +269,6 @@
   },
   {
    "batch": "B3",
-   "sub": "discard_energy_self",
-   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 11,
-   "cards": 11,
-   "samples": [
-    {
-     "card": "Greninja ex",
-     "name_zh": "",
-     "text": "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Kyurem",
-     "name_zh": "",
-     "text": "Discard all Energy from this Pokémon. This attack does 110 damage to 3 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "N’s Darmanitan",
-     "name_zh": "",
-     "text": "Discard all Energy from this Pokémon, and this attack also does 90 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Zeraora",
-     "name_zh": "",
-     "text": "Discard all Energy from this Pokémon, and this attack does 210 damage to 1 of your opponent’s Benched Pokémon {ex}. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Blaziken",
-     "name_zh": "",
-     "text": "Discard 2 Energy from this Pokémon. This attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    }
-   ]
-  },
-  {
-   "batch": "B3",
    "sub": "attach",
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
@@ -336,78 +300,6 @@
      "card": "Team Rocket's Zapdos",
      "name_zh": "",
      "text": "If this Pokémon has any Team Rocket’s Energy attached, this attack does 60 more damage."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "recover_from_discard",
-   "desc": "弃牌堆回收入手（Put … from your discard pile into your hand）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 8,
-   "cards": 8,
-   "samples": [
-    {
-     "card": "Slowpoke",
-     "name_zh": "",
-     "text": "Put a Pokémon from your discard pile into your hand."
-    },
-    {
-     "card": "Dedenne",
-     "name_zh": "",
-     "text": "Put a Trainer card from your discard pile into your hand."
-    },
-    {
-     "card": "Stoutland",
-     "name_zh": "",
-     "text": "Flip 3 coins. Put a number of cards up to the number of heads from your discard pile into your hand."
-    },
-    {
-     "card": "Night Stretcher",
-     "name_zh": "夜之担架",
-     "text": "Put a Pokémon or a Basic Energy card from your discard pile into your hand."
-    },
-    {
-     "card": "Miracle Headset",
-     "name_zh": "",
-     "text": "Put up to 2 Supporter cards from your discard pile into your hand."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "attach",
-   "desc": "附能量（attach … energy）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 6,
-   "cards": 6,
-   "samples": [
-    {
-     "card": "Wellspring Mask Ogerpon ex",
-     "name_zh": "",
-     "text": "You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched "
-    },
-    {
-     "card": "Okidogi",
-     "name_zh": "",
-     "text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
-    },
-    {
-     "card": "Raging Bolt",
-     "name_zh": "",
-     "text": "This attack does 30 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Ferrothorn",
-     "name_zh": "",
-     "text": "This attack does 20 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Genesect",
-     "name_zh": "",
-     "text": "This attack does 20 damage to 1 of your opponent’s Pokémon for each {G} Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
     }
    ]
   },
@@ -523,38 +415,6 @@
   },
   {
    "batch": "B3",
-   "sub": "spread",
-   "desc": "放置伤害指示物",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Feraligatr",
-     "name_zh": "",
-     "text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying We"
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "discard_self",
-   "desc": "弃自身/弃手牌（含对手）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Wugtrio ex",
-     "name_zh": "",
-     "text": "Discard up to 3 Energy cards from your hand. This attack does 60 damage to 1 of your opponent’s Pokémon for each Energy card you discarded in this way. (Don’t apply Weakness and Resistance for Benched"
-    }
-   ]
-  },
-  {
-   "batch": "B3",
    "sub": "discard_energy_self",
    "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
    "action_type": "rule",
@@ -603,6 +463,22 @@
   },
   {
    "batch": "B3",
+   "sub": "recover_from_discard",
+   "desc": "弃牌堆回收入手（数量/类别/子集未识别）",
+   "action_type": "rule",
+   "reason": "弃牌堆回收：回收数量未识别",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Stoutland",
+     "name_zh": "",
+     "text": "Flip 3 coins. Put a number of cards up to the number of heads from your discard pile into your hand."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
    "sub": "discard_self",
    "desc": "弃自身/弃手牌（含对手）",
    "action_type": "rule",
@@ -635,17 +511,33 @@
   },
   {
    "batch": "B3",
-   "sub": "switch",
-   "desc": "换位（switch / into the Active Spot）",
+   "sub": "recover_from_discard",
+   "desc": "弃牌堆回收入手（数量/类别/子集未识别）",
    "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "reason": "弃牌堆回收：限定子集未识别（in any combination of Pokémon ）",
    "entries": 1,
    "cards": 1,
    "samples": [
     {
-     "card": "Kieran",
+     "card": "Lana’s Aid",
      "name_zh": "",
-     "text": "Choose 1:\n\n• Switch your Active Pokémon with 1 of your Benched Pokémon.\n• During this turn, attacks used by your Pokémon do 30 more damage to your opponent’s Active Pokémon {ex} and Active Pokémon {V}"
+     "text": "Put up to 3 in any combination of Pokémon that don’t have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "recover_from_discard",
+   "desc": "弃牌堆回收入手（数量/类别/子集未识别）",
+   "action_type": "rule",
+   "reason": "弃牌堆回收：限定子集未识别（in any combination of {F} Poké）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Tarragon",
+     "name_zh": "",
+     "text": "Put up to 4 in any combination of {F} Pokémon and Basic {F} Energy cards from your discard pile into your hand."
     }
    ]
   },
@@ -723,6 +615,42 @@
   },
   {
    "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 30 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 5,
+   "cards": 5,
+   "samples": [
+    {
+     "card": "Farigiraf ex",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Glaceon ex",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Hop’s Zacian ex",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Zebstrika",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Marnie's Grimmsnarl ex",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "static_lock",
    "desc": "静态锁/免疫/伤害减免",
    "action_type": "rule",
@@ -749,6 +677,37 @@
      "card": "Team Rocket's Watchtower",
      "name_zh": "",
      "text": "{C} Pokémon in play (both yours and your opponent’s) have no Abilities."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 50 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 4,
+   "cards": 4,
+   "samples": [
+    {
+     "card": "Hop’s Corviknight",
+     "name_zh": "",
+     "text": "This attack also does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Lopunny",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Larry's Staraptor",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon, and this attack also does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Mega Starmie ex",
+     "name_zh": "",
+     "text": "This attack also does 50 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
     }
    ]
   },
@@ -785,6 +744,32 @@
   },
   {
    "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 50 damage to 2 of your opponent’s Pokémon）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Iron Crown ex",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
+    },
+    {
+     "card": "Electivire ex",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Steven's Skarmory",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
@@ -811,6 +796,202 @@
   },
   {
    "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 20 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Stonjourner",
+     "name_zh": "",
+     "text": "This attack also does 20 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Glastrier",
+     "name_zh": "",
+     "text": "This attack also does 20 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 120 damage to 1 of your opponent’s Pokémon）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Honchkrow",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Cramorant",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 60 damage to each of 2 of your opponent’s Pokémon）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Ambipom",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon, and this attack does 60 damage to each of 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Mega Eelektross ex",
+     "name_zh": "",
+     "text": "This attack does 60 damage to each of 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（own_bench_all：does 30 damage to each of your Benched Pokémon）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Centiskorch",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    },
+    {
+     "card": "Diggersby",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（both_bench_all：does 40 damage to each Benched Pokémon that has any damage c）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Hippowdon",
+     "name_zh": "",
+     "text": "This attack also does 40 damage to each Benched Pokémon that has any damage counters on it (both yours and your opponent’s). (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（own_bench_one：does 10 damage to 1 of your Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Girafarig",
+     "name_zh": "",
+     "text": "This attack also does 10 damage to 1 of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 120 damage to 2 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Greninja ex",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_all_conditional：does 30 damage to each of your opponent’s Benched Pokémon, a）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Ting-Lu",
+     "name_zh": "",
+     "text": "If a Stadium is in play, this attack also does 30 damage to each of your opponent’s Benched Pokémon, and discard that Stadium. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 60 damage to 1 of your opponent’s Benched Pokémon {ex} ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Shaymin",
+     "name_zh": "",
+     "text": "This attack does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（self_conditional：does 10 damage to itself for each damage counter on it）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Palafin",
+     "name_zh": "",
+     "text": "This Pokémon also does 10 damage to itself for each damage counter on it."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n_conditional：does 60 damage to 1 of your opponent’s Pokémon for each Ener）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Wugtrio ex",
+     "name_zh": "",
+     "text": "Discard up to 3 Energy cards from your hand. This attack does 60 damage to 1 of your opponent’s Pokémon for each Energy card you discarded in this way. (Don’t apply Weakness and Resistance for Benched"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
@@ -822,6 +1003,182 @@
      "card": "Roaring Moon",
      "name_zh": "",
      "text": "This attack does 10 more damage for each Ancient card in your discard pile."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one_conditional：does 120 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Wellspring Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched "
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（self_conditional：does 30 damage to itself）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Gurdurr",
+     "name_zh": "",
+     "text": "You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 100 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Fezandipiti ex",
+     "name_zh": "吉雉鸡ex",
+     "text": "This attack does 100 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 110 damage to 3 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Kyurem",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon. This attack does 110 damage to 3 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 180 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Cinderace ex",
+     "name_zh": "",
+     "text": "This attack does 180 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n_conditional：does 30 damage to 1 of your opponent’s Pokémon for each Ener）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Raging Bolt",
+     "name_zh": "",
+     "text": "This attack does 30 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_all：does 100 damage to each of your opponent’s Pokémon {ex} and ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Flygon ex",
+     "name_zh": "",
+     "text": "This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（unknown_conditional：does 120 damage to 2 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Wo-Chien",
+     "name_zh": "",
+     "text": "If there are 3 or fewer cards in your deck, this attack also does 120 damage to 2 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（unknown：does 130 damage to 2 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Hydreigon ex",
+     "name_zh": "",
+     "text": "This attack also does 130 damage to 2 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_all：does 60 damage to each of your opponent’s Pokémon {ex}）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Vaporeon ex",
+     "name_zh": "",
+     "text": "This attack does 60 damage to each of your opponent’s Pokémon {ex}. This attack’s damage isn’t affected by Weakness or Resistance."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 90 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "N’s Darmanitan",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon, and this attack also does 90 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
     }
    ]
   },
@@ -843,6 +1200,22 @@
   },
   {
    "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（own_bench_all：does 20 damage to each of your Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Hop’s Sandaconda",
+     "name_zh": "",
+     "text": "This attack also does 20 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
@@ -859,10 +1232,106 @@
   },
   {
    "batch": "B4",
-   "sub": "scaling_damage",
-   "desc": "条件伤害缩放（for each …）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（unknown：does 30 damage to 2 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Cynthia's Milotic",
+     "name_zh": "",
+     "text": "This attack also does 30 damage to 2 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（self_conditional：does 50 damage to itself）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Dondozo ex",
+     "name_zh": "",
+     "text": "You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（own_bench_one：does 40 damage to 1 of your Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Manectric",
+     "name_zh": "",
+     "text": "This attack also does 40 damage to 1 of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 210 damage to 1 of your opponent’s Benched Pokémon {ex}）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Zeraora",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon, and this attack does 210 damage to 1 of your opponent’s Benched Pokémon {ex}. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 120 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Blaziken",
+     "name_zh": "",
+     "text": "Discard 2 Energy from this Pokémon. This attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_all：does 30 damage to each of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Team Rocket's Arbok",
+     "name_zh": "",
+     "text": "This attack does 30 damage to each of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one_conditional：does 20 damage to 1 of your opponent’s Benched Pokémon for e）",
    "entries": 1,
    "cards": 1,
    "samples": [
@@ -870,6 +1339,38 @@
      "card": "Team Rocket's Sneasel",
      "name_zh": "",
      "text": "This attack does 20 damage to 1 of your opponent’s Benched Pokémon for each damage counter on that Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（self_conditional：does 90 damage to itself）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Team Rocket's Raticate",
+     "name_zh": "",
+     "text": "Flip 2 coins. If both of them are tails, this Pokémon also does 90 damage to itself."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_all_conditional：does 10 damage to each of your opponent’s Benched Pokémon fo）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Kyurem ex",
+     "name_zh": "",
+     "text": "This attack also does 10 damage to each of your opponent’s Benched Pokémon for each Prize card your opponent has taken. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
     }
    ]
   },
@@ -891,6 +1392,166 @@
   },
   {
    "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 60 damage to 1 of your opponent’s Benched Pokémon that ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Excadrill ex",
+     "name_zh": "",
+     "text": "This attack also does 60 damage to 1 of your opponent’s Benched Pokémon that has any damage counters on it. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（own_bench_all：does 10 damage to each of your Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Landorus",
+     "name_zh": "",
+     "text": "This attack also does 10 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 70 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Sigilyph",
+     "name_zh": "",
+     "text": "This attack does 70 damage to 1 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n_conditional：does 20 damage to 1 of your opponent’s Pokémon for each Ener）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Ferrothorn",
+     "name_zh": "",
+     "text": "This attack does 20 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 40 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Raboot",
+     "name_zh": "",
+     "text": "This attack does 40 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_all：does 20 damage to each of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Frosmoth",
+     "name_zh": "",
+     "text": "This attack does 20 damage to each of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.) Your opponent’s Active Pokémon is now Asleep."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（both_bench_all：does 20 damage to each Benched Pokémon ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Gloom",
+     "name_zh": "",
+     "text": "This attack also does 20 damage to each Benched Pokémon (both yours and your opponent’s). (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n_conditional：does 20 damage to 1 of your opponent’s Pokémon for each {G} ）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Genesect",
+     "name_zh": "",
+     "text": "This attack does 20 damage to 1 of your opponent’s Pokémon for each {G} Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_bench_one：does 70 damage to 1 of your opponent’s Benched Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Prinplup",
+     "name_zh": "",
+     "text": "This attack does 70 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n_conditional：does 140 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Coalossal",
+     "name_zh": "",
+     "text": "This attack does 140 damage to 1 of your opponent’s Pokémon. If you don’t have 10 or more Basic {F} Energy cards in your discard pile, this attack does nothing. (Don’t apply Weakness and Resistance fo"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
@@ -907,10 +1568,58 @@
   },
   {
    "batch": "B4",
-   "sub": "coin_flip",
-   "desc": "抛币判定（Flip a coin）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 280 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Mega Charizard Y ex",
+     "name_zh": "",
+     "text": "Discard 3 Energy from this Pokémon, and this attack does 280 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 50 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Mandibuzz ex",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 90 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Dartrix",
+     "name_zh": "",
+     "text": "Discard all Energy from this Pokémon, and this attack does 90 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（dynamic_conditional：does 150 damage to that Pokémon）",
    "entries": 1,
    "cards": 1,
    "samples": [
@@ -922,13 +1631,29 @@
    ]
   },
   {
+   "batch": "B4",
+   "sub": "extra_damage_target",
+   "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
+   "action_type": "damage",
+   "reason": "附加伤害目标未建模（opp_n：does 220 damage to 1 of your opponent’s Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Mega Skarmory ex",
+     "name_zh": "",
+     "text": "Shuffle all Energy attached to this Pokémon into your deck, and this attack does 220 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
+    }
+   ]
+  },
+  {
    "batch": "B5",
    "sub": "unclassified",
    "desc": "未分类（需人工判定）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 285,
-   "cards": 271,
+   "entries": 311,
+   "cards": 295,
    "samples": [
     {
      "card": "Boomerang Energy",
@@ -954,42 +1679,6 @@
      "card": "Prism Energy",
      "name_zh": "",
      "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to a Basic Pokémon, this card provides every type of Energy but provides only 1 Energy at a time."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
-   "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 83,
-   "cards": 80,
-   "samples": [
-    {
-     "card": "Hippowdon",
-     "name_zh": "",
-     "text": "This attack also does 40 damage to each Benched Pokémon that has any damage counters on it (both yours and your opponent’s). (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Girafarig",
-     "name_zh": "",
-     "text": "This attack also does 10 damage to 1 of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Ting-Lu",
-     "name_zh": "",
-     "text": "If a Stadium is in play, this attack also does 30 damage to each of your opponent’s Benched Pokémon, and discard that Stadium. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Shaymin",
-     "name_zh": "",
-     "text": "This attack does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
-    },
-    {
-     "card": "Iron Crown ex",
-     "name_zh": "",
-     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
     }
    ]
   },
@@ -1026,6 +1715,42 @@
      "card": "Slugma",
      "name_zh": "",
      "text": "If your opponent’s Active Pokémon is Burned, this attack does 40 more damage."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "unclassified",
+   "desc": "未分类（需人工判定）",
+   "action_type": "rule",
+   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "entries": 18,
+   "cards": 18,
+   "samples": [
+    {
+     "card": "Iron Crown ex",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
+    },
+    {
+     "card": "Cornerstone Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Vibrava",
+     "name_zh": "",
+     "text": "During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)."
+    },
+    {
+     "card": "Flygon ex",
+     "name_zh": "",
+     "text": "This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance."
+    },
+    {
+     "card": "Archaludon ex",
+     "name_zh": "",
+     "text": "During your opponent’s next turn, this Pokémon has no Weakness."
     }
    ]
   },

@@ -38,6 +38,12 @@ jobs:
         run: |
           cd packages/card-db
           python scripts/seed_demo.py
+      - name: 卡池解析对账（卡面 ↔ 引擎 tag）
+        run: |
+          # 「静默错映射」只有把卡面原文与引擎 tag 逐条对账才看得出（测试全绿也发现不了）。
+          # 历史战果：阵营反转 / 口径反转 / 弃错对象 / 凭空加伤 / 附加伤害目标误判 /
+          # 检索类别看全文 / 规则提醒括号被当效果。动过解析链或引擎 tag 就必须跑这条。
+          python packages/card-db/scripts/audit_pool_alignment.py
 
   agent:
     runs-on: ubuntu-latest
@@ -164,3 +170,8 @@ jobs:
             echo "::error::疑似提交了 API 密钥" && fail=1
           fi
           exit $fail
+      - name: 文档计数守卫（计数类文档必须实证）
+        run: |
+          # README 的测试项数是手写的，历史上失真 3 次（对外承诺与实际不符）。
+          # 把「数一遍」变成硬检查：实测各包 tests/ 下的 def test_*，与 README 声明比对。
+          python scripts/check_doc_counts.py

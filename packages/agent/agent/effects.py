@@ -322,7 +322,8 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 _EN_STATUS = (("asleep", "sleep"), ("burned", "burn"), ("confused", "confuse"),
               ("paralyzed", "paralyze"), ("poisoned", "poison"))
-_EN_DAMAGE_RE = re.compile(r"does\s+(\d+)\s+damage", re.I)
+# ⚠ 旧的 `_EN_DAMAGE_RE`（`does\s+(\d+)\s+damage`，恒定取第一个且恒标 active_opponent）
+# 已于 2026-09-22 删除：它无法区分反伤 / 后备 / 全体目标，会静默算错（详见 `_DMG_ANY_RE`）。
 _EN_SPREAD_RE = re.compile(r"put\s+(\d+)\s+damage\s+counters?", re.I)
 # v1.3：指示物放在**自身**（Self-spread，需新引擎机制 → 如实标注不支持）
 _EN_SELF_SPREAD_RE = re.compile(
@@ -354,10 +355,49 @@ _EN_ATTACH_RE = re.compile(
     r"colorless)\b)?\s*energ", re.I)
 _EN_ATTACH_AMT_RE = re.compile(r"attach\s+(?:up to\s+)?(\d+)", re.I)
 # v1.3：弃牌堆回收（Put up to N … from your discard pile into your hand）
+#
+# 2026-09-22 扩召回：原正则要求「数字 + 固定名词序」，漏掉真实卡面最常见的两种写法
+# （B3 `recover_from_discard` 8 条全落在这里）：
+#   · 冠词型：`Put a Trainer card from your discard pile into your hand.`
+#   · 组合型：`Put up to 5 in any combination of Pokémon and Basic Energy cards
+#              from your discard pile into your hand.`
+# → 改为「先定位回收子句，再从**子句内**（不看全文）取数量与类别」。
 _EN_RECOVER_RE = re.compile(
-    r"put\s+(?:up to\s+)?(\d+)?\s*(?:basic\s+)?"
-    r"(?:pok[eé]mon|energy|card)[^.]{0,40}?discard pile[^.]{0,24}?"
-    r"(?:into|to)\s+your\s+hand", re.I)
+    r"put\s+(?:up\s+to\s+)?(?P<n>\d+)?\s*(?P<body>[^.]{0,130}?)"
+    r"from\s+your\s+discard\s+pile\s+(?:into|to)\s+your\s+hand", re.I)
+
+# 回收子句里的**子集限定**（「that don't have a Rule Box」「{F} Pokémon」…）：
+# 引擎 `recover:N[:kind]` 只能按大类取，无法按子集 → 一律不映射（宁缺勿多算）
+_EN_RECOVER_SUBSET_RE = re.compile(
+    r"that\s+(?:don[\u2019']?t|do\s+not|doesn[\u2019']?t|does\s+not|has|have|"
+    r"is|are)\b|\{\s*[A-Za-z]\s*\}", re.I)
+
+
+def _en_recover_kind(body: str) -> Optional[str]:
+    """回收子句的类别（**只看子句**）→ 引擎 kind：any|pokemon|energy|trainer|supporter|item
+
+    判不出返回 None（绝不兜底成 any —— 那会从弃牌堆取到**错类别**的卡）。
+    """
+    b = _norm_apostrophe(body or "").lower()
+    has_poke = "pokémon" in b or "pokemon" in b
+    has_energy = "energy" in b
+    if has_poke and has_energy:
+        return "any"
+    if has_poke:
+        return "pokemon"
+    if has_energy:
+        return "energy"
+    if "supporter" in b:
+        return "supporter"
+    if "trainer" in b:
+        return "trainer"
+    if " item" in b or b.strip().startswith("item"):
+        return "item"
+    if re.search(r"\bcards?\b|\bin any combination\b", b):
+        return "any"
+    return None
+
+
 _EN_MOVE_RE = re.compile(r"move\s+(?:up to\s+)?(\d+)\s+damage\s+counters?",
                          re.I)
 # v1.3：移动全部指示物（Move all damage counters …）
@@ -376,6 +416,77 @@ _EN_MODIFY_RE = re.compile(r"weakness|resistance|prevents? all damage|"
                            re.I)
 _EN_BENCH_RE = re.compile(r"bench(?:ed)?\s+pok|onto your bench", re.I)
 _EN_HAND_RE = re.compile(r"(?:into|to)\s+your\s+hand", re.I)
+
+# ---------------- 规则提醒括号（**不是**卡面效果） ----------------
+# 官方卡面在「对后备造成伤害 / 计算伤害」的效果后固定跟一句**规则复述**：
+#   (Don't apply Weakness and Resistance for Benched Pokémon.)
+#   (before applying Weakness and Resistance)
+# 它们不是效果。但 `_EN_MODIFY_RE` 会命中其中的 "Resistance" →
+# 给整条效果塞一条 `rule` 未建模动作 → **整卡不可对战**（准入是「整卡不收」）。
+# 实测 2026-09-22：全库 133 张卡含「静态规则修改」未建模条目，其中 **84 张纯属括号假阳性**。
+# 中文解析器早就在剔括号注解（`_parse_rule_zh` 的 `t_clean`），英文侧此前漏了。
+_RULES_PAREN_RE = re.compile(
+    r"\((?:don[\u2019']?t\s+apply|before\s+applying)[^)]*?"
+    r"(?:weakness|resistance)[^)]*?\)", re.I)
+
+
+def _strip_rules_paren(text: str) -> str:
+    """剔掉「规则提醒括号」——仅供**语义权威判定**（modify / 触发时机）使用。
+
+    注意：**不改写 `source_text`**。卡面原文照旧落库（差异透明 C5）；
+    这里只是在判断「这段文本有没有静态改写效果」时，不把规则复述算进去。
+    """
+    return _RULES_PAREN_RE.sub(" ", str(text or ""))
+
+
+# ---------------- 附加伤害子句的目标形态 ----------------
+# 历史缺陷（2026-09-22 审计）：早期只取**第一个** `does N damage` 且**恒定**标为
+# `active_opponent`。而 `damage` 动作**不产 tag**（只产一条 note）→ 实际后果是：
+#   · `does N damage to itself`（反伤，全库 47 处）被记成打对手战斗位 → 反伤**完全消失**
+#   · `does N damage to 1 of your opponent's Benched Pokémon` 被记成打战斗位 → 效果消失
+#   · `also does N damage to 1 of your **Benched** Pokémon` 被记成打**对手**战斗位
+# 更危险的是：若该招式还有别的 tag（如 `discard_energy:2`），卡会被收进可对战池并
+# **静默丢效果** —— 本项目最忌的口径问题。实测 12 张卡命中该风险（Greninja ex /
+# Mega Charizard Y ex / Ambipom …），故必须先按**子句**判目标，再决定映射或如实登记。
+_DMG_ANY_RE = re.compile(
+    r"does\s+(\d+)\s+(more\s+)?damage(?:\s+to\s+([^.;,()]{0,90}))?", re.I)
+
+
+def _en_damage_target_kind(clause: str) -> str:
+    """附加伤害子句的目标形态 —— **只在子句内判断**，绝不看全文
+
+    返回 ``opp_active`` / ``self``（反伤）/ ``opp_bench_all`` / ``opp_bench_one`` /
+    ``opp_all`` / ``opp_n`` / ``opp_one`` / ``own_bench_all`` / ``own_bench_one`` /
+    ``both_bench_all`` / ``dynamic`` / ``own_other`` / ``unknown``。
+    """
+    c = _norm_apostrophe(clause).lower()
+    if re.search(r"\bitself\b", c):
+        return "self"
+    if "active pok" in c and "bench" not in c:
+        return "opp_active"
+    if re.search(r"each of your opponent'?s? benched", c):
+        return "opp_bench_all"
+    if re.search(r"1 of your opponent'?s? benched", c):
+        return "opp_bench_one"
+    if re.search(r"each of your opponent'?s? pok", c):
+        return "opp_all"
+    if re.search(r"\d+ of your opponent'?s? pok", c):
+        return "opp_n"
+    if re.search(r"1 of your opponent'?s? pok", c):
+        return "opp_one"
+    if re.search(r"each of your benched", c):
+        return "own_bench_all"
+    if re.search(r"1 of your (?:own )?benched", c):
+        return "own_bench_one"
+    if re.search(r"each benched", c):
+        return "both_bench_all"
+    if re.search(r"\bthat pok", c) or re.search(r"the new active", c):
+        return "dynamic"
+    if re.search(r"your pok", c):
+        return "own_other"
+    return "unknown"
+
+
 # 冠词型能量弃置：「Discard an Energy from this Pokémon.」——**不写数字**，
 # 故 `_EN_DISCARD_ENERGY_RE`（要求 \d+）匹配不到。⚠ 只认「来自自身」的写法：
 # 引擎 `discard_energy:N` 的语义是**弃自己战斗位（无则手牌）的能量**，
@@ -444,12 +555,25 @@ _EN_ENERGY_LETTER = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
 
 
 def _en_search_what(lower: str) -> str:
-    """英文检索目标归类（供训练家检索 tag 选择）"""
-    if "pokémon" in lower or "pokemon" in lower:
+    """英文检索目标归类（供训练家/招式检索 tag 选择）
+
+    ⚠ **只看「search … for …」之后的子句**，不看整段文本。
+    历史缺陷（2026-09-22）：早期对**全文**判断，于是
+    「Search your deck for an **Energy** card and attach it to 1 of your Benched
+    {G} **Pokémon**」因为文本里出现 Pokémon 被判成 `search_pokemon`
+    → 引擎去牌库拿**宝可梦**（静默拿错东西）。修法：截到「for」之后、
+    在第一个 `,` / ` and ` / ` then ` / 句号 处截断，取**名词短语**再判类别。
+    """
+    seg = lower
+    m = re.search(r"search\s+(?:your\s+deck|it)\s+for\s+(.{0,120})", lower)
+    if m:
+        seg = m.group(1)
+    seg = re.split(r",| and | then |\.|\(", seg, maxsplit=1)[0]
+    if "pokémon" in seg or "pokemon" in seg:
         return "pokemon"
-    if "trainer" in lower:
+    if "trainer" in seg:
         return "trainer"
-    if "energy" in lower:
+    if "energy" in seg:
         return "energy"
     return "any"
 
@@ -462,9 +586,51 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     conditions: list = []
     lower = t.lower()
 
-    m = _EN_DAMAGE_RE.search(t)
-    if m:
-        actions.append(act("damage", int(m.group(1)), "active_opponent"))
+    # 附加伤害子句（含反伤 `to itself` / 后备 / 全体）：目标**必须按子句判**，
+    # 判不出可表达的形态时如实登记未建模 —— 绝不静默标成「打战斗位」。
+    for md in _DMG_ANY_RE.finditer(t):
+        if md.group(2):
+            # 「does N **more** damage …」属修正器（缩放/抛币）范畴，不在此产出
+            continue
+        amt = int(md.group(1))
+        clause = md.group(3)
+        if not clause:
+            actions.append(act("damage", amt, "active_opponent"))
+            continue
+        tk = _en_damage_target_kind(clause)
+        # 「条件性附加伤害」判定：可映射的 tag（`self:N` / `spread:all:per`）都是
+        # **无条件**语义，因此只在子句无条件时才映射。两类条件都不放过：
+        #   · 句首条件：「If a Stadium is in play, … also does 30 damage …」（Ting-Lu）
+        #   · 子句/句尾缩放：「… for each Prize card your opponent has taken」（Kyurem ex）
+        #     —— 若按固定值映射会**静默低估**伤害。
+        head = re.split(r"[.!]", t[:md.start()])[-1]
+        tail = t[md.end():md.end() + 70]
+        conditional = bool(
+            re.match(r"\s*(if|during|once|when|whenever|as long as|while)\b",
+                     head, re.I)
+            or re.search(r"for each|if you |if this |if your ", clause + tail,
+                         re.I))
+        if tk == "opp_active":
+            actions.append(act("damage", amt, "active_opponent"))
+        elif tk == "self" and not conditional:
+            # 反伤：引擎 `self:N` 的语义即「攻击者自身受到 N 点伤害」→ 精确对应
+            actions.append(act("damage", amt, "self", {"recoil": True}))
+        elif tk == "opp_bench_all" and not conditional:
+            # 「does N damage to each of your opponent's Benched Pokémon」
+            # = 对手**全部**后备各 N 点 → 引擎 `spread:all:per`
+            # （现有 `spread:N:per` 是**随机 n 只**，语义不同，不可代用）
+            actions.append(act("spread", amt, "active_opponent_bench",
+                               {"per": amt, "all_targets": True}))
+        else:
+            # 引擎无法精确表达的附加伤害（选定 1 只 / n 只 / 我方后备 / 动态目标 /
+            # 带条件 / 带缩放）→ 保留伤害数值与目标形态，由 `to_engine_tags` 登记未建模。
+            # 这条守卫是「修假阳性不得导致静默丢效果」的关键：一旦某招式含此类子句，
+            # 该 item 必有 unsupported → 整卡不收（宁缺勿错）。
+            actions.append(act(
+                "damage", amt,
+                "self" if tk.startswith("own") else "active_opponent",
+                {"unaligned_target": (tk + "_conditional" if conditional else tk),
+                 "clause": md.group(0)[:90]}))
 
     m = _EN_SPREAD_RE.search(t)
     if m:
@@ -509,20 +675,35 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     elif re.search(r"draw (?:a|1) card", t, re.I):
         actions.append(act("draw", 1, "deck"))
 
-    # 弃牌堆回收（Put up to N … from your discard pile into your hand）
+    # 弃牌堆回收（Put [up to] N / a … from your discard pile into your hand）
     mr = _EN_RECOVER_RE.search(t)
     if mr:
-        n = int(mr.group(1)) if mr.group(1) else 1
-        low = t.lower()
+        body = mr.group("body") or ""
+        # 数量：显式数字 → 用之；冠词型「a/an/1 + 单数名词」→ 1；
+        # 其余（如「a number of cards up to the number of heads」）→ 判不出，不猜
+        if mr.group("n"):
+            n = int(mr.group("n"))
+        elif re.match(r"\s*(?:a|an|1)\s+", body) and "number of" not in body.lower():
+            n = 1
+        else:
+            n = None
         # 变量名用 rk（recover kind）：**不可**用 kind——那会遮蔽函数参数
         # `kind`，使最后 spec(kind=…, …) 写进 "pokemon"/"energy"，触发 Schema
         # 非法（真 bug：Recovery Net 一类卡曾因此报「kind 非法：pokemon」）。
-        rk = "any"
-        if "pokémon" in low or "pokemon" in low:
-            rk = "pokemon"
-        elif "energy" in low:
-            rk = "energy"
-        actions.append(act("recover", n, "discard", {"kind": rk}))
+        rk = _en_recover_kind(body)
+        if n is None:
+            actions.append(act("rule", None, "discard",
+                               {"note": "弃牌堆回收：回收数量未识别"}))
+        elif _EN_RECOVER_SUBSET_RE.search(body):
+            # 子集限定（「that don't have a Rule Box」/「{F} Pokémon」）引擎无法表达
+            actions.append(act("rule", None, "discard",
+                               {"note": "弃牌堆回收：限定子集未识别"
+                                        f"（{body.strip()[:30]}）"}))
+        elif rk is None:
+            actions.append(act("rule", None, "discard",
+                               {"note": "弃牌堆回收：可回收类别未识别"}))
+        else:
+            actions.append(act("recover", n, "discard", {"kind": rk}))
 
     if _EN_DISCARD_ALL_RE.search(t):
         actions.append(act("discard", None, "hand", {"all": True}))
@@ -589,11 +770,24 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _EN_GUST_RE.search(t):
         # 把对手后备拉上前台（gust）
         actions.append(act("switch", None, "active_opponent_bench"))
-    elif _EN_SWITCH_RE.search(t):
-        mine = bool(re.search(r"your|switch out", t, re.I)) and \
-            not _EN_OPP_RE.search(t)
-        actions.append(act("switch", None,
-                           "self" if mine else "active_opponent_bench"))
+    elif (_sm := _EN_SWITCH_RE.search(t)):
+        # 换位目标**只看换位子句**（截到句号/换行）。
+        # 历史缺陷（2026-09-22）：原先用全文判 `mine`，于是多选项卡
+        # 「• Switch your Active Pokémon with 1 of your Benched Pokémon.
+        #   • …do 30 more damage to your opponent's Active Pokémon {ex}…」
+        # （Kieran）因**另一条**选项提到 opponent → 判成 gust，
+        # 把**对手**后备拉上前台（我方换位效果变成干扰对手，完全反了）。
+        seg = re.split(r"[.\n]", t[_sm.start():], maxsplit=1)[0][:140]
+        opp_here = bool(re.search(r"opponent", seg, re.I))
+        mine_here = bool(re.search(r"your|switch out|switch it", seg, re.I))
+        if opp_here:
+            actions.append(act("switch", None, "active_opponent_bench"))
+        elif mine_here:
+            actions.append(act("switch", None, "self"))
+        else:
+            # 双方均可（场地卡）或判不出 → 不猜，如实登记
+            actions.append(act("rule", None, "any",
+                               {"note": "换位目标未识别（非我方/对手单一侧）"}))
 
     if _EN_KNOCKOUT_RE.search(t) and not re.search(r"if .{0,40}knocked out",
                                                    lower):
@@ -603,7 +797,7 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             r"evolve (?:it|this|your|1 of|a )", t, re.I):
         actions.append(act("evolve", None, "self"))
 
-    if _EN_MODIFY_RE.search(t):
+    if _EN_MODIFY_RE.search(_strip_rules_paren(t)):
         actions.append(act("rule", None, "any",
                            {"note": "静态规则修改（弱点/抗性/伤害减免/限制）"}))
 
@@ -618,7 +812,7 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         trigger = "static"
     elif kind in ("attack", "item", "supporter", "energy"):
         trigger = "on_use"
-    elif _EN_MODIFY_RE.search(t) or "as long as" in lower:
+    elif _EN_MODIFY_RE.search(_strip_rules_paren(t)) or "as long as" in lower:
         trigger = "static"
     else:
         trigger = "on_use"
@@ -1726,7 +1920,27 @@ def to_engine_tags(specs: list) -> dict:
             amt = a.get("amount")
             extra = a.get("extra") or {}
             if t == "damage":
-                notes.append("damage 由招式 damage 字段承载，无需 tag")
+                if extra.get("unaligned_target"):
+                    # 附加伤害子句的目标引擎无法精确表达（选定 1 只 / n 只 /
+                    # 我方后备 / 动态目标…）→ **必须如实登记**。
+                    # 若在这里放过，含其它 tag 的招式（如「弃 2 能量并打 2 只各 60」）
+                    # 会进池并**静默丢掉这段伤害** —— 实测 12 张卡命中该风险。
+                    unsupported.append({
+                        "type": t,
+                        "reason": "附加伤害目标未建模"
+                                  f"（{extra.get('unaligned_target')}："
+                                  f"{str(extra.get('clause'))[:60]}）"})
+                elif extra.get("recoil"):
+                    # 反伤「This Pokémon does N damage to itself.」→ 引擎 `self:N`
+                    # （语义即「攻击者自身受到 N 点伤害」，精确对应）。
+                    # 全库 49 条此类招式，此前**完全没建模**：卡不进池，或更糟——
+                    # 早期版本把它读成「打对手战斗位」，反伤静默消失。
+                    if amt is None:
+                        unsupported.append({"type": t, "reason": "反伤数值未识别"})
+                    else:
+                        tags.append(f"self:{int(amt)}")
+                else:
+                    notes.append("damage 由招式 damage 字段承载，无需 tag")
             elif t == "status":
                 st = extra.get("status")
                 if st in ENGINE_STATUS_TAGS:
@@ -1735,7 +1949,11 @@ def to_engine_tags(specs: list) -> dict:
                     unsupported.append({"type": t, "reason": f"未知状态 {st}"})
             elif t == "spread":
                 counters = extra.get("counters")
-                if extra.get("free_distribute") and amt is not None:
+                if extra.get("all_targets") and amt is not None:
+                    # 「does N damage to **each of** your opponent's Benched Pokémon」
+                    # → 对手全部后备各 N 点（引擎 `spread:all:per`，2026-09-22 新增）
+                    tags.append(f"spread:all:{int(amt)}")
+                elif extra.get("free_distribute") and amt is not None:
                     tags.append(f"spread_free:{int(amt)}")
                 elif counters and amt is not None:
                     per = int(amt) // max(1, int(counters))

@@ -1008,5 +1008,80 @@ class TestFourthBatchConditions(unittest.TestCase):
         self.assertTrue(any(x.startswith("opp_active_type:") for x in v["condition_params"]))
 
 
+class TestStaticMods(unittest.TestCase):
+    """S1 静态修正层（2026-10-26）：常驻减伤 / 无弱点 / 无撤退 / 加 HP
+
+    与 `shield:*`（时限制、至该玩家下个回合开始）**必须区分开**：
+    卡面「During your opponent's next turn, …」走 shield；不带时限的常驻写法走 passive。
+    """
+
+    def _battle(self, defender, key=()):
+        b = _arena()
+        b.players[1].active = make_pokemon(defender)
+        b.players[0].active = make_pokemon(PokemonDef(
+            "A", hp=200, ptype="lightning",
+            attacks=(AttackDef("Hit", cost=0, damage=100, effects=key),)))
+        return b
+
+    def test_passive_dmg_reduce(self):
+        b = self._battle(PokemonDef("D", hp=200, ptype="colorless"))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 100)     # 无修正
+
+        b2 = self._battle(PokemonDef("D2", hp=200, ptype="colorless",
+                                     abilities=(AbilityDef("Armor", "passive:dmg_reduce:30"),)))
+        r = b2.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b2.players[1].active.damage, 70)
+
+    def test_passive_dmg_reduce_after_weakness(self):
+        """卡面写 after applying Weakness and Resistance → 先 ×2 再减"""
+        b = self._battle(PokemonDef("D3", hp=200, ptype="grass",
+                                    weakness="lightning",
+                                    abilities=(AbilityDef("Armor", "passive:dmg_reduce:30"),)))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 200 - 30)  # 100×2 − 30
+
+    def test_passive_no_weakness(self):
+        b = self._battle(PokemonDef("D4", hp=200, ptype="grass",
+                                    weakness="lightning",
+                                    abilities=(AbilityDef("Hollow", "passive:no_weakness"),)))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 100)        # 弱点不生效
+
+    def test_passive_no_retreat(self):
+        b = _arena()
+        me = b.players[0].active = make_pokemon(PokemonDef(
+            "R", hp=100, ptype="colorless", retreat=3,
+            abilities=(AbilityDef("Float", "passive:no_retreat"),)))
+        _bench(b, 0, 1)
+        self.assertTrue(any(x["verb"] == "retreat" for x in b.legal_actions(0)),
+                        "撤退费用应视为 0，无需能量即可撤退")
+        r = b.step({"verb": "retreat", "bench": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+
+    def test_passive_hp_plus(self):
+        fp = make_pokemon(PokemonDef("H", hp=100, ptype="colorless",
+                                     abilities=(AbilityDef("Tough", "passive:hp_plus:40"),)))
+        self.assertEqual(fp.max_hp, 140)
+        fp.damage = 130
+        self.assertFalse(fp.is_ko)
+        fp.damage = 140
+        self.assertTrue(fp.is_ko)
+
+    def test_static_mods_unknown_passive_is_ignored(self):
+        """未知 passive 不得被当成任何一种修正（宁可无效，不可乱套）"""
+        from engine.battle import _static_mods
+        fp = make_pokemon(PokemonDef("U", hp=100, ptype="colorless",
+                                     abilities=(AbilityDef("X", "passive:whatever:9"),)))
+        m = _static_mods(fp)
+        self.assertEqual(m["dmg_reduce"], 0)
+        self.assertFalse(m["no_weakness"])
+        self.assertFalse(m["no_retreat"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -276,7 +276,7 @@ class Battle:
                                      "cost_map": list(atk.cost),
                                      "desc_zh": atk.desc_zh,
                                      "display_desc": atk.display_desc})
-                if p.active.total_energy() >= p.active.pdef.retreat \
+                if p.active.total_energy() >= _retreat_cost(p.active) \
                         and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
         # E2 进化：手牌 x → 场上同名 evolves_from 目标
@@ -576,7 +576,7 @@ class Battle:
             raise ValueError("无法撤退")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中无法撤退")
-        cost = p.active.pdef.retreat
+        cost = _retreat_cost(p.active)
         if not p.active.remove_any(cost):
             raise ValueError("能量不足")
         bi = int(action.get("bench", 0))
@@ -1037,11 +1037,17 @@ class Battle:
         self._ko_from_attack = True
         try:
             if base > 0:
+                # 静态修正（S1）：`passive:no_weakness` 让弱点不生效
+                static = _static_mods(defender)
                 dmg = compute_damage(attacker, defender, base,
                                      weakness_override=self._weakness_override(
                                          attacker, defender),
-                                     ignore_weakness=mods["ignore_weakness"],
+                                     ignore_weakness=(mods["ignore_weakness"]
+                                                      or static["no_weakness"]),
                                      ignore_resistance=mods["ignore_resistance"])
+                # 卡面写「after applying Weakness and Resistance」→ 静态减伤在弱抗之后
+                if static["dmg_reduce"]:
+                    dmg = max(0, dmg - static["dmg_reduce"])
                 dmg = apply_shield(defender, dmg)          # 护盾在弱抗之后
                 if dmg:
                     defender.damage += dmg
@@ -1049,6 +1055,7 @@ class Battle:
                                      "player": 1 - self.current,
                                      "dmg": dmg, "base": atk.damage,
                                      "bonus": mods["plus"],
+                                     "static_reduce": static["dmg_reduce"],
                                      "blocked": bool(atk.damage and dmg == 0)})
             elif atk.damage > 0:
                 self._log("damage", {"target": defender.name,
@@ -2273,6 +2280,47 @@ def _eval_condition(battle, cond: str) -> bool:
         f"带参形式：own_active_energy_type:<color> / "
         f"own_active_energy_at_least:<n> / "
         f"{' / '.join(_CONDITION_PARAMS)}）")
+
+
+def _static_mods(fp: Optional[FieldPokemon]) -> dict:
+    """静态修正层（S1）—— 从**卡面常驻被动**读出减伤 / 无弱点 / 无撤退
+
+    支持的 tag（写在特性上，`tag` 字段）：
+      ``passive:dmg_reduce:N``  受到的招式伤害 −N（在弱点/抗性之后结算，与卡面一致）
+      ``passive:no_weakness``   弱点不生效
+      ``passive:no_retreat``    撤退费用视为 0
+      ``passive:hp_plus:N``     上限 +N（在 `make_pokemon` 落盘，见 FieldPokemon.bonus_hp）
+
+    ⚠ **只认"无条件"形态**：带条件的静态修正（「若有 {M} 能量则…」/「你的其它
+    Bouffalant 在场时…」/「在对手的下个回合内…」）一律不映射 —— 这类条件要么需要
+    跨实例统计、要么是时限制（应走 `shield:*`），在解析层就被拒绝，不会走到这里。
+    这样做的代价是覆盖少，收益是**不会出现"有时生效有时不生效"的静默错算**。
+    """
+    out = {"dmg_reduce": 0, "no_weakness": False, "no_retreat": False}
+    if fp is None:
+        return out
+    for ab in fp.pdef.abilities:
+        tag = str(getattr(ab, "tag", "") or "")
+        if not tag.startswith("passive:"):
+            continue
+        parts = tag.split(":")
+        kind = parts[1] if len(parts) > 1 else ""
+        if kind == "dmg_reduce" and len(parts) > 2 and parts[2].isdigit():
+            out["dmg_reduce"] += int(parts[2])
+        elif kind == "no_weakness":
+            out["no_weakness"] = True
+        elif kind == "no_retreat":
+            out["no_retreat"] = True
+    return out
+
+
+def _retreat_cost(fp: Optional[FieldPokemon]) -> int:
+    """撤退费用（含 `passive:no_retreat` 静态修正，下限 0）"""
+    if fp is None:
+        return 0
+    if _static_mods(fp)["no_retreat"]:
+        return 0
+    return int(fp.pdef.retreat)
 
 
 def _is_bench_immune(fp: Optional[FieldPokemon]) -> bool:

@@ -1,6 +1,6 @@
 # PokéLab AI · 未建模动作清单（backlog）
 
-- 快照：`current` · 生成时间：2026-10-26 17:14:25
+- 快照：`current` · 生成时间：2026-10-26 17:27:10
 - 数据源：`packages/card-db/data/db/pokelab.db`（K2 解析后端：rule（离线确定性基线））
 
 ## 0. 总量
@@ -25,7 +25,7 @@
 | **B2** | tag 家族扩展 | 9 | 9 | 1.5% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
 | **B3** | 解析召回补齐（英文卡面） | 102 | 102 | 17.0% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
 | **B4** | 需新引擎机制（P1 登记） | 76 | 76 | 12.7% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
-| **B5** | 不建模登记 | 412 | 396 | 68.8% | 永久登记在差异透明清单（C5），不做实现 |
+| **B5** | 静态规则与新卡种（**实现队列**） | 412 | 396 | 68.8% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
 
 ## 2. B1 · 预设卡组关键卡（最高优先，逐卡建模）
 
@@ -203,76 +203,82 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-### B5 · 不建模登记（412 条 / 396 卡）
+### B5 · 静态规则与新卡种（**实现队列**）（412 条 / 396 卡）
 
-- 目标：真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）
-- 动作：永久登记在差异透明清单（C5），不做实现
+- 目标：原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现
+- 动作：S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| unclassified | rule | 303 | 287 | 静态/未建模（英文） |
-| unclassified | rule | 51 | 51 | 条件伤害缩放：条件未识别（引擎无该条件） |
-| unclassified | rule | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| unclassified | rule | 5 | 5 | 全量回复（需引擎新机制 · B4） |
-| unclassified | rule | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
-| unclassified | rule | 4 | 4 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
-| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
-| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
-| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
-| unclassified | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
-| unclassified | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
-| unclassified | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
-| unclassified | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
-| unclassified | rule | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
-| unclassified | rule | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| S6 | rule | 219 | 208 | 静态/未建模（英文） |
+| S6 | rule | 39 | 39 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| S2 | rule | 28 | 28 | 静态/未建模（英文） |
+| S5 | rule | 24 | 20 | 静态/未建模（英文） |
+| S6 | rule | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| S3 | rule | 15 | 15 | 静态/未建模（英文） |
+| S4 | rule | 10 | 10 | 静态/未建模（英文） |
+| S3 | rule | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| S1 | rule | 7 | 6 | 静态/未建模（英文） |
+| S6 | rule | 5 | 5 | 全量回复（需引擎新机制 · B4） |
+| S2 | rule | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
+| S5 | rule | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
+| S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
+| S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
+| S1 | rule | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
+| S2 | rule | 2 | 2 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| S6 | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| S4 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
+| S5 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
+| S6 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
+| S2 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
+| S5 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
+| S6 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
+| S6 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
+| S6 | rule | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
+| S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| S2 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| S3 | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 
-<details><summary>样例 · unclassified</summary>
+<details><summary>样例 · S6</summary>
 
-- **Boomerang Energy**：`As long as this card is attached to a Pokémon, it provides {C} Energy.
-
-If this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your dis`
-- **Neo Upper Energy**：`As long as this card is attached to a Pokémon, it provides {C} Energy.
-
-If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time.`
-- **Mist Energy**：`As long as this card is attached to a Pokémon, it provides {C} Energy.
-
-Prevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this card is attached to. (Existing effects a`
+- **Iron Thorns ex**：`Move an Energy from this Pokémon to 1 of your Benched Pokémon.`
+- **Gouging Fire ex**：`This Pokémon can’t use Blaze Blitz again until it leaves the Active Spot.`
+- **Totodile**：`During your opponent’s next turn, the Defending Pokémon can’t retreat.`
 
 </details>
 
-<details><summary>样例 · unclassified</summary>
+<details><summary>样例 · S6</summary>
 
 - **Team Rocket's Kangaskhan ex**：`If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage.`
-- **Chi-Yu**：`If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.`
 - **Enamorus**：`If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage.`
+- **Volbeat**：`If Illumise is on your Bench, this attack does 60 more damage.`
 
 </details>
 
-<details><summary>样例 · unclassified</summary>
+<details><summary>样例 · S2</summary>
 
-- **Iron Crown ex**：`This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon.`
-- **Cornerstone Mask Ogerpon ex**：`This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon.`
-- **Vibrava**：`During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).`
+- **Genesect**：`If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.`
+- **Mow Rotom**：`Before doing damage, discard all Pokémon Tools and Special Energy from your opponent’s Active Pokémon.`
+- **Rotom**：`Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there.`
 
 </details>
 
-<details><summary>样例 · unclassified</summary>
+<details><summary>样例 · S5</summary>
 
-- **Whimsicott**：`When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any damage in this way, discard all Energy f`
-- **Miltank**：`Flip 2 coins. If both of them are heads, heal all damage from 1 of your Pokémon.`
-- **Whimsicott**：`Heal all damage from 1 of your Benched Pokémon.`
+- **Bloodmoon Ursaluna ex**（血月月月熊ex）：`During your next turn, this Pokémon can’t use attacks.`
+- **Bloodmoon Ursaluna ex**（血月月月熊ex）：`Blood Moon used by this Pokémon costs {C} less for each Prize card your opponent has taken.`
+- **Hoothoot**：`Your opponent reveals their hand.`
 
 </details>
 

@@ -1,26 +1,26 @@
-# PokéLab AI · 未建模动作差异透明清单（永久登记）
+# PokéLab AI · 未建模动作差异透明清单（**实现队列**）
 
-> **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），不是待办列表。
-> 凡列于此的卡面机制，本引擎**不实现**（或明确留待后续批次）；对应卡牌会被如实标记为 `engine_ready=false` / `engine_status=approximated`，**绝不静默降级或假装支持**。
+> **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
+> ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-26 17:16:57
+- 生成时间：2026-10-26 17:28:57
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **599** 条 · 已映射 tag 947 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：523 张**
-- 解析层面「无未建模动作」卡：592 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **594** 条 · 已映射 tag 952 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：529 张**
+- 解析层面「无未建模动作」卡：597 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
 | 批次 | 含义 | 处置 |
 |---|---|---|
 | **B4** | 需新增引擎机制（条件伤害修正 / 抛币 / 伤害减免与免疫 / 指示物与计数 / 静态封锁） | **P1 批次**，按清单推进；当前不实现 |
-| **B5** | 真静态规则 / 元游戏效果 / 依赖引擎外信息（对手手牌、特定子类检索、场地与工具机制） | **本项目不做**（永久登记） |
+| **B5** | 静态修正 / 道具 / 场地 / 特殊能量 / 元游戏与信息类（原「永久不建模」，现全部纳入实现范围） | **实现队列**：S1 静态修正层 → S2 道具 → S3 场地 → S4 特殊能量 → S5 元游戏 → S6 待拆解 |
 
 ## 1. 明细（按条目数降序）
 
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
-| B4 | static_lock | `rule` | 27 | 27 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B4 | static_lock | `rule` | 23 | 23 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B4 | coin_flip | `rule` | 11 | 11 | 静态/未建模（英文） |
 | B4 | static_lock | `rule` | 4 | 4 | 静态/未建模（英文） |
 | B4 | scaling_damage | `rule` | 4 | 4 | 静态/未建模（英文） |
@@ -49,37 +49,49 @@
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Prize card your opponent took ） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
 | B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
-| B5 | unclassified | `rule` | 303 | 287 | 静态/未建模（英文） |
-| B5 | unclassified | `rule` | 51 | 51 | 条件伤害缩放：条件未识别（引擎无该条件） |
-| B5 | unclassified | `rule` | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B5 | unclassified | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
-| B5 | unclassified | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
-| B5 | unclassified | `rule` | 4 | 4 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
-| B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
-| B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
-| B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
-| B5 | unclassified | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
-| B5 | unclassified | `rule` | 2 | 2 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
-| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
-| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
-| B5 | unclassified | `rule` | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
-| B5 | unclassified | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| B5 | S6 | `rule` | 219 | 208 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 39 | 39 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S2 | `rule` | 28 | 28 | 静态/未建模（英文） |
+| B5 | S5 | `rule` | 24 | 20 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B5 | S3 | `rule` | 15 | 15 | 静态/未建模（英文） |
+| B5 | S4 | `rule` | 10 | 10 | 静态/未建模（英文） |
+| B5 | S3 | `rule` | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S1 | `rule` | 7 | 6 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
+| B5 | S2 | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
+| B5 | S5 | `rule` | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
+| B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
+| B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
+| B5 | S1 | `rule` | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
+| B5 | S2 | `rule` | 2 | 2 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S6 | `rule` | 2 | 2 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| B5 | S4 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
+| B5 | S5 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
+| B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Pokémon that has “Taur） |
+| B5 | S2 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all P） |
+| B5 | S5 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Energy card you find there） |
+| B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
+| B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
+| B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
+| B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| B5 | S2 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| B5 | S3 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
 
-**B4 · static_lock**（27 条）
+**B4 · static_lock**（23 条）
 
 - `Rabsca`：Prevent all damage from and effects of attacks from your opponent’s Pokémon done to your Benched Pokémon.
 - `Farigiraf ex`：Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.
@@ -208,130 +220,192 @@
 
 - `Team Rocket's Venture Bomb`：Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon.
 
-**B5 · unclassified**（303 条）
+**B5 · S6**（219 条）
 
-- `Boomerang Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
-- `Neo Upper Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy b
-- `Mist Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  Prevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this 
+- `Iron Thorns ex`：Move an Energy from this Pokémon to 1 of your Benched Pokémon.
+- `Gouging Fire ex`：This Pokémon can’t use Blaze Blitz again until it leaves the Active Spot.
+- `Totodile`：During your opponent’s next turn, the Defending Pokémon can’t retreat.
 
-**B5 · unclassified**（51 条）
+**B5 · S6**（39 条）
 
 - `Team Rocket's Kangaskhan ex`：If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage.
-- `Chi-Yu`：If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.
 - `Enamorus`：If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage.
+- `Volbeat`：If Illumise is on your Bench, this attack does 60 more damage.
 
-**B5 · unclassified**（18 条）
+**B5 · S2**（28 条）
+
+- `Genesect`：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
+- `Mow Rotom`：Before doing damage, discard all Pokémon Tools and Special Energy from your opponent’s Active Pokémon.
+- `Rotom`：Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there.
+
+**B5 · S5**（24 条）
+
+- `Bloodmoon Ursaluna ex`（血月月月熊ex）：During your next turn, this Pokémon can’t use attacks.
+- `Bloodmoon Ursaluna ex`（血月月月熊ex）：Blood Moon used by this Pokémon costs {C} less for each Prize card your opponent has taken.
+- `Hoothoot`：Your opponent reveals their hand.
+
+**B5 · S6**（16 条）
 
 - `Iron Crown ex`：This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon.
 - `Cornerstone Mask Ogerpon ex`：This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon.
 - `Vibrava`：During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).
 
-**B5 · unclassified**（5 条）
+**B5 · S3**（15 条）
+
+- `Fan Rotom`：If there is no Stadium in play, this attack does nothing.
+- `Chien-Pao`：When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.
+- `Cetitan ex`：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
+
+**B5 · S4**（10 条）
+
+- `Boomerang Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
+- `Neo Upper Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy b
+- `Mist Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  Prevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this 
+
+**B5 · S3**（7 条）
+
+- `Chi-Yu`：If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.
+- `Cetitan ex`：You may discard a Stadium in play. If you do, this attack does 140 more damage.
+- `Probopass`：If a Stadium is in play, this attack does 70 more damage.
+
+**B5 · S1**（7 条）
+
+- `Archaludon`：During your next turn, this Pokémon can’t use attacks.
+- `Bouffalant`：During your next turn, this Pokémon can’t use attacks.
+- `Latias ex`：During your next turn, this Pokémon can’t use attacks.
+
+**B5 · S6**（5 条）
 
 - `Whimsicott`：When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any 
 - `Miltank`：Flip 2 coins. If both of them are heads, heal all damage from 1 of your Pokémon.
 - `Whimsicott`：Heal all damage from 1 of your Benched Pokémon.
 
-**B5 · unclassified**（5 条）
+**B5 · S2**（5 条）
 
 - `Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 - `Mow Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 - `Heat Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 
-**B5 · unclassified**（4 条）
+**B5 · S5**（3 条）
 
-- `Spiky Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If the Pokémon this card is attached to is in the Active Spot and is damaged by an attac
-- `Spiritomb`：If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the 
-- `Mega Scrafty ex`：If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on
+- `Steelix`：If you have exactly 6 Prize cards remaining, this attack does 200 more damage.
+- `Zacian`：If your opponent has 3 or fewer Prize cards remaining, this attack does 90 more damage.
+- `Carbink`：If your opponent has 2 or fewer Prize cards remaining, this attack does 100 more damage.
 
-**B5 · unclassified**（2 条）
+**B5 · S6**（2 条）
 
 - `Chandelure`：This attack does 30 damage for each card in your opponent’s hand.
 - `Mega Froslass ex`：This attack does 50 damage for each card in your opponent’s hand.
 
-**B5 · unclassified**（2 条）
+**B5 · S6**（2 条）
 
 - `Zoroark`：This attack does 60 damage for each of your opponent’s Pokémon {ex} and Pokémon {V} in play.
 - `Dudunsparce ex`：This attack does 60 damage for each of your opponent’s Pokémon {ex} in play.
 
-**B5 · unclassified**（2 条）
+**B5 · S6**（2 条）
 
 - `Cradily`：This attack does 100 damage for each Special Condition affecting your opponent’s Active Pokémon.
 - `Team Rocket's Muk`：This attack does 100 damage for each Special Condition affecting your opponent’s Active Pokémon.
 
-**B5 · unclassified**（2 条）
+**B5 · S1**（2 条）
+
+- `Archaludon ex`：During your opponent’s next turn, this Pokémon has no Weakness.
+- `Sigilyph`：This attack does 70 damage to 1 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance.
+
+**B5 · S6**（2 条）
 
 - `Team Rocket's Porygon2`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
 - `Team Rocket's Porygon-Z`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
 
-**B5 · unclassified**（2 条）
+**B5 · S2**（2 条）
 
-- `Team Rocket's Dugtrio`：Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.
-- `Risky Ruins`：Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.
+- `Cobalion`：If this Pokémon has a Pokémon Tool attached, this attack does 40 more damage.
+- `Noivern`：If this Pokémon has a Pokémon Tool attached, this attack does 70 more damage.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（2 条）
+
+- `Spiritomb`：If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the 
+- `Mega Scrafty ex`：If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on
+
+**B5 · S4**（1 条）
+
+- `Spiky Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If the Pokémon this card is attached to is in the Active Spot and is damaged by an attac
+
+**B5 · S6**（1 条）
 
 - `Koraidon`：This attack does 30 damage for each of your Ancient Pokémon in play.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Dartrix`：This attack does 20 damage for each Pokémon in your discard pile that has the United Wings attack.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `N’s Darmanitan`：This attack does 30 damage for each Basic Energy card in your opponent’s discard pile.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Team Rocket's Spidops`：This attack does 30 damage for each of your Team Rocket’s Pokémon in play.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Tirtouga`：This attack does 30 damage for each Item card in your opponent’s discard pile.
 
-**B5 · unclassified**（1 条）
+**B5 · S5**（1 条）
 
 - `Whimsicott ex`：Your opponent reveals their hand. This attack does 50 damage for each Trainer card you find there.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Kyogre`：This attack does 20 damage for each Basic {W} Energy card in your discard pile. Then, shuffle those cards into your deck.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Alakazam`：Place 2 damage counters on your opponent’s Active Pokémon for each card in your hand.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Paldean Tauros`：This attack does 40 damage for each of your Pokémon that has “Tauros” in its name that has any damage counters on it.
 
-**B5 · unclassified**（1 条）
+**B5 · S2**（1 条）
 
 - `Bronzong`：This attack does 40 damage for each Pokémon Tool attached to all Pokémon.
 
-**B5 · unclassified**（1 条）
+**B5 · S5**（1 条）
 
 - `Beautifly`：Your opponent reveals their hand, and this attack does 80 damage for each Energy card you find there.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Mismagius`：If your opponent’s Active Pokémon is affected by a Special Condition, place 6 damage counters on 1 of your opponent’s Benched Pokémon.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
+
+- `Team Rocket's Dugtrio`：Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.
+
+**B5 · S6**（1 条）
 
 - `Erika's Victreebel`：This attack does 40 damage for each of your Erika’s Pokémon in play.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Passimian`：This attack does 20 damage for each of your Basic Pokémon in play.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Haunter`：Place 3 damage counters on your opponent’s Active Pokémon.
 
-**B5 · unclassified**（1 条）
+**B5 · S6**（1 条）
 
 - `Doublade`：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
+
+**B5 · S2**（1 条）
+
+- `Punk Helmet`：If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out)
+
+**B5 · S3**（1 条）
+
+- `Risky Ruins`：Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.
 
 ## 3. 与「已建模」的边界（避免误读）
 

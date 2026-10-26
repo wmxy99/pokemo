@@ -68,11 +68,62 @@ BATCHES = [
      "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
      "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
      "priority": 4},
-    {"id": "B5", "name": "不建模登记",
-     "goal": "真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）",
-     "fix": "永久登记在差异透明清单（C5），不做实现",
+    # ⚠ 2026-10-26 策略变更（用户决定）：**取消 B5 的"永久不建模"豁免**。
+    # 旧定义把 412 条静态规则/元游戏效果登记为「永久不做」，等于承认 33% 的卡永远
+    # 不能进对战池。现在改为**实现队列**：按机制族拆成 S1–S6，逐族实现、逐族收敛。
+    # 语义上的关键区别：这些条目仍然**如实披露为「当前不可对战」**（C5 红线不变，
+    # 不允许把没实现的卡当已实现），但不再是「不做」的终点，而是排期中的待办。
+    {"id": "B5", "name": "静态规则与新卡种（**实现队列**）",
+     "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，"
+             "按机制族（S1–S6）分批实现",
+     "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · "
+            "S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
      "priority": 5},
 ]
+
+# ---------------- B5 的机制族细分（S1–S6，取代「永久不建模」的大桶） ----------------
+# 判定顺序即优先级：越靠前越"底座化"（实现一次可解锁多张卡）。
+# 只有 key 会被统计，desc 进报告；正则按英文卡面特征写（真实卡池为英文）。
+_B5_FAMILIES = [
+    ("S1", "静态修正层（HP / 减伤 / 弱点 / 撤退）",
+     r"takes? \d+ less damage|gets? \+\d+ hp|\+?\d+ more hp|has no weakness|"
+     r"no resistance|have no retreat cost|has no retreat cost|"
+     r"retreat cost of the pok"),
+    ("S2", "道具挂载（Pokémon Tool）",
+     r"pok[eé]mon tool|tool attached|this card is attached to a pok[eé]mon"),
+    ("S3", "场地（Stadium）",
+     r"stadium is in play|stadium in play|this stadium|stadium card"),
+    ("S4", "特殊能量（Special Energy）",
+     r"provides? \{[a-z]\} energy|special energy|this card can only be attached"),
+    ("S5", "元游戏与信息类（手牌 / 奖赏 / 牌库操作）",
+     r"opponent reveals their hand|look at your opponent'?s hand|"
+     r"prize card|shuffle your hand|your opponent'?s deck"),
+    ("S6", "待拆解（需人工判定机制）", r""),
+]
+
+
+def _classify_b5_family(text: str, lib: dict | None = None) -> tuple:
+    """B5 条目 → 机制族（S1–S6）。判不出归 S6，**绝不猜**。
+
+    判定顺序：**卡种优先**（能量/道具/场地是结构性事实，不该靠文本猜），
+    再退回文本关键词。为什么必须先看卡种：特殊能量的卡面同样含
+    「As long as this card is attached to a Pokémon…」，只按文本会全部落进
+    S2（道具），把 S4 整族算成 0（实测过）。
+    """
+    lib = lib or {}
+    kind = str(lib.get("kind") or "").lower()
+    sub = str(lib.get("subtype") or "").lower()
+    if kind == "energy" and "special" in sub:
+        return "S4", "特殊能量（Special Energy）"
+    if "tool" in sub:
+        return "S2", "道具挂载（Pokémon Tool）"
+    if "stadium" in sub:
+        return "S3", "场地（Stadium）"
+    t = (text or "").lower()
+    for key, desc, pat in _B5_FAMILIES:
+        if pat and re.search(pat, t):
+            return key, desc
+    return "S6", "待拆解（需人工判定机制）"
 
 # ---------------- rule 桶细分（英文卡面关键词 → 归属） ----------------
 _RULE_RULES = [
@@ -156,8 +207,11 @@ def load_parse_gaps() -> dict:
               "cards_engine_ready": 0, "cards_ready_no_specs": 0}
     # 分组容器：key → {batch, sub, desc, entries, cards:set, samples[]}
     groups: dict = {}
-    cur.execute("select id, name, effects_json from cards")
-    for cid, name, ej in cur.fetchall():
+    # 取 rules_text：B5 的机制族（S1–S6）判定需要**整卡文本**，
+    # 只看单条子句会漏掉「As long as this card is attached to a Pokémon…」这类前缀，
+    # 从而把道具/特殊能量全归进 S6（曾实测 S6 被高估到 249 条）。
+    cur.execute("select id, name, effects_json, rules_text from cards")
+    for cid, name, ej, card_text in cur.fetchall():
         totals["cards"] += 1
         try:
             d = json.loads(ej) if ej else {}
@@ -206,6 +260,12 @@ def load_parse_gaps() -> dict:
                     batch, sub, desc = override
                 elif t == "rule":
                     batch, sub, desc = _classify_rule(src)
+                    if batch == "B5":
+                        # B5 不再是"不做"的大桶：按机制族（S1–S6）细分，
+                        # 让每个族都有明确的实现口径与工作量。
+                        # 用**整卡文本**判定（子句常缺「this card is attached to…」
+                        # 这类判定性前缀），判不出才退回子句。
+                        sub, desc = _classify_b5_family(card_text or src or reason, lib)
                 else:
                     batch, sub, desc = _TYPE_BATCH.get(
                         t, ("B4", f"type:{t}", f"未登记动作类型 {t}"))
@@ -480,21 +540,24 @@ def compare(a_path: str, b_path: str, report: str | None = None) -> None:
 
 
 def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
-    """生成「未建模动作**永久差异透明清单**」（C5）
+    """生成「未建模动作**差异透明清单**」（C5）
 
-    与 backlog 的区别：backlog 是**内部排期**（分批、可推进）；registry 是**对外承诺**
-    —— 把「哪些卡面机制本引擎不做、为什么不做」长期固定下来，供玩家/贡献者/评审
-    逐条核对，避免「悄悄不支持」或「假装支持」。只登记指定批次（默认 B4 + B5）。
+    ⚠ 2026-10-26 语义变更：本清单**不再是"永久不做"的承诺**。用户决定取消 B5 的
+    永久豁免，全部机制进入实现范围 —— 因此本清单的定位改为「**当前尚未实现 + 排队中**
+    的逐条披露」：
+      · 仍然**必须对外披露**（C5 红线：不允许把没实现的卡当已实现，也不允许静默降级）；
+      · 但每一条都对应一个实现族（S1–S6）与排期，而不是"不做"的终点。
+    只登记指定批次（默认 B4 + B5）。
     """
     items = [x for x in rep.get("items") or [] if x["batch"] in batches]
     items.sort(key=lambda x: (x["batch"], -x["entries"]))
     t = rep["parse_totals"]
-    L = ["# PokéLab AI · 未建模动作差异透明清单（永久登记）", "",
+    L = ["# PokéLab AI · 未建模动作差异透明清单（**实现队列**）", "",
          "> **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），"
-         "不是待办列表。",
-         "> 凡列于此的卡面机制，本引擎**不实现**（或明确留待后续批次）；对应卡牌会被"
-         "如实标记为 `engine_ready=false` / `engine_status=approximated`，"
-         "**绝不静默降级或假装支持**。",
+         "同时也是**实现队列**。",
+         "> ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，"
+         "按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 "
+         "`engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。",
          "",
          f"- 生成时间：{rep['generated_at']}",
          f"- 数据源：`{rep['source']['db']}`（解析后端 "
@@ -514,8 +577,9 @@ def to_registry_markdown(rep: dict, batches: tuple = ("B4", "B5")) -> str:
          "|---|---|---|",
          "| **B4** | 需新增引擎机制（条件伤害修正 / 抛币 / 伤害减免与免疫 / 指示物与"
          "计数 / 静态封锁） | **P1 批次**，按清单推进；当前不实现 |",
-         "| **B5** | 真静态规则 / 元游戏效果 / 依赖引擎外信息（对手手牌、特定子类检索、"
-         "场地与工具机制） | **本项目不做**（永久登记） |",
+         "| **B5** | 静态修正 / 道具 / 场地 / 特殊能量 / 元游戏与信息类"
+         "（原「永久不建模」，现全部纳入实现范围） | **实现队列**：S1 静态修正层 → "
+         "S2 道具 → S3 场地 → S4 特殊能量 → S5 元游戏 → S6 待拆解 |",
          "",
          "## 1. 明细（按条目数降序）",
          "",
@@ -597,7 +661,7 @@ def main() -> int:
         rp.write_text(to_registry_markdown(rep), encoding="utf-8")
         n = sum(x["entries"] for x in rep["items"]
                 if x["batch"] in ("B4", "B5"))
-        print(f"[ok] {rp.name}（B4+B5 共 {n} 条永久登记）")
+        print(f"[ok] {rp.name}（B4+B5 共 {n} 条待实现/待机制）")
         return 0
     suffix = "" if args.snapshot in ("current", "") else f".{args.snapshot}"
     jp = out / f"unmodeled_backlog{suffix}.json"

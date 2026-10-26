@@ -199,6 +199,12 @@ class FieldPokemon:
     # 常驻生效，不占这两个字段。
     shield_reduce: int = 0                       # 受到的招式伤害减少 N（下限 0）
     shield_prevent_all: bool = False             # 免疫招式伤害**与效果**
+    # ---- 静态修正（v1.5 · S1 静态修正层，2026-10-26）----
+    # `passive:hp_plus:N`（**无条件的自身**加 HP）。为什么放在**实例**上而不是
+    # 每次现算：`max_hp` 被 `is_ko` / 奖赏结算 / 前端展示广泛使用，而它拿不到
+    # battle 上下文；条件式加 HP（「若有 {D} 能量则 +100」）因此**故意不支持**
+    # （宁可未建模，也不做一个忽大忽小的血量上限）。条件式请走 `dmg_reduce`。
+    bonus_hp: int = 0
 
     # ---- 基本属性 ----
     @property
@@ -207,7 +213,7 @@ class FieldPokemon:
 
     @property
     def max_hp(self) -> int:
-        return self.pdef.hp
+        return self.pdef.hp + self.bonus_hp
 
     @property
     def hp_remaining(self) -> int:
@@ -297,4 +303,18 @@ class FieldPokemon:
 
 
 def make_pokemon(pdef: PokemonDef) -> FieldPokemon:
-    return FieldPokemon(pdef=pdef)
+    """把物种定义实例化到场上（并落**静态、无条件**的特性修正）
+
+    只处理「入场即生效、无任何条件」的静态修正（S1 静态修正层的子集）：
+      · `passive:hp_plus:N`   上限 +N（写入 `bonus_hp`，见 FieldPokemon 说明）
+    其余静态修正（减伤 / 无弱点 / 无撤退）需要**攻防双方上下文**，在 battle 里现算
+    （见 `battle._static_mods`），不在实例化时固化。
+    """
+    fp = FieldPokemon(pdef=pdef)
+    for ab in pdef.abilities:
+        tag = str(getattr(ab, "tag", "") or "")
+        if tag.startswith("passive:hp_plus:"):
+            raw = tag.split(":")
+            if len(raw) > 2 and raw[2].isdigit():
+                fp.bonus_hp += int(raw[2])
+    return fp

@@ -1552,6 +1552,26 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
     elif mprev and _opp_next_turn(t):
         out.append(act("shield", None, "self", {"kind": "prevent_all"}))
 
+    # 3b) 静态修正（S1 静态修正层 · 2026-10-26）
+    #     与上一段的 `shield:*` **必须严格区分**：
+    #       · 「During your opponent's next turn, this Pokémon takes 50 less damage」
+    #         → 时限制护盾 `shield:reduce:50`（在对手下个回合结束时失效）
+    #       · 「This Pokémon takes 30 less damage from attacks (after applying
+    #          Weakness and Resistance).」→ 常驻 `passive:dmg_reduce:30`
+    #     把常驻写成护盾（或反之）都会让减伤在错误的时间窗生效 —— 静默错算。
+    if not _opp_next_turn(t):
+        if mred and re.search(r"this pok[eé]mon takes", low):
+            out.append(act("passive", int(mred.group(1)), "self",
+                           {"kind": "dmg_reduce"}))
+        if re.search(r"this pok[eé]mon has no weakness", low):
+            out.append(act("passive", None, "self", {"kind": "no_weakness"}))
+        if re.search(r"this pok[eé]mon has no retreat cost", low):
+            out.append(act("passive", None, "self", {"kind": "no_retreat"}))
+        mhp = re.search(r"this pok[eé]mon gets? \+(\d+)\s*hp", low)
+        if mhp:
+            out.append(act("passive", int(mhp.group(1)), "self",
+                           {"kind": "hp_plus"}))
+
     # 4) 抽到指定手牌数
     m = _DRAW_UNTIL_RE.search(t)
     if m and kind == "ability":
@@ -2417,6 +2437,16 @@ def to_engine_tags(specs: list) -> dict:
                 kind_ = extra.get("kind")
                 if kind_ == "bench_immune":
                     tags.append("passive:bench_immune")
+                elif kind_ == "dmg_reduce" and amt is not None:
+                    # S1 静态修正：常驻减伤（卡面「after applying Weakness and
+                    # Resistance」→ 引擎在弱抗之后结算，见 battle._do_attack）
+                    tags.append(f"passive:dmg_reduce:{int(amt)}")
+                elif kind_ == "hp_plus" and amt is not None:
+                    tags.append(f"passive:hp_plus:{int(amt)}")
+                elif kind_ == "no_weakness":
+                    tags.append("passive:no_weakness")
+                elif kind_ == "no_retreat":
+                    tags.append("passive:no_retreat")
                 else:
                     unsupported.append(
                         {"type": t,

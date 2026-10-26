@@ -460,6 +460,43 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("dmg_plus:90:if:opp_active_status:burn", r["tags"])
         self.assertNotIn("burn", r["tags"], "条件词被当成效果施加了")
 
+    def test_static_modifiers_self_scope(self):
+        """S1 静态修正层：常驻自身修正 → `passive:*`（与时限护盾严格区分）"""
+        cases = [
+            ("This Pok\u00e9mon takes 30 less damage from attacks (after applying "
+             "Weakness and Resistance).", "passive:dmg_reduce:30"),
+            ("This Pok\u00e9mon has no Weakness.", "passive:no_weakness"),
+            ("This Pok\u00e9mon has no Retreat Cost.", "passive:no_retreat"),
+            ("This Pok\u00e9mon gets +40 HP.", "passive:hp_plus:40"),
+        ]
+        for text, tag in cases:
+            with self.subTest(tag=tag):
+                r = self._tags(text, kind="ability")
+                self.assertIn(tag, r["tags"])
+                self.assertEqual(r["unsupported"], [])
+
+    def test_temporary_reduction_stays_shield(self):
+        """带「对手的下个回合」时限制的减伤必须仍是 `shield:reduce`（不是常驻）"""
+        r = self._tags("During your opponent\u2019s next turn, this Pok\u00e9mon takes "
+                       "50 less damage from attacks (after applying Weakness and "
+                       "Resistance).", kind="ability")
+        self.assertIn("shield:reduce:50", r["tags"])
+        self.assertNotIn("passive:dmg_reduce:50", r["tags"])
+
+    def test_field_wide_static_still_refused(self):
+        """全体/带条件的静态修正**不许**当自身常驻（会变成全队白嫖）"""
+        texts = [
+            "All of your Pok\u00e9mon in play get +40 HP.",
+            "All of your Pok\u00e9mon that have {M} Energy attached have no "
+            "Retreat Cost.",
+            "Your Basic Pok\u00e9mon in play have no Retreat Cost.",
+        ]
+        for text in texts:
+            with self.subTest(text=text[:40]):
+                r = self._tags(text, kind="ability")
+                self.assertEqual(r["tags"], [], "全体范围被误映射成自身常驻")
+                self.assertTrue(r["unsupported"])
+
     def test_real_status_effect_still_applies(self):
         """对照：非条件句的「is now Burned」仍然要产出状态效果（不能修过头）"""
         r = self._tags("Your opponent\u2019s Active Pok\u00e9mon is now Burned.")

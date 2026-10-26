@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-26 17:14:25",
+ "generated_at": "2026-10-26 17:27:10",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -112,11 +112,11 @@
   },
   {
    "id": "B5",
-   "name": "不建模登记",
-   "goal": "真·静态规则与元游戏效果（如卡名依赖、双方限制、场地级规则）",
-   "fix": "永久登记在差异透明清单（C5），不做实现",
+   "name": "静态规则与新卡种（**实现队列**）",
+   "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现",
+   "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
-   "groups": 27,
+   "groups": 39,
    "entries": 412,
    "cards": 396,
    "share": 0.6878
@@ -1411,12 +1411,228 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 303,
-   "cards": 287,
+   "entries": 219,
+   "cards": 208,
+   "samples": [
+    {
+     "card": "Iron Thorns ex",
+     "name_zh": "",
+     "text": "Move an Energy from this Pokémon to 1 of your Benched Pokémon."
+    },
+    {
+     "card": "Gouging Fire ex",
+     "name_zh": "",
+     "text": "This Pokémon can’t use Blaze Blitz again until it leaves the Active Spot."
+    },
+    {
+     "card": "Totodile",
+     "name_zh": "",
+     "text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
+    },
+    {
+     "card": "Feraligatr",
+     "name_zh": "",
+     "text": "During your next turn, this Pokémon can’t use Giant Wave."
+    },
+    {
+     "card": "Wugtrio ex",
+     "name_zh": "",
+     "text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
+   "entries": 39,
+   "cards": 39,
+   "samples": [
+    {
+     "card": "Team Rocket's Kangaskhan ex",
+     "name_zh": "",
+     "text": "If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage."
+    },
+    {
+     "card": "Enamorus",
+     "name_zh": "",
+     "text": "If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage."
+    },
+    {
+     "card": "Volbeat",
+     "name_zh": "",
+     "text": "If Illumise is on your Bench, this attack does 60 more damage."
+    },
+    {
+     "card": "Revavroom ex",
+     "name_zh": "",
+     "text": "If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 120 more damage."
+    },
+    {
+     "card": "Okidogi ex",
+     "name_zh": "",
+     "text": "If this Pokémon is Poisoned, this attack does 130 more damage."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S2",
+   "desc": "道具挂载（Pokémon Tool）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 28,
+   "cards": 28,
+   "samples": [
+    {
+     "card": "Genesect",
+     "name_zh": "",
+     "text": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand."
+    },
+    {
+     "card": "Mow Rotom",
+     "name_zh": "",
+     "text": "Before doing damage, discard all Pokémon Tools and Special Energy from your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Rotom",
+     "name_zh": "",
+     "text": "Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there."
+    },
+    {
+     "card": "Rotom",
+     "name_zh": "",
+     "text": "Choose a random card from your opponent’s hand. Your opponent reveals that card and shuffles it into their deck."
+    },
+    {
+     "card": "Arven's Skwovet",
+     "name_zh": "",
+     "text": "Before doing damage, discard all Pokémon Tools from your opponent’s Active Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S5",
+   "desc": "元游戏与信息类（手牌 / 奖赏 / 牌库操作）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 24,
+   "cards": 20,
+   "samples": [
+    {
+     "card": "Bloodmoon Ursaluna ex",
+     "name_zh": "血月月月熊ex",
+     "text": "During your next turn, this Pokémon can’t use attacks."
+    },
+    {
+     "card": "Bloodmoon Ursaluna ex",
+     "name_zh": "血月月月熊ex",
+     "text": "Blood Moon used by this Pokémon costs {C} less for each Prize card your opponent has taken."
+    },
+    {
+     "card": "Hoothoot",
+     "name_zh": "",
+     "text": "Your opponent reveals their hand."
+    },
+    {
+     "card": "Munkidori ex",
+     "name_zh": "",
+     "text": "During your next turn, this Pokémon can’t use Dirty Headbutt."
+    },
+    {
+     "card": "Munkidori ex",
+     "name_zh": "",
+     "text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "entries": 16,
+   "cards": 16,
+   "samples": [
+    {
+     "card": "Iron Crown ex",
+     "name_zh": "",
+     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
+    },
+    {
+     "card": "Cornerstone Mask Ogerpon ex",
+     "name_zh": "",
+     "text": "This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon."
+    },
+    {
+     "card": "Vibrava",
+     "name_zh": "",
+     "text": "During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)."
+    },
+    {
+     "card": "Flygon ex",
+     "name_zh": "",
+     "text": "This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance."
+    },
+    {
+     "card": "Vaporeon ex",
+     "name_zh": "",
+     "text": "This attack does 60 damage to each of your opponent’s Pokémon {ex}. This attack’s damage isn’t affected by Weakness or Resistance."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S3",
+   "desc": "场地（Stadium）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 15,
+   "cards": 15,
+   "samples": [
+    {
+     "card": "Fan Rotom",
+     "name_zh": "",
+     "text": "If there is no Stadium in play, this attack does nothing."
+    },
+    {
+     "card": "Chien-Pao",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play."
+    },
+    {
+     "card": "Cetitan ex",
+     "name_zh": "",
+     "text": "Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon."
+    },
+    {
+     "card": "Chi-Yu",
+     "name_zh": "",
+     "text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn."
+    },
+    {
+     "card": "Eternatus",
+     "name_zh": "",
+     "text": "Discard a Stadium in play."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S4",
+   "desc": "特殊能量（Special Energy）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 10,
+   "cards": 10,
    "samples": [
     {
      "card": "Boomerang Energy",
@@ -1447,80 +1663,80 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S3",
+   "desc": "场地（Stadium）",
    "action_type": "rule",
    "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
-   "entries": 51,
-   "cards": 51,
+   "entries": 7,
+   "cards": 7,
    "samples": [
-    {
-     "card": "Team Rocket's Kangaskhan ex",
-     "name_zh": "",
-     "text": "If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage."
-    },
     {
      "card": "Chi-Yu",
      "name_zh": "",
      "text": "If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium."
     },
     {
-     "card": "Enamorus",
+     "card": "Cetitan ex",
      "name_zh": "",
-     "text": "If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage."
+     "text": "You may discard a Stadium in play. If you do, this attack does 140 more damage."
     },
     {
-     "card": "Volbeat",
+     "card": "Probopass",
      "name_zh": "",
-     "text": "If Illumise is on your Bench, this attack does 60 more damage."
+     "text": "If a Stadium is in play, this attack does 70 more damage."
     },
     {
-     "card": "Revavroom ex",
+     "card": "Dhelmise",
      "name_zh": "",
-     "text": "If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 120 more damage."
+     "text": "If you have a Stadium in play, this attack does 50 more damage."
+    },
+    {
+     "card": "Mamoswine",
+     "name_zh": "",
+     "text": "If a Stadium is in play, this attack does 120 more damage. Then, discard that Stadium."
     }
    ]
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S1",
+   "desc": "静态修正层（HP / 减伤 / 弱点 / 撤退）",
    "action_type": "rule",
-   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 18,
-   "cards": 18,
+   "reason": "静态/未建模（英文）",
+   "entries": 7,
+   "cards": 6,
    "samples": [
     {
-     "card": "Iron Crown ex",
+     "card": "Archaludon",
      "name_zh": "",
-     "text": "This attack does 50 damage to 2 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on those Pokémon."
+     "text": "During your next turn, this Pokémon can’t use attacks."
     },
     {
-     "card": "Cornerstone Mask Ogerpon ex",
+     "card": "Bouffalant",
      "name_zh": "",
-     "text": "This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon."
+     "text": "During your next turn, this Pokémon can’t use attacks."
     },
     {
-     "card": "Vibrava",
+     "card": "Latias ex",
      "name_zh": "",
-     "text": "During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance)."
+     "text": "During your next turn, this Pokémon can’t use attacks."
     },
     {
-     "card": "Flygon ex",
+     "card": "Latias ex",
      "name_zh": "",
-     "text": "This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance."
+     "text": "Your Basic Pokémon in play have no Retreat Cost."
     },
     {
-     "card": "Archaludon ex",
+     "card": "Ludicolo",
      "name_zh": "",
-     "text": "During your opponent’s next turn, this Pokémon has no Weakness."
+     "text": "All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack."
     }
    ]
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "全量回复（需引擎新机制 · B4）",
    "entries": 5,
@@ -1555,8 +1771,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S2",
+   "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Pokémon Tool attached to all o）",
    "entries": 5,
@@ -1591,39 +1807,34 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S5",
+   "desc": "元游戏与信息类（手牌 / 奖赏 / 牌库操作）",
    "action_type": "rule",
-   "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）",
-   "entries": 4,
-   "cards": 4,
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
+   "entries": 3,
+   "cards": 3,
    "samples": [
     {
-     "card": "Spiky Energy",
+     "card": "Steelix",
      "name_zh": "",
-     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if "
+     "text": "If you have exactly 6 Prize cards remaining, this attack does 200 more damage."
     },
     {
-     "card": "Spiritomb",
+     "card": "Zacian",
      "name_zh": "",
-     "text": "If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon."
+     "text": "If your opponent has 3 or fewer Prize cards remaining, this attack does 90 more damage."
     },
     {
-     "card": "Mega Scrafty ex",
+     "card": "Carbink",
      "name_zh": "",
-     "text": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on the Attacking Pokémon."
-    },
-    {
-     "card": "Punk Helmet",
-     "name_zh": "",
-     "text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacki"
+     "text": "If your opponent has 2 or fewer Prize cards remaining, this attack does 100 more damage."
     }
    ]
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（card in your opponent's hand）",
    "entries": 2,
@@ -1643,8 +1854,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex）",
    "entries": 2,
@@ -1664,8 +1875,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Special Condition affecting yo）",
    "entries": 2,
@@ -1685,8 +1896,29 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S1",
+   "desc": "静态修正层（HP / 减伤 / 弱点 / 撤退）",
+   "action_type": "rule",
+   "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Archaludon ex",
+     "name_zh": "",
+     "text": "During your opponent’s next turn, this Pokémon has no Weakness."
+    },
+    {
+     "card": "Sigilyph",
+     "name_zh": "",
+     "text": "This attack does 70 damage to 1 of your opponent’s Pokémon. This attack’s damage isn’t affected by Weakness or Resistance."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Supporter card that has “Team ）",
    "entries": 2,
@@ -1706,29 +1938,66 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S2",
+   "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
-   "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）",
+   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
    "entries": 2,
    "cards": 2,
    "samples": [
     {
-     "card": "Team Rocket's Dugtrio",
+     "card": "Cobalion",
      "name_zh": "",
-     "text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon."
+     "text": "If this Pokémon has a Pokémon Tool attached, this attack does 40 more damage."
     },
     {
-     "card": "Risky Ruins",
+     "card": "Noivern",
      "name_zh": "",
-     "text": "Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon."
+     "text": "If this Pokémon has a Pokémon Tool attached, this attack does 70 more damage."
     }
    ]
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Spiritomb",
+     "name_zh": "",
+     "text": "If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon."
+    },
+    {
+     "card": "Mega Scrafty ex",
+     "name_zh": "",
+     "text": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on the Attacking Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S4",
+   "desc": "特殊能量（Special Energy）",
+   "action_type": "rule",
+   "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Spiky Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if "
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla）",
    "entries": 1,
@@ -1743,8 +2012,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Pokémon in your discard pile t）",
    "entries": 1,
@@ -1759,8 +2028,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Basic Energy card in your oppo）",
    "entries": 1,
@@ -1775,8 +2044,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ）",
    "entries": 1,
@@ -1791,8 +2060,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Item card in your opponent's d）",
    "entries": 1,
@@ -1807,8 +2076,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S5",
+   "desc": "元游戏与信息类（手牌 / 奖赏 / 牌库操作）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Trainer card you find there）",
    "entries": 1,
@@ -1823,8 +2092,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Basic {W} Energy card in your ）",
    "entries": 1,
@@ -1839,8 +2108,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "放置伤害指示物：目标/条件未识别（your opponent’s Active Pokémon for each ）",
    "entries": 1,
@@ -1855,8 +2124,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your Pokémon that has “Taur）",
    "entries": 1,
@@ -1871,8 +2140,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S2",
+   "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Pokémon Tool attached to all P）",
    "entries": 1,
@@ -1887,8 +2156,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S5",
+   "desc": "元游戏与信息类（手牌 / 奖赏 / 牌库操作）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（Energy card you find there）",
    "entries": 1,
@@ -1903,8 +2172,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon）",
    "entries": 1,
@@ -1919,8 +2188,24 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Team Rocket's Dugtrio",
+     "name_zh": "",
+     "text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your Erika's Pokémon in pla）",
    "entries": 1,
@@ -1935,8 +2220,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（of your Basic Pokémon in play）",
    "entries": 1,
@@ -1951,8 +2236,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "放置伤害指示物：仅对手战斗位，需引擎新机制（B4）",
    "entries": 1,
@@ -1967,8 +2252,8 @@
   },
   {
    "batch": "B5",
-   "sub": "unclassified",
-   "desc": "未分类（需人工判定）",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
    "action_type": "rule",
    "reason": "条件伤害缩放：计数源未识别（card you revealed in this way）",
    "entries": 1,
@@ -1978,6 +2263,38 @@
      "card": "Doublade",
      "name_zh": "",
      "text": "Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S2",
+   "desc": "道具挂载（Pokémon Tool）",
+   "action_type": "rule",
+   "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Punk Helmet",
+     "name_zh": "",
+     "text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacki"
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S3",
+   "desc": "场地（Stadium）",
+   "action_type": "rule",
+   "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Risky Ruins",
+     "name_zh": "",
+     "text": "Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon."
     }
    ]
   }

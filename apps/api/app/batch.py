@@ -46,9 +46,23 @@ def _deck_of(spec: str, p: Principal):
     return _resolve_deck(spec), spec
 
 
+def _day_start_ts(now_ts: float | None = None) -> float:
+    """本日（**本地时区**）零点的时间戳
+
+    ⚠ 历史缺陷（2026-10-27 修）：曾写成
+    `datetime.combine(datetime.now().date(), datetime.min.time())
+     .replace(tzinfo=timezone.utc).timestamp()` —— 把**本地日期**和**UTC 零点**
+    混在一起。在 UTC+8 于 00:00–08:00 之间，这个边界落在**未来**，
+    于是「今日已用配额」恒为 0，日配额在这 8 小时里**完全失效**
+    （本地凌晨跑 `test_daily_quota_exhausted` 时暴露：第 11 次仍返回 202）。
+    配额是"用户的自然日"，边界必须与 `store.now()`（epoch）处于同一时区口径。
+    """
+    base = datetime.now() if now_ts is None else datetime.fromtimestamp(now_ts)
+    return datetime.combine(base.date(), datetime.min.time()).timestamp()
+
+
 def _usage_today(kind: str, owner: str) -> int:
-    start = datetime.combine(datetime.now().date(), datetime.min.time()) \
-        .replace(tzinfo=timezone.utc).timestamp()
+    start = _day_start_ts()
     return len([j for j in store.list_jobs(kind, owner, limit=500)
                 if j["created"] >= start])
 

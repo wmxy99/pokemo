@@ -333,6 +333,24 @@ class TestGuestQuota(unittest.TestCase):
         self.assertEqual(codes[-1], 429, f"第 11 次应被配额拦下：{codes}")
 
 
+class TestDayBoundary(unittest.TestCase):
+    """日配额边界必须落在**本地**零点（2026-10-27 修时区混用缺陷）
+
+    历史缺陷：`datetime.now().date()`（本地日期）+ `tzinfo=utc`（UTC 零点）混用，
+    在 UTC+8 的 00:00–08:00 之间边界落在未来 → 当日用量恒为 0 → 配额失效。
+    """
+
+    def test_day_start_is_local_midnight(self):
+        import time
+        from app.batch import _day_start_ts
+        now = time.time()
+        start = _day_start_ts(now)
+        self.assertLessEqual(start, now, "日界不得晚于当前时刻（否则配额失效）")
+        self.assertLess(now - start, 86400 + 60, "日界应在 24h 以内")
+        # 同一自然日内，任意时刻的日界一致
+        self.assertEqual(start, _day_start_ts(start + 60))
+
+
 class TestDecks(unittest.TestCase):
     """F3：导入解析/校验（60 张·同名4·含基础）· 起手模拟 · 导出往返"""
 

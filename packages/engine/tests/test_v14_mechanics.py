@@ -1144,12 +1144,25 @@ class TestToolAttachment(unittest.TestCase):
                          "已有道具的位置不应再出现在可选目标里")
 
     def test_tool_dmg_reduce_stacks_with_passive(self):
-        """道具减伤与特性减伤可叠加（都是「受招式伤害 −N」）"""
+        """道具减伤与特性减伤可叠加（都是「受招式伤害 −N」）
+
+        ⚠ 两者分属不同层：`_static_mods` 只算**与攻击方无关**的特性减伤；
+        道具减伤走 `_tool_reduce_vs`（可能带 from/holder 限定）。因此这里分别断言，
+        并在真实攻击里验总减伤 = 20 + 30。
+        """
         from engine.battle import _static_mods
-        fp = make_pokemon(PokemonDef("D", hp=100, ptype="colorless",
-                                     abilities=(AbilityDef("A", "passive:dmg_reduce:20"),)))
-        fp.tool = "tool:dmg_reduce:30"
-        self.assertEqual(_static_mods(fp)["dmg_reduce"], 50)
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=100, effects=()),)))
+        d = make_pokemon(PokemonDef("D", hp=200, ptype="colorless",
+                                    abilities=(AbilityDef("A", "passive:dmg_reduce:20"),)))
+        d.tool = "tool:dmg_reduce:30"
+        b.players[1].active = d
+        self.assertEqual(_static_mods(d)["dmg_reduce"], 20)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(d.damage, 50, "道具 30 + 特性 20 应叠加为 50")
 
 
 class TestToolTriggers(unittest.TestCase):
@@ -1228,6 +1241,75 @@ class TestToolTriggers(unittest.TestCase):
         r = b.step({"verb": "attack", "attack": 0})
         self.assertTrue(r["ok"], r.get("error"))
         self.assertEqual(len(b.players[1].hand), before + 1)   # 仅回合开始抽牌
+
+
+class TestToolQualifiers(unittest.TestCase):
+    """道具限定过滤（2026-10-27）：减伤只对特定攻击方生效、反制只对特定持有者
+
+    这张表最容易出错的地方是"限定条件被忽略 → 全类型生效"（静默加强），
+    所以每条都同时验命中与不命中。
+    """
+
+    def _battle(self, tool_tag, atk_type="colorless", atk_ability=False,
+                def_type="colorless"):
+        b = _arena()
+        atk = PokemonDef("Atk", hp=200, ptype=atk_type,
+                         attacks=(AttackDef("Hit", cost=0, damage=100, effects=()),),
+                         abilities=((AbilityDef("Ab", "x"),) if atk_ability else ()))
+        b.players[0].active = make_pokemon(atk)
+        d = make_pokemon(PokemonDef("Def", hp=200, ptype=def_type))
+        d.tool = tool_tag
+        b.players[1].active = d
+        return b, d
+
+    def test_from_type_list(self):
+        tag = "tool:dmg_reduce:50:from:type:grass,fire,water,lightning"
+        b, d = self._battle(tag, atk_type="fire")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d.damage, 50, "攻击方是 fire → 应减 50")
+        b2, d2 = self._battle(tag, atk_type="psychic")
+        b2.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d2.damage, 100, "攻击方是 psychic（不在集合）→ 不减伤")
+
+    def test_from_ability(self):
+        tag = "tool:dmg_reduce:30:from:ability"
+        b, d = self._battle(tag, atk_ability=True)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d.damage, 70, "攻击方有特性 → 减 30")
+        b2, d2 = self._battle(tag, atk_ability=False)
+        b2.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d2.damage, 100, "攻击方无特性 → 不减伤")
+
+    def test_holder_type_required(self):
+        tag = "tool:dmg_reduce:50:from:type:grass:holder:type:dragon"
+        b, d = self._battle(tag, atk_type="grass", def_type="colorless")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d.damage, 100, "持有者不是 dragon → 限定额不成立")
+        b2, d2 = self._battle(tag, atk_type="grass", def_type="dragon")
+        b2.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d2.damage, 50)
+
+    def test_once_tool_discarded_after_use(self):
+        tag = "tool:dmg_reduce:60:from:type:psychic:discard"
+        b, d = self._battle(tag, atk_type="psychic")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d.damage, 40)
+        self.assertIsNone(d.tool, "浆果类道具生效后应弃置")
+
+    def test_holder_qualified_counter(self):
+        tag = "tool:on_damaged:counter:40:holder:type:darkness"
+        b, d = self._battle(tag, atk_type="water", def_type="darkness")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 40, "持有者符合 → 反制 40")
+        b2, d2 = self._battle(tag, atk_type="water", def_type="psychic")
+        b2.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b2.players[0].active.damage, 0, "持有者不符合 → 不反制")
+
+    def test_unknown_qualifier_is_inert(self):
+        """未知限定形态一律不生效（宁可不减伤，不可乱减伤）"""
+        b, d = self._battle("tool:dmg_reduce:50:from:faction:rocket")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(d.damage, 100)
 
 
 if __name__ == "__main__":

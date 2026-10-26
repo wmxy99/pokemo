@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-26 23:35:37",
+ "generated_at": "2026-10-27 00:12:17",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 958,
-  "unsupported": 588,
-  "cards_with_unsupported": 516,
-  "cards_fully_mapped": 603,
-  "cards_with_supported_tag": 791,
-  "cards_engine_ready": 534,
+  "engine_tags": 962,
+  "unsupported": 584,
+  "cards_with_unsupported": 512,
+  "cards_fully_mapped": 607,
+  "cards_with_supported_tag": 795,
+  "cards_engine_ready": 538,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,7 +86,7 @@
    "groups": 2,
    "entries": 9,
    "cards": 9,
-   "share": 0.0153
+   "share": 0.0154
   },
   {
    "id": "B3",
@@ -97,7 +97,7 @@
    "groups": 30,
    "entries": 99,
    "cards": 99,
-   "share": 0.1684
+   "share": 0.1695
   },
   {
    "id": "B4",
@@ -106,9 +106,9 @@
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
    "groups": 29,
-   "entries": 72,
-   "cards": 72,
-   "share": 0.1224
+   "entries": 68,
+   "cards": 68,
+   "share": 0.1164
   },
   {
    "id": "B5",
@@ -116,10 +116,10 @@
    "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现",
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
-   "groups": 38,
+   "groups": 37,
    "entries": 408,
    "cards": 392,
-   "share": 0.6939
+   "share": 0.6986
   }
  ],
  "items": [
@@ -851,8 +851,8 @@
    "desc": "静态锁/免疫/伤害减免",
    "action_type": "rule",
    "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 23,
-   "cards": 23,
+   "entries": 19,
+   "cards": 19,
    "samples": [
     {
      "card": "Rabsca",
@@ -1482,8 +1482,8 @@
    "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 25,
-   "cards": 25,
+   "entries": 26,
+   "cards": 26,
    "samples": [
     {
      "card": "Genesect",
@@ -2242,22 +2242,6 @@
      "card": "Doublade",
      "name_zh": "",
      "text": "Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
-   "sub": "S2",
-   "desc": "道具挂载（Pokémon Tool）",
-   "action_type": "rule",
-   "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Punk Helmet",
-     "name_zh": "",
-     "text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacki"
     }
    ]
   },

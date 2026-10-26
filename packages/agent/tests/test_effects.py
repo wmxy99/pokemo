@@ -486,11 +486,28 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_tool_damage_reduction_with_qualifier_refused(self):
-        """带对手属性/特性限定的减伤：引擎无该过滤层 → 不许落成常驻减伤"""
-        r = self._tags("The Pok\u00e9mon this card is attached to takes 60 less "
-                       "damage from attacks from your opponent\u2019s {P} "
-                       "Pok\u00e9mon.", kind="item", name="Payapa")
+    def test_tool_damage_reduction_with_qualifier_mapped(self):
+        """带对手属性/特性限定的减伤：2026-10-27 起映射为**带限定**的减伤
+
+        关键是不能退化成无条件减伤（那是对所有攻击方都生效，静默加强）——
+        限定必须原样进 tag（`from:type:` / `from:ability` / `holder:type:`）。
+        """
+        r = self._tags("If the Pok\u00e9mon this card is attached to is damaged by an "
+                       "attack from your opponent\u2019s {P} Pok\u00e9mon, it takes 60 "
+                       "less damage (after applying Weakness and Resistance), and "
+                       "discard this card.", kind="item", name="Payapa")
+        self.assertIn("tool:dmg_reduce:60:from:type:psychic:discard", r["tags"])
+
+        r = self._tags("The Pok\u00e9mon this card is attached to takes 30 less "
+                       "damage from attacks from your opponent\u2019s Pok\u00e9mon "
+                       "that have an Ability (after applying Weakness and Resistance).",
+                       kind="item", name="Sacred Charm")
+        self.assertIn("tool:dmg_reduce:30:from:ability", r["tags"])
+
+    def test_tool_faction_qualifier_still_refused(self):
+        """按**卡名阵营**限定的（Team Rocket's / Hop's）仍拒绝：引擎无卡名归属元数据"""
+        r = self._tags("The Team Rocket\u2019s Pok\u00e9mon this card is attached to "
+                       "gets +30 HP.", kind="item", name="TR Tool")
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 

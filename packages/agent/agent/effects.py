@@ -1516,10 +1516,17 @@ def _detect_tool_hook(text: str) -> list:
     low = t.lower()
     if not _TOOL_HOLDER_RE.search(low):
         return []
-    # 带持有者限定的（属性 / 卡名阵营）一律放弃 —— 引擎无该过滤层
-    if re.search(r"the\s+\{[a-z]\}\s*pok[eé]mon this card is attached to", low) \
-            or re.search(r"the\s+[a-z][a-z' ]{2,20}pok[eé]mon this card is "
-                         r"attached to", low):
+    # 持有者限定：只支持**属性**（`the {D} Pokémon this card is attached to`）。
+    # 卡名/阵营限定（`the Team Rocket's Pokémon` / `the Hop's Pokémon`）需要按卡名
+    # 归属判定，引擎没有这套元数据 → 一律放弃。
+    holder_color = None
+    mh = re.search(r"the\s+\{([a-z])\}\s*pok[eé]mon this card is attached to", low)
+    if mh:
+        holder_color = _EN_SYMBOL_COLOR.get(mh.group(1).upper())
+        if not holder_color:
+            return []
+    elif re.search(r"the\s+(?!retreat cost)(?!cost)[a-z][a-z' ]{2,24}"
+                   r"pok[eé]mon this card is attached to", low):
         return []
 
     # B1 满 HP 免击倒（Survival Brace）
@@ -1541,9 +1548,11 @@ def _detect_tool_hook(text: str) -> list:
                     {"kind": "on_damaged_draw"})]
 
     # B3 受伤时把伤害指示物放到攻击方（Deluxe Bomb）
-    m = re.search(r"put (\d+) damage counters? on the attacking pok[eé]mon", low)
+    m = re.search(r"(?:put|place) (\d+) damage counters? on the attacking pok[eé]mon",
+                  low)
     if m:
-        extra = {"kind": "on_damaged_counter"}
+        extra = {"kind": "on_damaged_counter",
+                 "holder_type": holder_color}
         if re.search(r"discard this card", low):
             extra["discard"] = True
         return [act("tool", int(m.group(1)) * 10, "self", extra)]
@@ -1579,6 +1588,55 @@ def _detect_tool_static(text: str) -> list:
         n = len(re.findall(r"\{[a-z]\}", m.group(1)))
         if n:
             out.append(act("tool", n, "self", {"kind": "retreat_less"}))
+    # 持有者属性限定（`The {N} Pokémon this card is attached to …`）
+    holder_color = None
+    mh = re.search(r"the \{([a-z])\} pok[eé]mon this card is attached to", low)
+    if mh:
+        holder_color = _EN_SYMBOL_COLOR.get(mh.group(1).upper())
+    elif re.search(r"the\s+(?!retreat cost)(?!cost)[a-z][a-z' ]{2,24}"
+                   r"pok[eé]mon this card is attached to", low):
+        # 卡名/阵营限定（`The Team Rocket's Pokémon this card is attached to`）：
+        # 引擎没有"卡名归属"元数据 → 不能当成普通道具。**必须整卡放弃**，
+        # 否则「+30 HP」会变成任何宝可梦附着都生效（实测踩过）。
+        return []
+
+    # C1 浆果类：**条件性一次性**减伤（被特定属性攻击时 −N，然后弃置本卡）
+    #   「If the Pokémon this card is attached to is damaged by an attack from your
+    #     opponent's {P} Pokémon, it takes 60 less damage …, and discard this card.」
+    #   与常驻减伤的净效果等价（只在攻击方是该属性时生效），故映射为带 from 的减伤。
+    m = re.search(r"if the pok[eé]mon this card is attached to is damaged by an "
+                  r"attack from your opponent'?s? \{([a-z])\} pok[eé]mon, it takes "
+                  r"(\d+) less damage", low)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+        if color:
+            extra = {"kind": "dmg_reduce", "from_type": color,
+                     "discard": bool(re.search(r"discard this card", low))}
+            if holder_color and holder_color != color:
+                extra["holder_type"] = holder_color
+            return [act("tool", int(m.group(2)), "self", extra)]
+
+    # C2 「from … Pokémon that have an Ability」→ 只对**有特性**的攻击方减伤
+    m = re.search(r"takes (\d+) less damage from attacks from your opponent'?s? "
+                  r"pok[eé]mon that have an ability", low)
+    if m:
+        extra = {"kind": "dmg_reduce", "from_ability": True}
+        if holder_color:
+            extra["holder_type"] = holder_color
+        return [act("tool", int(m.group(1)), "self", extra)]
+
+    # C3 「from your opponent's {G}, {R}, {W}, or {L} Pokémon」→ 攻击方属性集合
+    m = re.search(r"takes (\d+) less damage from attacks from your opponent'?s? "
+                  r"((?:\{[a-z]\}(?:\s*,\s*|\s*or\s*|\s*)+)+)pok[eé]mon", low)
+    if m:
+        colors = [_EN_SYMBOL_COLOR.get(c.upper()) for c in re.findall(r"\{([a-z])\}", m.group(2))]
+        colors = [c for c in colors if c]
+        if colors:
+            extra = {"kind": "dmg_reduce", "from_types": colors}
+            if holder_color:
+                extra["holder_type"] = holder_color
+            return [act("tool", int(m.group(1)), "self", extra)]
+
     # ⚠ 只认「纯静态」整卡文本：只要还有条件/触发从句（if / when / during / …），
     #   就说明这张道具**还有别的作用没被建模**（例：Rescue Board 在剩余 HP ≤30 时
     #   额外「无撤退费用」）。此时若仍返回静态 tag，卡会被准入并**静默丢掉那段效果**
@@ -2556,14 +2614,32 @@ def to_engine_tags(specs: list) -> dict:
             elif t == "tool":
                 # S2 道具（Pokémon Tool）
                 k = extra.get("kind")
-                if k in ("hp_plus", "retreat_less", "dmg_reduce") and amt is not None:
+                if k == "dmg_reduce" and amt is not None:
+                    # 限定减伤：from 攻击方（类型集合 / 有特性）、holder 持有者属性
+                    tail = ""
+                    if extra.get("from_type"):
+                        tail += f":from:type:{extra['from_type']}"
+                    elif extra.get("from_types"):
+                        tail += ":from:type:" + ",".join(extra["from_types"])
+                    elif extra.get("from_ability"):
+                        tail += ":from:ability"
+                    if extra.get("holder_type"):
+                        tail += f":holder:type:{extra['holder_type']}"
+                    if extra.get("discard"):
+                        tail += ":discard"
+                    tags.append(f"tool:dmg_reduce:{int(amt)}{tail}")
+                elif k in ("hp_plus", "retreat_less") and amt is not None:
                     tags.append(f"tool:{k}:{int(amt)}")
                 elif k == "no_retreat":
                     tags.append("tool:no_retreat")
                 elif k == "on_damaged_draw" and amt is not None:
                     tags.append(f"tool:on_damaged:draw:{int(amt)}")
                 elif k == "on_damaged_counter" and amt is not None:
-                    tail = ":discard" if extra.get("discard") else ""
+                    tail = ""
+                    if extra.get("holder_type"):
+                        tail += f":holder:type:{extra['holder_type']}"
+                    if extra.get("discard"):
+                        tail += ":discard"
                     tags.append(f"tool:on_damaged:counter:{int(amt)}{tail}")
                 elif k == "survive" and amt is not None:
                     tags.append(f"tool:survive:{int(amt)}")

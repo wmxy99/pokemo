@@ -1087,6 +1087,9 @@ class Battle:
                 # 卡面写「after applying Weakness and Resistance」→ 静态减伤在弱抗之后
                 if static["dmg_reduce"]:
                     dmg = max(0, dmg - static["dmg_reduce"])
+                tool_red = self._tool_reduce_vs(defender, attacker)
+                if tool_red:
+                    dmg = max(0, dmg - tool_red)
                 dmg = apply_shield(defender, dmg)          # 护盾在弱抗之后
                 damage_dealt = dmg or 0
                 if dmg:
@@ -1118,6 +1121,32 @@ class Battle:
         return {"ok": True, "event": None}
 
     # ---------- S2 第二阶段：道具触发钩子 ----------
+    def _tool_reduce_vs(self, defender: FieldPokemon,
+                        attacker: FieldPokemon) -> int:
+        """道具减伤（**按攻击方判定**）—— `tool:dmg_reduce:N[:from:…][:holder:…]`
+
+        为什么要单独一个函数而不是塞进 `_static_mods`：卡面常写
+        「takes 30 less damage from attacks from your opponent's Pokémon **that
+        have an Ability**」/「**{G},{R},{W},{L} Pokémon**」—— 同一个减伤值只对
+        特定攻击方成立，静态层拿不到攻击方上下文，无条件累加会变成**全类型减伤**。
+        `discard`（浆果类一次性道具）在**生效后**弃置。
+        """
+        tag = str(defender.tool or "")
+        if not tag.startswith("tool:dmg_reduce:"):
+            return 0
+        meta = _tool_meta(tag)
+        if not meta["n"]:
+            return 0
+        if not _qual_ok(meta["holder"], defender):
+            return 0
+        if not _qual_ok(meta["from"], attacker):
+            return 0
+        if meta["discard"]:
+            name = _drop_tool(defender)
+            self._log("tool_discard", {"player": 1 - self.current, "tool": name,
+                                       "target": defender.name})
+        return meta["n"]
+
     def _trigger_tool_on_damaged(self, defender: FieldPokemon,
                                  attacker: FieldPokemon, dmg: int) -> None:
         """持有者被招式伤害后触发道具（``tool:on_damaged:<kind>:<n>[:discard]``）
@@ -1131,6 +1160,10 @@ class Battle:
         """
         tag = str(defender.tool or "")
         if dmg <= 0 or not tag.startswith("tool:on_damaged:"):
+            return
+        meta = _tool_meta(tag)
+        # 持有者限定（例：`the {D} Pokémon this card is attached to`）
+        if not _qual_ok(meta["holder"], defender):
             return
         parts = tag.split(":")
         kind = parts[2] if len(parts) > 2 else ""
@@ -1150,7 +1183,8 @@ class Battle:
                                        "target": defender.name})
             if attacker.is_ko:
                 self._resolve_ko(self.current, attacker)
-        if len(parts) > 4 and parts[4] == "discard":
+        # ⚠ 不能用 `parts[4] == "discard"`：加了 holder 限定后 discard 位置会变
+        if meta["discard"]:
             name = _drop_tool(defender)
             self._log("tool_discard", {"player": owner, "tool": name,
                                        "target": defender.name})
@@ -2420,18 +2454,77 @@ def _static_mods(fp: Optional[FieldPokemon]) -> dict:
             out["no_weakness"] = True
         elif kind == "no_retreat":
             out["no_retreat"] = True
-    # S2：道具提供的同类修正（attach 时写入 fp.tool）
+    # 道具的 `dmg_reduce` 需要**按攻击方**判定（可能带 from/holder 限定），
+    # 不能在 `_static_mods` 里无条件累加 —— 见 `Battle._tool_reduce_vs`。
+    # 这里只处理与攻击方无关的两类。
     tool = fp.tool
     if tool:
         tparts = str(tool).split(":")
         tkind = tparts[1] if len(tparts) > 1 else ""
-        if tkind == "dmg_reduce":
-            out["dmg_reduce"] += _tool_value(tool, "dmg_reduce")
-        elif tkind == "no_weakness":
+        if tkind == "no_weakness":
             out["no_weakness"] = True
         elif tkind == "no_retreat":
             out["no_retreat"] = True
     return out
+
+
+def _tool_meta(tag: Optional[str]) -> dict:
+    """``tool:<kind>:<n>[:from:…][:holder:…][:discard]`` → 结构化字段
+
+    限定语法的唯一权威定义（解析层只负责拼串，语义解释在这里）：
+      · ``from:type:a,b``  攻击方属性属于集合才生效
+      · ``from:ability``   攻击方**有特性**才生效
+      · ``holder:type:x``  持有者属性必须是 x 才生效
+      · ``discard``        生效后弃置本道具（一次性道具）
+    """
+    out = {"kind": "", "n": 0, "from": None, "holder": None, "discard": False}
+    if not tag:
+        return out
+    parts = str(tag).split(":")
+    out["kind"] = parts[1] if len(parts) > 1 else ""
+    out["n"] = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+    i = 3
+    while i < len(parts):
+        tok = parts[i]
+        if tok == "from":
+            if i + 2 < len(parts) and parts[i + 1] == "type":
+                out["from"] = ("type", parts[i + 2].split(","))
+                i += 3
+            elif i + 1 < len(parts) and parts[i + 1] == "ability":
+                out["from"] = ("ability", None)
+                i += 2
+            else:
+                # ⚠ 出现了 from 但形态不认识 → 标记 unknown，**必须不生效**。
+                #   若这里直接忽略，该道具会退化成"无条件减伤"（静默加强）。
+                out["from"] = ("unknown", None)
+                i += 1
+        elif tok == "holder":
+            if i + 2 < len(parts) and parts[i + 1] == "type":
+                out["holder"] = ("type", parts[i + 2].split(","))
+                i += 3
+            else:
+                out["holder"] = ("unknown", None)
+                i += 1
+        elif tok in ("discard", "once"):
+            out["discard"] = True
+            i += 1
+        else:
+            i += 1
+    return out
+
+
+def _qual_ok(qual, fp: Optional[FieldPokemon]) -> bool:
+    """限定条件是否成立（None = 无限定 → 成立；未知形态 → **不成立**，宁可不生效）"""
+    if not qual:
+        return True
+    if fp is None:
+        return False
+    kind, val = qual
+    if kind == "type":
+        return str(fp.pdef.ptype).lower() in [v.strip().lower() for v in val]
+    if kind == "ability":
+        return bool(fp.pdef.abilities)
+    return False
 
 
 def _retreat_cost(fp: Optional[FieldPokemon]) -> int:

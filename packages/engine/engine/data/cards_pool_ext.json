@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 423,
+      "kept": 427,
       "by_Pokemon": 367,
-      "by_Trainer": 56,
+      "by_Trainer": 60,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 509,
+        "存在未建模项（整卡不收）": 505,
         "Energy 不可执行": 3,
         "Pokemon 不可执行": 111,
         "人工卡池已有（人工优先）": 26,
@@ -17237,6 +17237,21 @@
       "source_card_id": 1159
     },
     {
+      "name": "Payapa Berry",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:dmg_reduce:60:from:type:psychic:discard",
+      "desc": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card.",
+      "real": {
+        "set": "SCR",
+        "number": "141"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1164
+    },
+    {
       "name": "Deluxe Bomb",
       "name_zh": "",
       "supertype": "Trainer",
@@ -17252,19 +17267,19 @@
       "source_card_id": 1167
     },
     {
-      "name": "Cynthia's Power Weight",
+      "name": "Haban Berry",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "tool",
-      "tag": "tool:hp_plus:70",
-      "desc": "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
+      "tag": "tool:dmg_reduce:60:from:type:dragon:discard",
+      "desc": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card.",
       "real": {
-        "set": "DRI",
-        "number": "162"
+        "set": "PRE",
+        "number": "111"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1173
+      "source_card_id": 1170
     },
     {
       "name": "Air Balloon",
@@ -17280,6 +17295,51 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1174
+    },
+    {
+      "name": "Punk Helmet",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:on_damaged:counter:40:holder:type:darkness",
+      "desc": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon.",
+      "real": {
+        "set": "PFL",
+        "number": "92"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1176
+    },
+    {
+      "name": "Sacred Charm",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:dmg_reduce:30:from:ability",
+      "desc": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent’s Pokémon that have an Ability (after applying Weakness and Resistance).",
+      "real": {
+        "set": "PFL",
+        "number": "93"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1177
+    },
+    {
+      "name": "Thick Scale",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:dmg_reduce:50:from:type:grass,fire,water,lightning:holder:type:dragon",
+      "desc": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent’s {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance).",
+      "real": {
+        "set": "ASC",
+        "number": "211"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1179
     },
     {
       "name": "Perrin",

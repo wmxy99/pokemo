@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-27 00:26:17",
+ "generated_at": "2026-10-27 00:29:44",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 968,
-  "unsupported": 578,
-  "cards_with_unsupported": 506,
-  "cards_fully_mapped": 613,
-  "cards_with_supported_tag": 801,
-  "cards_engine_ready": 544,
+  "engine_tags": 969,
+  "unsupported": 577,
+  "cards_with_unsupported": 505,
+  "cards_fully_mapped": 614,
+  "cards_with_supported_tag": 802,
+  "cards_engine_ready": 546,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -97,7 +97,7 @@
    "groups": 30,
    "entries": 99,
    "cards": 99,
-   "share": 0.1713
+   "share": 0.1716
   },
   {
    "id": "B4",
@@ -108,7 +108,7 @@
    "groups": 29,
    "entries": 67,
    "cards": 67,
-   "share": 0.1159
+   "share": 0.1161
   },
   {
    "id": "B5",
@@ -116,10 +116,10 @@
    "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现",
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
-   "groups": 37,
-   "entries": 403,
-   "cards": 387,
-   "share": 0.6972
+   "groups": 36,
+   "entries": 402,
+   "cards": 386,
+   "share": 0.6967
   }
  ],
  "items": [
@@ -2242,22 +2242,6 @@
      "card": "Doublade",
      "name_zh": "",
      "text": "Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
-   "sub": "S3",
-   "desc": "场地（Stadium）",
-   "action_type": "rule",
-   "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Risky Ruins",
-     "name_zh": "",
-     "text": "Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon."
     }
    ]
   }

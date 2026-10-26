@@ -224,6 +224,7 @@ class Battle:
         if p.active and not p.active.is_ko:
             for ev in status_checkup(p.active, self.rng):
                 self._log("checkup", {**ev, "player": self.current})
+            self._stadium_checkup_extra(p.active)
             if p.active.is_ko:
                 self._resolve_ko(self.current, p.active)
                 if self.finished:
@@ -574,6 +575,7 @@ class Battle:
         fp.just_played = True
         p.bench.append(fp)
         self._log("play", {"player": self.current, "card": fp.name})
+        self._on_bench_placed(self.current, fp)
         return {"ok": True, "event": self.events[-1]}
 
     def _do_attach(self, p: PlayerState, action: dict) -> dict:
@@ -1314,6 +1316,48 @@ class Battle:
         if m["type"] and str(defender.pdef.ptype).lower() != m["type"].lower():
             return 0
         return m["n"]
+
+    def _stadium_checkup_extra(self, fp: FieldPokemon) -> None:
+        """场地：checkup 阶段对特定状态/属性追加伤害（Perilous Jungle）
+
+        tag：``stadium:poison_extra:<n>:type:<c>``
+        「put 2 more damage counters on each Poisoned non-{D} Pokémon」
+        → 中毒的、且属性**不是** <c> 的，额外受 n 点（在常规中毒 10 点之后结算）。
+        这是**追加**而非替换：卡面写 "2 more damage counters"，不是 "instead"。
+        """
+        m = self._stadium_meta()
+        if m["kind"] != "poison_extra" or not m["n"]:
+            return
+        if "poison" not in fp.status:
+            return
+        if m["type"] and str(fp.pdef.ptype).lower() == m["type"].lower():
+            return                     # 该属性免疫此追加伤害
+        fp.damage += m["n"]
+        self._log("checkup", {"type": "stadium_poison_extra",
+                              "target": fp.name, "dmg": m["n"],
+                              "player": self.current})
+
+    def _on_bench_placed(self, owner: int, fp: FieldPokemon) -> None:
+        """场地：宝可梦被放到后备时触发的伤害（Risky Ruins）
+
+        tag：``stadium:on_bench_basic:<n>:type:<c>``
+        「Whenever any player puts a Basic non-{D} Pokémon onto their Bench during
+        their turn, place 2 damage counters on that Pokémon.」
+        ⚠ 只在**放到后备**时触发（不是战斗位）；属性 <c> 的豁免。
+        """
+        m = self._stadium_meta()
+        if m["kind"] != "on_bench_basic" or not m["n"]:
+            return
+        if fp.pdef.stage != 0:
+            return                     # 只限基础宝可梦
+        if m["type"] and str(fp.pdef.ptype).lower() == m["type"].lower():
+            return
+        fp.damage += m["n"]
+        self._log("stadium_trigger", {"kind": "on_bench_basic",
+                                      "player": owner, "target": fp.name,
+                                      "dmg": m["n"]})
+        if fp.is_ko:
+            self._resolve_ko(owner, fp)
 
     # ---------- S2 第二阶段：道具触发钩子 ----------
     def _tool_reduce_vs(self, defender: FieldPokemon,

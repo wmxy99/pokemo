@@ -1536,6 +1536,25 @@ def _detect_stadium(text: str) -> list:
         # 本轮不建模 —— 让整卡落进未建模，而不是硬套成上面三种。
         return []
 
+    # B 触发式（S3 第三步 2026-10-27）
+    # B1 Perilous Jungle：checkup 时中毒的非 <属性> 宝可梦**额外**受 n 点
+    m = re.search(r"during pok[eé]mon checkup, put (\d+) more damage counters? on "
+                  r"each poisoned non-\{([a-z])\}", low)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+        if color:
+            return [act("stadium", int(m.group(1)) * 10, "any",
+                        {"kind": "poison_extra", "ptype": color})]
+
+    # B2 Risky Ruins：基础（非 <属性>）宝可梦被放到后备时放 n 个指示物
+    m = re.search(r"whenever any player puts a basic non-\{([a-z])\} pok[eé]mon "
+                  r"onto their bench[^.]*?place (\d+) damage counters?", low)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+        if color:
+            return [act("stadium", int(m.group(2)) * 10, "any",
+                        {"kind": "on_bench_basic", "ptype": color})]
+
     # A 上限修正（按阶段）
     m = re.search(r"each (basic|stage 1|stage 2) pok[eé]mon in play[^.]*?"
                   r"gets ([+-]\d+) hp", low)
@@ -2694,6 +2713,9 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"stadium:hp_plus:{int(amt)}:stage:{extra['stage']}")
                 elif k == "dmg_reduce" and amt is not None and extra.get("ptype"):
                     tags.append(f"stadium:dmg_reduce:{int(amt)}:type:{extra['ptype']}")
+                elif k in ("poison_extra", "on_bench_basic") and amt is not None \
+                        and extra.get("ptype"):
+                    tags.append(f"stadium:{k}:{int(amt)}:type:{extra['ptype']}")
                 elif k == "use" and extra.get("use_kind"):
                     tail = ""
                     if amt is not None:

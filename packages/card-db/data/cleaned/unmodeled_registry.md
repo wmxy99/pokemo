@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-27 00:26:17
+- 生成时间：2026-10-27 00:29:45
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **578** 条 · 已映射 tag 968 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：544 张**
-- 解析层面「无未建模动作」卡：613 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **577** 条 · 已映射 tag 969 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：546 张**
+- 解析层面「无未建模动作」卡：614 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -85,7 +85,6 @@
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
-| B5 | S3 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
 
@@ -392,10 +391,6 @@
 **B5 · S6**（1 条）
 
 - `Doublade`：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
-
-**B5 · S3**（1 条）
-
-- `Risky Ruins`：Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.
 
 ## 3. 与「已建模」的边界（避免误读）
 

@@ -1475,6 +1475,49 @@ class TestStadium(unittest.TestCase):
                             for x in b.legal_actions(0)),
                         "新回合应可再次使用")
 
+    def test_stadium_poison_extra_at_checkup(self):
+        """Perilous Jungle：checkup 时中毒的非暗属性额外受 20（追加，不是替换）"""
+        b = self._battle("stadium:poison_extra:20:type:darkness", "Jungle")
+        b.step({"verb": "trainer", "hand": 0})
+        fp = b.players[1].active = make_pokemon(
+            PokemonDef("Poisoned", hp=200, ptype="grass"))
+        fp.status.add("poison")
+        self.assertEqual(fp.damage, 0)
+        b.current = 1            # checkup 结算的是「回合归属方」的战斗位
+        b._begin_turn()
+        # 常规中毒 10 + 场地追加 20
+        self.assertEqual(fp.damage, 30)
+
+    def test_stadium_poison_extra_exempts_type(self):
+        b = self._battle("stadium:poison_extra:20:type:darkness", "Jungle")
+        b.step({"verb": "trainer", "hand": 0})
+        dark = b.players[1].active = make_pokemon(
+            PokemonDef("Dark", hp=200, ptype="darkness"))
+        dark.status.add("poison")
+        b.current = 1
+        b._begin_turn()
+        self.assertEqual(dark.damage, 10, "暗属性只受常规毒伤，不吃追加")
+
+    def test_stadium_on_bench_basic(self):
+        """Risky Ruins：基础（非暗）宝可梦上场即受 20"""
+        b = self._battle("stadium:on_bench_basic:20:type:darkness", "Ruins")
+        b.step({"verb": "trainer", "hand": 0})
+        # 手牌放一张基础宝可梦到后备
+        basic = PokemonDef("Fresh", hp=100, ptype="water", stage=0)
+        b.players[0].hand.append(PokeRef(basic))
+        r = b.step({"verb": "play", "index": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].bench[-1].damage, 20, "上场应放 2 个指示物")
+
+    def test_stadium_on_bench_dark_exempt(self):
+        b = self._battle("stadium:on_bench_basic:20:type:darkness", "Ruins")
+        b.step({"verb": "trainer", "hand": 0})
+        dark_basic = PokemonDef("DarkFresh", hp=100, ptype="darkness", stage=0)
+        b.players[0].hand.append(PokeRef(dark_basic))
+        r = b.step({"verb": "play", "index": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].bench[-1].damage, 0, "暗属性豁免")
+
     def test_unknown_stadium_tag_is_inert(self):
         """未实现的场地形态不得产生任何修正（宁可无效）"""
         b = self._battle("stadium:search_basic:1")

@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 433,
+      "kept": 435,
       "by_Pokemon": 367,
-      "by_Trainer": 66,
+      "by_Trainer": 68,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 499,
+        "存在未建模项（整卡不收）": 498,
         "Energy 不可执行": 3,
         "Pokemon 不可执行": 111,
         "人工卡池已有（人工优先）": 26,
-        "Trainer 不可执行": 50
+        "Trainer 不可执行": 49
       }
     }
   },
@@ -17687,6 +17687,21 @@
       "source_card_id": 1242
     },
     {
+      "name": "Perilous Jungle",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:poison_extra:20:type:darkness",
+      "desc": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-{D} Pokémon (both yours and your opponent’s).",
+      "real": {
+        "set": "TEF",
+        "number": "156"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1243
+    },
+    {
       "name": "Full Metal Lab",
       "name_zh": "",
       "supertype": "Trainer",
@@ -17760,6 +17775,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1254
+    },
+    {
+      "name": "Risky Ruins",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:on_bench_basic:20:type:darkness",
+      "desc": "Whenever any player puts a Basic non-{D} Pokémon onto their Bench during their turn, place 2 damage counters on that Pokémon.",
+      "real": {
+        "set": "MEG",
+        "number": "127"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1260
     }
   ]
 }

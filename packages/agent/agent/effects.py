@@ -322,6 +322,22 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 _EN_STATUS = (("asleep", "sleep"), ("burned", "burn"), ("confused", "confuse"),
               ("paralyzed", "paralyze"), ("poisoned", "poison"))
+
+
+def _status_word_is_condition(text: str, word: str) -> bool:
+    """状态词是否只出现在「If …, this attack does N more damage」这类**条件句**里
+
+    只看词所在的那一句（不跨句），且要求同时满足：
+      · 该句以 `if` 开头（条件从句）
+      · 该句含 `more damage`（伤害缩放）
+    满足两条即视为「条件」，效果层必须让位；否则（如「is now Burned.」）照常产出。
+    """
+    for sent in re.split(r"(?<=[.!?])\s+", text):
+        low_s = _norm_apostrophe(sent).lower()
+        if word in low_s and re.search(r"more\s+damage", low_s) \
+                and low_s.strip().startswith("if "):
+            return True
+    return False
 # ⚠ 旧的 `_EN_DAMAGE_RE`（`does\s+(\d+)\s+damage`，恒定取第一个且恒标 active_opponent）
 # 已于 2026-09-22 删除：它无法区分反伤 / 后备 / 全体目标，会静默算错（详见 `_DMG_ANY_RE`）。
 _EN_SPREAD_RE = re.compile(r"(?:put|place)\s+(\d+)\s+damage\s+counters?", re.I)
@@ -911,6 +927,14 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
     for word, tag in _EN_STATUS:
         if word in lower:
+            # 2026-10-26 修：条件从句里的状态词是**条件**不是效果。
+            # 反例（真实卡面）：「If your opponent's Active Pokémon is Burned, this
+            # attack does 90 more damage.」——早期实现只做 `word in lower`，于是
+            # 既产出了 `dmg_plus:90:if:opp_active_status:burn`，又额外产出一个
+            # 无条件的 `burn` 动作 → **把条件当成效果施加**（静默加强）。
+            # 判定只看该词所在的**那一句**：以 if 开头且含 more damage 才算条件。
+            if _status_word_is_condition(t, word):
+                continue
             tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
             actions.append(act("status", None, tgt, {"status": tag}))
             break
@@ -1361,6 +1385,87 @@ def _condition_from_text(text: str) -> Optional[str]:
     for pat, cond in _CONDITION_PHRASES:
         if re.search(pat, low):
             return cond
+    return _condition_from_clause(text)
+
+
+# ---- 第四批（2026-10-26）：条件伤害缩放的高频条件 ----
+# 卡面原型：「If <条件>, this attack does N more damage.」
+# 设计要求：条件必须能由**当下局面**直接读出（不依赖「本回合是否被治疗 / 是否从后备换入」
+# 这类引擎没有的回合级历史），否则宁可返回 None 由调用方登记未建模。
+_STATUS_WORD_TO_TAG = {"burned": "burn", "poisoned": "poison", "asleep": "sleep",
+                       "paralyzed": "paralyze", "confused": "confuse"}
+# 句子边界：只取「含 more damage 的那一句」做条件匹配 ——
+# 同一张卡可能有两个「If …」从句（如「If A, 招式伤害 +N。If B, 再 +M。」），
+# 用全文匹配会把 B 的条件套到 A 的加伤上（**静默错映射**，比漏建模更糟）。
+_SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+# 「this attack does N more damage」（条件加伤从句）——逐个从句处理，见 _detect_modifiers
+_MORE_DMG_RE = re.compile(r"does\s+(\d+)\s+more\s+damage", re.I)
+
+
+def _sentence_at(text: str, pos: int) -> str:
+    """取 `pos` 所在的那一句（用于把条件限定在本从句内，避免跨句串味）"""
+    start = 0
+    for m in _SENT_SPLIT_RE.finditer(text):
+        if m.end() > pos:
+            return text[start:m.start()]
+        start = m.end()
+    return text[start:]
+
+
+def _clause_around_more_damage(text: str) -> str:
+    """取「含 more damage 的那一句」；取不到则回退全文（保持旧行为）"""
+    sentences = _SENT_SPLIT_RE.split(text)
+    for s in sentences:
+        if re.search(r"more\s+damage", s, re.I):
+            return s
+    return text
+
+
+def _condition_from_clause(text: str) -> Optional[str]:
+    """第四批条件表（在**单句**范围内匹配，避免跨句串味）"""
+    seg = _norm_apostrophe(_clause_around_more_damage(text)).lower()
+
+    opp_active = r"if your opponent'?s active pok[eé]mon"
+
+    # 1) 对手战斗位是 ex —— 注意「{ex} or {V}」是**并集**，引擎无法区分 V，故意不映射
+    if re.search(opp_active + r" is a pok[eé]mon \{ex\}", seg) \
+            and not re.search(r"\{ex\}\s*or\s+pok[eé]mon\s*\{v\}", seg):
+        return "opp_active_is_ex"
+
+    # 2) 对手战斗位是进化宝可梦
+    if re.search(opp_active + r" is an evolution pok[eé]mon", seg):
+        return "opp_active_is_evolution"
+
+    # 3) 对手战斗位已有伤害指示物
+    if re.search(opp_active + r" (?:already )?has any damage counters? on it", seg):
+        return "opp_active_has_damage"
+
+    # 4) 自身战斗位有伤害指示物（「this Pokémon」= 攻击方，引擎语义 own_active）
+    if re.search(r"if this pok[eé]mon has any damage counters? on it", seg):
+        return "own_active_has_damage"
+
+    # 5) 对手战斗位处于某特殊状态
+    m = re.search(opp_active + r" is (burned|poisoned|asleep|paraly[sz]ed|confused)", seg)
+    if m:
+        word = m.group(1).replace("paralysed", "paralyzed")
+        tag = _STATUS_WORD_TO_TAG.get(word)
+        return f"opp_active_status:{tag}" if tag else None
+
+    # 6) 对手战斗位是某属性的宝可梦（{P} / {D} …）
+    m = re.search(opp_active + r" is an? \{([a-z])\} pok[eé]mon", seg)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+        return f"opp_active_type:{color}" if color else None
+
+    # 7) 对手后备数量下限
+    m = re.search(r"if your opponent has (\d+) or more benched pok[eé]mon", seg)
+    if m:
+        return f"opp_bench_at_least:{int(m.group(1))}"
+
+    # 8) 我方全场能量下限（「you have N or more Energy in play」）
+    m = re.search(r"if you have (\d+) or more energy in play", seg)
+    if m:
+        return f"own_all_energy_at_least:{int(m.group(1))}"
     return None
 
 
@@ -1395,26 +1500,32 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
         else:
             out.append(act("rule", None, "active_opponent",
                            {"note": f"条件伤害缩放：计数源未识别（{phrase.strip()[:30]}）"}))
-    elif not _COIN_RE.search(t) and re.search(r"does\s+(\d+)\s+more\s+damage", t,
-                                              re.I):
+    elif not _COIN_RE.search(t) and _MORE_DMG_RE.search(t):
         # 「If <条件>, this attack does N more damage」——**只在条件落到引擎白名单时映射**。
         # ⚠ 条件不在白名单（场地在场上 / 曾打出某张卡 / 对手宝可梦的属性 …）时必须放弃：
         #   若退化成无条件的 `dmg_plus:N` 会凭空加伤，属**静默算错**，比"未建模"更糟。
         # ⚠ 文本含抛币时必须让位（「Flip a coin. If heads, … does N more damage」
         #   已由 `_detect_coin` 产出 `coin:heads:dmg_plus:N`；此处再报一次"条件未识别"
         #   会变成重复计入未建模 —— 实测 test_coin_heads_plus_damage 因此失败）。
-        n = int(re.search(r"does\s+(\d+)\s+more\s+damage", t, re.I).group(1))
-        cond = _condition_from_text(t)
-        if cond:
-            out.append(act("damage_mod", n, "active_opponent",
-                           {"mode": "plus_if", "cond": cond}))
-        elif _KO_LAST_TURN_RE.search(t) or re.search(r"were\s+knocked\s+out", t,
-                                                    re.I):
-            out.append(act("damage_mod", n, "active_opponent",
-                           {"mode": "plus_if", "cond": "opp_ko_last_turn"}))
-        else:
-            out.append(act("rule", None, "active_opponent",
-                           {"note": "条件伤害缩放：条件未识别（引擎无该条件）"}))
+        # ⚠ **逐个从句**处理（2026-10-26）：同一张卡可能有两个「If …, does N more damage」
+        #   （Kieran 式）。早期只 `re.search` 取第一个 → 第二条加伤**被静默丢弃**，
+        #   卡却被当作"已建模"收进卡池（少算伤害，且无任何 unsupported 提示）。
+        #   现在每个从句各自找条件：任一从句条件不可表达 → 该从句计入 unsupported，
+        #   整卡准入自然被拒（宁可未建模，不可少算）。
+        for mm in _MORE_DMG_RE.finditer(t):
+            n = int(mm.group(1))
+            seg = _sentence_at(t, mm.start())
+            cond = _condition_from_text(seg) or _condition_from_text(t)
+            if cond:
+                out.append(act("damage_mod", n, "active_opponent",
+                               {"mode": "plus_if", "cond": cond}))
+            elif _KO_LAST_TURN_RE.search(seg) or re.search(
+                    r"were\s+knocked\s+out", seg, re.I):
+                out.append(act("damage_mod", n, "active_opponent",
+                               {"mode": "plus_if", "cond": "opp_ko_last_turn"}))
+            else:
+                out.append(act("rule", None, "active_opponent",
+                               {"note": "条件伤害缩放：条件未识别（引擎无该条件）"}))
 
     # 2) 抛币
     if _COIN_RE.search(t):

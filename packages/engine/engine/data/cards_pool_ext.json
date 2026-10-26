@@ -11,14 +11,14 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 397,
-      "by_Pokemon": 346,
+      "kept": 414,
+      "by_Pokemon": 363,
       "by_Trainer": 51,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 543,
+        "存在未建模项（整卡不收）": 520,
         "Energy 不可执行": 2,
-        "Pokemon 不可执行": 104,
+        "Pokemon 不可执行": 110,
         "人工卡池已有（人工优先）": 26,
         "Trainer 不可执行": 50
       }
@@ -438,6 +438,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 48,
       "name_key": "croconaw"
+    },
+    {
+      "name": "Bronzor",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Mirror Attack",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 10,
+          "effects": [
+            "dmg_plus:30:if:opp_active_type:psychic"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a {P} Pokémon, this attack does 30 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "68"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 54,
+      "name_key": "bronzor"
     },
     {
       "name": "Great Tusk",
@@ -871,6 +910,45 @@
       "name_key": "rellor"
     },
     {
+      "name": "Slugma",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Roasting Heat",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 10,
+          "effects": [
+            "dmg_plus:40:if:opp_active_status:burn"
+          ],
+          "desc": "If your opponent’s Active Pokémon is Burned, this attack does 40 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "28"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 76,
+      "name_key": "slugma"
+    },
+    {
       "name": "Litten",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -1242,6 +1320,60 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 96,
       "name_key": "tealmaskogerponex"
+    },
+    {
+      "name": "Hearthflame Mask Ogerpon ex",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 210,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Wrathful Hearth",
+          "cost": {
+            "fire": 1,
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:20:per:own_active_counters"
+          ],
+          "desc": "This attack does 20 damage for each damage counter on this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Dynamic Blaze",
+          "cost": {
+            "fire": 3
+          },
+          "damage": 140,
+          "effects": [
+            "discard_energy:all",
+            "dmg_plus:140:if:opp_active_is_evolution"
+          ],
+          "desc": "If your opponent’s Active Pokémon is an Evolution Pokémon, this attack does 140 more damage, and discard all Energy from this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "40"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 99,
+      "name_key": "hearthflamemaskogerponex"
     },
     {
       "name": "Slurpuff",
@@ -2082,6 +2214,58 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 185,
       "name_key": "flittle"
+    },
+    {
+      "name": "Iron Crown",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Deleting Slash",
+          "cost": {
+            "metal": 1,
+            "colorless": 1
+          },
+          "damage": 40,
+          "effects": [
+            "dmg_plus:80:if:opp_bench_at_least:3"
+          ],
+          "desc": "If your opponent has 3 or more Benched Pokémon, this attack does 80 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Slicing Blade",
+          "cost": {
+            "metal": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "132"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 192,
+      "name_key": "ironcrown"
     },
     {
       "name": "Turtonator",
@@ -3614,6 +3798,57 @@
       "name_key": "nsreshiram"
     },
     {
+      "name": "Sandy Shocks",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Magnetic Burst",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:70:if:own_all_energy_at_least:3"
+          ],
+          "desc": "If you have 3 or more Energy in play, this attack does 70 more damage. This attack’s damage isn’t affected by Weakness.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Power Gem",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "98"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 312,
+      "name_key": "sandyshocks"
+    },
+    {
       "name": "Ceruledge ex",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -3757,6 +3992,58 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 329,
       "name_key": "tapukokoex"
+    },
+    {
+      "name": "XerneasEX",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 210,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Aurora Beam",
+          "cost": {
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Rising Horns",
+          "cost": {
+            "psychic": 2,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [
+            "dmg_plus:100:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 100 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PROMO",
+        "number": "179"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 331,
+      "name_key": "xerneasex"
     },
     {
       "name": "Riolu",
@@ -4688,6 +4975,56 @@
       "name_key": "arvenstoedscruel"
     },
     {
+      "name": "Tauros",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Horn Attack",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Clean Hit",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_plus:50:if:opp_active_is_evolution"
+          ],
+          "desc": "If your opponent’s Active Pokémon is an Evolution Pokémon, this attack does 50 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "152"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 390,
+      "name_key": "tauros"
+    },
+    {
       "name": "Lurantis",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -4825,6 +5162,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 403,
       "name_key": "dolliv"
+    },
+    {
+      "name": "Arcanine",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 140,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Growlithe",
+      "attacks": [
+        {
+          "name": "Flare",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Punishing Fang",
+          "cost": {
+            "fire": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [
+            "dmg_plus:100:if:opp_active_type:darkness"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a {D} Pokémon, this attack does 100 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "28"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 406,
+      "name_key": "arcanine"
     },
     {
       "name": "Team Rocket's Houndoom",
@@ -5572,6 +5960,58 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 450,
       "name_key": "teamrocketsnidoran"
+    },
+    {
+      "name": "Team Rocket's Nidorino",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Team Rocket's Nidoran♂",
+      "attacks": [
+        {
+          "name": "Hammer In",
+          "cost": {
+            "darkness": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Horn Rend",
+          "cost": {
+            "darkness": 2,
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_plus:60:if:opp_active_has_damage"
+          ],
+          "desc": "If your opponent’s Active Pokémon already has any damage counters on it, this attack does 60 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "118"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 454,
+      "name_key": "teamrocketsnidorino"
     },
     {
       "name": "Team Rocket's Zubat",
@@ -7081,6 +7521,45 @@
       "name_key": "venipede"
     },
     {
+      "name": "Whirlipede",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Venipede",
+      "attacks": [
+        {
+          "name": "Venoshock",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:60:if:opp_active_status:poison"
+          ],
+          "desc": "If your opponent’s Active Pokémon is Poisoned, this attack does 60 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "55"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 536,
+      "name_key": "whirlipede"
+    },
+    {
       "name": "Escavalier",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -7118,6 +7597,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 543,
       "name_key": "escavalier"
+    },
+    {
+      "name": "Bisharp",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Pawniard",
+      "attacks": [
+        {
+          "name": "Cut Up",
+          "cost": {
+            "metal": 1
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Finishing Blow",
+          "cost": {
+            "metal": 1,
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_plus:60:if:opp_active_has_damage"
+          ],
+          "desc": "If your opponent’s Active Pokémon already has any damage counters on it, this attack does 60 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "65"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 545,
+      "name_key": "bisharp"
     },
     {
       "name": "Genesect ex",
@@ -8979,6 +9509,84 @@
       "name_key": "stevensmetagrossex"
     },
     {
+      "name": "Marnie's Purrloin",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Pointy Nails",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:40:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 40 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "130"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 642,
+      "name_key": "marniespurrloin"
+    },
+    {
+      "name": "Marnie's Liepard",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": "Marnie's Purrloin",
+      "attacks": [
+        {
+          "name": "Pointy Claws",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 70,
+          "effects": [
+            "dmg_plus:70:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 70 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "131"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 643,
+      "name_key": "marniesliepard"
+    },
+    {
       "name": "Marnie's Scraggy",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -10724,6 +11332,58 @@
       "name_key": "lopunny"
     },
     {
+      "name": "Granbull",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 130,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Snubbull",
+      "attacks": [
+        {
+          "name": "Bite",
+          "cost": {
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Finishing Blow",
+          "cost": {
+            "psychic": 2,
+            "colorless": 1
+          },
+          "damage": 90,
+          "effects": [
+            "dmg_plus:90:if:opp_active_has_damage"
+          ],
+          "desc": "If your opponent’s Active Pokémon already has any damage counters on it, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "38"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 763,
+      "name_key": "granbull"
+    },
+    {
       "name": "Meloetta",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -11111,6 +11771,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 786,
       "name_key": "nymble"
+    },
+    {
+      "name": "Moltres",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Fighting Wings",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:90:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "14"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 791,
+      "name_key": "moltres"
     },
     {
       "name": "Darumaka",
@@ -14688,6 +15387,45 @@
       "name_key": "zangooseex"
     },
     {
+      "name": "Larry's Rufflet",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Peck the Wound",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:80:if:opp_active_has_damage"
+          ],
+          "desc": "If your opponent’s Active Pokémon already has any damage counters on it, this attack does 80 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "173"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1007,
+      "name_key": "larrysrufflet"
+    },
+    {
       "name": "Larry's Komala",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -15697,6 +16435,59 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1061,
       "name_key": "drapion"
+    },
+    {
+      "name": "Chien-Pao",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Strafe",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 20,
+          "effects": [
+            "switch_self"
+          ],
+          "desc": "You may switch this Pokémon with 1 of your Benched Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Rising Blade",
+          "cost": {
+            "darkness": 2,
+            "colorless": 1
+          },
+          "damage": 80,
+          "effects": [
+            "dmg_plus:80:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 80 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "54"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1063,
+      "name_key": "chienpao"
     },
     {
       "name": "Rattata",

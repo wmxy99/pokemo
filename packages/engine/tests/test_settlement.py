@@ -176,10 +176,68 @@ class TestSpecialConditions(unittest.TestCase):
 
     def test_paralyze_blocks_attack(self):
         a = Arena(); addE(a.b.players[0].active, 1)
-        a.b.players[0].active.status.add("paralyzed")
+        # ⚠ 必须用**标准拼写** `paralyze`（= rules.STATUSES / 招式 tag 名）。
+        #   历史版本这里写的是 `"paralyzed"`，与生产代码里的错误拼写互相印证，
+        #   于是「麻痹不生效」这个真 bug 被测试固化了（2026-10-26 修）。
+        a.b.players[0].active.status.add("paralyze")
         res = a.attack()
         self.assertFalse(res["ok"])
         self.assertIn("禁止攻击", res["error"])
+
+    def test_paralyze_from_attack_tag_blocks_and_recovers(self):
+        """端到端回归：招式带 `paralyze` tag → 真实写入状态 → 阻止攻击 → 回合结束恢复
+
+        这条用例走的是**生产路径**（tag → `_apply_attack_effects` → status 集合），
+        而不是手写 status。历史 bug 有两层：
+          ① 生产路径写入 `paralyze`、判定读 `paralyzed` → 拼写不一致，判定永不命中；
+          ② 恢复被放在**回合开始**的检查阶段 → 轮到被麻痹方时立刻被清掉，
+             状态存在时间恒为 0 个行动窗口。
+        修法：拼写统一 + 恢复移到**回合结束**（`status_checkup(phase="end")`）。
+        """
+        a = Arena()
+        hot = a.place(0, PARALYZER)           # Fang: effects=("paralyze",)
+        a.place(1, BENCH1, active=False)      # 让「撤退」先过「有无后备」这一关
+        addE(hot, 1)
+        a.b.rng.random = lambda: 0.9
+        res = a.attack()
+        self.assertTrue(res["ok"], res)
+        target = a.b.players[1].active
+        self.assertIn("paralyze", target.status)
+        self.assertEqual(a.b.current, 1, "攻击后应轮到对手")
+
+        # 对手回合：不能攻击、不能撤退（麻痹真正生效）
+        self.assertFalse(any(x["verb"] == "attack" for x in a.b.legal_actions(1)))
+        nxt = a.b.step({"verb": "retreat", "bench": 0})
+        self.assertFalse(nxt["ok"])
+        self.assertIn("麻痹", nxt.get("error", ""))
+        self.assertIn("paralyze", target.status, "回合进行中不应提前恢复")
+
+        # 对手回合结束时恢复
+        a.b._end_turn()
+        self.assertNotIn("paralyze", target.status)
+
+    def test_paralyze_checkup_phase_split(self):
+        """`status_checkup` 的 phase 契约：start 不碰麻痹，end 只恢复麻痹
+
+        直接锁死「恢复时机」这条语义 —— 否则把 phase 写反（又回到回合开始恢复）
+        时，上面那条端到端用例仍可能因为时序巧合而通过。
+        """
+        fp = make_pokemon(P("PhaseT", hp=100, ptype="grass"))
+        fp.status.add("paralyze")
+        # 回合开始：不清麻痹、也不结算毒/烧（未中毒）
+        self.assertEqual(status_checkup(fp, random.Random(1), phase="start"), [])
+        self.assertIn("paralyze", fp.status)
+        # 回合结束：恢复麻痹，且不结算毒/烧伤害
+        fp.status.add("poison")
+        evs = status_checkup(fp, random.Random(1), phase="end")
+        self.assertEqual([e["type"] for e in evs], ["paralyze_recover"])
+        self.assertEqual(fp.damage, 0, "phase=end 不得结算毒伤")
+        self.assertIn("poison", fp.status)
+        # 兼容历史拼写
+        fp.status = {"paralyzed"}
+        evs = status_checkup(fp, random.Random(1), phase="end")
+        self.assertEqual([e["type"] for e in evs], ["paralyze_recover"])
+        self.assertEqual(fp.status, set())
 
     def test_confuse_tails_self_damage(self):
         a = Arena()

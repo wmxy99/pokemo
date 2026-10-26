@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），不是待办列表。
 > 凡列于此的卡面机制，本引擎**不实现**（或明确留待后续批次）；对应卡牌会被如实标记为 `engine_ready=false` / `engine_status=approximated`，**绝不静默降级或假装支持**。
 
-- 生成时间：2026-09-22 21:45:10
+- 生成时间：2026-10-26 17:16:57
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **627** 条 · 已映射 tag 925 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：508 张**
-- 解析层面「无未建模动作」卡：569 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **599** 条 · 已映射 tag 947 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：523 张**
+- 解析层面「无未建模动作」卡：592 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -50,7 +50,7 @@
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
 | B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
 | B5 | unclassified | `rule` | 303 | 287 | 静态/未建模（英文） |
-| B5 | unclassified | `rule` | 78 | 78 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | unclassified | `rule` | 51 | 51 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | unclassified | `rule` | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | unclassified | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | B5 | unclassified | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
@@ -214,7 +214,7 @@
 - `Neo Upper Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy b
 - `Mist Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  Prevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this 
 
-**B5 · unclassified**（78 条）
+**B5 · unclassified**（51 条）
 
 - `Team Rocket's Kangaskhan ex`：If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage.
 - `Chi-Yu`：If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.

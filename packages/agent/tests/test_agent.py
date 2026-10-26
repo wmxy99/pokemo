@@ -281,11 +281,21 @@ class TestSystemPromptInjection(unittest.TestCase):
         且词汇表前后的正文均逐字节一致。
         → 此类「引擎加能力 → 提示词同步」的增长必须允许，否则就会出现
           「引擎支持、提示词不提」的错配。**提示词正文再加内容仍须云端实测净收益。**
+
+        ── 2026-10-26 上调至 8600（**仍是引擎能力驱动，正文逐字节未改**）──
+        第四批条件（`opp_active_is_ex` / `opp_active_is_evolution` /
+        `opp_active_has_damage` / `own_active_has_damage`）进入 `_CONDITIONS`，
+        经 `dmg_vocab()` 自动注入。实测：**8514** 字符（上一版 8429），
+        差额 85 = 4 个条件名（80 字符）+ 4 个分隔符（4）+ 1 —— 与「正文未改、
+        仅词汇表变长」完全对得上（去掉 4 个名字后回落到 8419，与 8429 的差异
+        来自同批 `condition_params` 不计入该槽位）。
+        **提示词正文（模板）本轮未改动一个字节**；K2 云端准确率基线不受影响，
+        故无需重跑云端跑分即可接受该增长。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 8500,
-            f"提示词已 {len(sp)} 字符，超过 8500 预算；"
+            len(sp), 8600,
+            f"提示词已 {len(sp)} 字符，超过 8600 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 

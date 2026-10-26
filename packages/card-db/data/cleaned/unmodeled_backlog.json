@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-09-22 21:45:11",
+ "generated_at": "2026-10-26 17:14:25",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 925,
-  "unsupported": 627,
-  "cards_with_unsupported": 550,
-  "cards_fully_mapped": 569,
-  "cards_with_supported_tag": 765,
-  "cards_engine_ready": 508,
+  "engine_tags": 947,
+  "unsupported": 599,
+  "cards_with_unsupported": 527,
+  "cards_fully_mapped": 592,
+  "cards_with_supported_tag": 784,
+  "cards_engine_ready": 523,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,7 +86,7 @@
    "groups": 2,
    "entries": 9,
    "cards": 9,
-   "share": 0.0144
+   "share": 0.015
   },
   {
    "id": "B3",
@@ -94,10 +94,10 @@
    "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
-   "groups": 31,
-   "entries": 103,
-   "cards": 103,
-   "share": 0.1643
+   "groups": 30,
+   "entries": 102,
+   "cards": 102,
+   "share": 0.1703
   },
   {
    "id": "B4",
@@ -108,7 +108,7 @@
    "groups": 29,
    "entries": 76,
    "cards": 76,
-   "share": 0.1212
+   "share": 0.1269
   },
   {
    "id": "B5",
@@ -117,9 +117,9 @@
    "fix": "永久登记在差异透明清单（C5），不做实现",
    "priority": 5,
    "groups": 27,
-   "entries": 439,
-   "cards": 423,
-   "share": 0.7002
+   "entries": 412,
+   "cards": 396,
+   "share": 0.6878
   }
  ],
  "items": [
@@ -655,22 +655,6 @@
      "card": "Sinistcha",
      "name_zh": "",
      "text": "Put 4 damage counters on your opponent’s Pokémon in any way you like."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "discard_energy_self",
-   "desc": "弃自身能量（Discard a {X} Energy from this Pokémon）",
-   "action_type": "rule",
-   "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
-   "entries": 1,
-   "cards": 1,
-   "samples": [
-    {
-     "card": "Hearthflame Mask Ogerpon ex",
-     "name_zh": "",
-     "text": "If your opponent’s Active Pokémon is an Evolution Pokémon, this attack does 140 more damage, and discard all Energy from this Pokémon."
     }
    ]
   },
@@ -1467,8 +1451,8 @@
    "desc": "未分类（需人工判定）",
    "action_type": "rule",
    "reason": "条件伤害缩放：条件未识别（引擎无该条件）",
-   "entries": 78,
-   "cards": 78,
+   "entries": 51,
+   "cards": 51,
    "samples": [
     {
      "card": "Team Rocket's Kangaskhan ex",
@@ -1486,14 +1470,14 @@
      "text": "If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage."
     },
     {
-     "card": "Bronzor",
+     "card": "Volbeat",
      "name_zh": "",
-     "text": "If your opponent’s Active Pokémon is a {P} Pokémon, this attack does 30 more damage."
+     "text": "If Illumise is on your Bench, this attack does 60 more damage."
     },
     {
-     "card": "Slugma",
+     "card": "Revavroom ex",
      "name_zh": "",
-     "text": "If your opponent’s Active Pokémon is Burned, this attack does 40 more damage."
+     "text": "If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 120 more damage."
     }
    ]
   },

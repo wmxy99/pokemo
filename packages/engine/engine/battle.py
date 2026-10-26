@@ -29,6 +29,14 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 _DAMAGE_MOD_PREFIXES = ("dmg_plus:", "dmg_zero", "ignore_weakness",
                         "ignore_resistance")
 
+# 禁止攻击 / 撤退的状态 —— **取值必须与 `rules.STATUSES` 和招式 tag 名一致**。
+# 2026-10-26 修：此前这里写的是 `"paralyzed"`，而招式 tag 落地的是 `"paralyze"`，
+# 导致**麻痹完全不生效**（既不阻止攻击、也永不自动恢复），且单元测试手写
+# `status.add("paralyzed")` 反而把错误拼写固化了 —— 真实对局里没有任何一条
+# 路径会写入 `"paralyzed"`。现统一到 `"paralyze"`，并在 `rules.checkup` 里
+# 兼容旧拼写（历史回放/外部构造的状态仍能被清除）。
+_NO_ATTACK_STATUS = frozenset({"sleep", "paralyze"})
+
 
 class Battle:
     """对战裁判（自管理字段；seed 驱动的确定性）"""
@@ -222,6 +230,12 @@ class Battle:
     def _end_turn(self) -> None:
         if self.finished:
             return
+        # 回合结束检查：麻痹只在本回合结束才恢复（见 rules.status_checkup 的 phase 说明）。
+        # 放在切换 current **之前**，作用于「刚结束回合的这一方」。
+        cur = self.players[self.current]
+        if cur.active is not None and not cur.active.is_ko:
+            for ev in status_checkup(cur.active, self.rng, phase="end"):
+                self._log("checkup", {**ev, "player": self.current})
         self._log("turn_end", {"player": self.current})
         self.current = 1 - self.current
         self._begin_turn()
@@ -250,7 +264,7 @@ class Battle:
                 acts.append({"verb": "attach", "target": bi + 1})
         # 招式 / 撤退（总能量计无色门槛）
         if p.active is not None:
-            blocked = {"sleep", "paralyzed"} & p.active.status
+            blocked = _NO_ATTACK_STATUS & p.active.status
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
                     if p.active.can_pay(atk.cost):
@@ -560,7 +574,7 @@ class Battle:
     def _do_retreat(self, p: PlayerState, action: dict) -> dict:
         if p.active is None or not p.bench:
             raise ValueError("无法撤退")
-        if {"sleep", "paralyzed"} & p.active.status:
+        if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中无法撤退")
         cost = p.active.pdef.retreat
         if not p.active.remove_any(cost):
@@ -979,7 +993,7 @@ class Battle:
             raise ValueError("无 active")
         if self.cfg.first_turn_no_attack and self.turn_counts[self.current] == 1:
             raise ValueError("先手第一回合不可攻击")
-        if {"sleep", "paralyzed"} & p.active.status:
+        if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
         ai = _attack_index_from_action(p.active.pdef.attacks, action)
         if ai is None:
@@ -2136,6 +2150,27 @@ _CONDITIONS = {
     "own_prizes_full": lambda b, p, o: p.prizes_left == b.cfg.prizes,
     "opp_has_bench": lambda b, p, o: len(o.bench) > 0,
     "own_has_bench": lambda b, p, o: len(p.bench) > 0,
+    # ---- 2026-10-26 第四批：条件伤害缩放的高频条件（全部为「当下局面可直接读出」，
+    #      不依赖本回合历史，因此无需新增 turn 级状态位）----
+    # 「if your opponent's Active Pokémon already has any damage counters on it」
+    "opp_active_has_damage": lambda b, p, o: o.active is not None and o.active.damage > 0,
+    # 「if this Pokémon has any damage counters on it」
+    "own_active_has_damage": lambda b, p, o: p.active is not None and p.active.damage > 0,
+    # 「if your opponent's Active Pokémon is a Pokémon {ex}」
+    "opp_active_is_ex": lambda b, p, o: o.active is not None and bool(o.active.pdef.is_ex),
+    # 「if your opponent's Active Pokémon is an Evolution Pokémon」
+    "opp_active_is_evolution": lambda b, p, o: o.active is not None and o.active.pdef.stage > 0,
+}
+
+# 带参数的**条件**（与 `_CONDITIONS` 同样进白名单，只是需要参数）。
+# ⚠ 与「计数源」区分：这里回答的是**是/否**，不是「几个」。
+# 拼写必须与 `rules.STATUSES`（poison/burn/sleep/paralyze/confuse）以及
+# `engine.cards.TYPES`（grass/fire/...）一致 —— 参数值不做任何兜底猜测。
+_CONDITION_PARAMS = {
+    "opp_active_status": "special condition name ∈ rules.STATUSES",
+    "opp_active_type": "energy/type name ∈ engine.cards.TYPES",
+    "opp_bench_at_least": "整数 n ≥ 0",
+    "own_all_energy_at_least": "整数 n ≥ 0",
 }
 
 
@@ -2154,6 +2189,9 @@ def dmg_vocab() -> dict:
     return {
         "counters": sorted(_COUNTERS),
         "conditions": sorted(_CONDITIONS),
+        # 带参条件的**形态说明**（提示词/文档用；不进无参 `conditions` 列表，
+        # 避免模型把 `opp_active_type:` 这种半截字符串当无参条件照抄）
+        "condition_params": [f"{k}:<{v}>" for k, v in sorted(_CONDITION_PARAMS.items())],
         "energy_zones": sorted(_ENERGY_ZONES),
         "passive_tags": ["bench_immune"],       # 见 _is_bench_immune 的 tag 白名单
     }
@@ -2204,10 +2242,37 @@ def _eval_condition(battle, cond: str) -> bool:
         except ValueError as e:                              # noqa: F841
             raise ValueError(f"条件参数非整数：{cond}") from None
         return _eval_counter(battle, "own_active_energy") >= n
+    # ---- 第四批带参条件（2026-10-26）----
+    name, _, arg = cond.partition(":")
+    if name == "opp_active_status":
+        # 参数用**标准状态名**；非标准名直接抛错（拼错就等于静默不生效）
+        from .rules import STATUSES as _STATUSES
+        if arg not in _STATUSES:
+            raise ValueError(f"{cond}：未知特殊状态 {arg!r}（可用：{'/'.join(_STATUSES)}）")
+        st = set(o.active.status) if o.active is not None else set()
+        # 兼容历史拼写：`paralyzed` 与标准 `paralyze` 视为同一状态
+        if arg == "paralyze":
+            return bool(st & {"paralyze", "paralyzed"})
+        return arg in st
+    if name == "opp_active_type":
+        if o.active is None:
+            return False
+        if not arg:
+            raise ValueError(f"{cond}：缺少属性参数")
+        return str(o.active.pdef.ptype).lower() == arg.lower()
+    if name in ("opp_bench_at_least", "own_all_energy_at_least"):
+        try:
+            n = int(arg)
+        except (TypeError, ValueError):
+            raise ValueError(f"条件参数非整数：{cond}") from None
+        if name == "opp_bench_at_least":
+            return len(o.bench) >= n
+        return _eval_counter(battle, "own_all_energy") >= n
     raise ValueError(
         f"未知条件 {cond}（可用：{'、'.join(sorted(_CONDITIONS))}；"
         f"带参形式：own_active_energy_type:<color> / "
-        f"own_active_energy_at_least:<n>）")
+        f"own_active_energy_at_least:<n> / "
+        f"{' / '.join(_CONDITION_PARAMS)}）")
 
 
 def _is_bench_immune(fp: Optional[FieldPokemon]) -> bool:

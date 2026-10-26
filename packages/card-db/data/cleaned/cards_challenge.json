@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-09-22 21:43:46"
+  "reparsed_at": "2026-10-26 17:14:21"
  },
  "stats": {
   "rows_in": 2022,
@@ -86,7 +86,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 508,
+  "engine_ready": 523,
   "engine_match_alias": 7,
   "with_zh": 36,
   "with_image": 0,
@@ -111,22 +111,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 8902,
-   "engine_unmatched": 18972,
-   "engine_approximated": 8110
+   "zh_backfill": 9933,
+   "engine_unmatched": 20475,
+   "engine_approximated": 9069
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 0,
-   "engine_tags": 925,
-   "unsupported": 627,
+   "engine_tags": 947,
+   "unsupported": 599,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 472
+  "engine_approximated": 487
  },
  "cards": [
   {
@@ -6482,11 +6482,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 30,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_type:psychic"
           }
          }
         ],
@@ -6494,13 +6495,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:30:if:opp_active_type:psychic"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -6511,11 +6509,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 30,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_type:psychic"
         }
        }
       ],
@@ -6523,13 +6522,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:30:if:opp_active_type:psychic"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -9313,12 +9309,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -9332,19 +9329,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 40,
           "target": "active_opponent",
           "extra": {
-           "status": "burn"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "active_opponent",
-          "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_status:burn"
           }
          }
         ],
@@ -9353,14 +9343,9 @@
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "dmg_plus:40:if:opp_active_status:burn"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -9371,19 +9356,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 40,
         "target": "active_opponent",
         "extra": {
-         "status": "burn"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "active_opponent",
-        "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_status:burn"
         }
        }
       ],
@@ -9392,14 +9370,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn"
+     "dmg_plus:40:if:opp_active_status:burn"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -12697,12 +12670,13 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -12760,11 +12734,12 @@
           }
          },
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 140,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_evolution"
           }
          }
         ],
@@ -12773,14 +12748,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:all"
+       "discard_energy:all",
+       "dmg_plus:140:if:opp_active_is_evolution"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "card",
@@ -12852,11 +12823,12 @@
         }
        },
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 140,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_evolution"
         }
        }
       ],
@@ -12884,14 +12856,10 @@
     "engine_tags": [
      "dmg_plus:20:per:own_active_counters",
      "discard_energy:all",
+     "dmg_plus:140:if:opp_active_is_evolution",
      "passive:bench_immune"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -18523,14 +18491,6 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
-          "target": "self",
-          "extra": {
-           "status": "poison"
-          }
-         },
-         {
           "type": "rule",
           "amount": null,
           "target": "active_opponent",
@@ -18543,9 +18503,7 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "poison"
-      ],
+      "engine_tags": [],
       "unsupported": [
        {
         "type": "rule",
@@ -18587,14 +18545,6 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
-        "target": "self",
-        "extra": {
-         "status": "poison"
-        }
-       },
-       {
         "type": "rule",
         "amount": null,
         "target": "active_opponent",
@@ -18609,7 +18559,6 @@
     "errors": [],
     "engine_tags": [
      "search_energy:2",
-     "poison",
      "poison"
     ],
     "unsupported": [
@@ -21317,11 +21266,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 80,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -21329,13 +21279,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:80:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      },
      {
       "target": "ability",
@@ -21377,11 +21324,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 80,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -21406,12 +21354,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "dmg_plus:80:if:opp_active_has_damage"
+    ],
     "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     },
      {
       "type": "rule",
       "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
@@ -26208,12 +26154,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -26227,11 +26174,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 80,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_bench_at_least:3"
           }
          }
         ],
@@ -26239,13 +26187,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:80:if:opp_bench_at_least:3"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -26256,11 +26201,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 80,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_bench_at_least:3"
         }
        }
       ],
@@ -26268,13 +26214,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:80:if:opp_bench_at_least:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -28473,12 +28416,13 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -42488,12 +42432,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -42507,11 +42452,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 70,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "own_all_energy_at_least:3"
           }
          }
         ],
@@ -42519,13 +42465,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:70:if:own_all_energy_at_least:3"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -42536,11 +42479,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 70,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "own_all_energy_at_least:3"
         }
        }
       ],
@@ -42548,13 +42492,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:70:if:own_all_energy_at_least:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -42631,11 +42572,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -42643,13 +42585,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:100:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -42691,11 +42630,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -42720,12 +42660,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "dmg_plus:100:if:opp_active_has_damage"
+    ],
     "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     },
      {
       "type": "rule",
       "reason": "静态/未建模（英文）"
@@ -44644,12 +44582,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -44663,11 +44602,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -44675,13 +44615,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:100:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -44692,11 +44629,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -44704,13 +44642,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:100:if:opp_active_is_ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -51860,12 +51795,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -51879,11 +51815,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 50,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_evolution"
           }
          }
         ],
@@ -51891,13 +51828,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:50:if:opp_active_is_evolution"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -51908,11 +51842,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 50,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_evolution"
         }
        }
       ],
@@ -51920,13 +51855,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:50:if:opp_active_is_evolution"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -53578,12 +53510,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -53597,11 +53530,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_type:darkness"
           }
          }
         ],
@@ -53609,13 +53543,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:100:if:opp_active_type:darkness"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -53626,11 +53557,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_type:darkness"
         }
        }
       ],
@@ -53638,13 +53570,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:100:if:opp_active_type:darkness"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -59570,12 +59499,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -59589,11 +59519,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 60,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -59601,13 +59532,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:60:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -59618,11 +59546,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 60,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -59630,13 +59559,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:60:if:opp_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -69954,19 +69880,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 60,
           "target": "active_opponent",
           "extra": {
-           "status": "poison"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "active_opponent",
-          "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_status:poison"
           }
          }
         ],
@@ -69975,14 +69894,9 @@
       ],
       "errors": [],
       "engine_tags": [
-       "poison"
+       "dmg_plus:60:if:opp_active_status:poison"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -69993,19 +69907,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 60,
         "target": "active_opponent",
         "extra": {
-         "status": "poison"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "active_opponent",
-        "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_status:poison"
         }
        }
       ],
@@ -70014,14 +69921,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "poison"
+     "dmg_plus:60:if:opp_active_status:poison"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -70089,19 +69991,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 90,
           "target": "active_opponent",
           "extra": {
-           "status": "poison"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "active_opponent",
-          "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_status:poison"
           }
          }
         ],
@@ -70110,14 +70005,9 @@
       ],
       "errors": [],
       "engine_tags": [
-       "poison"
+       "dmg_plus:90:if:opp_active_status:poison"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "ability",
@@ -70156,19 +70046,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 90,
         "target": "active_opponent",
         "extra": {
-         "status": "poison"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "active_opponent",
-        "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_status:poison"
         }
        }
       ],
@@ -70194,15 +70077,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "poison",
+     "dmg_plus:90:if:opp_active_status:poison",
      "poison"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -71060,11 +70938,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 60,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -71072,13 +70951,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:60:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -71089,11 +70965,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 60,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -71101,13 +70978,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:60:if:opp_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -71748,11 +71622,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 80,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_evolution"
           }
          }
         ],
@@ -71760,13 +71635,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:80:if:opp_active_is_evolution"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -71805,11 +71677,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 80,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_evolution"
         }
        }
       ],
@@ -71831,12 +71704,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "dmg_plus:80:if:opp_active_is_evolution"
+    ],
     "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     },
      {
       "type": "knockout",
       "reason": "击倒效果需引擎新机制（未建模动作清单 B4）"
@@ -81250,11 +81121,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -81262,13 +81134,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:100:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      },
      {
       "target": "ability",
@@ -81310,11 +81179,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -81339,12 +81209,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "dmg_plus:100:if:opp_active_is_ex"
+    ],
     "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     },
      {
       "type": "rule",
       "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
@@ -82540,12 +82408,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -82559,11 +82428,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 40,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -82571,13 +82441,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:40:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -82588,11 +82455,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 40,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -82600,13 +82468,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:40:if:opp_active_is_ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -82650,12 +82515,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -82669,11 +82535,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 70,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -82681,13 +82548,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:70:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -82698,11 +82562,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 70,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -82710,13 +82575,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:70:if:opp_active_is_ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -84775,19 +84637,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 160,
           "target": "active_opponent",
           "extra": {
-           "status": "burn"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "active_opponent",
-          "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_status:burn"
           }
          }
         ],
@@ -84796,14 +84651,9 @@
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "dmg_plus:160:if:opp_active_status:burn"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -84842,19 +84692,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 160,
         "target": "active_opponent",
         "extra": {
-         "status": "burn"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "active_opponent",
-        "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_status:burn"
         }
        }
       ],
@@ -84880,15 +84723,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn",
+     "dmg_plus:160:if:opp_active_status:burn",
      "discard_energy:2"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -96584,12 +96422,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -96603,11 +96442,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 90,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -96615,13 +96455,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:90:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -96632,11 +96469,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 90,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -96644,13 +96482,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:90:if:opp_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -99743,12 +99578,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -99762,11 +99598,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 90,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -99774,13 +99611,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:90:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -99791,11 +99625,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 90,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -99803,13 +99638,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:90:if:opp_active_is_ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -103967,11 +103799,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 150,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "own_active_has_damage"
           }
          }
         ],
@@ -103979,13 +103812,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:150:if:own_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -104010,11 +103840,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 150,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "own_active_has_damage"
         }
        }
       ],
@@ -104023,14 +103854,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "draw:2"
+     "draw:2",
+     "dmg_plus:150:if:own_active_has_damage"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -115822,11 +115649,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 90,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -115834,13 +115662,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:90:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      },
      {
       "target": "ability",
@@ -115882,11 +115707,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 90,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -115915,14 +115741,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "dmg_plus:90:if:opp_active_is_ex",
      "switch_self"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -117215,11 +117037,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 200,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -117227,13 +117050,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:200:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -117244,11 +117064,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 200,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -117256,13 +117077,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:200:if:opp_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -119426,11 +119244,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 120,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -119438,13 +119257,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:120:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -119472,11 +119288,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 120,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -119485,14 +119302,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "passive:bench_immune"
+     "passive:bench_immune",
+     "dmg_plus:120:if:opp_active_is_ex"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -121450,11 +121263,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "own_active_has_damage"
           }
          }
         ],
@@ -121462,13 +121276,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:100:if:own_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -121496,11 +121307,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "own_active_has_damage"
         }
        }
       ],
@@ -121508,15 +121320,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "dmg_plus:100:if:own_active_has_damage"
+    ],
     "unsupported": [
      {
       "type": "rule",
       "reason": "静态/未建模（英文）"
-     },
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
      }
     ],
     "generated_by": "rule",
@@ -125177,14 +124987,6 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
-          "amount": null,
-          "target": "self",
-          "extra": {
-           "status": "burn"
-          }
-         },
-         {
           "type": "rule",
           "amount": null,
           "target": "active_opponent",
@@ -125197,9 +124999,7 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "burn"
-      ],
+      "engine_tags": [],
       "unsupported": [
        {
         "type": "rule",
@@ -125254,14 +125054,6 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
-        "amount": null,
-        "target": "self",
-        "extra": {
-         "status": "burn"
-        }
-       },
-       {
         "type": "rule",
         "amount": null,
         "target": "active_opponent",
@@ -125301,7 +125093,6 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn",
      "snipe:opp_bench:50:1",
      "discard_energy:2"
     ],
@@ -125521,12 +125312,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -125540,11 +125332,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 80,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_has_damage"
           }
          }
         ],
@@ -125552,13 +125345,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:80:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -125569,11 +125359,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 80,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_has_damage"
         }
        }
       ],
@@ -125581,13 +125372,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
+    "engine_tags": [
+     "dmg_plus:80:if:opp_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -132611,12 +132399,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -132655,11 +132444,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 80,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+           "mode": "plus_if",
+           "cond": "opp_active_is_ex"
           }
          }
         ],
@@ -132667,13 +132457,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:80:if:opp_active_is_ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -132698,11 +132485,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 80,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：条件未识别（引擎无该条件）"
+         "mode": "plus_if",
+         "cond": "opp_active_is_ex"
         }
        }
       ],
@@ -132711,14 +132499,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "switch_self"
+     "switch_self",
+     "dmg_plus:80:if:opp_active_is_ex"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：条件未识别（引擎无该条件）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

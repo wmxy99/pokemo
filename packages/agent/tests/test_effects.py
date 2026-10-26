@@ -391,6 +391,89 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("dmg_plus:30:if:opp_has_bench", r["tags"])
         self.assertEqual(r["unsupported"], [])
 
+    # ---- 第四批（2026-10-26）：高频条件 ----
+    def test_fourth_batch_conditions(self):
+        """第四批条件：能由当下局面直读的，映射到引擎条件"""
+        cases = [
+            ("If your opponent\u2019s Active Pok\u00e9mon is a Pok\u00e9mon {ex}, "
+             "this attack does 30 more damage.", "dmg_plus:30:if:opp_active_is_ex"),
+            ("If your opponent\u2019s Active Pok\u00e9mon is an Evolution "
+             "Pok\u00e9mon, this attack does 60 more damage.",
+             "dmg_plus:60:if:opp_active_is_evolution"),
+            ("If your opponent\u2019s Active Pok\u00e9mon already has any damage "
+             "counters on it, this attack does 120 more damage.",
+             "dmg_plus:120:if:opp_active_has_damage"),
+            ("If this Pok\u00e9mon has any damage counters on it, this attack "
+             "does 40 more damage.", "dmg_plus:40:if:own_active_has_damage"),
+            ("If your opponent\u2019s Active Pok\u00e9mon is Burned, this attack "
+             "does 90 more damage.", "dmg_plus:90:if:opp_active_status:burn"),
+            ("If your opponent\u2019s Active Pok\u00e9mon is a {P} Pok\u00e9mon, "
+             "this attack does 50 more damage.",
+             "dmg_plus:50:if:opp_active_type:psychic"),
+            ("If your opponent has 3 or more Benched Pok\u00e9mon, this attack "
+             "does 70 more damage.", "dmg_plus:70:if:opp_bench_at_least:3"),
+            ("If you have 3 or more Energy in play, this attack does 90 more "
+             "damage.", "dmg_plus:90:if:own_all_energy_at_least:3"),
+        ]
+        for text, tag in cases:
+            with self.subTest(tag=tag):
+                r = self._tags(text)
+                self.assertIn(tag, r["tags"])
+                self.assertEqual(r["unsupported"], [])
+
+    def test_fourth_batch_keeps_refusing_unrepresentable(self):
+        """⚠ 负向守卫：引擎表达不了的条件**必须继续拒绝**（宁可未建模，不可近似）"""
+        texts = [
+            # 场地：引擎无场地机制
+            "If a Stadium is in play, this attack does 30 more damage.",
+            # 「额外能量（费用之外）」：用总数会提前触发
+            "If this Pok\u00e9mon has at least 2 extra Energy attached (in "
+            "addition to this attack\u2019s cost), this attack does 90 more damage.",
+            # {ex} 或 {V}：并集，引擎不区分 V
+            "If your opponent\u2019s Active Pok\u00e9mon is a Pok\u00e9mon {ex} or "
+            "Pok\u00e9mon {V}, this attack does 30 more damage.",
+            # 道具附着：引擎无道具挂载模型
+            "If this Pok\u00e9mon has a Pok\u00e9mon Tool attached, this attack "
+            "does 40 more damage.",
+            # 回合历史：本回合是否被治疗
+            "If this Pok\u00e9mon was healed during this turn, this attack does "
+            "50 more damage.",
+            # 回合历史：本回合是否从后备换入
+            "If this Pok\u00e9mon moved from your Bench to the Active Spot this "
+            "turn, this attack does 60 more damage.",
+        ]
+        for text in texts:
+            with self.subTest(text=text[:40]):
+                r = self._tags(text)
+                self.assertEqual(r["tags"], [], "条件不可表达却产出了 tag（静默加强）")
+                self.assertTrue(r["unsupported"])
+
+    def test_conditional_status_is_not_applied_as_effect(self):
+        """⚠ 回归：条件句里的状态词**不得**被当成效果施加
+
+        真实反例（本批同源缺陷）：「If your opponent's Active Pokémon is Burned,
+        this attack does 90 more damage.」——早期只做 `word in text`，
+        于是既产出条件加伤、又额外给对手挂上灼伤（条件当效果）。
+        """
+        r = self._tags("If your opponent\u2019s Active Pok\u00e9mon is Burned, "
+                       "this attack does 90 more damage.")
+        self.assertIn("dmg_plus:90:if:opp_active_status:burn", r["tags"])
+        self.assertNotIn("burn", r["tags"], "条件词被当成效果施加了")
+
+    def test_real_status_effect_still_applies(self):
+        """对照：非条件句的「is now Burned」仍然要产出状态效果（不能修过头）"""
+        r = self._tags("Your opponent\u2019s Active Pok\u00e9mon is now Burned.")
+        self.assertIn("burn", r["tags"])
+
+    def test_two_conditions_do_not_cross_contaminate(self):
+        """同卡两个 if 从句时，条件只取「含 more damage 的那一句」"""
+        r = self._tags("If your opponent\u2019s Active Pok\u00e9mon is a "
+                       "Pok\u00e9mon {ex}, this attack does 30 more damage. "
+                       "If this Pok\u00e9mon has any damage counters on it, "
+                       "this attack does 40 more damage.")
+        self.assertIn("dmg_plus:30:if:opp_active_is_ex", r["tags"])
+        self.assertIn("dmg_plus:40:if:own_active_has_damage", r["tags"])
+
     def test_coin_heads_shield_not_unconditional(self):
         """护盾写在抛币分支内 → 只能有 coin:heads:…，不得再产出无条件 shield
 

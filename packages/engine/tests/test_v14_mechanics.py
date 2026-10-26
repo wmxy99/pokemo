@@ -907,5 +907,106 @@ class TestParameterizedConditions(unittest.TestCase):
         self.assertIn("未知条件", str(r.get("error")))
 
 
+class TestFourthBatchConditions(unittest.TestCase):
+    """第四批条件（2026-10-26）：全部为「当下局面可直读」的条件
+
+    覆盖 `opp_active_is_ex` / `opp_active_is_evolution` / `opp_active_has_damage` /
+    `own_active_has_damage` / `opp_active_status:<s>` / `opp_active_type:<c>` /
+    `opp_bench_at_least:<n>` / `own_all_energy_at_least:<n>`。
+    每条都同时验「命中」与「不命中」，避免只测单边导致条件恒真/恒假。
+    """
+
+    def _run(self, cond, setup):
+        b = _arena()
+        _equip(b, (f"dmg_plus:50:if:{cond}",), owner=0, damage=0)
+        setup(b)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        return b.players[1].active.damage
+
+    # --- 对手战斗位是 ex / 进化 ---
+    def test_opp_active_is_ex(self):
+        self.assertEqual(self._run("opp_active_is_ex", lambda b: None), 0)
+        got = self._run("opp_active_is_ex", lambda b: setattr(
+            b.players[1], "active",
+            make_pokemon(PokemonDef("ExP", hp=200, ptype="colorless", is_ex=True))))
+        self.assertEqual(got, 50)
+
+    def test_opp_active_is_evolution(self):
+        self.assertEqual(self._run("opp_active_is_evolution", lambda b: None), 0)
+        got = self._run("opp_active_is_evolution", lambda b: setattr(
+            b.players[1], "active",
+            make_pokemon(PokemonDef("EvoP", hp=200, ptype="colorless", stage=1))))
+        self.assertEqual(got, 50)
+
+    # --- 伤害指示物（双方各一侧）---
+    def test_opp_active_has_damage(self):
+        self.assertEqual(self._run("opp_active_has_damage", lambda b: None), 0)
+        got = self._run("opp_active_has_damage",
+                        lambda b: setattr(b.players[1].active, "damage", 30))
+        # 预置 30 + 条件加伤 50 = 80（攻击后对手回合开始的检查阶段不再叠加伤害）
+        self.assertEqual(got, 80)
+
+    def test_own_active_has_damage(self):
+        self.assertEqual(self._run("own_active_has_damage", lambda b: None), 0)
+        got = self._run("own_active_has_damage",
+                        lambda b: setattr(b.players[0].active, "damage", 20))
+        self.assertEqual(got, 50)
+
+    # --- 特殊状态（参数化）---
+    def test_opp_active_status_burn(self):
+        self.assertEqual(self._run("opp_active_status:burn", lambda b: None), 0)
+        got = self._run("opp_active_status:burn",
+                        lambda b: b.players[1].active.status.add("burn"))
+        # 条件加伤 50 + 对手回合开始时的灼伤结算 20 = 70（后者的存在本身即证明状态未被误改）
+        self.assertEqual(got, 70)
+        # 别的状态不算：中毒只留 10 点中毒结算，无 50 加伤
+        self.assertEqual(self._run("opp_active_status:burn",
+                                   lambda b: b.players[1].active.status.add("poison")), 10)
+
+    def test_opp_active_status_paralyze_alias(self):
+        """`paralyze` 条件对历史拼写 `paralyzed` 同样成立（兼容旧回放）"""
+        got = self._run("opp_active_status:paralyze",
+                        lambda b: b.players[1].active.status.add("paralyzed"))
+        self.assertEqual(got, 50)
+
+    def test_opp_active_status_param_validated(self):
+        """状态参数必须是标准名（拼错要抛错，不能静默 False）"""
+        b = _arena()
+        _equip(b, ("dmg_plus:50:if:opp_active_status:burnt",), owner=0, damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertFalse(r["ok"])
+        self.assertIn("未知特殊状态", str(r.get("error")))
+
+    # --- 属性（参数化）---
+    def test_opp_active_type(self):
+        got = self._run("opp_active_type:psychic", lambda b: setattr(
+            b.players[1], "active",
+            make_pokemon(PokemonDef("PsyP", hp=200, ptype="psychic"))))
+        self.assertEqual(got, 50)
+        self.assertEqual(self._run("opp_active_type:psychic", lambda b: None), 0)
+
+    # --- 计数下限（参数化）---
+    def test_opp_bench_at_least(self):
+        self.assertEqual(self._run("opp_bench_at_least:2", lambda b: _bench(b, 1, 1)), 0)
+        self.assertEqual(self._run("opp_bench_at_least:2", lambda b: _bench(b, 1, 2)), 50)
+
+    def test_own_all_energy_at_least(self):
+        def add(b, n):
+            for _ in range(n):
+                b.players[0].active.add_energy("colorless")
+        self.assertEqual(self._run("own_all_energy_at_least:3", lambda b: add(b, 2)), 0)
+        self.assertEqual(self._run("own_all_energy_at_least:3", lambda b: add(b, 3)), 50)
+
+    def test_conditions_listed_in_vocab(self):
+        """取值域必须把新增条件暴露给提示词层（避免文档/引擎漂移）"""
+        from engine.battle import dmg_vocab
+        v = dmg_vocab()
+        for c in ("opp_active_is_ex", "opp_active_is_evolution",
+                  "opp_active_has_damage", "own_active_has_damage"):
+            self.assertIn(c, v["conditions"])
+        self.assertTrue(any(x.startswith("opp_active_type:") for x in v["condition_params"]))
+
+
 if __name__ == "__main__":
     unittest.main()

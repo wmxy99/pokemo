@@ -67,17 +67,31 @@ def distribute_damage(bench_count: int, total: int, step: int = 10) -> list:
     return dmg
 
 
-def status_checkup(field: FieldPokemon, rng) -> dict:
-    """宝可梦检查阶段：结算中毒/烧伤伤害并处理睡眠/麻痹苏醒。
+def status_checkup(field: FieldPokemon, rng, phase: str = "start") -> list:
+    """宝可梦检查阶段：结算中毒/烧伤伤害并处理睡眠苏醒 / 麻痹恢复。
 
     返回事件描述 dict 列表（空表=无事件）。规则要点：
       - poison:   -10 HP（恒定，v1 简化）
       - burn:     -20 HP（恒定不移除，v1 简化）
       - sleep:    抛币，正面醒
-      - paralyzed: 自动恢复
+      - paralyze: **回合结束**才恢复（`phase="end"`）
+
+    ⚠ 为什么麻痹要按 phase 分开（2026-10-26 修）：
+      此前的实现把「麻痹恢复」放在**回合开始**的检查阶段，而麻痹是在**对手回合**
+      被打上的 → 轮到被麻痹方时，回合开始的检查阶段立刻把它清掉，于是被麻痹的
+      宝可梦**从未真正被阻止过**（状态存在时间恒为 0 个行动窗口）。
+      正确时序：麻痹持续整个「被麻痹方的下一回合」，在**该回合结束时**恢复。
+      因此 `phase="start"` 只做毒/烧/睡眠，`phase="end"` 只做麻痹恢复。
+
+    兼容性：`"paralyzed"` 是历史拼写（旧回放/外部构造可能写入），一并清除。
     """
     events = []
     if not field or field.is_ko:
+        return events
+    if phase == "end":
+        if field.status & {"paralyze", "paralyzed"}:
+            field.status -= {"paralyze", "paralyzed"}
+            events.append({"type": "paralyze_recover", "target": field.name})
         return events
     if "poison" in field.status:
         field.damage += 10
@@ -89,9 +103,6 @@ def status_checkup(field: FieldPokemon, rng) -> dict:
         if rng.random() < 0.5:
             field.status.discard("sleep")
             events.append({"type": "sleep_wake", "target": field.name})
-    if "paralyzed" in field.status:
-        field.status.discard("paralyzed")
-        events.append({"type": "paralyze_recover", "target": field.name})
     return events
 
 

@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 418,
+      "kept": 420,
       "by_Pokemon": 367,
-      "by_Trainer": 51,
+      "by_Trainer": 53,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 515,
+        "存在未建模项（整卡不收）": 512,
         "Energy 不可执行": 2,
         "Pokemon 不可执行": 111,
         "人工卡池已有（人工优先）": 26,
-        "Trainer 不可执行": 50
+        "Trainer 不可执行": 51
       }
     }
   },
@@ -17192,19 +17192,49 @@
       "source_card_id": 1152
     },
     {
-      "name": "Amulet of Hope",
+      "name": "Hero’s Cape",
       "name_zh": "",
       "supertype": "Trainer",
-      "kind": "item",
-      "tag": "search_any:3",
-      "desc": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck.",
+      "kind": "tool",
+      "tag": "tool:hp_plus:100",
+      "desc": "The Pokémon this card is attached to gets +100 HP.",
       "real": {
-        "set": "SSP",
+        "set": "TEF",
+        "number": "152"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1159
+    },
+    {
+      "name": "Cynthia's Power Weight",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:hp_plus:70",
+      "desc": "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
+      "real": {
+        "set": "DRI",
         "number": "162"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1169
+      "source_card_id": 1173
+    },
+    {
+      "name": "Air Balloon",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:retreat_less:2",
+      "desc": "The Retreat Cost of the Pokémon this card is attached to is {C}{C} less.",
+      "real": {
+        "set": "BLK",
+        "number": "79"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1174
     },
     {
       "name": "Perrin",

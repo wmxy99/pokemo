@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-26 17:28:57
+- 生成时间：2026-10-26 22:38:17
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **594** 条 · 已映射 tag 952 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：529 张**
-- 解析层面「无未建模动作」卡：597 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **591** 条 · 已映射 tag 955 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：531 张**
+- 解析层面「无未建模动作」卡：600 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -51,7 +51,7 @@
 | B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
 | B5 | S6 | `rule` | 219 | 208 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 39 | 39 | 条件伤害缩放：条件未识别（引擎无该条件） |
-| B5 | S2 | `rule` | 28 | 28 | 静态/未建模（英文） |
+| B5 | S2 | `rule` | 25 | 25 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 24 | 20 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 15 | 15 | 静态/未建模（英文） |
@@ -232,7 +232,7 @@
 - `Enamorus`：If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage.
 - `Volbeat`：If Illumise is on your Bench, this attack does 60 more damage.
 
-**B5 · S2**（28 条）
+**B5 · S2**（25 条）
 
 - `Genesect`：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
 - `Mow Rotom`：Before doing damage, discard all Pokémon Tools and Special Energy from your opponent’s Active Pokémon.

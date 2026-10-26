@@ -14,7 +14,7 @@ import random
 import re
 from typing import Optional
 from .cards import (PokeRef, EnergyRef, TrainerRef, FieldPokemon,
-                    make_pokemon)
+                    make_pokemon, _tool_value)
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield)
@@ -401,6 +401,14 @@ class Battle:
                 # 通用检索（检索 n 张指定类别入手）——牌库需有可检索对象
                 if _deck_has_kind(p, _search_kind_of(tag)):
                     out.append(dict(base))
+            elif tag.startswith("tool:"):
+                # S2 道具：列出**尚未附着道具**的己方位置（每只最多 1 张）
+                targets = []
+                if p.active is not None and not p.active.tool:
+                    targets.append(0)
+                targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
+                for tpos in targets:
+                    out.append(dict(base, target=tpos))
         return out
 
     # ---------- 自由文本指令（中文别名 → 合法动作） ----------
@@ -807,12 +815,17 @@ class Battle:
         elif tag.startswith(("search_pokemon:", "search_trainer:",
                              "search_any:")):
             placed = self._trainer_search_kind(p, tag)
+        elif tag.startswith("tool:"):
+            placed = self._trainer_attach_tool(p, c, tag,
+                                               int(action.get("target", 0)))
         else:
             raise ValueError(f"未知训练家 tag={tag}")
         # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
         # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
         p.hand = [x for x in p.hand if x is not c]
-        self._to_discard(p, c)
+        # S2 道具：**附着而非弃置**（它留在场上，随持有者被击倒才进弃牌堆）
+        if not tag.startswith("tool:"):
+            self._to_discard(p, c)
         if kind == "supporter":
             p.supporter_used = 1
         self._log("trainer", {"player": self.current, "tag": tag,
@@ -820,6 +833,29 @@ class Battle:
         return {"ok": True, "event": self.events[-1]}
 
     # --- E4 训练家行为 ---
+    def _trainer_attach_tool(self, p: PlayerState, card, tag: str,
+                             target: int) -> str:
+        """把道具附着到己方 1 只宝可梦（每只最多 1 张，S2）
+
+        目标位置码与 `attach.target` 一致：0 = 战斗位，i+1 = 后备 i。
+        """
+        if target == 0:
+            if p.active is None:
+                raise ValueError("无 active，无法附着道具")
+            fp = p.active
+        else:
+            bi = target - 1
+            if bi >= len(p.bench):
+                raise ValueError("道具目标越界")
+            fp = p.bench[bi]
+        if fp.tool:
+            raise ValueError(f"{fp.name} 已附着道具（每只最多 1 张）")
+        fp.tool = tag
+        fp.tool_name = getattr(card.tdef, "display", "") or card.tdef.name
+        self._log("attach_tool", {"player": self.current, "target": fp.name,
+                                  "tool": fp.tool_name, "tag": tag})
+        return f"attach tool {fp.tool_name} -> {fp.name}"
+
     def _trainer_poffin(self, p: PlayerState) -> str:
         """检索牌库 2 张基础宝可梦放入后备并洗牌"""
         found = 0
@@ -2311,6 +2347,17 @@ def _static_mods(fp: Optional[FieldPokemon]) -> dict:
             out["no_weakness"] = True
         elif kind == "no_retreat":
             out["no_retreat"] = True
+    # S2：道具提供的同类修正（attach 时写入 fp.tool）
+    tool = fp.tool
+    if tool:
+        tparts = str(tool).split(":")
+        tkind = tparts[1] if len(tparts) > 1 else ""
+        if tkind == "dmg_reduce":
+            out["dmg_reduce"] += _tool_value(tool, "dmg_reduce")
+        elif tkind == "no_weakness":
+            out["no_weakness"] = True
+        elif tkind == "no_retreat":
+            out["no_retreat"] = True
     return out
 
 
@@ -2320,7 +2367,8 @@ def _retreat_cost(fp: Optional[FieldPokemon]) -> int:
         return 0
     if _static_mods(fp)["no_retreat"]:
         return 0
-    return int(fp.pdef.retreat)
+    base = int(fp.pdef.retreat) - _tool_value(fp.tool, "retreat_less")
+    return max(0, base)
 
 
 def _is_bench_immune(fp: Optional[FieldPokemon]) -> bool:

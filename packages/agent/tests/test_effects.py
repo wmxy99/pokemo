@@ -460,6 +460,40 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("dmg_plus:90:if:opp_active_status:burn", r["tags"])
         self.assertNotIn("burn", r["tags"], "条件词被当成效果施加了")
 
+    def test_tool_static_modifiers(self):
+        """S2 道具：附着型静态修正 → `tool:*`"""
+        cases = [
+            ("The Pok\u00e9mon this card is attached to gets +100 HP.",
+             "tool:hp_plus:100"),
+            ("The Retreat Cost of the Pok\u00e9mon this card is attached to is "
+             "{C}{C} less.", "tool:retreat_less:2"),
+        ]
+        for text, tag in cases:
+            with self.subTest(tag=tag):
+                r = self._tags(text, kind="item", name="T")
+                self.assertIn(tag, r["tags"])
+                self.assertEqual(r["unsupported"], [])
+
+    def test_tool_with_extra_clause_is_refused(self):
+        """⚠ 道具卡面若还有条件/触发从句，说明**还有效果没建模** → 整张放弃
+
+        反例（真实卡）Rescue Board：撤退 −1 之外还有「剩余 HP ≤30 时无撤退费用」。
+        只映射前半段会把卡放进池并静默丢掉后半段 —— 属"部分实现冒充已实现"。
+        """
+        r = self._tags("The Retreat Cost of the Pok\u00e9mon this card is attached "
+                       "to is {C} less. If that Pok\u00e9mon\u2019s remaining HP is "
+                       "30 or less, it has no Retreat Cost.", kind="item", name="RB")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_tool_damage_reduction_with_qualifier_refused(self):
+        """带对手属性/特性限定的减伤：引擎无该过滤层 → 不许落成常驻减伤"""
+        r = self._tags("The Pok\u00e9mon this card is attached to takes 60 less "
+                       "damage from attacks from your opponent\u2019s {P} "
+                       "Pok\u00e9mon.", kind="item", name="Payapa")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
     def test_static_modifiers_self_scope(self):
         """S1 静态修正层：常驻自身修正 → `passive:*`（与时限护盾严格区分）"""
         cases = [

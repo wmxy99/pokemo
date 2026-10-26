@@ -40,7 +40,9 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 "search", "evolve", "spread", "move_damage", "knockout",
                 "status", "rule", "recover",
                 # v1.4 修正器类（B4 批次）
-                "coin_flip", "damage_mod", "shield", "passive")
+                "coin_flip", "damage_mod", "shield", "passive",
+                # S2 道具（2026-10-26）：附着在宝可梦上的常驻修正
+                "tool")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -1048,7 +1050,14 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             else _parse_rule_zh(text, kind=kind, name=name))
     actions = spec.get("actions") or []
     # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
+    tools = _detect_tool_static(str(text or ""))
+    if tools:
+        # 道具静态修正已被真正识别 → 移除「静态未建模」兜底 rule
+        actions = [a for a in actions
+                   if not (a.get("type") == "rule"
+                           and _note_starts_with(a, list(_RULE_PLACEHOLDER_NOTES)))]
     mods = _detect_modifiers(str(text or ""), kind, name)
+    actions = actions + tools
     if mods:
         # 修正器出现时，移除「静态未建模」兜底 rule（已被真正识别）
         has_coin = any(m.get("type") == "coin_flip" for m in mods)
@@ -1058,6 +1067,9 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
                    if not (a.get("type") == "rule"
                            and _note_starts_with(a, drop))]
         spec["actions"] = actions + mods
+    elif tools:
+        # 只有道具静态修正时也要写回（否则识别到了却没进 spec —— 实测踩过）
+        spec["actions"] = actions
     return spec
 
 
@@ -1467,6 +1479,48 @@ def _condition_from_clause(text: str) -> Optional[str]:
     if m:
         return f"own_all_energy_at_least:{int(m.group(1))}"
     return None
+
+
+_TOOL_HOLDER_RE = re.compile(r"this card is attached to", re.I)
+
+
+def _detect_tool_static(text: str) -> list:
+    """道具（Pokémon Tool）静态修正识别 → ``tool:*`` 动作（S2 · 2026-10-26）
+
+    **只认"附着后常驻、且不依赖任何额外条件"的形态**：
+      · ``The Pokémon this card is attached to gets +N HP.`` → ``tool:hp_plus:N``
+      · ``The Retreat Cost of the Pokémon this card is attached to is {C} less.``
+        → ``tool:retreat_less:<{C} 的个数>``
+
+    ⚠ 故意不认（宁可未建模）：
+      * 带对手属性/特性限定的减伤（``from your opponent's {P} Pokémon``）——
+        引擎没有"攻击方属性/特性"这一层过滤；
+      * 带自身状态前置的（``If that Pokémon's remaining HP is 30 or less``）；
+      * 触发式道具（被击倒/受伤时…）—— 需要事件钩子，属 S2 第二阶段。
+    这类一律返回空表，由调用方如实登记未建模。
+    """
+    t = _norm_apostrophe(text)
+    low = t.lower()
+    if not _TOOL_HOLDER_RE.search(low):
+        return []
+    out: list = []
+    m = re.search(r"this card is attached to gets \+(\d+)\s*hp", low)
+    if m:
+        out.append(act("tool", int(m.group(1)), "self", {"kind": "hp_plus"}))
+    m = re.search(r"retreat cost of the pok[eé]mon this card is attached to is "
+                  r"((?:\{\s*[a-z]\s*\}\s*)+)less", low)
+    if m:
+        n = len(re.findall(r"\{[a-z]\}", m.group(1)))
+        if n:
+            out.append(act("tool", n, "self", {"kind": "retreat_less"}))
+    # ⚠ 只认「纯静态」整卡文本：只要还有条件/触发从句（if / when / during / …），
+    #   就说明这张道具**还有别的作用没被建模**（例：Rescue Board 在剩余 HP ≤30 时
+    #   额外「无撤退费用」）。此时若仍返回静态 tag，卡会被准入并**静默丢掉那段效果**
+    #   —— 属"部分实现却标成已实现"，比不建模更糟。这里整体放弃，如实登记。
+    if out and re.search(r"\b(if|when|whenever|during|after|at the end|"
+                         r"as long as|unless|instead)\b", low):
+        return []
+    return out
 
 
 def _detect_modifiers(text: str, kind: str, name: str) -> list:
@@ -2433,6 +2487,16 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append("shield:prevent_all")
                 else:
                     unsupported.append({"type": t, "reason": "护盾类型未识别"})
+            elif t == "tool":
+                # S2 道具（Pokémon Tool）：附着后常驻的修正
+                k = extra.get("kind")
+                if k in ("hp_plus", "retreat_less", "dmg_reduce") and amt is not None:
+                    tags.append(f"tool:{k}:{int(amt)}")
+                elif k == "no_retreat":
+                    tags.append("tool:no_retreat")
+                else:
+                    unsupported.append({"type": t,
+                                        "reason": f"道具形态未建模（{k}）"})
             elif t == "passive":
                 kind_ = extra.get("kind")
                 if kind_ == "bench_immune":

@@ -50,7 +50,9 @@ POOL_EXT = REPO / "packages" / "engine" / "engine" / "data" / "cards_pool_ext.js
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "shuffle_draw", "switch_self", "recover",
                 "discard_search_energy", "search_energy", "candy",
-                "search_pokemon", "search_trainer", "search_any")
+                "search_pokemon", "search_trainer", "search_any",
+                # S2 道具（2026-10-26）：附着型训练家
+                "tool:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -190,12 +192,21 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     if (it or {}).get("unsupported"):
         return None
     tags = (it or {}).get("engine_tags") or []
+    subtype = str(card.get("subtype") or "")
+    is_tool = "tool" in subtype.lower()
     tag = next((t for t in tags
                 if any(str(t).startswith(p) for p in TRAINER_TAGS)), None)
     if not tag:
         return None
-    subtype = str(card.get("subtype") or "")
-    kind = "supporter" if "supporter" in subtype.lower() else "item"
+    if is_tool:
+        # ⚠ 道具必须**只认 tool: tag**：道具卡面里常夹带「draw / search」等
+        #   触发式子效果，若按普通训练家 tag 准入，就会变成**无条件生效**
+        #   （静默加强）。这里要求：唯一的可执行 tag 必须是 tool:*。
+        tool_tags = [t for t in tags if str(t).startswith("tool:")]
+        if len(tool_tags) != 1 or len(tags) != 1:
+            return None
+    kind = ("tool" if is_tool
+            else "supporter" if "supporter" in subtype.lower() else "item")
     return {
         "name": card["name"],
         "name_zh": card.get("name_zh") or "",

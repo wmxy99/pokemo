@@ -205,6 +205,11 @@ class FieldPokemon:
     # battle 上下文；条件式加 HP（「若有 {D} 能量则 +100」）因此**故意不支持**
     # （宁可未建模，也不做一个忽大忽小的血量上限）。条件式请走 `dmg_reduce`。
     bonus_hp: int = 0
+    # ---- S2 道具（Pokémon Tool，2026-10-26）----
+    # 附着在**本只**宝可梦上的道具 tag（`tool:<kind>[:N]`）。每只最多 1 张。
+    # 存 tag 而不是卡对象：引擎只需要"它能提供什么修正"，不需要卡面文本。
+    tool: Optional[str] = None
+    tool_name: str = ""              # 展示用（中文优先由上层 fill）
 
     # ---- 基本属性 ----
     @property
@@ -213,7 +218,8 @@ class FieldPokemon:
 
     @property
     def max_hp(self) -> int:
-        return self.pdef.hp + self.bonus_hp
+        # 道具的 +HP 在这里叠加（道具是**中途附着**的，不能在 make_pokemon 时固化）
+        return self.pdef.hp + self.bonus_hp + _tool_value(self.tool, "hp_plus")
 
     @property
     def hp_remaining(self) -> int:
@@ -300,6 +306,17 @@ class FieldPokemon:
             "energy": self.total_energy(), "energy_map": dict(self.energy),
             "status": sorted(self.status), "stage": self.stage,
         }
+
+
+def _tool_value(tag: Optional[str], kind: str) -> int:
+    """``tool:<kind>:<n>`` → n（不匹配返回 0，**不猜**）"""
+    if not tag:
+        return 0
+    parts = str(tag).split(":")
+    if len(parts) >= 3 and parts[0] == "tool" and parts[1] == kind \
+            and parts[2].isdigit():
+        return int(parts[2])
+    return 0
 
 
 def make_pokemon(pdef: PokemonDef) -> FieldPokemon:

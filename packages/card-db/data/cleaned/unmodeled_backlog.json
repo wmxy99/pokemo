@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-26 17:27:10",
+ "generated_at": "2026-10-26 22:41:46",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 947,
-  "unsupported": 599,
-  "cards_with_unsupported": 527,
-  "cards_fully_mapped": 592,
-  "cards_with_supported_tag": 784,
-  "cards_engine_ready": 523,
+  "engine_tags": 955,
+  "unsupported": 591,
+  "cards_with_unsupported": 519,
+  "cards_fully_mapped": 600,
+  "cards_with_supported_tag": 788,
+  "cards_engine_ready": 531,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,7 +86,7 @@
    "groups": 2,
    "entries": 9,
    "cards": 9,
-   "share": 0.015
+   "share": 0.0152
   },
   {
    "id": "B3",
@@ -95,9 +95,9 @@
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
    "groups": 30,
-   "entries": 102,
-   "cards": 102,
-   "share": 0.1703
+   "entries": 101,
+   "cards": 101,
+   "share": 0.1709
   },
   {
    "id": "B4",
@@ -106,9 +106,9 @@
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
    "groups": 29,
-   "entries": 76,
-   "cards": 76,
-   "share": 0.1269
+   "entries": 72,
+   "cards": 72,
+   "share": 0.1218
   },
   {
    "id": "B5",
@@ -117,9 +117,9 @@
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
    "groups": 39,
-   "entries": 412,
-   "cards": 396,
-   "share": 0.6878
+   "entries": 409,
+   "cards": 393,
+   "share": 0.692
   }
  ],
  "items": [
@@ -196,8 +196,8 @@
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 22,
-   "cards": 22,
+   "entries": 21,
+   "cards": 21,
    "samples": [
     {
      "card": "Shiftry",
@@ -856,8 +856,8 @@
    "desc": "静态锁/免疫/伤害减免",
    "action_type": "rule",
    "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 27,
-   "cards": 27,
+   "entries": 23,
+   "cards": 23,
    "samples": [
     {
      "card": "Rabsca",
@@ -1487,8 +1487,8 @@
    "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 28,
-   "cards": 28,
+   "entries": 25,
+   "cards": 25,
    "samples": [
     {
      "card": "Genesect",

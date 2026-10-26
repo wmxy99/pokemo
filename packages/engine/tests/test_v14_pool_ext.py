@@ -172,7 +172,12 @@ class TestEveryCardExecutes(unittest.TestCase):
             p.discard.append("Energy")
             p.bench = [make_pokemon(PokemonDef("Pawn3", hp=100,
                                                ptype="colorless", attacks=()))]
-            for a in [x for x in b.legal_actions(0) if x["verb"] == "trainer"]:
+            # ⚠ 只执行**快照里的第一条** trainer 动作：同一张卡可能产生多个合法动作
+            #   （S2 道具按「可附着的宝可梦」逐个列 targets），首条执行后卡已离开手牌，
+            #   后续动作的手牌索引即失效 —— 那是测试拿旧快照连发导致的假失败。
+            acts = [x for x in b.legal_actions(0) if x["verb"] == "trainer"]
+            if acts:
+                a = acts[0]
                 checked += 1
                 r = b.step(a)
                 if not r.get("ok"):

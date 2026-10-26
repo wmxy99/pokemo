@@ -1083,5 +1083,74 @@ class TestStaticMods(unittest.TestCase):
         self.assertFalse(m["no_retreat"])
 
 
+class TestToolAttachment(unittest.TestCase):
+    """S2 道具子系统（2026-10-26）：附着 / 每只 1 张 / 修正生效 / 合法动作
+
+    道具是**训练家卡**，但用后不弃置（留在持有者身上），与普通物品的关键差别就在这里。
+    """
+
+    def _battle_with_tool(self, tag, name="Cape"):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef("Holder", hp=100,
+                                                      ptype="colorless"))
+        b.players[0].hand.append(
+            TrainerRef(TrainerDef(tag, kind="tool", name=name)))
+        return b
+
+    def test_attach_tool_sets_field_and_keeps_card(self):
+        b = self._battle_with_tool("tool:hp_plus:100", "Hero's Cape")
+        r = b.step({"verb": "trainer", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        fp = b.players[0].active
+        self.assertEqual(fp.tool, "tool:hp_plus:100")
+        self.assertEqual(fp.tool_name, "Hero's Cape")
+        self.assertEqual(fp.max_hp, 200, "道具 +HP 必须叠加到上限")
+        self.assertEqual(len(b.players[0].hand), 0, "道具应离开手牌")
+        self.assertFalse(any(isinstance(c, TrainerRef)
+                             for c in b.players[0].discard_refs),
+                         "道具不得进弃牌堆（它附着在场上）")
+
+    def test_one_tool_per_pokemon(self):
+        b = self._battle_with_tool("tool:hp_plus:100")
+        self.assertTrue(b.step({"verb": "trainer", "hand": 0, "target": 0})["ok"])
+        b.players[0].hand.append(
+            TrainerRef(TrainerDef("tool:hp_plus:70", kind="tool", name="W2")))
+        r = b.step({"verb": "trainer", "hand": 0, "target": 0})
+        self.assertFalse(r["ok"])
+        self.assertIn("已附着道具", str(r.get("error")))
+
+    def test_retreat_less_applies(self):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Heavy", hp=100, ptype="colorless", retreat=3))
+        _bench(b, 0, 1)          # 撤退必须有后备可换（否则 legal 里没有 retreat）
+        b.players[0].hand.append(
+            TrainerRef(TrainerDef("tool:retreat_less:2", kind="tool",
+                                  name="Air Balloon")))
+        self.assertFalse(any(x["verb"] == "retreat"
+                             for x in b.legal_actions(0)), "3 费时无能量不能撤退")
+        self.assertTrue(b.step({"verb": "trainer", "hand": 0, "target": 0})["ok"])
+        b.players[0].active.add_energy("colorless")     # 剩 1 费 → 够
+        self.assertTrue(any(x["verb"] == "retreat" for x in b.legal_actions(0)))
+        r = b.step({"verb": "retreat", "bench": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+
+    def test_legals_list_only_pokemon_without_tool(self):
+        b = self._battle_with_tool("tool:hp_plus:100")
+        _bench(b, 0, 1)
+        b.players[0].bench[0].tool = "tool:hp_plus:70"   # 后备已有道具
+        legal = [x for x in b.legal_actions(0) if x["verb"] == "trainer"]
+        self.assertEqual([x.get("target") for x in legal], [0],
+                         "已有道具的位置不应再出现在可选目标里")
+
+    def test_tool_dmg_reduce_stacks_with_passive(self):
+        """道具减伤与特性减伤可叠加（都是「受招式伤害 −N」）"""
+        from engine.battle import _static_mods
+        fp = make_pokemon(PokemonDef("D", hp=100, ptype="colorless",
+                                     abilities=(AbilityDef("A", "passive:dmg_reduce:20"),)))
+        fp.tool = "tool:dmg_reduce:30"
+        self.assertEqual(_static_mods(fp)["dmg_reduce"], 50)
+
+
 if __name__ == "__main__":
     unittest.main()

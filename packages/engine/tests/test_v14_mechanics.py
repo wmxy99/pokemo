@@ -1416,6 +1416,65 @@ class TestStadium(unittest.TestCase):
         self.assertEqual(b.stadium["tag"], "stadium:hp_plus:-30:stage:2",
                          "新场地必须顶替旧场地（全场只能有 1 张）")
 
+    def test_stadium_use_top_deck_once_per_turn(self):
+        """Academy at Night：把手牌 1 张放到牌库顶，每回合只能 1 次"""
+        b = self._battle("stadium:use:top_deck", "Academy")
+        b.players[0].hand.append(EnergyRef())
+        b.step({"verb": "trainer", "hand": 0})
+        hand_before = len(b.players[0].hand)
+        deck_top_before = b.players[0].deck[-1]
+        self.assertTrue(any(x["verb"] == "stadium_use"
+                            for x in b.legal_actions(0)))
+        r = b.step({"verb": "stadium_use", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), hand_before - 1)
+        self.assertIsNot(b.players[0].deck[-1], deck_top_before,
+                         "手牌应被放到牌库顶（列表末尾）")
+        # 同回合第二次不可用
+        self.assertFalse(any(x["verb"] == "stadium_use"
+                             for x in b.legal_actions(0)))
+
+    def test_stadium_use_recover_energy(self):
+        """Levincia：从弃牌堆取回 ≤2 张基本 {L} 能量"""
+        b = self._battle("stadium:use:recover_energy:2:type:lightning", "Levincia")
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].discard_refs.extend([EnergyRef(EnergyDef("lightning")),
+                                          EnergyRef(EnergyDef("lightning")),
+                                          EnergyRef(EnergyDef("fire"))])
+        before = len(b.players[0].hand)
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), before + 2, "只取 2 张闪电能量")
+        left = [c for c in b.players[0].discard_refs if isinstance(c, EnergyRef)]
+        self.assertEqual([c.edef.type for c in left], ["fire"],
+                         "非闪电能量不应被取走")
+
+    def test_stadium_use_heal_all_requires_supporter(self):
+        """Community Center：必须本回合用过支援者才能回复"""
+        b = self._battle("stadium:use:heal_all:10:require:supporter", "Center")
+        b.players[0].active.damage = 40
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertFalse(any(x["verb"] == "stadium_use"
+                             for x in b.legal_actions(0)),
+                         "未使用支援者时不应出现场地使用动作")
+        b.players[0].supporter_used = 1
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 30)
+
+    def test_stadium_use_resets_next_turn(self):
+        b = self._battle("stadium:use:top_deck", "Academy")
+        b.players[0].hand.append(EnergyRef())
+        b.step({"verb": "trainer", "hand": 0})
+        b.step({"verb": "stadium_use", "hand": 0})
+        b.players[0].hand.append(EnergyRef())
+        # 结束回合 → 对手回合 → 再回到我方：标志应重置
+        b.step({"verb": "pass"})
+        b.step({"verb": "pass"})
+        self.assertTrue(any(x["verb"] == "stadium_use"
+                            for x in b.legal_actions(0)),
+                        "新回合应可再次使用")
+
     def test_unknown_stadium_tag_is_inert(self):
         """未实现的场地形态不得产生任何修正（宁可无效）"""
         b = self._battle("stadium:search_basic:1")

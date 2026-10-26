@@ -1510,6 +1510,32 @@ def _detect_stadium(text: str) -> list:
     if re.search(r"\b(steven|n|hop|marnie|erika|team rocket)'?s\s+pok[eé]mon", low):
         return []
 
+    # C 每回合一次的主动使用（S3 第二步 2026-10-27）
+    if re.search(r"once during each player'?s turn", low):
+        # C1 Academy at Night：把手牌 1 张放到牌库顶
+        if re.search(r"put a card from their hand on top of their deck", low):
+            return [act("stadium", None, "any", {"kind": "use",
+                                                 "use_kind": "top_deck"})]
+        # C2 Levincia：弃牌堆取回 ≤2 张基本能量
+        m = re.search(r"put up to (\d+) basic \{([a-z])\} energy cards? from "
+                      r"their discard pile into their hand", low)
+        if m:
+            color = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+            if color:
+                return [act("stadium", int(m.group(1)), "any",
+                            {"kind": "use", "use_kind": "recover_energy",
+                             "ptype": color})]
+        # C3 Community Center：本回合用过支援者则可回复
+        m = re.search(r"if they played a supporter card from their hand this turn, "
+                      r"they may heal (\d+) damage from each of their pok[eé]mon", low)
+        if m:
+            return [act("stadium", int(m.group(1)), "any",
+                        {"kind": "use", "use_kind": "heal_all",
+                         "require": "supporter"})]
+        # 其余「每回合一次」形态（检索/换位/弃牌换抽）需要目标选择或额外代价，
+        # 本轮不建模 —— 让整卡落进未建模，而不是硬套成上面三种。
+        return []
+
     # A 上限修正（按阶段）
     m = re.search(r"each (basic|stage 1|stage 2) pok[eé]mon in play[^.]*?"
                   r"gets ([+-]\d+) hp", low)
@@ -2668,6 +2694,15 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"stadium:hp_plus:{int(amt)}:stage:{extra['stage']}")
                 elif k == "dmg_reduce" and amt is not None and extra.get("ptype"):
                     tags.append(f"stadium:dmg_reduce:{int(amt)}:type:{extra['ptype']}")
+                elif k == "use" and extra.get("use_kind"):
+                    tail = ""
+                    if amt is not None:
+                        tail += f":{int(amt)}"
+                    if extra.get("ptype"):
+                        tail += f":type:{extra['ptype']}"
+                    if extra.get("require"):
+                        tail += f":require:{extra['require']}"
+                    tags.append(f"stadium:use:{extra['use_kind']}{tail}")
                 else:
                     unsupported.append({"type": t,
                                         "reason": f"场地形态未建模（{k}）"})

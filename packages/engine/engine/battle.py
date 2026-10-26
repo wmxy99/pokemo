@@ -50,6 +50,8 @@ class Battle:
     # S3 场地：全场只有 1 张（打出新的即顶替旧的）。类级默认值同 `_ko_by_attack`
     # 的理由 —— 测试常用 `object.__new__(Battle)` 手工装配，没有 `__init__`。
     stadium = None            # {"name": str, "tag": str, "owner": int} | None
+    # S3：场地「每回合一次」的使用计数（按玩家；回合开始清零）
+    _stadium_used = None      # list[int] 惰性创建，兼容 object.__new__ 装配
 
     def _ko_flags(self) -> list:
         """按宝可梦所属方计数的「被招式击倒」标记（惰性创建，实例隔离）"""
@@ -201,6 +203,8 @@ class Battle:
         p.discarded_this_turn = 0                 # v1.4「in this way」按回合重置
         p.discarded_energy_this_turn = 0
         self._refresh_stadium_hp()                # S3：场地对上限的修正在新回合重算
+        # 场地「每回合一次」按**回合归属方**重置（不是使用者）
+        self._stadium_used_flags()[self.current] = 0
         for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
             fp.just_played = False
             fp.ability_used.clear()
@@ -416,6 +420,11 @@ class Battle:
                 targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
                 for tpos in targets:
                     out.append(dict(base, target=tpos))
+        # S3 场地「每回合一次」——与手牌无关，单独一条合法动作
+        if self._stadium_use_available(p):
+            out.append({"verb": "stadium_use",
+                        "name": (self.stadium or {}).get("name", ""),
+                        "display": (self.stadium or {}).get("name", "")})
         return out
 
     # ---------- 自由文本指令（中文别名 → 合法动作） ----------
@@ -537,6 +546,8 @@ class Battle:
                 return self._do_ability(p, action)
             if verb == "trainer":
                 return self._do_trainer(p, action)
+            if verb == "stadium_use":
+                return self._do_stadium_use(p, action)
             if verb == "pass":
                 self._end_turn()
                 return {"ok": True, "event": None}
@@ -1178,6 +1189,98 @@ class Battle:
                 out["type"] = parts[i + 1]
             i += 2
         return out
+
+    def _stadium_used_flags(self) -> list:
+        if self._stadium_used is None:
+            self._stadium_used = [0, 0]
+        return self._stadium_used
+
+    def _stadium_use_spec(self) -> dict:
+        """场地「每回合一次」形态 → ``{"kind","n","color","require"}``（无则空）
+
+        tag：``stadium:use:<kind>[:<n>][:type:<c>][:require:supporter]``
+          · ``top_deck``          把手牌 1 张放到牌库顶（Academy at Night）
+          · ``recover_energy``    弃牌堆取 ≤n 张基本能量入手（Levincia）
+          · ``heal_all``          己方每只回复 n 点（Community Center）
+        """
+        out = {"kind": "", "n": 0, "type": None, "require": None}
+        tag = (self.stadium or {}).get("tag") or ""
+        if not tag.startswith("stadium:use:"):
+            return out
+        parts = tag.split(":")
+        # stadium:use:<kind>[:<n>][:type:<c>][:require:supporter]
+        out["kind"] = parts[2] if len(parts) > 2 else ""
+        i = 3
+        if i < len(parts) and parts[i].isdigit():
+            out["n"] = int(parts[i])
+            i += 1
+        while i + 1 < len(parts):
+            if parts[i] == "type":
+                out["type"] = parts[i + 1]
+            elif parts[i] == "require":
+                out["require"] = parts[i + 1]
+            i += 2
+        return out
+
+    def _stadium_use_available(self, p: PlayerState) -> bool:
+        spec = self._stadium_use_spec()
+        if not spec["kind"]:
+            return False
+        if self._stadium_used_flags()[self.current]:
+            return False
+        if spec["require"] == "supporter" and not p.supporter_used:
+            return False
+        if spec["kind"] == "top_deck":
+            return bool(p.hand)
+        if spec["kind"] == "recover_energy":
+            return any(isinstance(c, EnergyRef) and
+                       (not spec["type"] or getattr(c.edef, "type", None) == spec["type"])
+                       for c in p.discard_refs)
+        if spec["kind"] == "heal_all":
+            return any(fp.damage > 0 for fp in p.all_field())
+        return False
+
+    def _do_stadium_use(self, p: PlayerState, action: dict) -> dict:
+        """场地「每回合一次」的主动使用（S3 2026-10-27）"""
+        spec = self._stadium_use_spec()
+        if not self._stadium_use_available(p):
+            raise ValueError("该场地本回合不可使用（未满足条件或已用过）")
+        kind = spec["kind"]
+        if kind == "top_deck":
+            hi = int(action.get("hand", 0))
+            if not (0 <= hi < len(p.hand)):
+                hi = 0
+            card = p.hand.pop(hi)
+            p.deck.append(card)          # 牌库顶 = 列表末尾（见 `_safe_draw`）
+            detail = f"put {_card_label(card)} on top of deck"
+        elif kind == "recover_energy":
+            got = 0
+            for di in reversed(range(len(p.discard_refs))):
+                if got >= spec["n"]:
+                    break
+                c = p.discard_refs[di]
+                if not isinstance(c, EnergyRef):
+                    continue
+                if spec["type"] and getattr(c.edef, "type", None) != spec["type"]:
+                    continue
+                p.discard_refs.pop(di)
+                p.hand.append(self._rebuild_ref(c))
+                got += 1
+            detail = f"recover {got} energy"
+        elif kind == "heal_all":
+            healed = 0
+            for fp in p.all_field():
+                if fp.damage:
+                    fp.damage = max(0, fp.damage - spec["n"])
+                    healed += 1
+            detail = f"heal {spec['n']} x{healed}"
+        else:
+            raise ValueError(f"未知场地上使用形态：{kind}")
+        self._stadium_used_flags()[self.current] = 1
+        self._log("stadium_use", {"player": self.current,
+                                  "name": (self.stadium or {}).get("name"),
+                                  "kind": kind, "detail": detail})
+        return {"ok": True, "event": self.events[-1]}
 
     def _stadium_hp_delta(self, fp: FieldPokemon) -> int:
         m = self._stadium_meta()

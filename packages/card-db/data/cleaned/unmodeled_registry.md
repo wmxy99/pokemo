@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-27 00:16:31
+- 生成时间：2026-10-27 00:26:17
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **580** 条 · 已映射 tag 966 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：541 张**
-- 解析层面「无未建模动作」卡：611 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **578** 条 · 已映射 tag 968 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：544 张**
+- 解析层面「无未建模动作」卡：613 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -54,7 +54,7 @@
 | B5 | S2 | `rule` | 25 | 25 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 24 | 20 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B5 | S3 | `rule` | 13 | 13 | 静态/未建模（英文） |
+| B5 | S3 | `rule` | 11 | 11 | 静态/未建模（英文） |
 | B5 | S4 | `rule` | 10 | 10 | 静态/未建模（英文） |
 | B5 | S3 | `rule` | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S1 | `rule` | 7 | 6 | 静态/未建模（英文） |
@@ -248,7 +248,7 @@
 - `Cornerstone Mask Ogerpon ex`：This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon.
 - `Vibrava`：During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).
 
-**B5 · S3**（13 条）
+**B5 · S3**（11 条）
 
 - `Fan Rotom`：If there is no Stadium in play, this attack does nothing.
 - `Chien-Pao`：When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.

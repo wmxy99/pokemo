@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 430,
+      "kept": 433,
       "by_Pokemon": 367,
-      "by_Trainer": 63,
+      "by_Trainer": 66,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 501,
+        "存在未建模项（整卡不收）": 499,
         "Energy 不可执行": 3,
         "Pokemon 不可执行": 111,
         "人工卡池已有（人工优先）": 26,
-        "Trainer 不可执行": 51
+        "Trainer 不可执行": 50
       }
     }
   },
@@ -17672,6 +17672,21 @@
       "source_card_id": 1233
     },
     {
+      "name": "Community Center",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:heal_all:10:require:supporter",
+      "desc": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon.",
+      "real": {
+        "set": "TWM",
+        "number": "146"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1242
+    },
+    {
       "name": "Full Metal Lab",
       "name_zh": "",
       "supertype": "Trainer",
@@ -17685,6 +17700,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1244
+    },
+    {
+      "name": "Academy at Night",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:top_deck",
+      "desc": "Once during each player’s turn, that player may put a card from their hand on top of their deck.",
+      "real": {
+        "set": "SFA",
+        "number": "54"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1248
     },
     {
       "name": "Lively Stadium",
@@ -17715,6 +17745,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1252
+    },
+    {
+      "name": "Levincia",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:recover_energy:2:type:lightning",
+      "desc": "Once during each player’s turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand.",
+      "real": {
+        "set": "JTG",
+        "number": "150"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1254
     }
   ]
 }

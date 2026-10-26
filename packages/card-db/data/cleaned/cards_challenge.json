@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-27 00:14:52"
+  "reparsed_at": "2026-10-27 00:24:51"
  },
  "stats": {
   "rows_in": 2022,
@@ -86,7 +86,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 541,
+  "engine_ready": 544,
   "engine_match_alias": 7,
   "with_zh": 36,
   "with_image": 0,
@@ -111,22 +111,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 16871,
-   "engine_unmatched": 30008,
-   "engine_approximated": 15539
+   "zh_backfill": 17956,
+   "engine_unmatched": 31457,
+   "engine_approximated": 16552
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 0,
-   "engine_tags": 966,
-   "unsupported": 580,
+   "engine_tags": 968,
+   "unsupported": 578,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 505
+  "engine_approximated": 508
  },
  "cards": [
   {
@@ -149510,12 +149510,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -149529,9 +149530,14 @@
         "conditions": [],
         "actions": [
          {
-          "type": "heal",
+          "type": "stadium",
           "amount": 10,
-          "target": "self"
+          "target": "any",
+          "extra": {
+           "kind": "use",
+           "use_kind": "heal_all",
+           "require": "supporter"
+          }
          }
         ],
         "source_text": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
@@ -149539,7 +149545,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "heal:10"
+       "stadium:use:heal_all:10:require:supporter"
       ],
       "unsupported": []
      }
@@ -149552,9 +149558,14 @@
       "conditions": [],
       "actions": [
        {
-        "type": "heal",
+        "type": "stadium",
         "amount": 10,
-        "target": "self"
+        "target": "any",
+        "extra": {
+         "kind": "use",
+         "use_kind": "heal_all",
+         "require": "supporter"
+        }
        }
       ],
       "source_text": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
@@ -149562,7 +149573,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "heal:10"
+     "stadium:use:heal_all:10:require:supporter"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -150053,12 +150064,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may put a card from their hand on top of their deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -150072,11 +150084,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "stadium",
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "top_deck"
           }
          }
         ],
@@ -150084,13 +150097,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:top_deck"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -150101,11 +150111,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "stadium",
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "top_deck"
         }
        }
       ],
@@ -150113,13 +150124,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:top_deck"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -150599,12 +150607,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -150618,11 +150627,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "stadium",
+          "amount": 2,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "recover_energy",
+           "ptype": "lightning"
           }
          }
         ],
@@ -150630,13 +150641,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:recover_energy:2:type:lightning"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -150647,11 +150655,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "stadium",
+        "amount": 2,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "recover_energy",
+         "ptype": "lightning"
         }
        }
       ],
@@ -150659,13 +150669,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:recover_energy:2:type:lightning"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

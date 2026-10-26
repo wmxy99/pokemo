@@ -1050,12 +1050,13 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             else _parse_rule_zh(text, kind=kind, name=name))
     actions = spec.get("actions") or []
     # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
-    tools = _detect_tool_static(str(text or ""))
+    tools = _detect_tool(str(text or ""))
     if tools:
-        # 道具静态修正已被真正识别 → 移除「静态未建模」兜底 rule
-        actions = [a for a in actions
-                   if not (a.get("type") == "rule"
-                           and _note_starts_with(a, list(_RULE_PLACEHOLDER_NOTES)))]
+        # 道具整段文本就是这一条效果 → **整体替换**通用解析结果。
+        # 若不替换：诸如「put 12 damage counters on the Attacking Pokémon」会被
+        # 通用分支再解析成 spread/其他动作，产出多余 tag 而破坏"道具只认 tool:"
+        # 的准入约束（或更糟：把触发式效果当成无条件效果）。
+        actions = list(tools)
     mods = _detect_modifiers(str(text or ""), kind, name)
     actions = actions + tools
     if mods:
@@ -1484,8 +1485,73 @@ def _condition_from_clause(text: str) -> Optional[str]:
 _TOOL_HOLDER_RE = re.compile(r"this card is attached to", re.I)
 
 
+def _detect_tool(text: str) -> list:
+    """道具（Pokémon Tool）识别 → ``tool:*`` 动作（S2 · 2026-10-26）
+
+    两类形态：
+      A. **静态**（附着即常驻）
+      B. **触发**（S2 第二阶段）：被招式伤害时 / 满 HP 将被击倒时
+    """
+    return (_detect_tool_hook(text) or _detect_tool_static(text))
+
+
+def _detect_tool_hook(text: str) -> list:
+    """触发式道具识别（S2 第二阶段 · 2026-10-26）
+
+    只认**单一效果、且不依赖额外限定**的两类钩子：
+      · ``… is in the Active Spot and is damaged by an attack …, draw N cards.``
+        → ``tool:on_damaged:draw:N``（Lucky Helmet）
+      · ``… put N damage counters on the Attacking Pokémon.``（可选尾句
+        ``If you placed any damage counters in this way, discard this card.``）
+        → ``tool:on_damaged:counter:<N*10>[:discard]``（Deluxe Bomb）
+      · ``If … has full HP and would be Knocked Out by damage …, it is not
+        Knocked Out, and its remaining HP becomes M.``
+        → ``tool:survive:<M>``（Survival Brace）
+
+    ⚠ 故意不认：带**持有者属性/卡名限定**的（``the {D} Pokémon`` /
+    ``the Team Rocket's Pokémon``）、以及换能量 / 移能量 / 检索类触发效果 ——
+    这些要么需要"攻击方属性"过滤层，要么需要跨侧移动，本轮都还没有。
+    """
+    t = _norm_apostrophe(text)
+    low = t.lower()
+    if not _TOOL_HOLDER_RE.search(low):
+        return []
+    # 带持有者限定的（属性 / 卡名阵营）一律放弃 —— 引擎无该过滤层
+    if re.search(r"the\s+\{[a-z]\}\s*pok[eé]mon this card is attached to", low) \
+            or re.search(r"the\s+[a-z][a-z' ]{2,20}pok[eé]mon this card is "
+                         r"attached to", low):
+        return []
+
+    # B1 满 HP 免击倒（Survival Brace）
+    m = re.search(r"has full hp and would be knocked out", low)
+    if m:
+        m2 = re.search(r"remaining hp becomes (\d+)", low)
+        if m2:
+            return [act("tool", int(m2.group(1)), "self", {"kind": "survive"})]
+        return []
+
+    # 触发前提：在战斗位 + 被对手招式伤害
+    if not re.search(r"is in the active spot and is damaged by an attack", low):
+        return []
+
+    # B2 受伤时抽牌（Lucky Helmet）
+    m = re.search(r"damaged by an attack[^.]{0,80}?draw (\d+) cards?", low)
+    if m:
+        return [act("tool", int(m.group(1)), "self",
+                    {"kind": "on_damaged_draw"})]
+
+    # B3 受伤时把伤害指示物放到攻击方（Deluxe Bomb）
+    m = re.search(r"put (\d+) damage counters? on the attacking pok[eé]mon", low)
+    if m:
+        extra = {"kind": "on_damaged_counter"}
+        if re.search(r"discard this card", low):
+            extra["discard"] = True
+        return [act("tool", int(m.group(1)) * 10, "self", extra)]
+    return []
+
+
 def _detect_tool_static(text: str) -> list:
-    """道具（Pokémon Tool）静态修正识别 → ``tool:*`` 动作（S2 · 2026-10-26）
+    """道具静态修正识别（S2 第一步）
 
     **只认"附着后常驻、且不依赖任何额外条件"的形态**：
       · ``The Pokémon this card is attached to gets +N HP.`` → ``tool:hp_plus:N``
@@ -2488,12 +2554,19 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     unsupported.append({"type": t, "reason": "护盾类型未识别"})
             elif t == "tool":
-                # S2 道具（Pokémon Tool）：附着后常驻的修正
+                # S2 道具（Pokémon Tool）
                 k = extra.get("kind")
                 if k in ("hp_plus", "retreat_less", "dmg_reduce") and amt is not None:
                     tags.append(f"tool:{k}:{int(amt)}")
                 elif k == "no_retreat":
                     tags.append("tool:no_retreat")
+                elif k == "on_damaged_draw" and amt is not None:
+                    tags.append(f"tool:on_damaged:draw:{int(amt)}")
+                elif k == "on_damaged_counter" and amt is not None:
+                    tail = ":discard" if extra.get("discard") else ""
+                    tags.append(f"tool:on_damaged:counter:{int(amt)}{tail}")
+                elif k == "survive" and amt is not None:
+                    tags.append(f"tool:survive:{int(amt)}")
                 else:
                     unsupported.append({"type": t,
                                         "reason": f"道具形态未建模（{k}）"})

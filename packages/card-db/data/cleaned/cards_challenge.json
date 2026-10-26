@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-26 22:38:16"
+  "reparsed_at": "2026-10-26 23:35:02"
  },
  "stats": {
   "rows_in": 2022,
@@ -86,7 +86,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 531,
+  "engine_ready": 534,
   "engine_match_alias": 7,
   "with_zh": 36,
   "with_image": 0,
@@ -111,22 +111,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 12577,
-   "engine_unmatched": 24166,
-   "engine_approximated": 11533
+   "zh_backfill": 13642,
+   "engine_unmatched": 25635,
+   "engine_approximated": 12526
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 0,
-   "engine_tags": 955,
-   "unsupported": 591,
+   "engine_tags": 958,
+   "unsupported": 588,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 495
+  "engine_approximated": 498
  },
  "cards": [
   {
@@ -928,11 +928,19 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "tool",
+          "amount": 20,
+          "target": "self",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "kind": "on_damaged_counter"
+          }
+         },
+         {
+          "type": "tool",
+          "amount": 20,
+          "target": "self",
+          "extra": {
+           "kind": "on_damaged_counter"
           }
          }
         ],
@@ -940,13 +948,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "tool:on_damaged:counter:20"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -957,11 +962,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "tool",
+        "amount": 20,
+        "target": "self",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "kind": "on_damaged_counter"
+        }
+       },
+       {
+        "type": "tool",
+        "amount": 20,
+        "target": "self",
+        "extra": {
+         "kind": "on_damaged_counter"
         }
        }
       ],
@@ -969,13 +982,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-     }
+    "engine_tags": [
+     "tool:on_damaged:counter:20"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141347,12 +141357,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -141366,22 +141377,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "knockout",
-          "amount": null,
-          "target": "active_opponent"
+          "type": "tool",
+          "amount": 10,
+          "target": "self",
+          "extra": {
+           "kind": "survive"
+          }
+         },
+         {
+          "type": "tool",
+          "amount": 10,
+          "target": "self",
+          "extra": {
+           "kind": "survive"
+          }
          }
         ],
         "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discar"
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "knockout",
-        "reason": "击倒效果需引擎新机制（未建模动作清单 B4）"
-       }
-      ]
+      "engine_tags": [
+       "tool:survive:10"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -141392,22 +141411,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "knockout",
-        "amount": null,
-        "target": "active_opponent"
+        "type": "tool",
+        "amount": 10,
+        "target": "self",
+        "extra": {
+         "kind": "survive"
+        }
+       },
+       {
+        "type": "tool",
+        "amount": 10,
+        "target": "self",
+        "extra": {
+         "kind": "survive"
+        }
        }
       ],
       "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discar"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "knockout",
-      "reason": "击倒效果需引擎新机制（未建模动作清单 B4）"
-     }
+    "engine_tags": [
+     "tool:survive:10"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141435,12 +141462,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), draw 2 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -141454,9 +141482,20 @@
         "conditions": [],
         "actions": [
          {
-          "type": "draw",
+          "type": "tool",
           "amount": 2,
-          "target": "deck"
+          "target": "self",
+          "extra": {
+           "kind": "on_damaged_draw"
+          }
+         },
+         {
+          "type": "tool",
+          "amount": 2,
+          "target": "self",
+          "extra": {
+           "kind": "on_damaged_draw"
+          }
          }
         ],
         "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
@@ -141464,7 +141503,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "draw:2"
+       "tool:on_damaged:draw:2"
       ],
       "unsupported": []
      }
@@ -141477,9 +141516,20 @@
       "conditions": [],
       "actions": [
        {
-        "type": "draw",
+        "type": "tool",
         "amount": 2,
-        "target": "deck"
+        "target": "self",
+        "extra": {
+         "kind": "on_damaged_draw"
+        }
+       },
+       {
+        "type": "tool",
+        "amount": 2,
+        "target": "self",
+        "extra": {
+         "kind": "on_damaged_draw"
+        }
        }
       ],
       "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
@@ -141487,7 +141537,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "draw:2"
+     "tool:on_damaged:draw:2"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -141731,6 +141781,14 @@
           "extra": {
            "kind": "hp_plus"
           }
+         },
+         {
+          "type": "tool",
+          "amount": 100,
+          "target": "self",
+          "extra": {
+           "kind": "hp_plus"
+          }
          }
         ],
         "source_text": "The Pokémon this card is attached to gets +100 HP."
@@ -141750,6 +141808,14 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
+       {
+        "type": "tool",
+        "amount": 100,
+        "target": "self",
+        "extra": {
+         "kind": "hp_plus"
+        }
+       },
        {
         "type": "tool",
         "amount": 100,
@@ -142434,12 +142500,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -142453,11 +142520,21 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "tool",
+          "amount": 120,
+          "target": "self",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "kind": "on_damaged_counter",
+           "discard": true
+          }
+         },
+         {
+          "type": "tool",
+          "amount": 120,
+          "target": "self",
+          "extra": {
+           "kind": "on_damaged_counter",
+           "discard": true
           }
          }
         ],
@@ -142465,13 +142542,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "tool:on_damaged:counter:120:discard"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -142482,11 +142556,21 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "tool",
+        "amount": 120,
+        "target": "self",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "kind": "on_damaged_counter",
+         "discard": true
+        }
+       },
+       {
+        "type": "tool",
+        "amount": 120,
+        "target": "self",
+        "extra": {
+         "kind": "on_damaged_counter",
+         "discard": true
         }
        }
       ],
@@ -142494,13 +142578,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-     }
+    "engine_tags": [
+     "tool:on_damaged:counter:120:discard"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -143012,6 +143093,14 @@
           "extra": {
            "kind": "hp_plus"
           }
+         },
+         {
+          "type": "tool",
+          "amount": 70,
+          "target": "self",
+          "extra": {
+           "kind": "hp_plus"
+          }
          }
         ],
         "source_text": "The Cynthia’s Pokémon this card is attached to gets +70 HP."
@@ -143031,6 +143120,14 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
+       {
+        "type": "tool",
+        "amount": 70,
+        "target": "self",
+        "extra": {
+         "kind": "hp_plus"
+        }
+       },
        {
         "type": "tool",
         "amount": 70,
@@ -143101,6 +143198,14 @@
           "extra": {
            "kind": "retreat_less"
           }
+         },
+         {
+          "type": "tool",
+          "amount": 2,
+          "target": "self",
+          "extra": {
+           "kind": "retreat_less"
+          }
          }
         ],
         "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C}{C} less."
@@ -143120,6 +143225,14 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
+       {
+        "type": "tool",
+        "amount": 2,
+        "target": "self",
+        "extra": {
+         "kind": "retreat_less"
+        }
+       },
        {
         "type": "tool",
         "amount": 2,

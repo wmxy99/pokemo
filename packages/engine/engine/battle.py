@@ -1071,6 +1071,9 @@ class Battle:
         # 「被招式击倒」标记：仅本段内（含招式附加效果）的击倒计入
         prev_ko_flag = self._ko_from_attack
         self._ko_from_attack = True
+        # S2 第二阶段：Survival Brace 的前置条件是「受伤前满 HP」，必须在加伤害前取快照
+        was_full = defender.damage == 0
+        damage_dealt = 0
         try:
             if base > 0:
                 # 静态修正（S1）：`passive:no_weakness` 让弱点不生效
@@ -1085,6 +1088,7 @@ class Battle:
                 if static["dmg_reduce"]:
                     dmg = max(0, dmg - static["dmg_reduce"])
                 dmg = apply_shield(defender, dmg)          # 护盾在弱抗之后
+                damage_dealt = dmg or 0
                 if dmg:
                     defender.damage += dmg
                 self._log("damage", {"target": defender.name,
@@ -1101,6 +1105,10 @@ class Battle:
             self._apply_attack_effects(attacker, atk.effects,
                                        plan=action.get("targets"), action=action,
                                        pre_mods=mods)
+            # S2 第二阶段：道具触发钩子（卡面写 even if Knocked Out → 先于击倒结算）
+            self._trigger_tool_on_damaged(defender, attacker, damage_dealt)
+            if defender.is_ko and was_full and self._tool_survive(defender):
+                pass                      # 免击倒：伤害已改为「剩 M 点」
             if defender.is_ko:
                 self._resolve_ko(1 - self.current, defender)
         finally:
@@ -1108,6 +1116,63 @@ class Battle:
         if not self.finished:
             self._end_turn()
         return {"ok": True, "event": None}
+
+    # ---------- S2 第二阶段：道具触发钩子 ----------
+    def _trigger_tool_on_damaged(self, defender: FieldPokemon,
+                                 attacker: FieldPokemon, dmg: int) -> None:
+        """持有者被招式伤害后触发道具（``tool:on_damaged:<kind>:<n>[:discard]``）
+
+        卡面限定「is in the Active Spot and is damaged by an attack」：
+          · `defender` 必为对手战斗位（调用点就是 `opp.active`）；
+          · `dmg > 0` 才算"被伤害"（被护盾完全挡下不触发）；
+          · 卡面写 "even if this Pokémon is Knocked Out" → 先于击倒结算执行。
+
+        支持 kind：`draw`（抽 n 张，归属持有者）/ `counter`（攻击方受 n 点伤害）。
+        """
+        tag = str(defender.tool or "")
+        if dmg <= 0 or not tag.startswith("tool:on_damaged:"):
+            return
+        parts = tag.split(":")
+        kind = parts[2] if len(parts) > 2 else ""
+        n = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 0
+        owner = 1 - self.current          # defender 属于对手
+        if kind == "draw" and n > 0:
+            self._safe_draw(owner, n, source="tool")
+            self._log("tool_trigger", {"player": owner, "tool": defender.tool_name,
+                                       "kind": "draw", "n": n,
+                                       "target": defender.name})
+        elif kind == "counter" and n > 0:
+            attacker.damage += n
+            self._log("damage", {"target": attacker.name, "player": self.current,
+                                 "dmg": n, "tool": defender.tool_name})
+            self._log("tool_trigger", {"player": owner, "tool": defender.tool_name,
+                                       "kind": "counter", "n": n,
+                                       "target": defender.name})
+            if attacker.is_ko:
+                self._resolve_ko(self.current, attacker)
+        if len(parts) > 4 and parts[4] == "discard":
+            name = _drop_tool(defender)
+            self._log("tool_discard", {"player": owner, "tool": name,
+                                       "target": defender.name})
+
+    def _tool_survive(self, defender: FieldPokemon) -> bool:
+        """``tool:survive:<m>`` —— 满 HP 时免于被招式击倒，剩 m 点 HP，道具自身弃置
+
+        只在**伤害结算后 `is_ko` 成立**时调用（调用点已保证"受伤前满 HP"）。
+        返回 True 表示已免击倒（调用方不应再走 `_resolve_ko`）。
+        """
+        tag = str(defender.tool or "")
+        if not tag.startswith("tool:survive:"):
+            return False
+        try:
+            m = int(tag.split(":")[2])
+        except (IndexError, ValueError):
+            return False
+        defender.damage = max(0, defender.max_hp - m)
+        name = _drop_tool(defender)
+        self._log("tool_survive", {"player": 1 - self.current, "target":
+                                   defender.name, "tool": name, "hp": m})
+        return True
 
     # ---------- v1.4 伤害修正层（抛币 / 计数缩放 / 条件加伤） ----------
     def _attack_mods(self, attacker: FieldPokemon, effects: tuple,
@@ -2316,6 +2381,14 @@ def _eval_condition(battle, cond: str) -> bool:
         f"带参形式：own_active_energy_type:<color> / "
         f"own_active_energy_at_least:<n> / "
         f"{' / '.join(_CONDITION_PARAMS)}）")
+
+
+def _drop_tool(fp: FieldPokemon) -> Optional[str]:
+    """卸下并"丢弃"道具（触发后自弃，如 Deluxe Bomb / Survival Brace）"""
+    name = fp.tool_name
+    fp.tool = None
+    fp.tool_name = ""
+    return name
 
 
 def _static_mods(fp: Optional[FieldPokemon]) -> dict:

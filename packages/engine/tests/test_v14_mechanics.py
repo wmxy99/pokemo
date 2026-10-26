@@ -1152,5 +1152,83 @@ class TestToolAttachment(unittest.TestCase):
         self.assertEqual(_static_mods(fp)["dmg_reduce"], 50)
 
 
+class TestToolTriggers(unittest.TestCase):
+    """S2 第二阶段：触发式道具（2026-10-26）
+
+    覆盖 `tool:on_damaged:draw:N` / `tool:on_damaged:counter:N[:discard]` /
+    `tool:survive:M`。三条都要求"受伤前/受伤后"的时序正确，否则会静默错算。
+    """
+
+    def _setup(self, tool_tag, def_hp=200, atk_damage=30, tool_name="T"):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=atk_damage, effects=()),)))
+        b.players[1].active = make_pokemon(PokemonDef(
+            "Def", hp=def_hp, ptype="colorless"))
+        b.players[1].active.tool = tool_tag
+        b.players[1].active.tool_name = tool_name
+        # 双方牌库充足，避免抽牌/磨牌触发判负
+        b.players[1].deck = [EnergyRef() for _ in range(20)]
+        return b
+
+    def test_on_damaged_draw(self):
+        b = self._setup("tool:on_damaged:draw:2")
+        before = len(b.players[1].hand)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        # 攻击结束会切到对手回合 → 对手回合开始抽 1 张，所以增量 = 1 + 2
+        self.assertEqual(len(b.players[1].hand), before + 3,
+                         "持有者应在被伤害后抽 2 张（另 1 张是回合开始抽牌）")
+        self.assertEqual(b.players[1].active.tool, "tool:on_damaged:draw:2",
+                         "抽牌型道具**不弃置**")
+
+    def test_on_damaged_not_triggered_without_damage(self):
+        """被打 0 点（伤害被完全挡下）不算"被伤害" → 不触发"""
+        b = self._setup("tool:on_damaged:draw:2", atk_damage=0)
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk0", hp=200, ptype="colorless",
+            attacks=(AttackDef("Tap", cost=0, damage=0, effects=()),)))
+        before = len(b.players[1].hand)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        # 只有对手回合开始的抽 1 张，没有道具的 +2
+        self.assertEqual(len(b.players[1].hand), before + 1)
+
+    def test_on_damaged_counter_and_discard(self):
+        b = self._setup("tool:on_damaged:counter:120:discard", atk_damage=10)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 120, "攻击方应受 120 点反制伤害")
+        self.assertIsNone(b.players[1].active.tool, "带 :discard 的道具触发后应弃置")
+
+    def test_tool_survive_prevents_ko_when_full_hp(self):
+        b = self._setup("tool:survive:10", def_hp=100, atk_damage=150)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        defp = b.players[1].active
+        self.assertFalse(defp.is_ko, "满 HP 时 Survival Brace 应免击倒")
+        self.assertEqual(defp.hp_remaining, 10)
+        self.assertIsNone(defp.tool, "免击倒后道具应弃置")
+
+    def test_tool_survive_not_when_not_full_hp(self):
+        """非满 HP 时不该救（卡面前提是 has full HP）"""
+        b = self._setup("tool:survive:10", def_hp=100, atk_damage=150)
+        b.players[1].active.damage = 30       # 先掉 30，非满 HP
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        # 击倒已发生：active 被清空 + 攻击方拿到奖赏卡（免击倒时这两条都不成立）
+        self.assertIsNone(b.players[1].active)
+        self.assertLess(b.players[0].prizes_left, 10)
+
+    def test_unknown_tool_hook_is_inert(self):
+        """未识别的道具形态不得产生任何副作用（宁可无效，不可乱套）"""
+        b = self._setup("tool:on_damaged:teleport:5")
+        before = len(b.players[1].hand)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), before + 1)   # 仅回合开始抽牌
+
+
 if __name__ == "__main__":
     unittest.main()

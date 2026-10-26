@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-27 00:12:17",
+ "generated_at": "2026-10-27 00:16:30",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 962,
-  "unsupported": 584,
-  "cards_with_unsupported": 512,
-  "cards_fully_mapped": 607,
-  "cards_with_supported_tag": 795,
-  "cards_engine_ready": 538,
+  "engine_tags": 966,
+  "unsupported": 580,
+  "cards_with_unsupported": 508,
+  "cards_fully_mapped": 611,
+  "cards_with_supported_tag": 799,
+  "cards_engine_ready": 541,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,7 +86,7 @@
    "groups": 2,
    "entries": 9,
    "cards": 9,
-   "share": 0.0154
+   "share": 0.0155
   },
   {
    "id": "B3",
@@ -97,7 +97,7 @@
    "groups": 30,
    "entries": 99,
    "cards": 99,
-   "share": 0.1695
+   "share": 0.1707
   },
   {
    "id": "B4",
@@ -106,9 +106,9 @@
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
    "groups": 29,
-   "entries": 68,
-   "cards": 68,
-   "share": 0.1164
+   "entries": 67,
+   "cards": 67,
+   "share": 0.1155
   },
   {
    "id": "B5",
@@ -117,9 +117,9 @@
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
    "groups": 37,
-   "entries": 408,
-   "cards": 392,
-   "share": 0.6986
+   "entries": 405,
+   "cards": 389,
+   "share": 0.6983
   }
  ],
  "items": [
@@ -851,8 +851,8 @@
    "desc": "静态锁/免疫/伤害减免",
    "action_type": "rule",
    "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 19,
-   "cards": 19,
+   "entries": 18,
+   "cards": 18,
    "samples": [
     {
      "card": "Rabsca",
@@ -1482,8 +1482,8 @@
    "desc": "道具挂载（Pokémon Tool）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 26,
-   "cards": 26,
+   "entries": 25,
+   "cards": 25,
    "samples": [
     {
      "card": "Genesect",
@@ -1590,8 +1590,8 @@
    "desc": "场地（Stadium）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 15,
-   "cards": 15,
+   "entries": 13,
+   "cards": 13,
    "samples": [
     {
      "card": "Fan Rotom",

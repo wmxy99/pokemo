@@ -1305,11 +1305,124 @@ class TestToolQualifiers(unittest.TestCase):
         b2.step({"verb": "attack", "attack": 0})
         self.assertEqual(b2.players[0].active.damage, 0, "持有者不符合 → 不反制")
 
+    def test_on_damaged_move_energy(self):
+        """Handheld Fan：攻击方 1 个能量被移到**攻击方自己的后备**"""
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=30, effects=()),)))
+        b.players[0].active.add_energy("colorless")
+        bench = _bench(b, 0, 1)[0]
+        d = make_pokemon(PokemonDef("Def", hp=200, ptype="colorless"))
+        d.tool = "tool:on_damaged:move_energy:1"
+        b.players[1].active = d
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.total_energy(), 0, "攻击方能量应被移走")
+        self.assertEqual(bench.total_energy(), 1, "能量应进攻击方后备")
+
+    def test_move_energy_without_bench_is_noop(self):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=30, effects=()),)))
+        b.players[0].active.add_energy("colorless")
+        d = make_pokemon(PokemonDef("Def", hp=200, ptype="colorless"))
+        d.tool = "tool:on_damaged:move_energy:1"
+        b.players[1].active = d
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.total_energy(), 1, "无后备时能量不动")
+
     def test_unknown_qualifier_is_inert(self):
         """未知限定形态一律不生效（宁可不减伤，不可乱减伤）"""
         b, d = self._battle("tool:dmg_reduce:50:from:faction:rocket")
         b.step({"verb": "attack", "attack": 0})
         self.assertEqual(d.damage, 100)
+
+
+class TestStadium(unittest.TestCase):
+    """S3 场地（2026-10-27）：全局唯一 / 顶替 / 全场静态修正
+
+    场地是**双方共用**的一张卡：不打在某只宝可梦身上，效果作用于"全场符合条件的"。
+    """
+
+    def _battle(self, tag, name="S"):
+        b = _arena()
+        b.players[0].hand.append(
+            TrainerRef(TrainerDef(tag, kind="stadium", name=name)))
+        return b
+
+    def test_play_sets_stadium_and_card_leaves_hand(self):
+        b = self._battle("stadium:hp_plus:30:stage:0")
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.stadium["tag"], "stadium:hp_plus:30:stage:0")
+        self.assertEqual(len(b.players[0].hand), 0)
+        self.assertFalse(any(isinstance(c, TrainerRef)
+                             for c in b.players[0].discard_refs),
+                         "场地道具语义：打出后留在场上，不进弃牌堆")
+
+    def test_hp_plus_applies_to_basic_both_sides(self):
+        b = self._battle("stadium:hp_plus:30:stage:0")
+        basic = make_pokemon(PokemonDef("B", hp=100, ptype="colorless"))
+        evo = make_pokemon(PokemonDef("E", hp=100, ptype="colorless", stage=1))
+        b.players[0].bench = [basic, evo]
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertEqual(basic.max_hp, 130, "基础宝可梦 +30")
+        self.assertEqual(evo.max_hp, 100, "一阶不受影响")
+        # 对手侧同样生效
+        opp_basic = b.players[1].active
+        opp_basic.pdef = PokemonDef("OB", hp=100, ptype="colorless")
+        b._refresh_stadium_hp()
+        self.assertEqual(opp_basic.max_hp, 130, "场地对双方都生效")
+
+    def test_gravity_mountain_minus_hp(self):
+        b = self._battle("stadium:hp_plus:-30:stage:2")
+        st2 = make_pokemon(PokemonDef("S2", hp=150, ptype="colorless", stage=2))
+        b.players[0].active = st2
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertEqual(st2.max_hp, 120, "二阶 −30")
+
+    def test_stadium_damage_reduce_by_type(self):
+        b = self._battle("stadium:dmg_reduce:30:type:metal")
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=100, effects=()),)))
+        metal = make_pokemon(PokemonDef("M", hp=200, ptype="metal"))
+        b.players[1].active = metal
+        b.step({"verb": "trainer", "hand": 0})
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(metal.damage, 70, "钢系受招式伤害 −30")
+
+    def test_stadium_damage_reduce_other_type_unaffected(self):
+        b = self._battle("stadium:dmg_reduce:30:type:metal")
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=100, effects=()),)))
+        grass = make_pokemon(PokemonDef("G", hp=200, ptype="grass"))
+        b.players[1].active = grass
+        b.step({"verb": "trainer", "hand": 0})
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(grass.damage, 100, "非钢系不减伤")
+
+    def test_new_stadium_replaces_old(self):
+        b = self._battle("stadium:hp_plus:30:stage:0")
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].hand.append(
+            TrainerRef(TrainerDef("stadium:hp_plus:-30:stage:2",
+                                  kind="stadium", name="Gravity")))
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.stadium["tag"], "stadium:hp_plus:-30:stage:2",
+                         "新场地必须顶替旧场地（全场只能有 1 张）")
+
+    def test_unknown_stadium_tag_is_inert(self):
+        """未实现的场地形态不得产生任何修正（宁可无效）"""
+        b = self._battle("stadium:search_basic:1")
+        basic = make_pokemon(PokemonDef("B2", hp=100, ptype="colorless"))
+        b.players[0].bench = [basic]
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertEqual(basic.max_hp, 100)
 
 
 if __name__ == "__main__":

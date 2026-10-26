@@ -42,7 +42,9 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # v1.4 修正器类（B4 批次）
                 "coin_flip", "damage_mod", "shield", "passive",
                 # S2 道具（2026-10-26）：附着在宝可梦上的常驻修正
-                "tool")
+                "tool",
+                # S3 场地（2026-10-27）：全场唯一、双方共用
+                "stadium")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -1050,6 +1052,9 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             else _parse_rule_zh(text, kind=kind, name=name))
     actions = spec.get("actions") or []
     # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
+    stadium = _detect_stadium(str(text or ""))
+    if stadium:
+        actions = list(stadium)
     tools = _detect_tool(str(text or ""))
     if tools:
         # 道具整段文本就是这一条效果 → **整体替换**通用解析结果。
@@ -1068,8 +1073,8 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
                    if not (a.get("type") == "rule"
                            and _note_starts_with(a, drop))]
         spec["actions"] = actions + mods
-    elif tools:
-        # 只有道具静态修正时也要写回（否则识别到了却没进 spec —— 实测踩过）
+    elif tools or stadium:
+        # 只有道具/场地时也要写回（否则识别到了却没进 spec —— 实测踩过）
         spec["actions"] = actions
     return spec
 
@@ -1485,6 +1490,45 @@ def _condition_from_clause(text: str) -> Optional[str]:
 _TOOL_HOLDER_RE = re.compile(r"this card is attached to", re.I)
 
 
+def _detect_stadium(text: str) -> list:
+    """场地（Stadium）静态修正识别 → ``stadium:*`` 动作（S3 · 2026-10-27）
+
+    只认**全场静态修正**两类（其余形态需要"每回合可选动作 / checkup 钩子 /
+    规则改写"，本轮尚未实现）：
+      · ``Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP.``
+        → ``stadium:hp_plus:30:stage:0``
+      · ``Each Stage 2 Pokémon in play … gets -30 HP.``
+        → ``stadium:hp_plus:-30:stage:2``
+      · ``{M} Pokémon (both yours and your opponent's) take 30 less damage from
+         attacks from the opponent's Pokémon …`` → ``stadium:dmg_reduce:30:type:metal``
+    ⚠ 带**卡名阵营**限定（Steven's / N's / Hop's / Team Rocket's）一律放弃。
+    """
+    t = _norm_apostrophe(text)
+    low = t.lower()
+
+    # 卡名/阵营限定 → 引擎无卡名归属元数据
+    if re.search(r"\b(steven|n|hop|marnie|erika|team rocket)'?s\s+pok[eé]mon", low):
+        return []
+
+    # A 上限修正（按阶段）
+    m = re.search(r"each (basic|stage 1|stage 2) pok[eé]mon in play[^.]*?"
+                  r"gets ([+-]\d+) hp", low)
+    if m:
+        stage = {"basic": 0, "stage 1": 1, "stage 2": 2}[m.group(1)]
+        return [act("stadium", int(m.group(2)), "any",
+                    {"kind": "hp_plus", "stage": stage})]
+
+    # B 减伤（按属性）
+    m = re.search(r"\{([a-z])\}\s*pok[eé]mon \(both yours and your opponent'?s\)"
+                  r" take (\d+) less damage", low)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+        if color:
+            return [act("stadium", int(m.group(2)), "any",
+                        {"kind": "dmg_reduce", "ptype": color})]
+    return []
+
+
 def _detect_tool(text: str) -> list:
     """道具（Pokémon Tool）识别 → ``tool:*`` 动作（S2 · 2026-10-26）
 
@@ -1546,6 +1590,13 @@ def _detect_tool_hook(text: str) -> list:
     if m:
         return [act("tool", int(m.group(1)), "self",
                     {"kind": "on_damaged_draw"})]
+
+    # B3b 受伤时把**攻击方的 1 个能量移到其后备**（Handheld Fan）
+    #   卡面：「move an Energy from the Attacking Pokémon to 1 of your opponent's
+    #   Benched Pokémon」——"your opponent" 指道具持有者的对手 = 攻击方本人，
+    #   所以是「攻击方 → 攻击方自己的后备」，不是跨方移动。
+    if re.search(r"move an energy from the attacking pok[eé]mon", low):
+        return [act("tool", 1, "self", {"kind": "on_damaged_move_energy"})]
 
     # B3 受伤时把伤害指示物放到攻击方（Deluxe Bomb）
     m = re.search(r"(?:put|place) (\d+) damage counters? on the attacking pok[eé]mon",
@@ -2611,6 +2662,15 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append("shield:prevent_all")
                 else:
                     unsupported.append({"type": t, "reason": "护盾类型未识别"})
+            elif t == "stadium":
+                k = extra.get("kind")
+                if k == "hp_plus" and amt is not None and extra.get("stage") is not None:
+                    tags.append(f"stadium:hp_plus:{int(amt)}:stage:{extra['stage']}")
+                elif k == "dmg_reduce" and amt is not None and extra.get("ptype"):
+                    tags.append(f"stadium:dmg_reduce:{int(amt)}:type:{extra['ptype']}")
+                else:
+                    unsupported.append({"type": t,
+                                        "reason": f"场地形态未建模（{k}）"})
             elif t == "tool":
                 # S2 道具（Pokémon Tool）
                 k = extra.get("kind")
@@ -2634,6 +2694,8 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append("tool:no_retreat")
                 elif k == "on_damaged_draw" and amt is not None:
                     tags.append(f"tool:on_damaged:draw:{int(amt)}")
+                elif k == "on_damaged_move_energy":
+                    tags.append("tool:on_damaged:move_energy:1")
                 elif k == "on_damaged_counter" and amt is not None:
                     tail = ""
                     if extra.get("holder_type"):

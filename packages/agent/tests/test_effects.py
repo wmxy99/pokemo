@@ -504,6 +504,32 @@ class TestV14Modifiers(unittest.TestCase):
                        kind="item", name="Sacred Charm")
         self.assertIn("tool:dmg_reduce:30:from:ability", r["tags"])
 
+    def test_stadium_static_modifiers(self):
+        """S3 场地：全场静态修正 → `stadium:*`"""
+        cases = [
+            ("Each Basic Pok\u00e9mon in play (both yours and your opponent\u2019s) "
+             "gets +30 HP.", "stadium:hp_plus:30:stage:0"),
+            ("Each Stage 2 Pok\u00e9mon in play (both yours and your opponent\u2019s) "
+             "gets -30 HP.", "stadium:hp_plus:-30:stage:2"),
+            ("{M} Pok\u00e9mon (both yours and your opponent\u2019s) take 30 less "
+             "damage from attacks from the opponent\u2019s Pok\u00e9mon (after "
+             "applying Weakness and Resistance).",
+             "stadium:dmg_reduce:30:type:metal"),
+        ]
+        for text, tag in cases:
+            with self.subTest(tag=tag):
+                r = self._tags(text, kind="card", name="S")
+                self.assertIn(tag, r["tags"])
+                self.assertEqual(r["unsupported"], [])
+
+    def test_stadium_faction_qualified_refused(self):
+        """按卡名阵营限定的场地仍拒绝（无卡名归属元数据）"""
+        r = self._tags("Steven\u2019s Pok\u00e9mon (both yours and your "
+                       "opponent\u2019s) take 30 less damage from attacks from the "
+                       "opponent\u2019s Pok\u00e9mon.", kind="card", name="Granite")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
     def test_tool_faction_qualifier_still_refused(self):
         """按**卡名阵营**限定的（Team Rocket's / Hop's）仍拒绝：引擎无卡名归属元数据"""
         r = self._tags("The Team Rocket\u2019s Pok\u00e9mon this card is attached to "

@@ -52,7 +52,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "discard_search_energy", "search_energy", "candy",
                 "search_pokemon", "search_trainer", "search_any",
                 # S2 道具（2026-10-26）：附着型训练家
-                "tool:")
+                "tool:",
+                # S3 场地（2026-10-27）：全场唯一
+                "stadium:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -194,10 +196,16 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     tags = (it or {}).get("engine_tags") or []
     subtype = str(card.get("subtype") or "")
     is_tool = "tool" in subtype.lower()
+    is_stadium = "stadium" in subtype.lower()
     tag = next((t for t in tags
                 if any(str(t).startswith(p) for p in TRAINER_TAGS)), None)
     if not tag:
         return None
+    if is_stadium:
+        # 场地同理：必须**唯一 tag 且是 stadium:***（卡面常夹带触发式副效果）
+        st = [t for t in tags if str(t).startswith("stadium:")]
+        if len(st) != 1 or len(tags) != 1:
+            return None
     if is_tool:
         # ⚠ 道具必须**只认 tool: tag**：道具卡面里常夹带「draw / search」等
         #   触发式子效果，若按普通训练家 tag 准入，就会变成**无条件生效**
@@ -206,6 +214,7 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
         if len(tool_tags) != 1 or len(tags) != 1:
             return None
     kind = ("tool" if is_tool
+            else "stadium" if is_stadium
             else "supporter" if "supporter" in subtype.lower() else "item")
     return {
         "name": card["name"],

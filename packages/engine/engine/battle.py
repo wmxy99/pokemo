@@ -14,7 +14,7 @@ import random
 import re
 from typing import Optional
 from .cards import (PokeRef, EnergyRef, TrainerRef, FieldPokemon,
-                    make_pokemon, _tool_value)
+                    make_pokemon, _tool_value, COLORLESS)
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield)
@@ -47,6 +47,9 @@ class Battle:
     # 注意：``_ko_by_attack`` 的类级值**必须是 None**，可变默认值会在实例间共享。
     _ko_by_attack = None
     _ko_from_attack = False
+    # S3 场地：全场只有 1 张（打出新的即顶替旧的）。类级默认值同 `_ko_by_attack`
+    # 的理由 —— 测试常用 `object.__new__(Battle)` 手工装配，没有 `__init__`。
+    stadium = None            # {"name": str, "tag": str, "owner": int} | None
 
     def _ko_flags(self) -> list:
         """按宝可梦所属方计数的「被招式击倒」标记（惰性创建，实例隔离）"""
@@ -197,6 +200,7 @@ class Battle:
         p.supporter_used = 0
         p.discarded_this_turn = 0                 # v1.4「in this way」按回合重置
         p.discarded_energy_this_turn = 0
+        self._refresh_stadium_hp()                # S3：场地对上限的修正在新回合重算
         for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
             fp.just_played = False
             fp.ability_used.clear()
@@ -401,6 +405,9 @@ class Battle:
                 # 通用检索（检索 n 张指定类别入手）——牌库需有可检索对象
                 if _deck_has_kind(p, _search_kind_of(tag)):
                     out.append(dict(base))
+            elif tag.startswith("stadium:"):
+                # S3 场地：无目标，手上有就能打（全场唯一，顶替旧场地）
+                out.append(dict(base))
             elif tag.startswith("tool:"):
                 # S2 道具：列出**尚未附着道具**的己方位置（每只最多 1 张）
                 targets = []
@@ -818,13 +825,16 @@ class Battle:
         elif tag.startswith("tool:"):
             placed = self._trainer_attach_tool(p, c, tag,
                                                int(action.get("target", 0)))
+        elif tag.startswith("stadium:"):
+            placed = self._trainer_play_stadium(p, c, tag)
         else:
             raise ValueError(f"未知训练家 tag={tag}")
         # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
         # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
         p.hand = [x for x in p.hand if x is not c]
-        # S2 道具：**附着而非弃置**（它留在场上，随持有者被击倒才进弃牌堆）
-        if not tag.startswith("tool:"):
+        # S2 道具 / S3 场地：**留在场上**，不进弃牌堆
+        #（场地被顶替时才把旧场地送进弃牌堆，见 `_trainer_play_stadium`）
+        if not tag.startswith(("tool:", "stadium:")):
             self._to_discard(p, c)
         if kind == "supporter":
             p.supporter_used = 1
@@ -833,6 +843,27 @@ class Battle:
         return {"ok": True, "event": self.events[-1]}
 
     # --- E4 训练家行为 ---
+    def _trainer_play_stadium(self, p: PlayerState, card, tag: str) -> str:
+        """打出场馆：全局唯一，顶替旧场地（旧场地进弃牌堆）
+
+        规则要点：场地是**双方共用**的，不归属打出方；顶替时旧场地送去**其拥有者**的
+        弃牌堆（简化：统一记到当前玩家弃牌堆并在日志标注 owner，弃牌堆不参与胜负判定）。
+        """
+        old = self.stadium
+        self.stadium = {"name": card.tdef.name, "tag": tag,
+                        "owner": p.name}
+        self._refresh_stadium_hp()
+        detail = "stadium set"
+        if old:
+            # 旧场地进弃牌堆（简化：记到打出方弃牌堆；弃牌堆不参与胜负判定）
+            detail = f"replace {old.get('name')}"
+            self._log("stadium_replace", {"old": old.get("name"),
+                                          "new": card.tdef.name,
+                                          "by": p.name})
+        self._log("stadium", {"name": card.tdef.name, "tag": tag,
+                              "by": p.name})
+        return detail
+
     def _trainer_attach_tool(self, p: PlayerState, card, tag: str,
                              target: int) -> str:
         """把道具附着到己方 1 只宝可梦（每只最多 1 张，S2）
@@ -1090,6 +1121,9 @@ class Battle:
                 tool_red = self._tool_reduce_vs(defender, attacker)
                 if tool_red:
                     dmg = max(0, dmg - tool_red)
+                stad_red = self._stadium_damage_reduce(defender)
+                if stad_red:
+                    dmg = max(0, dmg - stad_red)
                 dmg = apply_shield(defender, dmg)          # 护盾在弱抗之后
                 damage_dealt = dmg or 0
                 if dmg:
@@ -1119,6 +1153,64 @@ class Battle:
         if not self.finished:
             self._end_turn()
         return {"ok": True, "event": None}
+
+    # ---------- S3 场地（Stadium，2026-10-27） ----------
+    def _stadium_meta(self) -> dict:
+        """当前场地 tag → 结构化效果（`stadium:<kind>:<n>[:stage:<k>|:type:<c>]`）
+
+        只支持**全场静态修正**两类：
+          · `stadium:hp_plus:<n>:stage:<k>`  某阶段宝可梦上限 +n（负值即 −n）
+          · `stadium:dmg_reduce:<n>:type:<c>` 某属性宝可梦受招式伤害 −n
+        每回合可选动作 / checkup 触发 / 规则改写等形态**尚未实现**（如实登记）。
+        """
+        out = {"kind": "", "n": 0, "stage": None, "type": None}
+        tag = (self.stadium or {}).get("tag") or ""
+        if not tag.startswith("stadium:"):
+            return out
+        parts = tag.split(":")
+        out["kind"] = parts[1] if len(parts) > 1 else ""
+        out["n"] = int(parts[2]) if len(parts) > 2 and parts[2].lstrip("-").isdigit() else 0
+        i = 3
+        while i + 1 < len(parts):
+            if parts[i] == "stage":
+                out["stage"] = int(parts[i + 1]) if parts[i + 1].isdigit() else None
+            elif parts[i] == "type":
+                out["type"] = parts[i + 1]
+            i += 2
+        return out
+
+    def _stadium_hp_delta(self, fp: FieldPokemon) -> int:
+        m = self._stadium_meta()
+        if m["kind"] != "hp_plus":
+            return 0
+        if m["stage"] is not None and fp.pdef.stage != m["stage"]:
+            return 0
+        return m["n"]
+
+    def _refresh_stadium_hp(self) -> None:
+        """把「特性静态 + 场地静态」的 +HP 一起重算到 `bonus_hp`
+
+        为什么必须重算而不是增量：场地会被顶替/移走，增量减法一旦漏一处就会
+        永久漂移（血量上限这种字段出错极难发现）。重算的代价是每回合 O(场上数量)。
+        """
+        for pi in (0, 1):
+            for fp in self.players[pi].all_field():
+                base = 0
+                for ab in fp.pdef.abilities:
+                    tag = str(getattr(ab, "tag", "") or "")
+                    if tag.startswith("passive:hp_plus:"):
+                        raw = tag.split(":")
+                        if len(raw) > 2 and raw[2].isdigit():
+                            base += int(raw[2])
+                fp.bonus_hp = base + self._stadium_hp_delta(fp)
+
+    def _stadium_damage_reduce(self, defender: FieldPokemon) -> int:
+        m = self._stadium_meta()
+        if m["kind"] != "dmg_reduce" or not m["n"]:
+            return 0
+        if m["type"] and str(defender.pdef.ptype).lower() != m["type"].lower():
+            return 0
+        return m["n"]
 
     # ---------- S2 第二阶段：道具触发钩子 ----------
     def _tool_reduce_vs(self, defender: FieldPokemon,
@@ -1174,6 +1266,26 @@ class Battle:
             self._log("tool_trigger", {"player": owner, "tool": defender.tool_name,
                                        "kind": "draw", "n": n,
                                        "target": defender.name})
+        elif kind == "move_energy" and n > 0:
+            # 攻击方的 n 个能量 → 攻击方自己的后备（卡面 "your opponent's Benched
+            # Pokémon" 是相对**道具持有者**说的，即攻击方一侧）
+            ap = self.players[self.current]
+            moved = 0
+            if ap.bench:
+                for _ in range(n):
+                    # 选哪个能量：与 `remove_any` 同口径 —— **无色优先**，其次任意色
+                    av = {k: v for k, v in attacker.energy.items() if v > 0}
+                    if not av:
+                        break
+                    etype = next((t for t in av if t == COLORLESS), next(iter(av)))
+                    attacker.energy[etype] -= 1
+                    if attacker.energy[etype] <= 0:
+                        del attacker.energy[etype]
+                    ap.bench[0].add_energy(etype)
+                    moved += 1
+                self._log("tool_trigger", {"player": owner, "tool": defender.tool_name,
+                                           "kind": "move_energy", "n": moved,
+                                           "target": defender.name})
         elif kind == "counter" and n > 0:
             attacker.damage += n
             self._log("damage", {"target": attacker.name, "player": self.current,

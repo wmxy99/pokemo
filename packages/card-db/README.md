@@ -92,11 +92,11 @@ python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
 
 | 口径 | 数值（2026-09-22） | 定义 | 用在哪 |
 |---|---:|---|---|
-| **严格：`engine_ready`** | **538 / 1267** | 库内标志位（含近似/fidelity 条件） | `/cards/stats`、卡组校验、对局可用池 |
-| 解析层面「无未建模动作」 | 607 / 1267 | 只表示解析链未产出未建模动作 | `unmodeled_registry.md` 的进展对比 |
+| **严格：`engine_ready`** | **541 / 1267** | 库内标志位（含近似/fidelity 条件） | `/cards/stats`、卡组校验、对局可用池 |
+| 解析层面「无未建模动作」 | 611 / 1267 | 只表示解析链未产出未建模动作 | `unmodeled_registry.md` 的进展对比 |
 
 两者**不是同一件事**，差值部分 = 「解析通过但标志仍不可对战」的卡。
-对外（README / 发布说明 / KPI）**统一用 538**；`unmodeled_registry.md` 已同步标注两种口径。
+对外（README / 发布说明 / KPI）**统一用 541**；`unmodeled_registry.md` 已同步标注两种口径。
 
 ### ⚠ `pokelab.db` 里的设计期表已被取代（勿误用）
 
@@ -119,8 +119,8 @@ python scripts/import_challenge_dataset.py --zip <path.zip> --parse-effects
   ↔ `Basic Psychic Energy`）；
 - 引擎卡池（人工池 + 扩展池）按 `name_key`/别名回填 `name_zh` 与 `engine_status`：
   **人工池** 40 张 → `mapped`（逐卡校对，其中 7 张靠别名命中）；
-  **扩展池** 427 张 → `approximated`（见下节）。库内 `engine_ready` 合计
-  **538 / 1267**（`mapped` 36 + `approximated` 502）。
+  **扩展池** 430 张 → `approximated`（见下节）。库内 `engine_ready` 合计
+  **541 / 1267**（`mapped` 36 + `approximated` 505）。
 
 ### 扩展卡池生成（`scripts/gen_engine_pool.py`）
 

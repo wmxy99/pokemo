@@ -4,8 +4,8 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **300** 项）· 全仓 **671** 项测试全绿
-（engine 300 · agent 227 · api 132 · gym 12）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **309** 项）· 全仓 **682** 项测试全绿
+（engine 309 · agent 229 · api 132 · gym 12）
 <!-- 上面这行由 scripts/check_doc_counts.py 在 CI 中核对（计数类文档必须实证） -->
 
 | | |
@@ -86,8 +86,8 @@ python scripts/ci_local.py engine api   # 只跑指定 job（--list 可看全部
 
 | 边界 | 数值 | 披露位置 |
 |---|---|---|
-| 卡池引擎覆盖率 | 538 / 1267 = **42.5%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
-| 未建模动作条目 | **584** 条（**全部纳入实现范围**，见 `docs/RULES_COMPLETION_PLAN.md`） | 同上（含批次图例与处置） |
+| 卡池引擎覆盖率 | 541 / 1267 = **42.7%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
+| 未建模动作条目 | **580** 条（**全部纳入实现范围**，见 `docs/RULES_COMPLETION_PLAN.md`） | 同上（含批次图例与处置） |
 | 规则简化子集 | 能量不分颜色 · 先手不禁攻（开关已留）· 每回合抽 1 · 起手自动铺后备 · 攻击即结束回合 | `packages/engine/README.md`「规则边界」 |
 | 引擎未实现卡 | 对战时以基础能量**占位**并在 UI 显式告知 | 卡组页 / 预设清单三态标注 |
 

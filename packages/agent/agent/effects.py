@@ -894,6 +894,17 @@ def _draw_extra_of(text: str, m) -> Optional[dict]:
         return None
     if "each player" in seg or "opponent draws" in low:
         return None
+    # **抽牌方阵营**（2026-10-27）：`draw:` 在引擎里恒指**自己**抽。若本句里
+    # 抽牌动作之前的主语是「对手 / 双方」，放通就会变成「对手洗回手牌，我方抽 N」
+    # —— 实测 Gothitelle「have your opponent shuffle their hand … and draw 3
+    # cards」/ Vivillon「Your opponent shuffles … they draw 4 cards」两张。
+    head = text[max(text.rfind(".", 0, m.start()), 0):m.start()]
+    _before = text[:m.start()].lower()
+    # 「they/their」是代词主语：全文里若提到 opponent，指的就是对手（Vivillon
+    # 「Your opponent shuffles their hand … they draw 4 cards」）
+    if re.search(r"\bopponent\b|\beach player\b|\btheir hand\b", head) \
+            or (re.search(r"\bthey\b|\btheir\b", head) and "opponent" in _before):
+        return None
     if "instead" in seg or re.search(r"draw\s+\d+\s+more", seg):
         return None
     # 同一段后面还有第二段抽牌（"Draw 2 cards. Then … draw 2 more cards."）
@@ -1217,7 +1228,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                            {"from_deck": True, "side": side}))
 
     _da = _EN_DISCARD_ALL_RE.search(t)
-    if _da and _is_delayed(t, _da.start()):
+    # 「Discard a **Special** Energy …」——引擎能量不分基本/特殊，`discard_energy`
+    # 会按任意色弃一张 → 对手只贴了基本能量时该效果**本不该生效却生效**。
+    # （实测 Cobalion「Discard a Special Energy from your opponent's Active Pokémon」）
+    _sp_e = re.search(r"(?:discard|remove)\s+(?:up to\s+\d+\s+)?(?:\d+\s+|a\s+|an\s+)?"
+                      r"special energy", lower)
+    if _sp_e:
+        actions.append(act("rule", None, "any", {
+            "note": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"}))
+    elif _da and _is_delayed(t, _da.start()):
         # Amarys：「Draw 4 cards. At the end of this turn, … discard your hand.」
         # 引擎没有「回合末延迟队列」，立即弃手牌会把刚抽的牌一并弃掉（时序错）。
         actions.append(act("rule", None, "hand",
@@ -1363,6 +1382,13 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _EN_MODIFY_RE.search(_strip_rules_paren(t)):
         actions.append(act("rule", None, "any",
                            {"note": "静态规则修改（弱点/抗性/伤害减免/限制）"}))
+
+    # 「… this attack does N more damage. Then, discard that Stadium.」——条件加伤的
+    # **附带动作**。引擎没有「弃置场地」这类动作，若只映射条件加伤，这段效果会被
+    # **静默丢掉**（实测 Chi-Yu / Mamoswine 两张，加伤对了、少弃一张场地）。
+    if re.search(r"\b(?:discard|remove)\s+that\s+stadium\b", lower):
+        actions.append(act("rule", None, "any",
+                           {"note": "附带动作「弃置该场地」需引擎弃场地动作（B4）"}))
 
     # 触发时机（英文）
     if re.search(r"if .{0,30}(?:is|are) knocked out", lower) or \
@@ -1909,6 +1935,118 @@ def _condition_from_clause(text: str) -> Optional[str]:
     m = re.search(r"if you have (\d+) or more energy in play", seg)
     if m:
         return f"own_all_energy_at_least:{int(m.group(1))}"
+
+    # ---- 第五批（2026-10-27）：其余「当下局面可直接读出」的条件 ----
+    # 纪律不变：**只能**用当下棋盘状态判定。凡依赖「本回合是否换入 / 是否被治疗 /
+    # 是否进化 / 上回合用过哪招 / 本回合是否打出某卡」的，一律返回 None（需回合记账）。
+    # ⚠ 顺序有讲究：`this Pokémon has any {G} Energy attached`（第 22 条）必须
+    #   **先于** 第 4 条的「has any damage counters」之后的通用匹配，否则会被
+    #   `_condition_from_text` 的 `has any {X} Energy` 分支先截走（那条在更外层）。
+    #   —— 实际上外层优先，此处仅保证同层内不互相抢占。
+
+    # 9) 场上有场地（任意一方）。两种写法都真实存在：
+    #    「If a Stadium is in play」/「If you have a Stadium in play」
+    if re.search(r"if (?:a|any) stadium is in play"
+                 r"|if you have a stadium in play", seg):
+        return "stadium_in_play"
+
+    # 10) 自身战斗位有道具（Pokémon Tool）
+    if re.search(r"if this pok[eé]mon has a pok[eé]mon tool attached", seg):
+        return "own_active_has_tool"
+
+    # 11) 自身战斗位满 HP（「has no damage counters on it」）
+    if re.search(r"if this pok[eé]mon has no damage counters? on it", seg):
+        return "own_active_full_hp"
+
+    # 12) 对手战斗位有**任意**特殊状态（不指定是哪一种）
+    if re.search(opp_active + r" is affected by a special condition", seg):
+        return "opp_active_has_status"
+
+    # 13) 自身战斗位处于某特殊状态
+    #     ⚠ 「Burned or Poisoned」是**析取**，引擎条件只有单值 → 拒绝（不能取其一）
+    m = re.search(r"if this pok[eé]mon is (burned|poisoned|asleep|paraly[sz]ed|confused)",
+                  seg)
+    if m:
+        if re.search(r"if this pok[eé]mon is (?:burned|poisoned|asleep|paraly[sz]ed|"
+                     r"confused)\s+or\s+", seg):
+            return None
+        word = m.group(1).replace("paralysed", "paralyzed")
+        tag = _STATUS_WORD_TO_TAG.get(word)
+        return f"own_active_status:{tag}" if tag else None
+
+    # 14) 我方**后备**有伤害指示物
+    if re.search(r"if your benched pok[eé]mon have any damage counters? on them", seg):
+        return "own_bench_has_damage"
+
+    # 15) 双方手牌数相同
+    if re.search(r"if you have the same number of cards in your hand as your opponent",
+                 seg):
+        return "own_hand_eq_opp_hand"
+
+    # 16) 双方战斗位能量数相同
+    if re.search(r"if this pok[eé]mon and your opponent'?s active pok[eé]mon have the "
+                 r"same amount of energy attached", seg):
+        return "own_opp_active_energy_equal"
+
+    # 17) 对手手牌数上限
+    m = re.search(r"if your opponent has (\d+) or fewer cards? in (?:their|his or her) "
+                  r"hand", seg)
+    if m:
+        return f"opp_hand_at_most:{int(m.group(1))}"
+
+    # 18) 对手剩余奖赏卡上限
+    m = re.search(r"if your opponent has (\d+) or fewer prize cards? remaining", seg)
+    if m:
+        return f"opp_prizes_at_most:{int(m.group(1))}"
+
+    # 19) 我方剩余奖赏卡恰为 N
+    m = re.search(r"if you have exactly (\d+) prize cards? remaining", seg)
+    if m:
+        return f"own_prizes_exactly:{int(m.group(1))}"
+
+    # 20) 对手战斗位的进化阶段
+    m = re.search(opp_active + r" is a stage (\d) pok[eé]mon", seg)
+    if m:
+        return f"opp_active_is_stage:{int(m.group(1))}"
+
+    # 21) 自身剩余 HP 上限（「remaining HP is 50 or less」）
+    m = re.search(r"if this pok[eé]mon'?s remaining hp is (\d+) or less", seg)
+    if m:
+        return f"own_active_hp_at_most:{int(m.group(1))}"
+
+    # 22) 自身战斗位某色能量下限（「has 2 or more {G} Energy attached」）
+    m = re.search(r"if this pok[eé]mon has (\d+) or more \{([a-z])\} energy attached",
+                  seg)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+        return f"own_active_energy_type_at_least:{color}:{int(m.group(1))}" if color else None
+
+    # 23) 我方全场某色能量下限（「you have at least 4 {L} Energy in play」）
+    m = re.search(r"if you have at least (\d+) \{([a-z])\} energy in play", seg)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+        return f"own_all_energy_type_at_least:{color}:{int(m.group(1))}" if color else None
+
+    # 24) 对手战斗位有某属性抗性（「has {F} Resistance」）
+    m = re.search(opp_active + r" has \{([a-z])\} resistance", seg)
+    if m:
+        color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+        return f"opp_active_resistance:{color}" if color else None
+
+    # 25) 我方后备有指定名字的宝可梦。两种写法：
+    #     「If Illumise is on your Bench」/「If a Pokémon that has "Nidoking" in its
+    #     name is on your Bench」。
+    #     ⚠ 多名字并列（「If Beldum and Metang are on your Bench」）是**合取**，
+    #       单条件表达不了 → 拒绝（否则会变成「有其一就加伤」）。
+    if re.search(r" and [a-z][a-z'’ ]{2,20} (?:is|are) on your bench", seg):
+        return None
+    m = re.search(r"if a pok[eé]mon that has ['\"]?([a-z][a-z' ]{2,20}?)['\"]? in its "
+                  r"name is on your bench", seg)
+    if not m:
+        m = re.search(r"if ([a-z][a-z' ]{2,20}?) is on your bench", seg)
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", m.group(1).lower())
+        return f"own_bench_name:{key}" if key else None
     return None
 
 
@@ -3004,6 +3142,13 @@ def to_engine_tags(specs: list) -> dict:
                 _src = str(s.get("source_text") or "")
                 if st not in ENGINE_STATUS_TAGS:
                     unsupported.append({"type": t, "reason": f"未知状态 {st}"})
+                elif tgt == "self":
+                    # 「This Pokémon is now Asleep/Confused/Poisoned」= **施术者自己**
+                    # 陷入状态。引擎的裸状态 tag 恒作用于**对手战斗位**（
+                    # `_apply_attack_effects` 里写的是 opp.active）→ 放通即方向反转。
+                    # 实测 Larry's Komala 先前因此一直在给**对手**上睡眠。
+                    unsupported.append(
+                        {"type": t, "reason": "自身陷入状态需引擎 self-status（B4）"})
                 elif kind == "ability" and trigger == "on_evolve":
                     # 「when you play this Pokémon from your hand to evolve …」只能
                     # 在进化那一刻用一次；引擎的特性是**每回合都能再发动** →

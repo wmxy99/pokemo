@@ -1936,5 +1936,137 @@ class TestAbilityOnDamaged(unittest.TestCase):
                          "击倒前仍须在攻击方身上放指示物")
 
 
+class TestScalingConditions5(unittest.TestCase):
+    """第五批条件伤害缩放（2026-10-27）
+
+    卡面原型「If <局面条件>, this attack does N more damage.」
+    纪律：**只认当下局面**能判定的条件；依赖回合历史的（本回合换入 / 被治疗 /
+    进化 / 上回合用过某招）一律不进白名单。
+    """
+
+    def _b(self):
+        from engine.battle import _eval_condition
+        b = _arena()
+        return b, _eval_condition
+
+    def test_stadium_in_play(self):
+        b, ev = self._b()
+        self.assertFalse(ev(b, "stadium_in_play"))
+        b.stadium = {"tag": "stadium:hp_plus:30:stage:0", "name": "X"}
+        self.assertTrue(ev(b, "stadium_in_play"))
+
+    def test_own_active_has_tool(self):
+        b, ev = self._b()
+        self.assertFalse(ev(b, "own_active_has_tool"))
+        b.players[0].active.tool = "tool:hp_plus:30"
+        self.assertTrue(ev(b, "own_active_has_tool"))
+
+    def test_own_active_full_hp(self):
+        b, ev = self._b()
+        self.assertTrue(ev(b, "own_active_full_hp"))
+        b.players[0].active.damage = 10
+        self.assertFalse(ev(b, "own_active_full_hp"))
+
+    def test_opp_active_has_status(self):
+        b, ev = self._b()
+        self.assertFalse(ev(b, "opp_active_has_status"))
+        b.players[1].active.status.add("poison")
+        self.assertTrue(ev(b, "opp_active_has_status"))
+
+    def test_own_bench_has_damage(self):
+        b, ev = self._b()
+        _bench(b, 0, 2)
+        self.assertFalse(ev(b, "own_bench_has_damage"))
+        b.players[0].bench[1].damage = 20
+        self.assertTrue(ev(b, "own_bench_has_damage"))
+
+    def test_own_hand_eq_opp_hand(self):
+        b, ev = self._b()
+        self.assertTrue(ev(b, "own_hand_eq_opp_hand"))
+        b.players[1].hand.append(EnergyRef())
+        self.assertFalse(ev(b, "own_hand_eq_opp_hand"))
+
+    def test_own_opp_active_energy_equal(self):
+        b, ev = self._b()
+        b.players[0].active.energy["fire"] = 2
+        self.assertFalse(ev(b, "own_opp_active_energy_equal"))
+        b.players[1].active.energy["water"] = 2
+        self.assertTrue(ev(b, "own_opp_active_energy_equal"))
+
+    def test_opp_hand_at_most(self):
+        b, ev = self._b()
+        b.players[1].hand.extend([EnergyRef() for _ in range(3)])
+        self.assertTrue(ev(b, "opp_hand_at_most:3"))
+        self.assertFalse(ev(b, "opp_hand_at_most:2"))
+
+    def test_opp_prizes_at_most(self):
+        b, ev = self._b()
+        self.assertTrue(ev(b, "opp_prizes_at_most:6"))
+        self.assertFalse(ev(b, "opp_prizes_at_most:3"))
+        b.players[1].prizes_left = 3
+        self.assertTrue(ev(b, "opp_prizes_at_most:3"))
+
+    def test_own_prizes_exactly(self):
+        b, ev = self._b()
+        self.assertTrue(ev(b, "own_prizes_exactly:6"))
+        self.assertFalse(ev(b, "own_prizes_exactly:5"))
+
+    def test_opp_active_is_stage(self):
+        b, ev = self._b()
+        self.assertTrue(ev(b, "opp_active_is_stage:0"))
+        self.assertFalse(ev(b, "opp_active_is_stage:2"))
+
+    def test_own_active_hp_at_most(self):
+        b, ev = self._b()
+        self.assertFalse(ev(b, "own_active_hp_at_most:50"))
+        b.players[0].active.damage = 160
+        self.assertTrue(ev(b, "own_active_hp_at_most:50"))
+
+    def test_own_active_status_param(self):
+        b, ev = self._b()
+        self.assertFalse(ev(b, "own_active_status:poison"))
+        b.players[0].active.status.add("poison")
+        self.assertTrue(ev(b, "own_active_status:poison"))
+        with self.assertRaises(ValueError):
+            ev(b, "own_active_status:poisoned")     # 非标准拼写必须抛错
+
+    def test_own_active_energy_type_at_least(self):
+        b, ev = self._b()
+        b.players[0].active.energy["grass"] = 1
+        self.assertFalse(ev(b, "own_active_energy_type_at_least:grass:2"))
+        b.players[0].active.energy["grass"] = 2
+        self.assertTrue(ev(b, "own_active_energy_type_at_least:grass:2"))
+        self.assertFalse(ev(b, "own_active_energy_type_at_least:fire:1"))
+
+    def test_own_all_energy_type_at_least(self):
+        b, ev = self._b()
+        b.players[0].active.energy["lightning"] = 2
+        _bench(b, 0, 1)
+        b.players[0].bench[0].energy["lightning"] = 3
+        self.assertTrue(ev(b, "own_all_energy_type_at_least:lightning:4"))
+        self.assertFalse(ev(b, "own_all_energy_type_at_least:lightning:6"))
+
+    def test_opp_active_resistance(self):
+        b, ev = self._b()
+        b.players[1].active.pdef = PokemonDef(
+            "Def", hp=200, ptype="colorless", resistance="fighting")
+        self.assertTrue(ev(b, "opp_active_resistance:fighting"))
+        self.assertFalse(ev(b, "opp_active_resistance:grass"))
+
+    def test_own_bench_name_substring(self):
+        """「has "Nidoking" in its name」→ 归一化后子串匹配"""
+        b, ev = self._b()
+        b.players[0].bench.append(make_pokemon(PokemonDef(
+            "Team Rocket's Nidoking", hp=100, ptype="darkness", attacks=())))
+        self.assertTrue(ev(b, "own_bench_name:nidoking"))
+        self.assertFalse(ev(b, "own_bench_name:nidoqueen"))
+
+    def test_unknown_condition_still_raises(self):
+        """负向守卫：未知条件必须抛错（静默 False 会让加伤永不生效）"""
+        b, ev = self._b()
+        with self.assertRaises(ValueError):
+            ev(b, "definitely_not_a_condition")
+
+
 if __name__ == "__main__":
     unittest.main()

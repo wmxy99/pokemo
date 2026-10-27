@@ -3063,6 +3063,24 @@ _CONDITIONS = {
     "opp_active_is_ex": lambda b, p, o: o.active is not None and bool(o.active.pdef.is_ex),
     # 「if your opponent's Active Pokémon is an Evolution Pokémon」
     "opp_active_is_evolution": lambda b, p, o: o.active is not None and o.active.pdef.stage > 0,
+    # ---- 2026-10-27 第五批：仍是「当下局面可直接读出」的条件 ----
+    # 「If a Stadium is in play」/「If you have a Stadium in play」——场地双方共用
+    "stadium_in_play": lambda b, p, o: bool((b.stadium or {}).get("tag")),
+    # 「If this Pokémon has a Pokémon Tool attached」
+    "own_active_has_tool": lambda b, p, o: p.active is not None and bool(p.active.tool),
+    # 「If this Pokémon has no damage counters on it」（= 满 HP）
+    "own_active_full_hp": lambda b, p, o: p.active is not None and p.active.damage == 0,
+    # 「If your opponent's Active Pokémon is affected by a Special Condition」
+    "opp_active_has_status": lambda b, p, o: o.active is not None and bool(o.active.status),
+    # 「If your Benched Pokémon have any damage counters on them」
+    "own_bench_has_damage": lambda b, p, o: any(fp.damage > 0 for fp in p.bench),
+    # 「If you have the same number of cards in your hand as your opponent」
+    "own_hand_eq_opp_hand": lambda b, p, o: len(p.hand) == len(o.hand),
+    # 「If this Pokémon and your opponent's Active Pokémon have the same amount of
+    #   Energy attached」
+    "own_opp_active_energy_equal": lambda b, p, o: (
+        p.active is not None and o.active is not None
+        and p.active.total_energy() == o.active.total_energy()),
 }
 
 # 带参数的**条件**（与 `_CONDITIONS` 同样进白名单，只是需要参数）。
@@ -3074,6 +3092,17 @@ _CONDITION_PARAMS = {
     "opp_active_type": "energy/type name ∈ engine.cards.TYPES",
     "opp_bench_at_least": "整数 n ≥ 0",
     "own_all_energy_at_least": "整数 n ≥ 0",
+    # ---- 2026-10-27 第五批（全部为当下局面可判定）----
+    "own_active_status": "special condition name ∈ rules.STATUSES",
+    "opp_hand_at_most": "整数 n ≥ 0（对手手牌数 ≤ n）",
+    "opp_prizes_at_most": "整数 n ≥ 0（对手剩余奖赏 ≤ n）",
+    "own_prizes_exactly": "整数 n ≥ 0（我方剩余奖赏 = n）",
+    "opp_active_is_stage": "0/1/2（对手战斗位进化阶段）",
+    "own_active_hp_at_most": "整数（自身剩余 HP ≤ n）",
+    "own_active_energy_type_at_least": "<color>:<n>（自身战斗位该色能量 ≥ n）",
+    "own_all_energy_type_at_least": "<color>:<n>（全场该色能量 ≥ n）",
+    "opp_active_resistance": "energy/type name ∈ engine.cards.TYPES",
+    "own_bench_name": "卡名归一化键（小写、去非字母数字）",
 }
 
 
@@ -3171,6 +3200,55 @@ def _eval_condition(battle, cond: str) -> bool:
         if name == "opp_bench_at_least":
             return len(o.bench) >= n
         return _eval_counter(battle, "own_all_energy") >= n
+    # ---- 第五批带参条件（2026-10-27）----
+    if name in ("opp_hand_at_most", "opp_prizes_at_most", "own_prizes_exactly",
+                "opp_active_is_stage", "own_active_hp_at_most"):
+        try:
+            n = int(arg)
+        except (TypeError, ValueError):
+            raise ValueError(f"条件参数非整数：{cond}") from None
+        if name == "opp_hand_at_most":
+            return len(o.hand) <= n
+        if name == "opp_prizes_at_most":
+            return o.prizes_left <= n
+        if name == "own_prizes_exactly":
+            return p.prizes_left == n
+        if name == "opp_active_is_stage":
+            return o.active is not None and o.active.pdef.stage == n
+        # own_active_hp_at_most
+        return p.active is not None and p.active.hp_remaining <= n
+    if name == "own_active_status":
+        from .rules import STATUSES as _STATUSES
+        if arg not in _STATUSES:
+            raise ValueError(f"{cond}：未知特殊状态 {arg!r}（可用：{'/'.join(_STATUSES)}）")
+        st = set(p.active.status) if p.active is not None else set()
+        if arg == "paralyze":
+            return bool(st & {"paralyze", "paralyzed"})
+        return arg in st
+    if name in ("own_active_energy_type_at_least", "own_all_energy_type_at_least"):
+        color, _, raw = arg.partition(":")
+        if not color:
+            raise ValueError(f"{cond}：缺少属性参数")
+        try:
+            n = int(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"条件参数非整数：{cond}") from None
+        zone = "own_active_energy" if name.startswith("own_active") \
+            else "own_all_energy"
+        return _eval_counter(battle, f"{zone}_{color}") >= n
+    if name == "opp_active_resistance":
+        if o.active is None:
+            return False
+        if not arg:
+            raise ValueError(f"{cond}：缺少属性参数")
+        return str(o.active.pdef.resistance or "").lower() == arg.lower()
+    if name == "own_bench_name":
+        key = _name_key(arg)
+        if not key:
+            raise ValueError(f"{cond}：缺少卡名参数")
+        # 卡面「a Pokémon that has "Nidoking" in its name」是**子串**语义 →
+        # 归一化后按 in 判定（"Team Rocket's Nidoking" 也应命中）
+        return any(key in _name_key(fp.pdef.name) for fp in p.bench)
     raise ValueError(
         f"未知条件 {cond}（可用：{'、'.join(sorted(_CONDITIONS))}；"
         f"带参形式：own_active_energy_type:<color> / "

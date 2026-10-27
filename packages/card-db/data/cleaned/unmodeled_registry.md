@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-27 09:14:47
+- 生成时间：2026-10-27 10:25:13
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **575** 条 · 已映射 tag 971 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：551 张**
-- 解析层面「无未建模动作」卡：616 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **635** 条 · 已映射 tag 910 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：618 张**
+- 解析层面「无未建模动作」卡：565 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -21,7 +21,7 @@
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
 | B4 | static_lock | `rule` | 15 | 15 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B4 | coin_flip | `rule` | 11 | 11 | 静态/未建模（英文） |
+| B4 | coin_flip | `rule` | 10 | 10 | 静态/未建模（英文） |
 | B4 | scaling_damage | `rule` | 4 | 4 | 静态/未建模（英文） |
 | B4 | static_lock | `rule` | 4 | 4 | 场地形态未建模（S3 未覆盖） |
 | B4 | static_lock | `rule` | 3 | 3 | 静态/未建模（英文） |
@@ -35,6 +35,7 @@
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy card you discar） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Ancient card in your discard p） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
+| B4 | coin_flip | `rule` | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（2 of your opponent’s Benched Pokémon） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex}） |
@@ -48,32 +49,38 @@
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each {G} Energy attached to） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Prize card your opponent took ） |
+| B4 | coin_flip | `rule` | 1 | 1 | 抛币分支内的回复（需 coin 嵌套，B4） |
+| B4 | coin_flip | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
 | B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
-| B5 | S6 | `rule` | 219 | 208 | 静态/未建模（英文） |
-| B5 | S6 | `rule` | 39 | 39 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B4 | type:on_damaged | `on_damaged` | 1 | 1 | 受击反应仅实现特性侧（B4） |
+| B4 | coin_flip | `rule` | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
+| B5 | S6 | `rule` | 216 | 205 | 静态/未建模（英文） |
 | B5 | S2 | `rule` | 25 | 25 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 24 | 24 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S5 | `rule` | 24 | 20 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B5 | S4 | `rule` | 10 | 10 | 静态/未建模（英文） |
-| B5 | S3 | `rule` | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S4 | `rule` | 9 | 9 | 静态/未建模（英文） |
 | B5 | S1 | `rule` | 7 | 6 | 静态/未建模（英文） |
 | B5 | S3 | `rule` | 7 | 7 | 场地形态未建模（S3 未覆盖） |
 | B5 | S3 | `rule` | 5 | 5 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | B5 | S2 | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
-| B5 | S5 | `rule` | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| B5 | S3 | `rule` | 4 | 4 | 附带动作「弃置该场地」需引擎弃场地动作（B4） |
+| B5 | S6 | `rule` | 4 | 4 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
+| B5 | S6 | `rule` | 3 | 3 | 回复范围/限定不可精确表达（B4） |
 | B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
+| B5 | S2 | `rule` | 2 | 2 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
 | B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
 | B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Special Condition affecting yo） |
 | B5 | S1 | `rule` | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B5 | S6 | `rule` | 2 | 2 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B5 | S6 | `rule` | 2 | 2 | 条件伤害缩放：计数源未识别（Supporter card that has “Team ） |
-| B5 | S2 | `rule` | 2 | 2 | 条件伤害缩放：条件未识别（引擎无该条件） |
-| B5 | S6 | `rule` | 2 | 2 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Ancient Pokémon in pla） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Pokémon in your discard pile t） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic Energy card in your oppo） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Team Rocket's Pokémon ） |
+| B5 | S3 | `rule` | 1 | 1 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Item card in your opponent's d） |
 | B5 | S5 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Trainer card you find there） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card in your ） |
@@ -87,6 +94,8 @@
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| B5 | S4 | `rule` | 1 | 1 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
+| B5 | S6 | `rule` | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
 
@@ -96,7 +105,7 @@
 - `Farigiraf ex`：Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.
 - `Cornerstone Mask Ogerpon ex`：Prevent all damage from attacks done to this Pokémon by your opponent’s Pokémon that have an Ability.
 
-**B4 · coin_flip**（11 条）
+**B4 · coin_flip**（10 条）
 
 - `Sylveon`：Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.
 - `Alolan Exeggutor ex`：Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon.
@@ -165,6 +174,10 @@
 
 - `Wellspring Mask Ogerpon ex`：You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t ap
 
+**B4 · coin_flip**（1 条）
+
+- `Cradily`：Once during your turn, you may flip a coin. If heads, choose Burned, Confused, or Poisoned. Your opponent’s Active Pokémon is now affected by that Special Condi
+
 **B4 · extra_damage_target**（1 条）
 
 - `Flygon ex`：This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance.
@@ -217,6 +230,14 @@
 
 - `Okidogi`：This attack does 60 more damage for each Prize card your opponent took during their last turn.
 
+**B4 · coin_flip**（1 条）
+
+- `Floragato`：Flip a coin. If heads, this attack does 30 more damage, and heal 30 damage from this Pokémon.
+
+**B4 · coin_flip**（1 条）
+
+- `Fezandipiti`：If this Pokémon has any {D} Energy attached and is damaged by an attack, flip a coin. If heads, prevent that damage.
+
 **B4 · extra_damage_target**（1 条）
 
 - `Mega Zygarde ex`：For each of your opponent’s Pokémon, flip a coin. If heads, this attack does 150 damage to that Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémo
@@ -225,23 +246,31 @@
 
 - `Team Rocket's Venture Bomb`：Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon.
 
-**B5 · S6**（219 条）
+**B4 · type:on_damaged**（1 条）
+
+- `Team Rocket’s Hypnotizer`：If the Team Rocket’s Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Team Rocket’s
+
+**B4 · coin_flip**（1 条）
+
+- `Harlequin`：Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and
+
+**B5 · S6**（216 条）
 
 - `Iron Thorns ex`：Move an Energy from this Pokémon to 1 of your Benched Pokémon.
 - `Gouging Fire ex`：This Pokémon can’t use Blaze Blitz again until it leaves the Active Spot.
 - `Totodile`：During your opponent’s next turn, the Defending Pokémon can’t retreat.
-
-**B5 · S6**（39 条）
-
-- `Team Rocket's Kangaskhan ex`：If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage.
-- `Enamorus`：If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage.
-- `Volbeat`：If Illumise is on your Bench, this attack does 60 more damage.
 
 **B5 · S2**（25 条）
 
 - `Genesect`：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
 - `Mow Rotom`：Before doing damage, discard all Pokémon Tools and Special Energy from your opponent’s Active Pokémon.
 - `Rotom`：Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there.
+
+**B5 · S6**（24 条）
+
+- `Team Rocket's Kangaskhan ex`：If you played a Supporter card that has “Team Rocket” in its name from your hand during this turn, this attack does 100 more damage.
+- `Enamorus`：If any of your Pokémon in play are the same type as any of your opponent’s Pokémon in play, this attack does 120 more damage.
+- `Revavroom ex`：If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 120 more damage.
 
 **B5 · S5**（24 条）
 
@@ -255,17 +284,11 @@
 - `Cornerstone Mask Ogerpon ex`：This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon.
 - `Vibrava`：During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).
 
-**B5 · S4**（10 条）
+**B5 · S4**（9 条）
 
 - `Boomerang Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
 - `Neo Upper Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is attached to a Stage 2 Pokémon, this card provides every type of Energy b
 - `Mist Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  Prevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this 
-
-**B5 · S3**（7 条）
-
-- `Chi-Yu`：If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.
-- `Cetitan ex`：You may discard a Stadium in play. If you do, this attack does 140 more damage.
-- `Probopass`：If a Stadium is in play, this attack does 70 more damage.
 
 **B5 · S1**（7 条）
 
@@ -297,16 +320,33 @@
 - `Mow Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 - `Heat Rotom`：This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.
 
-**B5 · S5**（3 条）
+**B5 · S3**（4 条）
 
-- `Steelix`：If you have exactly 6 Prize cards remaining, this attack does 200 more damage.
-- `Zacian`：If your opponent has 3 or fewer Prize cards remaining, this attack does 90 more damage.
-- `Carbink`：If your opponent has 2 or fewer Prize cards remaining, this attack does 100 more damage.
+- `Chi-Yu`：If a Stadium is in play, this attack does 60 more damage. Then, discard that Stadium.
+- `Ting-Lu`：If a Stadium is in play, this attack also does 30 damage to each of your opponent’s Benched Pokémon, and discard that Stadium. (Don’t apply Weakness and Resista
+- `Mamoswine`：If a Stadium is in play, this attack does 120 more damage. Then, discard that Stadium.
+
+**B5 · S6**（4 条）
+
+- `Pecharunt`：As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent’s Poisoned Pokémon during Pokémon Checkup.
+- `Hoothoot`：This Pokémon can’t be Asleep.
+- `Magmortar`：During Pokémon Checkup, put 3 more damage counters on your opponent’s Burned Pokémon.
+
+**B5 · S6**（3 条）
+
+- `Munna`：This Pokémon is now Asleep. Heal 30 damage from it.
+- `Super Potion`：Heal 60 damage from 1 of your Pokémon. If you healed any damage in this way, discard an Energy from that Pokémon.
+- `Arven's Sandwich`：Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead.
 
 **B5 · S6**（2 条）
 
 - `Chandelure`：This attack does 30 damage for each card in your opponent’s hand.
 - `Mega Froslass ex`：This attack does 50 damage for each card in your opponent’s hand.
+
+**B5 · S2**（2 条）
+
+- `Farfetch'd`：Discard a Special Energy from your opponent’s Active Pokémon.
+- `Cobalion`：Discard a Special Energy from your opponent’s Active Pokémon.
 
 **B5 · S6**（2 条）
 
@@ -325,18 +365,13 @@
 
 **B5 · S6**（2 条）
 
-- `Team Rocket's Porygon2`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
-- `Team Rocket's Porygon-Z`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
-
-**B5 · S2**（2 条）
-
-- `Cobalion`：If this Pokémon has a Pokémon Tool attached, this attack does 40 more damage.
-- `Noivern`：If this Pokémon has a Pokémon Tool attached, this attack does 70 more damage.
+- `Zamazenta`：During your opponent’s next turn, if this Pokémon is damaged by an attack (even if this Pokémon is Knocked Out), put damage counters on the Attacking Pokémon eq
+- `Mega Heracross ex`：If this Pokémon was damaged by an attack during your opponent’s last turn, this attack does that much more damage.
 
 **B5 · S6**（2 条）
 
-- `Spiritomb`：If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the 
-- `Mega Scrafty ex`：If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on
+- `Team Rocket's Porygon2`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
+- `Team Rocket's Porygon-Z`：This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.
 
 **B5 · S6**（1 条）
 
@@ -353,6 +388,10 @@
 **B5 · S6**（1 条）
 
 - `Team Rocket's Spidops`：This attack does 30 damage for each of your Team Rocket’s Pokémon in play.
+
+**B5 · S3**（1 条）
+
+- `Cetitan ex`：You may discard a Stadium in play. If you do, this attack does 140 more damage.
 
 **B5 · S6**（1 条）
 
@@ -405,6 +444,14 @@
 **B5 · S6**（1 条）
 
 - `Doublade`：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
+
+**B5 · S4**（1 条）
+
+- `Enhanced Hammer`：Discard a Special Energy from 1 of your opponent’s Pokémon.
+
+**B5 · S6**（1 条）
+
+- `Lucian`：Each player shuffles their hand and puts it on the bottom of their deck. If either player put any cards on the bottom of their deck in this way, each player fli
 
 ## 3. 与「已建模」的边界（避免误读）
 

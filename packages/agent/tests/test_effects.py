@@ -339,9 +339,20 @@ class TestV14Modifiers(unittest.TestCase):
         own = self._tags("Discard an Energy from this Pok\u00e9mon.")
         self.assertIn("discard_energy:1", own["tags"])
         self.assertNotIn("discard_energy:1:opp", own["tags"])
-        opp = self._tags("Discard a Special Energy from your opponent\u2019s "
+        opp = self._tags("Discard an Energy from your opponent\u2019s "
                          "Active Pok\u00e9mon.")
         self.assertIn("discard_energy:1:opp", opp["tags"])
+
+    def test_discard_special_energy_is_refused(self):
+        """⚠ 「Special Energy」引擎分不出基本/特殊 → 必须拒绝（2026-10-27）
+
+        `discard_energy:N:opp` 会按**任意色**弃一张；对手只贴基本能量时本不该生效。
+        实测 Cobalion「Discard a Special Energy from your opponent's Active Pokémon」。
+        """
+        r = self._tags("Discard a Special Energy from your opponent\u2019s "
+                       "Active Pok\u00e9mon.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
 
     def test_counter_side_is_not_reversed(self):
         """计数源阵营不得反转（your ↔ opponent's）
@@ -379,10 +390,21 @@ class TestV14Modifiers(unittest.TestCase):
 
     def test_unmappable_condition_not_emitted_as_flat_bonus(self):
         """条件无法表达时**不得**退化成无条件加伤（凭空加伤 = 静默算错）"""
-        r = self._tags("If a Stadium is in play, this attack does 60 more "
-                       "damage. Then, discard that Stadium.")
+        r = self._tags("If this Pok\u00e9mon was healed during this turn, this "
+                       "attack does 60 more damage.")
         self.assertEqual(r["tags"], [], "条件未知却产出了加伤 tag")
         self.assertTrue(r["unsupported"])
+
+    def test_secondary_action_on_stadium_is_not_dropped(self):
+        """「Then, discard that Stadium.」是**附带动作**，引擎没有弃场地动作
+
+        只映射条件加伤会把这段效果静默丢掉（Chi-Yu / Mamoswine 实测）——
+        加伤算对了、少弃一张场地，局面正常且无报错。
+        """
+        r = self._tags("If a Stadium is in play, this attack does 60 more "
+                       "damage. Then, discard that Stadium.")
+        self.assertTrue(r["unsupported"], "附带动作未建模必须整卡不收")
+        self.assertEqual(r["tags"], ["dmg_plus:60:if:stadium_in_play"])
 
     def test_condition_mappable_to_engine_whitelist(self):
         """条件在引擎白名单内时才映射为 `dmg_plus:N:if:<cond>`"""
@@ -392,6 +414,62 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertEqual(r["unsupported"], [])
 
     # ---- 第四批（2026-10-26）：高频条件 ----
+    # ---- 第五批（2026-10-27）：其余「当下局面可直读」的条件 ----
+    def test_fifth_batch_conditions(self):
+        """第五批条件：场地 / 道具 / 手牌 / 奖赏 / 阶段 / 能量色 / 抗性 / 后备名字"""
+        cases = [
+            ("If a Stadium is in play, this attack does 60 more damage.",
+             "dmg_plus:60:if:stadium_in_play"),
+            ("If you have a Stadium in play, this attack does 50 more damage.",
+             "dmg_plus:50:if:stadium_in_play"),
+            ("If this Pok\u00e9mon has a Pok\u00e9mon Tool attached, this attack "
+             "does 40 more damage.", "dmg_plus:40:if:own_active_has_tool"),
+            ("If this Pok\u00e9mon has no damage counters on it, this attack does "
+             "120 more damage.", "dmg_plus:120:if:own_active_full_hp"),
+            ("If this Pok\u00e9mon is Poisoned, this attack does 130 more damage.",
+             "dmg_plus:130:if:own_active_status:poison"),
+            ("If your opponent\u2019s Active Pok\u00e9mon is affected by a Special "
+             "Condition, this attack does 120 more damage.",
+             "dmg_plus:120:if:opp_active_has_status"),
+            ("If your Benched Pok\u00e9mon have any damage counters on them, this "
+             "attack does 60 more damage.", "dmg_plus:60:if:own_bench_has_damage"),
+            ("If you have the same number of cards in your hand as your opponent, "
+             "this attack does 90 more damage.",
+             "dmg_plus:90:if:own_hand_eq_opp_hand"),
+            ("If this Pok\u00e9mon and your opponent\u2019s Active Pok\u00e9mon "
+             "have the same amount of Energy attached, this attack does 120 more "
+             "damage.", "dmg_plus:120:if:own_opp_active_energy_equal"),
+            ("If your opponent has 3 or fewer cards in their hand, this attack does "
+             "120 more damage.", "dmg_plus:120:if:opp_hand_at_most:3"),
+            ("If your opponent has 3 or fewer Prize cards remaining, this attack "
+             "does 90 more damage.", "dmg_plus:90:if:opp_prizes_at_most:3"),
+            ("If you have exactly 6 Prize cards remaining, this attack does 200 "
+             "more damage.", "dmg_plus:200:if:own_prizes_exactly:6"),
+            ("If your opponent\u2019s Active Pok\u00e9mon is a Stage 2 Pok\u00e9mon, "
+             "this attack does 140 more damage.",
+             "dmg_plus:140:if:opp_active_is_stage:2"),
+            ("If this Pok\u00e9mon\u2019s remaining HP is 50 or less, this attack "
+             "does 170 more damage.", "dmg_plus:170:if:own_active_hp_at_most:50"),
+            ("If this Pok\u00e9mon has 2 or more {G} Energy attached, this attack "
+             "does 120 more damage.",
+             "dmg_plus:120:if:own_active_energy_type_at_least:grass:2"),
+            ("If you have at least 4 {L} Energy in play, this attack does 90 more "
+             "damage.", "dmg_plus:90:if:own_all_energy_type_at_least:lightning:4"),
+            ("If your opponent\u2019s Active Pok\u00e9mon has {F} Resistance, this "
+             "attack does 50 more damage.",
+             "dmg_plus:50:if:opp_active_resistance:fighting"),
+            ("If Illumise is on your Bench, this attack does 60 more damage.",
+             "dmg_plus:60:if:own_bench_name:illumise"),
+            ("If a Pok\u00e9mon that has \"Nidoking\" in its name is on your "
+             "Bench, this attack does 120 more damage.",
+             "dmg_plus:120:if:own_bench_name:nidoking"),
+        ]
+        for text, want in cases:
+            with self.subTest(text=text[:44]):
+                r = self._tags(text)
+                self.assertEqual(r["tags"], [want])
+                self.assertEqual(r["unsupported"], [])
+
     def test_fourth_batch_conditions(self):
         """第四批条件：能由当下局面直读的，映射到引擎条件"""
         cases = [
@@ -423,24 +501,27 @@ class TestV14Modifiers(unittest.TestCase):
 
     def test_fourth_batch_keeps_refusing_unrepresentable(self):
         """⚠ 负向守卫：引擎表达不了的条件**必须继续拒绝**（宁可未建模，不可近似）"""
+        # ⚠ 2026-10-27 起「场地在场上」「有道具附着」已进引擎词表（第五批），
+        #   从拒绝清单移到 `test_fifth_batch_conditions` 的正向用例。
         texts = [
-            # 场地：引擎无场地机制
-            "If a Stadium is in play, this attack does 30 more damage.",
             # 「额外能量（费用之外）」：用总数会提前触发
             "If this Pok\u00e9mon has at least 2 extra Energy attached (in "
             "addition to this attack\u2019s cost), this attack does 90 more damage.",
             # {ex} 或 {V}：并集，引擎不区分 V
             "If your opponent\u2019s Active Pok\u00e9mon is a Pok\u00e9mon {ex} or "
             "Pok\u00e9mon {V}, this attack does 30 more damage.",
-            # 道具附着：引擎无道具挂载模型
-            "If this Pok\u00e9mon has a Pok\u00e9mon Tool attached, this attack "
-            "does 40 more damage.",
             # 回合历史：本回合是否被治疗
             "If this Pok\u00e9mon was healed during this turn, this attack does "
             "50 more damage.",
             # 回合历史：本回合是否从后备换入
             "If this Pok\u00e9mon moved from your Bench to the Active Spot this "
             "turn, this attack does 60 more damage.",
+            # 析取：任一状态（引擎条件只有单值）
+            "If this Pok\u00e9mon is Burned or Poisoned, this attack does 100 more "
+            "damage.",
+            # 合取：两只指定宝可梦同时在后备
+            "If Beldum and Metang are on your Bench, this attack does 150 more "
+            "damage.",
         ]
         for text in texts:
             with self.subTest(text=text[:40]):

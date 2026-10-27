@@ -11,15 +11,15 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 494,
-      "by_Pokemon": 415,
+      "kept": 511,
+      "by_Pokemon": 432,
       "by_Trainer": 79,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 562,
+        "存在未建模项（整卡不收）": 546,
         "Energy 不可执行": 2,
         "人工卡池已有（人工优先）": 26,
-        "Pokemon 不可执行": 34,
+        "Pokemon 不可执行": 33,
         "Trainer 不可执行": 4
       }
     }
@@ -1399,6 +1399,58 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 85,
       "name_key": "beldum"
+    },
+    {
+      "name": "Volbeat",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Quick Sign",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "If you go first, you can use this attack during your first turn. Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Coordinated Strike",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:60:if:own_bench_name:illumise"
+          ],
+          "desc": "If Illumise is on your Bench, this attack does 60 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "9"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 88,
+      "name_key": "volbeat"
     },
     {
       "name": "Thwackey",
@@ -6444,6 +6496,57 @@
       "name_key": "gorebyss"
     },
     {
+      "name": "Abomasnow",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 150,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": false,
+      "evolves_from": "Snover",
+      "attacks": [
+        {
+          "name": "Lunge Out",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 90,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Frozen Wood",
+          "cost": {
+            "water": 3,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [
+            "dmg_plus:120:if:own_active_energy_type_at_least:grass:2"
+          ],
+          "desc": "If this Pokémon has 2 or more {G} Energy attached, this attack does 120 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "60"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 419,
+      "name_key": "abomasnow"
+    },
+    {
       "name": "Arrokuda",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -6969,6 +7072,56 @@
       "name_key": "teamrocketspupitar"
     },
     {
+      "name": "Probopass",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 140,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Nosepass",
+      "attacks": [
+        {
+          "name": "Power Gem",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Mountain Drop",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 70,
+          "effects": [
+            "dmg_plus:70:if:stadium_in_play"
+          ],
+          "desc": "If a Stadium is in play, this attack does 70 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "98"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 444,
+      "name_key": "probopass"
+    },
+    {
       "name": "Meditite",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -7006,6 +7159,98 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 445,
       "name_key": "meditite"
+    },
+    {
+      "name": "Medicham",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": "Meditite",
+      "attacks": [
+        {
+          "name": "Harmonious Spirit Palm",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_plus:120:if:own_opp_active_energy_equal"
+          ],
+          "desc": "If this Pokémon and your opponent’s Active Pokémon have the same amount of Energy attached, this attack does 120 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "100"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 446,
+      "name_key": "medicham"
+    },
+    {
+      "name": "Regirock ex",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 230,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Regi Charge",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:2:fighting:discard"
+          ],
+          "desc": "Attach up to 2 Basic {F} Energy cards from your discard pile to this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Giant Rock",
+          "cost": {
+            "fighting": 1,
+            "colorless": 3
+          },
+          "damage": 140,
+          "effects": [
+            "dmg_plus:140:if:opp_active_is_stage:2"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Stage 2 Pokémon, this attack does 140 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "101"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 447,
+      "name_key": "regirockex"
     },
     {
       "name": "Team Rocket's Ekans",
@@ -7095,6 +7340,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 450,
       "name_key": "teamrocketsnidoran"
+    },
+    {
+      "name": "Team Rocket's Nidoqueen",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 170,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Team Rocket's Nidorina",
+      "attacks": [
+        {
+          "name": "Love Impact",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_plus:120:if:own_bench_name:nidoking"
+          ],
+          "desc": "If a Pokémon that has \"Nidoking\" in its name is on your Bench, this attack does 120 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Mega Kick",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 130,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "116"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 452,
+      "name_key": "teamrocketsnidoqueen"
     },
     {
       "name": "Team Rocket's Nidorino",
@@ -7696,6 +7991,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 488,
       "name_key": "foongus"
+    },
+    {
+      "name": "Amoonguss",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Foongus",
+      "attacks": [
+        {
+          "name": "Dangerous Reaction",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:120:if:opp_active_has_status"
+          ],
+          "desc": "If your opponent’s Active Pokémon is affected by a Special Condition, this attack does 120 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Seed Bomb",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "11"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 489,
+      "name_key": "amoonguss"
     },
     {
       "name": "Darmanitan",
@@ -10183,6 +10529,56 @@
       "name_key": "roggenrola"
     },
     {
+      "name": "Boldore",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 110,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Roggenrola",
+      "attacks": [
+        {
+          "name": "Smack Down",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:50:if:opp_active_resistance:fighting"
+          ],
+          "desc": "If your opponent’s Active Pokémon has {F} Resistance, this attack does 50 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Power Gem",
+          "cost": {
+            "fighting": 3
+          },
+          "damage": 90,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "WHT",
+        "number": "47"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 600,
+      "name_key": "boldore"
+    },
+    {
       "name": "Archen",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -10544,6 +10940,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 622,
       "name_key": "klang"
+    },
+    {
+      "name": "Durant",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Bite Together",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:20:if:own_bench_name:durant"
+          ],
+          "desc": "If Durant is on your Bench, this attack does 20 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Vise Grip",
+          "cost": {
+            "metal": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "WHT",
+        "number": "70"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 624,
+      "name_key": "durant"
     },
     {
       "name": "Patrat",
@@ -11880,6 +12327,57 @@
       "name_key": "shroodle"
     },
     {
+      "name": "Steelix",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 200,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 4,
+      "is_ex": false,
+      "evolves_from": "Onix",
+      "attacks": [
+        {
+          "name": "Welcoming Tail",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 40,
+          "effects": [
+            "dmg_plus:200:if:own_prizes_exactly:6"
+          ],
+          "desc": "If you have exactly 6 Prize cards remaining, this attack does 200 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Skull Bash",
+          "cost": {
+            "metal": 2,
+            "colorless": 2
+          },
+          "damage": 140,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "93"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 694,
+      "name_key": "steelix"
+    },
+    {
       "name": "Fearow",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -12154,6 +12652,46 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 713,
       "name_key": "ninjask"
+    },
+    {
+      "name": "Dhelmise",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Earthen Power",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:50:if:stadium_in_play"
+          ],
+          "desc": "If you have a Stadium in play, this attack does 50 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "18"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 714,
+      "name_key": "dhelmise"
     },
     {
       "name": "Centiskorch",
@@ -12551,6 +13089,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 733,
       "name_key": "magneton"
+    },
+    {
+      "name": "Raikou",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Electro Fall",
+          "cost": {
+            "lightning": 2
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:90:if:own_all_energy_type_at_least:lightning:4"
+          ],
+          "desc": "If you have at least 4 {L} Energy in play, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "48"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 735,
+      "name_key": "raikou"
     },
     {
       "name": "Electrike",
@@ -14128,6 +14705,45 @@
       "name_key": "piloswine"
     },
     {
+      "name": "Suicune",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Crystal Fall",
+          "cost": {
+            "water": 2
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:90:if:own_all_energy_type_at_least:water:4"
+          ],
+          "desc": "If you have at least 4 {W} Energy in play, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "26"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 803,
+      "name_key": "suicune"
+    },
+    {
       "name": "Piplup",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -14386,6 +15002,46 @@
       "name_key": "cottonee"
     },
     {
+      "name": "Zacian",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Limit Break",
+          "cost": {
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_plus:90:if:opp_prizes_at_most:3"
+          ],
+          "desc": "If your opponent has 3 or fewer Prize cards remaining, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "45"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 816,
+      "name_key": "zacian"
+    },
+    {
       "name": "Bramblin",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -14540,6 +15196,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 822,
       "name_key": "trapinch"
+    },
+    {
+      "name": "Weavile",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 90,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": "Sneasel",
+      "attacks": [
+        {
+          "name": "Retaliatory Claw",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:170:if:own_active_hp_at_most:50"
+          ],
+          "desc": "If this Pokémon’s remaining HP is 50 or less, this attack does 170 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Cut",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 60,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PROMO",
+        "number": "21"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 826,
+      "name_key": "weavile"
     },
     {
       "name": "Carvanha",
@@ -15134,6 +15840,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 853,
       "name_key": "cascoon"
+    },
+    {
+      "name": "Entei",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 140,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Flare Fall",
+          "cost": {
+            "fire": 2
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:90:if:own_all_energy_type_at_least:fire:4"
+          ],
+          "desc": "If you have at least 4 {R} Energy in play, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "25"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 855,
+      "name_key": "entei"
     },
     {
       "name": "Numel",
@@ -15921,6 +16666,59 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 907,
       "name_key": "noibat"
+    },
+    {
+      "name": "Noivern",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": "Noibat",
+      "attacks": [
+        {
+          "name": "Agility",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 40,
+          "effects": [
+            "coin:heads:shield:prevent_all"
+          ],
+          "desc": "Flip a coin. If heads, during your opponent’s next turn, prevent all damage from and effects of attacks done to this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Enhanced Blade",
+          "cost": {
+            "psychic": 1,
+            "darkness": 1
+          },
+          "damage": 70,
+          "effects": [
+            "dmg_plus:70:if:own_active_has_tool"
+          ],
+          "desc": "If this Pokémon has a Pokémon Tool attached, this attack does 70 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "157"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 908,
+      "name_key": "noivern"
     },
     {
       "name": "Erika's Oddish",
@@ -17889,55 +18687,6 @@
       "name_key": "larrysrufflet"
     },
     {
-      "name": "Larry's Komala",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 0,
-      "hp": 90,
-      "types": [
-        "colorless"
-      ],
-      "weakness": "fighting",
-      "resistance": null,
-      "retreat": 2,
-      "is_ex": false,
-      "evolves_from": null,
-      "attacks": [
-        {
-          "name": "Dozing Draw",
-          "cost": {
-            "colorless": 1
-          },
-          "damage": 0,
-          "effects": [
-            "sleep",
-            "draw:2"
-          ],
-          "desc": "This Pokémon is now Asleep. Draw 2 cards.",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Lethargic Charge",
-          "name_zh": "",
-          "tag": "attach_energy:1:hand",
-          "location": "field",
-          "desc": "Once during your turn, if this Pokémon is on your Bench, you may use this Ability. Attach an Energy card from your hand to your Active Larry’s Pokémon.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "ASC",
-        "number": "175"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1009,
-      "name_key": "larryskomala"
-    },
-    {
       "name": "Ariados",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -18872,6 +19621,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1053,
       "name_key": "tyrunt"
+    },
+    {
+      "name": "Hawlucha",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Vengeful Kick",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:60:if:own_bench_has_damage"
+          ],
+          "desc": "If your Benched Pokémon have any damage counters on them, this attack does 60 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "46"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1055,
+      "name_key": "hawlucha"
     },
     {
       "name": "Gastly",

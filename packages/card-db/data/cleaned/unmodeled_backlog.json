@@ -1,6 +1,6 @@
 {
- "snapshot": "current",
- "generated_at": "2026-10-27 00:29:44",
+ "snapshot": "s3step4",
+ "generated_at": "2026-10-27 09:14:54",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 969,
-  "unsupported": 577,
-  "cards_with_unsupported": 505,
-  "cards_fully_mapped": 614,
-  "cards_with_supported_tag": 802,
-  "cards_engine_ready": 546,
+  "engine_tags": 971,
+  "unsupported": 575,
+  "cards_with_unsupported": 503,
+  "cards_fully_mapped": 616,
+  "cards_with_supported_tag": 804,
+  "cards_engine_ready": 551,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -86,7 +86,7 @@
    "groups": 2,
    "entries": 9,
    "cards": 9,
-   "share": 0.0156
+   "share": 0.0157
   },
   {
    "id": "B3",
@@ -94,10 +94,10 @@
    "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
-   "groups": 30,
-   "entries": 99,
-   "cards": 99,
-   "share": 0.1716
+   "groups": 31,
+   "entries": 96,
+   "cards": 96,
+   "share": 0.167
   },
   {
    "id": "B4",
@@ -105,10 +105,10 @@
    "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
-   "groups": 29,
+   "groups": 30,
    "entries": 67,
    "cards": 67,
-   "share": 0.1161
+   "share": 0.1165
   },
   {
    "id": "B5",
@@ -116,10 +116,10 @@
    "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现",
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
-   "groups": 36,
-   "entries": 402,
-   "cards": 386,
-   "share": 0.6967
+   "groups": 37,
+   "entries": 403,
+   "cards": 387,
+   "share": 0.7009
   }
  ],
  "items": [
@@ -196,8 +196,8 @@
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
    "reason": "静态/未建模（英文）",
-   "entries": 21,
-   "cards": 21,
+   "entries": 20,
+   "cards": 20,
    "samples": [
     {
      "card": "Shiftry",
@@ -403,37 +403,6 @@
   },
   {
    "batch": "B3",
-   "sub": "switch",
-   "desc": "换位（switch / into the Active Spot）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 4,
-   "cards": 4,
-   "samples": [
-    {
-     "card": "Gumshoos",
-     "name_zh": "",
-     "text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck."
-    },
-    {
-     "card": "Linoone",
-     "name_zh": "",
-     "text": "Once during your turn, if this Pokémon is on your Bench, and if you have any Mega Evolution Pokémon {ex} in play, you may use this Ability. Switch this Pokémon with your Active Pokémon."
-    },
-    {
-     "card": "Team Rocket's Bother-Bot",
-     "name_zh": "",
-     "text": "Turn 1 of your opponent’s face-down Prize cards face up and choose a random card from your opponent’s hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize "
-    },
-    {
-     "card": "Surfing Beach",
-     "name_zh": "",
-     "text": "Once during each player’s turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
    "sub": "spread",
    "desc": "放置伤害指示物",
    "action_type": "rule",
@@ -481,6 +450,32 @@
      "card": "Maractus",
      "name_zh": "",
      "text": "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent’s Pokémon, put 6 damage counters on the Attacking Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "switch",
+   "desc": "换位（switch / into the Active Spot）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Gumshoos",
+     "name_zh": "",
+     "text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck."
+    },
+    {
+     "card": "Linoone",
+     "name_zh": "",
+     "text": "Once during your turn, if this Pokémon is on your Bench, and if you have any Mega Evolution Pokémon {ex} in play, you may use this Ability. Switch this Pokémon with your Active Pokémon."
+    },
+    {
+     "card": "Team Rocket's Bother-Bot",
+     "name_zh": "",
+     "text": "Turn 1 of your opponent’s face-down Prize cards face up and choose a random card from your opponent’s hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize "
     }
    ]
   },
@@ -544,48 +539,6 @@
      "card": "Toxtricity",
      "name_zh": "",
      "text": "Once during your turn, you may use this Ability. Search your deck for a Basic {D} Energy card and attach it to 1 of your Benched {D} Pokémon. Then, shuffle your deck. If you attached Energy to a Pokém"
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "draw",
-   "desc": "抽牌（draw … card）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 2,
-   "cards": 2,
-   "samples": [
-    {
-     "card": "Meddling Memo",
-     "name_zh": "",
-     "text": "Your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck. If they do, they draw that many cards."
-    },
-    {
-     "card": "Mystery Garden",
-     "name_zh": "",
-     "text": "Once during each player’s turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "search",
-   "desc": "检索（search / look at）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 2,
-   "cards": 2,
-   "samples": [
-    {
-     "card": "Spikemuth Gym",
-     "name_zh": "",
-     "text": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
-    },
-    {
-     "card": "Lumiose City",
-     "name_zh": "",
-     "text": "Once during each player’s turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, t"
     }
    ]
   },
@@ -815,6 +768,22 @@
   },
   {
    "batch": "B3",
+   "sub": "draw",
+   "desc": "抽牌（draw … card）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Meddling Memo",
+     "name_zh": "",
+     "text": "Your opponent counts the cards in their hand, shuffles those cards, and puts them on the bottom of their deck. If they do, they draw that many cards."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
    "sub": "recover_from_discard",
    "desc": "弃牌堆回收入手（数量/类别/子集未识别）",
    "action_type": "rule",
@@ -846,13 +815,45 @@
    ]
   },
   {
+   "batch": "B3",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
+   "action_type": "rule",
+   "reason": "场地形态未建模（S3 未覆盖）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Festival Grounds",
+     "name_zh": "",
+     "text": "Each Pokémon that has any Energy attached (both yours and your opponent’s) recovers from all Special Conditions and can’t be affected by any Special Conditions."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "search",
+   "desc": "检索（search / look at）",
+   "action_type": "rule",
+   "reason": "场地形态未建模（S3 未覆盖）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Grand Tree",
+     "name_zh": "",
+     "text": "Once during each player’s turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolve"
+    }
+   ]
+  },
+  {
    "batch": "B4",
    "sub": "static_lock",
    "desc": "静态锁/免疫/伤害减免",
    "action_type": "rule",
    "reason": "静态规则修改（弱点/抗性/伤害减免/限制）",
-   "entries": 18,
-   "cards": 18,
+   "entries": 15,
+   "cards": 15,
    "samples": [
     {
      "card": "Rabsca",
@@ -919,37 +920,6 @@
   },
   {
    "batch": "B4",
-   "sub": "static_lock",
-   "desc": "静态锁/免疫/伤害减免",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 4,
-   "cards": 4,
-   "samples": [
-    {
-     "card": "Iron Thorns ex",
-     "name_zh": "",
-     "text": "As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule"
-    },
-    {
-     "card": "Flutter Mane",
-     "name_zh": "",
-     "text": "As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering."
-    },
-    {
-     "card": "Gastrodon",
-     "name_zh": "",
-     "text": "As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities."
-    },
-    {
-     "card": "Team Rocket's Watchtower",
-     "name_zh": "",
-     "text": "{C} Pokémon in play (both yours and your opponent’s) have no Abilities."
-    }
-   ]
-  },
-  {
-   "batch": "B4",
    "sub": "scaling_damage",
    "desc": "条件伤害缩放（for each …）",
    "action_type": "rule",
@@ -976,6 +946,63 @@
      "card": "Voltorb ex",
      "name_zh": "",
      "text": "Flip a coin until you get tails. This attack does 100 more damage for each heads."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "static_lock",
+   "desc": "静态锁/免疫/伤害减免",
+   "action_type": "rule",
+   "reason": "场地形态未建模（S3 未覆盖）",
+   "entries": 4,
+   "cards": 4,
+   "samples": [
+    {
+     "card": "Neutralization Zone",
+     "name_zh": "",
+     "text": "Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule B"
+    },
+    {
+     "card": "Team Rocket's Watchtower",
+     "name_zh": "",
+     "text": "{C} Pokémon in play (both yours and your opponent’s) have no Abilities."
+    },
+    {
+     "card": "Granite Cave",
+     "name_zh": "",
+     "text": "Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance)."
+    },
+    {
+     "card": "Battle Cage",
+     "name_zh": "",
+     "text": "Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent’s) by effects of attacks and Abilities from the opponent’s Pokémon. (Damage from attacks is still taken.)"
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "static_lock",
+   "desc": "静态锁/免疫/伤害减免",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Iron Thorns ex",
+     "name_zh": "",
+     "text": "As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule"
+    },
+    {
+     "card": "Flutter Mane",
+     "name_zh": "",
+     "text": "As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering."
+    },
+    {
+     "card": "Gastrodon",
+     "name_zh": "",
+     "text": "As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities."
     }
    ]
   },
@@ -1586,42 +1613,6 @@
   },
   {
    "batch": "B5",
-   "sub": "S3",
-   "desc": "场地（Stadium）",
-   "action_type": "rule",
-   "reason": "静态/未建模（英文）",
-   "entries": 11,
-   "cards": 11,
-   "samples": [
-    {
-     "card": "Fan Rotom",
-     "name_zh": "",
-     "text": "If there is no Stadium in play, this attack does nothing."
-    },
-    {
-     "card": "Chien-Pao",
-     "name_zh": "",
-     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play."
-    },
-    {
-     "card": "Cetitan ex",
-     "name_zh": "",
-     "text": "Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon."
-    },
-    {
-     "card": "Chi-Yu",
-     "name_zh": "",
-     "text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn."
-    },
-    {
-     "card": "Eternatus",
-     "name_zh": "",
-     "text": "Discard a Stadium in play."
-    }
-   ]
-  },
-  {
-   "batch": "B5",
    "sub": "S4",
    "desc": "特殊能量（Special Energy）",
    "action_type": "rule",
@@ -1725,6 +1716,78 @@
      "card": "Ludicolo",
      "name_zh": "",
      "text": "All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S3",
+   "desc": "场地（Stadium）",
+   "action_type": "rule",
+   "reason": "场地形态未建模（S3 未覆盖）",
+   "entries": 7,
+   "cards": 7,
+   "samples": [
+    {
+     "card": "Jamming Tower",
+     "name_zh": "",
+     "text": "Pokémon Tools attached to each Pokémon (both yours and your opponent’s) have no effect."
+    },
+    {
+     "card": "Area Zero Underdepths",
+     "name_zh": "",
+     "text": "Each player who has any Tera Pokémon in play can have up to 8 Pokémon on their Bench.\n\nIf a player no longer has any Tera Pokémon in play, that player discards Pokémon from their Bench until they have"
+    },
+    {
+     "card": "N’s Castle",
+     "name_zh": "",
+     "text": "N’s Pokémon in play (both yours and your opponent’s) have no Retreat Cost."
+    },
+    {
+     "card": "Postwick",
+     "name_zh": "",
+     "text": "Attacks used by Hop’s Pokémon (both yours and your opponent’s) do 30 more damage to the opponent’s Active Pokémon (before applying Weakness and Resistance)."
+    },
+    {
+     "card": "Forest of Vitality",
+     "name_zh": "",
+     "text": "Each player’s {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S3",
+   "desc": "场地（Stadium）",
+   "action_type": "rule",
+   "reason": "静态/未建模（英文）",
+   "entries": 5,
+   "cards": 5,
+   "samples": [
+    {
+     "card": "Fan Rotom",
+     "name_zh": "",
+     "text": "If there is no Stadium in play, this attack does nothing."
+    },
+    {
+     "card": "Chien-Pao",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play."
+    },
+    {
+     "card": "Cetitan ex",
+     "name_zh": "",
+     "text": "Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon."
+    },
+    {
+     "card": "Chi-Yu",
+     "name_zh": "",
+     "text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn."
+    },
+    {
+     "card": "Eternatus",
+     "name_zh": "",
+     "text": "Discard a Stadium in play."
     }
    ]
   },

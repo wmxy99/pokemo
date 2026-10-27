@@ -530,6 +530,88 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
+    # ---- S3 第四步：需要代价/目标的「每回合一次」（2026-10-27） ----
+    def test_stadium_use_switch_typed(self):
+        """Surfing Beach：战斗位 ↔ 后备**同属性**换位（要选目标）"""
+        r = self._tags("Once during each player\u2019s turn, that player may switch "
+                       "their Active {W} Pok\u00e9mon with 1 of their Benched {W} "
+                       "Pok\u00e9mon.", kind="stadium", name="Surfing Beach")
+        self.assertEqual(r["tags"], ["stadium:use:switch_typed:type:water"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_stadium_use_draw_to_count_with_cost(self):
+        """Mystery Garden：弃 1 张手牌能量 → 抽到「手牌数 = 该属性在场数」"""
+        r = self._tags(
+            "Once during each player\u2019s turn, that player may discard an "
+            "Energy card from their hand in order to draw cards until they "
+            "have as many cards in their hand as they have {P} Pok\u00e9mon "
+            "in play.", kind="stadium", name="Mystery Garden")
+        self.assertEqual(
+            r["tags"],
+            ["stadium:use:draw_to_count:1:type:psychic:cost:discard_energy"])
+
+    def test_stadium_use_search_basic_bench_ends_turn(self):
+        """Lumiose City：检索基础宝可梦直铺后备 + **回合结束**"""
+        r = self._tags(
+            "Once during each player\u2019s turn, that player may search their "
+            "deck for a Basic Pok\u00e9mon and put it onto their Bench. Then, "
+            "that player shuffles their deck. If a player searches their deck "
+            "in this way, their turn ends.", kind="stadium", name="Lumiose")
+        self.assertEqual(
+            r["tags"], ["stadium:use:search_basic_bench:1:end:1"])
+
+    def test_stadium_use_draw_requires_supporter_name(self):
+        """Team Rocket's Factory：只认名字含 "Team Rocket" 的支援者"""
+        r = self._tags(
+            "Once during each player\u2019s turn, if they played a Supporter "
+            "card that has \"Team Rocket\" in its name from their hand this "
+            "turn, they may draw 2 cards.", kind="stadium", name="TR Factory")
+        self.assertEqual(
+            r["tags"],
+            ["stadium:use:draw:2:require:supporter_name:name:teamrocket"])
+
+    def test_stadium_use_search_by_name(self):
+        """Spikemuth Gym：检索专名指定的宝可梦入手（专名是**检索目标**，可表达）"""
+        r = self._tags(
+            "Once during each player\u2019s turn, that player may search their "
+            "deck for a Marnie\u2019s Pok\u00e9mon, reveal it, and put it into "
+            "their hand. Then, that player shuffles their deck.",
+            kind="stadium", name="Spikemuth")
+        self.assertEqual(r["tags"], ["stadium:use:search_name:1:name:marnie"])
+
+    def test_stadium_kind_never_falls_back_to_generic_parse(self):
+        """**硬分流**：场地卡未识别时必须落未建模，绝不能退回通用解析
+
+        两个实测过的静默错映射（局面正常、无报错，只有对账才发现）：
+          · Dizzying Valley「Confused Pokémon don't recover from that condition…」
+            被读成 `confuse`（凭空让某只宝可梦混乱）；
+          · Grand Tree「search … Stage 1 … to evolve it」被读成 `candy`（跳过进化阶）。
+        """
+        cases = [
+            ("Once during each player\u2019s turn, that player may search their "
+             "deck for a Stage 1 Pok\u00e9mon that evolves from 1 of their Basic "
+             "Pok\u00e9mon and put it onto that Pok\u00e9mon to evolve it. Then, "
+             "that player shuffles their deck.", "Grand Tree", "candy"),
+            ("Confused Pok\u00e9mon (both yours and your opponent\u2019s) "
+             "don\u2019t recover from that Special Condition when they evolve "
+             "or devolve.", "Dizzying Valley", "confuse"),
+        ]
+        for text, name, bad in cases:
+            with self.subTest(name=name):
+                r = self._tags(text, kind="stadium", name=name)
+                self.assertEqual(r["tags"], [], f"{name} 不得产出任何 tag")
+                self.assertFalse(any(t.startswith(bad) for t in r["tags"]),
+                                 f"{name} 不得落成 `{bad}`")
+                self.assertTrue(r["unsupported"], "必须如实登记未建模")
+
+    def test_stadium_lumiose_needs_turn_ends_clause(self):
+        """负向守卫：少了「their turn ends」就不是 Lumiose 形态（不得硬套 end）"""
+        r = self._tags(
+            "Once during each player\u2019s turn, that player may search their "
+            "deck for a Basic Pok\u00e9mon and put it onto their Bench. Then, "
+            "that player shuffles their deck.", kind="stadium", name="X")
+        self.assertEqual(r["tags"], [])
+
     def test_tool_faction_qualifier_still_refused(self):
         """按**卡名阵营**限定的（Team Rocket's / Hop's）仍拒绝：引擎无卡名归属元数据"""
         r = self._tags("The Team Rocket\u2019s Pok\u00e9mon this card is attached to "

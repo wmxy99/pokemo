@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-27 00:28:40"
+  "reparsed_at": "2026-10-27 09:13:20"
  },
  "stats": {
   "rows_in": 2022,
@@ -86,7 +86,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 546,
+  "engine_ready": 551,
   "engine_match_alias": 7,
   "with_zh": 36,
   "with_image": 0,
@@ -111,22 +111,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 19046,
-   "engine_unmatched": 32901,
-   "engine_approximated": 17570
+   "zh_backfill": 20689,
+   "engine_unmatched": 35059,
+   "engine_approximated": 19105
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 0,
-   "engine_tags": 969,
-   "unsupported": 577,
+   "engine_tags": 971,
+   "unsupported": 575,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 510
+  "engine_approximated": 515
  },
  "cards": [
   {
@@ -149524,7 +149524,7 @@
       "name": "Community Center",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Community Center",
         "trigger": "on_use",
         "conditions": [],
@@ -149552,7 +149552,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Community Center",
       "trigger": "on_use",
       "conditions": [],
@@ -149617,7 +149617,7 @@
       "name": "Perilous Jungle",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Perilous Jungle",
         "trigger": "on_use",
         "conditions": [],
@@ -149644,7 +149644,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Perilous Jungle",
       "trigger": "on_use",
       "conditions": [],
@@ -149708,9 +149708,9 @@
       "name": "Full Metal Lab",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Full Metal Lab",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
@@ -149735,9 +149735,9 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Full Metal Lab",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
@@ -149798,17 +149798,17 @@
       "name": "Festival Grounds",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Festival Grounds",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -149820,24 +149820,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Festival Grounds",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -149849,7 +149849,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -149892,17 +149892,17 @@
       "name": "Jamming Tower",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Jamming Tower",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -149914,24 +149914,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Jamming Tower",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -149943,7 +149943,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -149986,17 +149986,17 @@
       "name": "Neutralization Zone",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Neutralization Zone",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -150008,24 +150008,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Neutralization Zone",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -150037,7 +150037,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -150081,7 +150081,7 @@
       "name": "Academy at Night",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Academy at Night",
         "trigger": "on_use",
         "conditions": [],
@@ -150108,7 +150108,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Academy at Night",
       "trigger": "on_use",
       "conditions": [],
@@ -150171,48 +150171,60 @@
       "name": "Grand Tree",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Grand Tree",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "evolve",
+          "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "self"
+          "extra": {
+           "note": "场地形态未建模（S3 未覆盖）"
+          }
          }
         ],
         "source_text": "Once during each player’s turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolve"
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "candy"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "场地形态未建模（S3 未覆盖）"
+       }
+      ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Grand Tree",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "evolve",
+        "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "self"
+        "extra": {
+         "note": "场地形态未建模（S3 未覆盖）"
+        }
        }
       ],
       "source_text": "Once during each player’s turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolve"
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "candy"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "场地形态未建模（S3 未覆盖）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -150253,17 +150265,17 @@
       "name": "Area Zero Underdepths",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Area Zero Underdepths",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -150275,24 +150287,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Area Zero Underdepths",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -150304,7 +150316,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -150348,7 +150360,7 @@
       "name": "Lively Stadium",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Lively Stadium",
         "trigger": "on_use",
         "conditions": [],
@@ -150375,7 +150387,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Lively Stadium",
       "trigger": "on_use",
       "conditions": [],
@@ -150439,7 +150451,7 @@
       "name": "Gravity Mountain",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Gravity Mountain",
         "trigger": "on_use",
         "conditions": [],
@@ -150466,7 +150478,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Gravity Mountain",
       "trigger": "on_use",
       "conditions": [],
@@ -150529,17 +150541,17 @@
       "name": "N’s Castle",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "N’s Castle",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -150551,24 +150563,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "N’s Castle",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -150580,7 +150592,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -150624,7 +150636,7 @@
       "name": "Levincia",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Levincia",
         "trigger": "on_use",
         "conditions": [],
@@ -150652,7 +150664,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Levincia",
       "trigger": "on_use",
       "conditions": [],
@@ -150716,17 +150728,17 @@
       "name": "Postwick",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Postwick",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -150738,24 +150750,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Postwick",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -150767,7 +150779,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -150810,17 +150822,17 @@
       "name": "Team Rocket's Watchtower",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Team Rocket's Watchtower",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -150832,24 +150844,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Team Rocket's Watchtower",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -150861,7 +150873,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -150891,12 +150903,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -150904,15 +150917,21 @@
       "name": "Team Rocket's Factory",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Team Rocket's Factory",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "draw",
+          "type": "stadium",
           "amount": 2,
-          "target": "deck"
+          "target": "any",
+          "extra": {
+           "kind": "use",
+           "use_kind": "draw",
+           "require": "supporter_name",
+           "name_key": "teamrocket"
+          }
          }
         ],
         "source_text": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
@@ -150920,22 +150939,28 @@
       ],
       "errors": [],
       "engine_tags": [
-       "draw:2"
+       "stadium:use:draw:2:require:supporter_name:name:teamrocket"
       ],
       "unsupported": []
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Team Rocket's Factory",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "draw",
+        "type": "stadium",
         "amount": 2,
-        "target": "deck"
+        "target": "any",
+        "extra": {
+         "kind": "use",
+         "use_kind": "draw",
+         "require": "supporter_name",
+         "name_key": "teamrocket"
+        }
        }
       ],
       "source_text": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
@@ -150943,7 +150968,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "draw:2"
+     "stadium:use:draw:2:require:supporter_name:name:teamrocket"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -150986,17 +151011,17 @@
       "name": "Granite Cave",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Granite Cave",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -151008,24 +151033,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Granite Cave",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -151037,7 +151062,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -151067,12 +151092,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -151080,17 +151106,19 @@
       "name": "Spikemuth Gym",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Spikemuth Gym",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "stadium",
+          "amount": 1,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "search_name",
+           "name_key": "marnie"
           }
          }
         ],
@@ -151098,28 +151126,27 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:search_name:1:name:marnie"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Spikemuth Gym",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "stadium",
+        "amount": 1,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "search_name",
+         "name_key": "marnie"
         }
        }
       ],
@@ -151127,13 +151154,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:search_name:1:name:marnie"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151175,7 +151199,7 @@
       "name": "Risky Ruins",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Risky Ruins",
         "trigger": "on_use",
         "conditions": [],
@@ -151202,7 +151226,7 @@
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Risky Ruins",
       "trigger": "on_use",
       "conditions": [],
@@ -151265,17 +151289,17 @@
       "name": "Forest of Vitality",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Forest of Vitality",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -151287,24 +151311,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Forest of Vitality",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -151316,7 +151340,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -151346,12 +151370,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -151359,17 +151384,19 @@
       "name": "Surfing Beach",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Surfing Beach",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "stadium",
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "switch_typed",
+           "ptype": "water"
           }
          }
         ],
@@ -151377,28 +151404,27 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:switch_typed:type:water"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Surfing Beach",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "stadium",
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "switch_typed",
+         "ptype": "water"
         }
        }
       ],
@@ -151406,13 +151432,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:switch_typed:type:water"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151440,12 +151463,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -151453,17 +151477,20 @@
       "name": "Mystery Garden",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Mystery Garden",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "stadium",
+          "amount": 1,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "draw_to_count",
+           "ptype": "psychic",
+           "cost": "discard_energy"
           }
          }
         ],
@@ -151471,28 +151498,28 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:draw_to_count:1:type:psychic:cost:discard_energy"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Mystery Garden",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "stadium",
+        "amount": 1,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "draw_to_count",
+         "ptype": "psychic",
+         "cost": "discard_energy"
         }
        }
       ],
@@ -151500,13 +151527,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:draw_to_count:1:type:psychic:cost:discard_energy"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151547,17 +151571,17 @@
       "name": "Battle Cage",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Battle Cage",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -151569,24 +151593,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Battle Cage",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -151598,7 +151622,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -151641,17 +151665,17 @@
       "name": "Dizzying Valley",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Dizzying Valley",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "active_opponent",
           "extra": {
-           "status": "confuse"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -151659,25 +151683,28 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "confuse"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "场地形态未建模（S3 未覆盖）"
+       }
+      ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Dizzying Valley",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "active_opponent",
         "extra": {
-         "status": "confuse"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -151685,10 +151712,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "confuse"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "场地形态未建模（S3 未覆盖）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151729,17 +151759,17 @@
       "name": "Nighttime Mine",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Nighttime Mine",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "场地形态未建模（S3 未覆盖）"
           }
          }
         ],
@@ -151751,24 +151781,24 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "场地形态未建模（S3 未覆盖）"
        }
       ]
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Nighttime Mine",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "场地形态未建模（S3 未覆盖）"
         }
        }
       ],
@@ -151780,7 +151810,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "场地形态未建模（S3 未覆盖）"
      }
     ],
     "generated_by": "rule",
@@ -151810,12 +151840,13 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Once during each player’s turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -151823,17 +151854,19 @@
       "name": "Lumiose City",
       "specs": [
        {
-        "kind": "item",
+        "kind": "stadium",
         "name": "Lumiose City",
         "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "stadium",
+          "amount": 1,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "use",
+           "use_kind": "search_basic_bench",
+           "end_turn": true
           }
          }
         ],
@@ -151841,28 +151874,27 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "stadium:use:search_basic_bench:1:end:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
-      "kind": "item",
+      "kind": "stadium",
       "name": "Lumiose City",
       "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "stadium",
+        "amount": 1,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "use",
+         "use_kind": "search_basic_bench",
+         "end_turn": true
         }
        }
       ],
@@ -151870,13 +151902,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "stadium:use:search_basic_bench:1:end:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

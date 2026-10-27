@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-27 00:29:45
+- 生成时间：2026-10-27 09:14:47
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **577** 条 · 已映射 tag 969 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：546 张**
-- 解析层面「无未建模动作」卡：614 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **575** 条 · 已映射 tag 971 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：551 张**
+- 解析层面「无未建模动作」卡：616 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -20,10 +20,11 @@
 
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
-| B4 | static_lock | `rule` | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B4 | static_lock | `rule` | 15 | 15 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B4 | coin_flip | `rule` | 11 | 11 | 静态/未建模（英文） |
-| B4 | static_lock | `rule` | 4 | 4 | 静态/未建模（英文） |
 | B4 | scaling_damage | `rule` | 4 | 4 | 静态/未建模（英文） |
+| B4 | static_lock | `rule` | 4 | 4 | 场地形态未建模（S3 未覆盖） |
+| B4 | static_lock | `rule` | 3 | 3 | 静态/未建模（英文） |
 | B4 | extra_damage_target | `damage` | 3 | 3 | 附加伤害目标未建模（itself） |
 | B4 | scaling_damage | `rule` | 3 | 3 | 条件伤害缩放：计数源未识别（damage counter on all of your ） |
 | B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy attached to thi） |
@@ -54,10 +55,11 @@
 | B5 | S2 | `rule` | 25 | 25 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 24 | 20 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| B5 | S3 | `rule` | 11 | 11 | 静态/未建模（英文） |
 | B5 | S4 | `rule` | 10 | 10 | 静态/未建模（英文） |
 | B5 | S3 | `rule` | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S1 | `rule` | 7 | 6 | 静态/未建模（英文） |
+| B5 | S3 | `rule` | 7 | 7 | 场地形态未建模（S3 未覆盖） |
+| B5 | S3 | `rule` | 5 | 5 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | B5 | S2 | `rule` | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
 | B5 | S5 | `rule` | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
@@ -88,7 +90,7 @@
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
 
-**B4 · static_lock**（18 条）
+**B4 · static_lock**（15 条）
 
 - `Rabsca`：Prevent all damage from and effects of attacks from your opponent’s Pokémon done to your Benched Pokémon.
 - `Farigiraf ex`：Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.
@@ -100,17 +102,23 @@
 - `Alolan Exeggutor ex`：Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon.
 - `Ethan's Sudowoodo`：Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.
 
-**B4 · static_lock**（4 条）
-
-- `Iron Thorns ex`：As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (P
-- `Flutter Mane`：As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.
-- `Gastrodon`：As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.
-
 **B4 · scaling_damage**（4 条）
 
 - `Breloom`：Flip a coin until you get tails. This attack does 50 more damage for each heads.
 - `Tyrogue`：Flip a coin until you get tails. This attack does 30 more damage for each heads.
 - `Mega Kangaskhan ex`：Flip a coin until you get tails. This attack does 50 more damage for each heads.
+
+**B4 · static_lock**（4 条）
+
+- `Neutralization Zone`：Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pok
+- `Team Rocket's Watchtower`：{C} Pokémon in play (both yours and your opponent’s) have no Abilities.
+- `Granite Cave`：Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance).
+
+**B4 · static_lock**（3 条）
+
+- `Iron Thorns ex`：As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (P
+- `Flutter Mane`：As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.
+- `Gastrodon`：As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.
 
 **B4 · extra_damage_target**（3 条）
 
@@ -247,12 +255,6 @@
 - `Cornerstone Mask Ogerpon ex`：This attack’s damage isn’t affected by Weakness or Resistance, or by any effects on your opponent’s Active Pokémon.
 - `Vibrava`：During your next turn, the Defending Pokémon takes 50 more damage from attacks (after applying Weakness and Resistance).
 
-**B5 · S3**（11 条）
-
-- `Fan Rotom`：If there is no Stadium in play, this attack does nothing.
-- `Chien-Pao`：When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.
-- `Cetitan ex`：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
-
 **B5 · S4**（10 条）
 
 - `Boomerang Energy`：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
@@ -270,6 +272,18 @@
 - `Archaludon`：During your next turn, this Pokémon can’t use attacks.
 - `Bouffalant`：During your next turn, this Pokémon can’t use attacks.
 - `Latias ex`：During your next turn, this Pokémon can’t use attacks.
+
+**B5 · S3**（7 条）
+
+- `Jamming Tower`：Pokémon Tools attached to each Pokémon (both yours and your opponent’s) have no effect.
+- `Area Zero Underdepths`：Each player who has any Tera Pokémon in play can have up to 8 Pokémon on their Bench.  If a player no longer has any Tera Pokémon in play, that player discards 
+- `N’s Castle`：N’s Pokémon in play (both yours and your opponent’s) have no Retreat Cost.
+
+**B5 · S3**（5 条）
+
+- `Fan Rotom`：If there is no Stadium in play, this attack does nothing.
+- `Chien-Pao`：When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.
+- `Cetitan ex`：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
 
 **B5 · S6**（5 条）
 

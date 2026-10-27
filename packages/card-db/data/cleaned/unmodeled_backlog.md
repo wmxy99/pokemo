@@ -1,6 +1,6 @@
 # PokéLab AI · 未建模动作清单（backlog）
 
-- 快照：`current` · 生成时间：2026-10-27 00:29:44
+- 快照：`s3step4` · 生成时间：2026-10-27 09:14:54
 - 数据源：`packages/card-db/data/db/pokelab.db`（K2 解析后端：rule（离线确定性基线））
 
 ## 0. 总量
@@ -11,11 +11,11 @@
 | 已跑解析卡数 | 1119 |
 | 解析条目（item） | 1481 |
 | 解析动作条目（spec.actions） | 1481 |
-| 已映射引擎 tag 条目 | 969 |
-| **未建模动作条目** | **577** |
-| 含未建模条目的卡数 | 505 |
-| 全效果可映射卡数 | 614 |
-| 至少 1 条引擎 tag 的卡数 | 802 |
+| 已映射引擎 tag 条目 | 971 |
+| **未建模动作条目** | **575** |
+| 含未建模条目的卡数 | 503 |
+| 全效果可映射卡数 | 616 |
+| 至少 1 条引擎 tag 的卡数 | 804 |
 
 ## 1. 批次总览（按优先级）
 
@@ -23,9 +23,9 @@
 |---|---|---:|---:|---:|---|
 | **B1** | 预设卡组关键卡 | 0 | 0 | 0.0% | 为每张卡补引擎原生 tag（训练家 tag / 特性 tag），并补引擎派发 |
 | **B2** | tag 家族扩展 | 9 | 9 | 1.6% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
-| **B3** | 解析召回补齐（英文卡面） | 99 | 99 | 17.2% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
-| **B4** | 需新引擎机制（P1 登记） | 67 | 67 | 11.6% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
-| **B5** | 静态规则与新卡种（**实现队列**） | 402 | 386 | 69.7% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
+| **B3** | 解析召回补齐（英文卡面） | 96 | 96 | 16.7% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
+| **B4** | 需新引擎机制（P1 登记） | 67 | 67 | 11.7% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
+| **B5** | 静态规则与新卡种（**实现队列**） | 403 | 387 | 70.1% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
 
 ## 2. B1 · 预设卡组关键卡（最高优先，逐卡建模）
 
@@ -62,27 +62,25 @@
 
 </details>
 
-### B3 · 解析召回补齐（英文卡面）（99 条 / 99 卡）
+### B3 · 解析召回补齐（英文卡面）（96 条 / 96 卡）
 
 - 目标：英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底
 - 动作：agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| attach | rule | 21 | 21 | 静态/未建模（英文） |
+| attach | rule | 20 | 20 | 静态/未建模（英文） |
 | knockout_condition | knockout | 12 | 12 | 击倒效果需引擎新机制（未建模动作清单 B4） |
 | discard_self | rule | 10 | 10 | 静态/未建模（英文） |
 | search | rule | 8 | 8 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
 | attach | rule | 8 | 8 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | attach | rule | 4 | 4 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
-| switch | rule | 4 | 4 | 静态/未建模（英文） |
 | spread | rule | 3 | 3 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
 | spread | rule | 3 | 3 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
+| switch | rule | 3 | 3 | 静态/未建模（英文） |
 | attach | rule | 2 | 2 | 全量回复（需引擎新机制 · B4） |
 | spread | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（each Pokémon that has an Ability） |
 | attach | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
-| draw | rule | 2 | 2 | 静态/未建模（英文） |
-| search | rule | 2 | 2 | 静态/未建模（英文） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon for each Ba） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Defending Pokémon） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（this Pokémon） |
@@ -97,8 +95,11 @@
 | discard_self | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card that you） |
 | attach | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon for each {M} Energ） |
 | search | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| draw | rule | 1 | 1 | 静态/未建模（英文） |
 | recover_from_discard | rule | 1 | 1 | 弃牌堆回收：限定子集未识别（in any combination of Pokémon ） |
 | recover_from_discard | rule | 1 | 1 | 弃牌堆回收：限定子集未识别（in any combination of {F} Poké） |
+| attach | rule | 1 | 1 | 场地形态未建模（S3 未覆盖） |
+| search | rule | 1 | 1 | 场地形态未建模（S3 未覆盖） |
 
 <details><summary>样例 · attach</summary>
 
@@ -141,10 +142,11 @@ As long as this card is attached to a Pokémon, i`
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| static_lock | rule | 18 | 18 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| static_lock | rule | 15 | 15 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | coin_flip | rule | 11 | 11 | 静态/未建模（英文） |
-| static_lock | rule | 4 | 4 | 静态/未建模（英文） |
 | scaling_damage | rule | 4 | 4 | 静态/未建模（英文） |
+| static_lock | rule | 4 | 4 | 场地形态未建模（S3 未覆盖） |
+| static_lock | rule | 3 | 3 | 静态/未建模（英文） |
 | extra_damage_target | damage | 3 | 3 | 附加伤害目标未建模（itself） |
 | scaling_damage | rule | 3 | 3 | 条件伤害缩放：计数源未识别（damage counter on all of your ） |
 | extra_damage_target | damage | 2 | 2 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy attached to thi） |
@@ -187,14 +189,6 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-<details><summary>样例 · static_lock</summary>
-
-- **Iron Thorns ex**：`As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule`
-- **Flutter Mane**：`As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.`
-- **Gastrodon**：`As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.`
-
-</details>
-
 <details><summary>样例 · scaling_damage</summary>
 
 - **Breloom**：`Flip a coin until you get tails. This attack does 50 more damage for each heads.`
@@ -203,7 +197,15 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-### B5 · 静态规则与新卡种（**实现队列**）（402 条 / 386 卡）
+<details><summary>样例 · static_lock</summary>
+
+- **Neutralization Zone**：`Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule B`
+- **Team Rocket's Watchtower**：`{C} Pokémon in play (both yours and your opponent’s) have no Abilities.`
+- **Granite Cave**：`Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance).`
+
+</details>
+
+### B5 · 静态规则与新卡种（**实现队列**）（403 条 / 387 卡）
 
 - 目标：原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现
 - 动作：S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）
@@ -215,10 +217,11 @@ As long as this card is attached to a Pokémon, i`
 | S2 | rule | 25 | 25 | 静态/未建模（英文） |
 | S5 | rule | 24 | 20 | 静态/未建模（英文） |
 | S6 | rule | 16 | 16 | 静态规则修改（弱点/抗性/伤害减免/限制） |
-| S3 | rule | 11 | 11 | 静态/未建模（英文） |
 | S4 | rule | 10 | 10 | 静态/未建模（英文） |
 | S3 | rule | 7 | 7 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | S1 | rule | 7 | 6 | 静态/未建模（英文） |
+| S3 | rule | 7 | 7 | 场地形态未建模（S3 未覆盖） |
+| S3 | rule | 5 | 5 | 静态/未建模（英文） |
 | S6 | rule | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | S2 | rule | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
 | S5 | rule | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |

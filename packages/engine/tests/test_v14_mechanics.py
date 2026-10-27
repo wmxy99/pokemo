@@ -1526,6 +1526,154 @@ class TestStadium(unittest.TestCase):
         b.step({"verb": "trainer", "hand": 0})
         self.assertEqual(basic.max_hp, 100)
 
+    # ---- S3 第四步：需要代价/目标的场地（2026-10-27） ----
+    def test_stadium_use_switch_typed_only_same_type(self):
+        """Surfing Beach：只能换上**同属性**后备，且不消耗撤退能量"""
+        b = self._battle("stadium:use:switch_typed:type:water", "Beach")
+        b.players[0].active = make_pokemon(
+            PokemonDef("WActive", hp=100, ptype="water"))
+        w = make_pokemon(PokemonDef("WBench", hp=100, ptype="water"))
+        p = make_pokemon(PokemonDef("PBench", hp=100, ptype="psychic"))
+        b.players[0].bench = [w, p]
+        b.step({"verb": "trainer", "hand": 0})
+        acts = [a for a in b.legal_actions(0) if a["verb"] == "stadium_use"]
+        self.assertEqual([a.get("bench") for a in acts], [0],
+                         "只有同属性的后备可被换上")
+        r = b.step({"verb": "stadium_use", "bench": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.name, "WBench")
+        self.assertIn("WActive", [fp.name for fp in b.players[0].bench])
+
+    def test_stadium_use_switch_typed_requires_water_active(self):
+        """负向守卫：战斗位不是该属性时不可用（不能凭空换位）"""
+        b = self._battle("stadium:use:switch_typed:type:water", "Beach")
+        b.players[0].bench = [make_pokemon(
+            PokemonDef("WBench", hp=100, ptype="water"))]
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)))
+
+    def test_stadium_use_draw_to_count_pays_energy(self):
+        """Mystery Garden：弃 1 张手牌能量 → 抽到手牌数 = 该属性在场数"""
+        b = self._battle("stadium:use:draw_to_count:1:type:psychic:"
+                         "cost:discard_energy", "Garden")
+        b.players[0].active = make_pokemon(
+            PokemonDef("PsyActive", hp=100, ptype="psychic"))
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].hand = [EnergyRef(), EnergyRef()]   # 手牌 2，在场 psychic 1
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)),
+                         "弃 1 后已无可抽空间 → 不应列为可用")
+        b.players[0].bench = [make_pokemon(
+            PokemonDef("PsyBench", hp=100, ptype="psychic"))]  # 在场 psychic 2
+        self.assertTrue(any(a["verb"] == "stadium_use"
+                            for a in b.legal_actions(0)))
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 2, "弃 1 抽 1 后仍是 2 张")
+        self.assertEqual(len(b.players[0].discard_refs), 1, "代价必须真的进弃牌堆")
+
+    def test_stadium_use_draw_to_count_no_energy_not_available(self):
+        """负向守卫：手牌无能量时无法支付代价"""
+        b = self._battle("stadium:use:draw_to_count:1:type:psychic:"
+                         "cost:discard_energy", "Garden")
+        b.players[0].active = make_pokemon(
+            PokemonDef("PsyActive", hp=100, ptype="psychic"))
+        b.players[0].bench = [make_pokemon(
+            PokemonDef("P2", hp=100, ptype="psychic"))]
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].hand = [PokeRef(PokemonDef("Filler", hp=60,
+                                               ptype="colorless"))]
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)))
+
+    def test_stadium_use_search_basic_bench_ends_turn(self):
+        """Lumiose City：检索基础宝可梦直铺后备，**回合立刻结束**"""
+        b = self._battle("stadium:use:search_basic_bench:1:end:1", "Lumiose")
+        b.step({"verb": "trainer", "hand": 0})
+        basic = PokemonDef("DeckBasic", hp=100, ptype="water", stage=0)
+        b.players[0].deck.append(PokeRef(basic))
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([fp.name for fp in b.players[0].bench], ["DeckBasic"])
+        self.assertEqual(b.current, 1, "检索铺场后本回合必须结束")
+
+    def test_stadium_use_search_basic_bench_needs_room(self):
+        """负向守卫：后备已满时不可用"""
+        b = self._battle("stadium:use:search_basic_bench:1:end:1", "Lumiose")
+        b.players[0].bench = [make_pokemon(
+            PokemonDef(f"F{i}", hp=60, ptype="colorless")) for i in range(5)]
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].deck.append(PokeRef(
+            PokemonDef("DeckBasic", hp=100, ptype="water", stage=0)))
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)))
+
+    def test_stadium_use_search_by_name(self):
+        """Spikemuth Gym：按名字检索（归一化子串匹配，忽略大小写/撇号）"""
+        b = self._battle("stadium:use:search_name:1:name:marnie", "Gym")
+        b.step({"verb": "trainer", "hand": 0})
+        want = PokeRef(PokemonDef("Marnie\u2019s Impidimp", hp=60,
+                                  ptype="darkness", stage=0))
+        other = PokeRef(PokemonDef("Other Mon", hp=60, ptype="water", stage=0))
+        b.players[0].deck.extend([other, want])
+        b.players[0].hand = []
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 1)
+        self.assertEqual(b.players[0].hand[0].pdef.name, "Marnie\u2019s Impidimp",
+                         "必须拿到名字匹配的那张，不是随便一张")
+
+    def test_stadium_use_draw_requires_supporter_name(self):
+        """Team Rocket's Factory：只认名字含 "Team Rocket" 的支援者
+
+        两个独立对局（一回合只能打 1 张支援者，不能在同一局里连打两张验证）。
+        """
+        # ① 名字不符 → 不可用
+        b = self._battle("stadium:use:draw:2:require:supporter_name:"
+                         "name:teamrocket", "Factory")
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)),
+                         "未打出支援者时不应可用")
+        b.players[0].hand.append(TrainerRef(
+            TrainerDef("research:5", kind="supporter", name="Professor X")))
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertEqual(b.players[0].supporter_name, "Professor X",
+                         "打出的支援者卡名必须被记录（供场地上判定）")
+        self.assertFalse(any(a["verb"] == "stadium_use"
+                             for a in b.legal_actions(0)),
+                         "名字不符的支援者不应满足条件")
+
+        # ② 名字含 Team Rocket → 可用，抽 2
+        b = self._battle("stadium:use:draw:2:require:supporter_name:"
+                         "name:teamrocket", "Factory")
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].hand.append(TrainerRef(
+            TrainerDef("research:5", kind="supporter",
+                       name="Team Rocket\u2019s Ariana")))
+        b.step({"verb": "trainer", "hand": 0})
+        self.assertEqual(b.players[0].supporter_name,
+                         "Team Rocket\u2019s Ariana")
+        hand_before = len(b.players[0].hand)
+        deck_now = len(b.players[0].deck)
+        r = b.step({"verb": "stadium_use"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), hand_before + 2)
+        self.assertEqual(len(b.players[0].deck), deck_now - 2)
+
+    def test_stadium_use_end_turn_does_not_leak_to_opponent(self):
+        """回归守卫：场地结束回合时，日志归属必须是**使用者**而不是对手"""
+        b = self._battle("stadium:use:search_basic_bench:1:end:1", "Lumiose")
+        b.step({"verb": "trainer", "hand": 0})
+        b.players[0].deck.append(PokeRef(
+            PokemonDef("DeckBasic", hp=100, ptype="water", stage=0)))
+        b.step({"verb": "stadium_use"})
+        use_ev = [e for e in b.events if e.get("type") == "stadium_use"]
+        self.assertEqual(len(use_ev), 1)
+        self.assertEqual(use_ev[0]["player"], 0, "日志应记在动作发起方名下")
+        self.assertEqual(b.current, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

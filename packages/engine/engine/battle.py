@@ -200,6 +200,7 @@ class Battle:
         self.phase = "main"
         p.attached_energy_this_turn = 0
         p.supporter_used = 0
+        p.supporter_name = ""                     # S3：在场地上判定的支援者卡名
         p.discarded_this_turn = 0                 # v1.4「in this way」按回合重置
         p.discarded_energy_this_turn = 0
         self._refresh_stadium_hp()                # S3：场地对上限的修正在新回合重算
@@ -421,11 +422,13 @@ class Battle:
                 targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
                 for tpos in targets:
                     out.append(dict(base, target=tpos))
-        # S3 场地「每回合一次」——与手牌无关，单独一条合法动作
-        if self._stadium_use_available(p):
-            out.append({"verb": "stadium_use",
-                        "name": (self.stadium or {}).get("name", ""),
-                        "display": (self.stadium or {}).get("name", "")})
+        # S3 场地「每回合一次」——与手牌无关，单独列动作
+        #（switch_typed 这类要选目标 → 每个合法替补一行）
+        base_su = {"verb": "stadium_use",
+                   "name": (self.stadium or {}).get("name", ""),
+                   "display": (self.stadium or {}).get("name", "")}
+        for extra in self._stadium_use_actions(p):
+            out.append({**base_su, **extra})
         return out
 
     # ---------- 自由文本指令（中文别名 → 合法动作） ----------
@@ -808,9 +811,13 @@ class Battle:
             # 弃全部手牌（不含自身）→ 抽 n
             n = int(tag.split(":")[1])
             others = [c for i, c in enumerate(p.hand) if i != hi]
-            for c in others:
-                self._to_discard(p, c)
-            p.hand = [c for i, c in enumerate(p.hand) if i == hi]
+            # ⚠ 循环变量**不能**叫 `c`：函数末尾靠 `c` 的**身份**移除「已使用的训练家卡」
+            # （`p.hand = [x for x in p.hand if x is not c]`）。这里一旦复用 `c`，
+            # 末尾就会拿「最后一张被弃的牌」当成本卡 → 支援者留在手牌里，
+            # 还会被重复弃一次（真实卡池的 Professor's Research 会踩到）。
+            for _dropped in others:
+                self._to_discard(p, _dropped)
+            p.hand = [x for i, x in enumerate(p.hand) if i == hi]
             self._safe_draw(self.current, n, source="trainer")
             placed = f"discard {len(others)} draw {n}"
         elif tag.startswith("shuffle_draw:"):
@@ -851,6 +858,7 @@ class Battle:
             self._to_discard(p, c)
         if kind == "supporter":
             p.supporter_used = 1
+            p.supporter_name = c.tdef.name
         self._log("trainer", {"player": self.current, "tag": tag,
                               "kind": kind, "detail": placed})
         return {"ok": True, "event": self.events[-1]}
@@ -1198,22 +1206,33 @@ class Battle:
         return self._stadium_used
 
     def _stadium_use_spec(self) -> dict:
-        """场地「每回合一次」形态 → ``{"kind","n","color","require"}``（无则空）
+        """场地「每回合一次」形态 → ``{"kind","n","type","require","name","cost","end_turn"}``
 
-        tag：``stadium:use:<kind>[:<n>][:type:<c>][:require:supporter]``
-          · ``top_deck``          把手牌 1 张放到牌库顶（Academy at Night）
-          · ``recover_energy``    弃牌堆取 ≤n 张基本能量入手（Levincia）
-          · ``heal_all``          己方每只回复 n 点（Community Center）
+        tag：``stadium:use:<kind>[:<n>][:type:<c>][:require:<r>][:name:<key>]
+        [:cost:<c>][:end:1]``
+          · ``top_deck``           把手牌 1 张放到牌库顶（Academy at Night）
+          · ``recover_energy``     弃牌堆取 ≤n 张基本能量入手（Levincia）
+          · ``heal_all``           己方每只回复 n 点（Community Center）
+          · ``switch_typed``       己方战斗位 ↔ 后备中**同属性**的一只（Surfing Beach）
+          · ``draw_to_count``      弃 1 张手牌能量 → 抽到「手牌数 = 该属性在场数」（Mystery Garden）
+          · ``search_basic_bench`` 牌库检索 1 张基础宝可梦**直接放后备**（Lumiose City）
+          · ``search_name``        牌库检索 ≤n 张名字含 <key> 的卡入手（Spikemuth Gym）
+          · ``draw``               抽 n 张（要求本回合用过指定支援者时用 ``require``）
+
+        ``name`` 是**归一化卡名子串**（只保留 a-z0-9，见 `_name_key`）——
+        卡名里有空格/撇号（"Team Rocket"、"Marnie's"），而 tag 是紧凑字符串，
+        若原样塞进去会让解析层和审计脚本的 ``split(":")`` 语义变脆。
         """
-        out = {"kind": "", "n": 0, "type": None, "require": None}
+        out = {"kind": "", "n": 0, "type": None, "require": None,
+               "name": None, "cost": None, "end_turn": False}
         tag = (self.stadium or {}).get("tag") or ""
         if not tag.startswith("stadium:use:"):
             return out
         parts = tag.split(":")
-        # stadium:use:<kind>[:<n>][:type:<c>][:require:supporter]
+        # stadium:use:<kind>[:<n>][:type:<c>][:require:<r>][:name:<k>][:cost:<c>][:end:1]
         out["kind"] = parts[2] if len(parts) > 2 else ""
         i = 3
-        if i < len(parts) and parts[i].isdigit():
+        if i < len(parts) and parts[i].lstrip("-").isdigit():
             out["n"] = int(parts[i])
             i += 1
         while i + 1 < len(parts):
@@ -1221,26 +1240,74 @@ class Battle:
                 out["type"] = parts[i + 1]
             elif parts[i] == "require":
                 out["require"] = parts[i + 1]
+            elif parts[i] == "name":
+                out["name"] = parts[i + 1]
+            elif parts[i] == "cost":
+                out["cost"] = parts[i + 1]
+            elif parts[i] == "end":
+                out["end_turn"] = parts[i + 1] in ("1", "true", "turn")
             i += 2
         return out
 
-    def _stadium_use_available(self, p: PlayerState) -> bool:
+    def _stadium_use_actions(self, p: PlayerState) -> list:
+        """当前场地在本回合能做什么 → 合法动作列表（空 = 不可使用）
+
+        返回列表而不是布尔：``switch_typed`` 这类要**选目标**，每个候选是一行动作。
+        """
         spec = self._stadium_use_spec()
-        if not spec["kind"]:
-            return False
+        kind = spec["kind"]
+        if not kind:
+            return []
         if self._stadium_used_flags()[self.current]:
-            return False
+            return []
+        # 使用条件（本回合打出过支援者 / 打出过**名字含 <key> 的**支援者）
         if spec["require"] == "supporter" and not p.supporter_used:
-            return False
-        if spec["kind"] == "top_deck":
-            return bool(p.hand)
-        if spec["kind"] == "recover_energy":
-            return any(isinstance(c, EnergyRef) and
-                       (not spec["type"] or getattr(c.edef, "type", None) == spec["type"])
-                       for c in p.discard_refs)
-        if spec["kind"] == "heal_all":
-            return any(fp.damage > 0 for fp in p.all_field())
-        return False
+            return []
+        if spec["require"] == "supporter_name":
+            if not p.supporter_used or not spec["name"]:
+                return []
+            if spec["name"] not in _name_key(p.supporter_name):
+                return []
+        if kind == "top_deck":
+            return [{}] if p.hand else []
+        if kind == "recover_energy":
+            ok = any(isinstance(c, EnergyRef) and
+                     (not spec["type"] or
+                      getattr(c.edef, "type", None) == spec["type"])
+                     for c in p.discard_refs)
+            return [{}] if ok else []
+        if kind == "heal_all":
+            return [{}] if any(fp.damage > 0 for fp in p.all_field()) else []
+        if kind == "switch_typed":
+            if p.active is None:
+                return []
+            if spec["type"] and str(p.active.pdef.ptype).lower() != spec["type"]:
+                return []
+            return [{"bench": i} for i, fp in enumerate(p.bench)
+                    if not spec["type"]
+                    or str(fp.pdef.ptype).lower() == spec["type"]]
+        if kind == "draw_to_count":
+            if spec["cost"] != "discard_energy" or not spec["type"]:
+                return []                # 未知代价形态 → 不建模（宁可不用）
+            if p.energy_in_hand() <= 0:
+                return []
+            # 弃 1 张之后手牌数仍小于该属性在场数，才有牌可抽；
+            # 否则「先弃 1 再抽 0」严格劣于不使用 —— 不列进合法动作。
+            return [{}] if _typed_in_play(p, spec["type"]) > len(p.hand) - 1 else []
+        if kind == "search_basic_bench":
+            if not p.bench_has_room(self.cfg):
+                return []
+            return [{}] if _deck_has_basic(p) else []
+        if kind == "search_name":
+            if not spec["name"]:
+                return []
+            return [{}] if _deck_name_hits(p, spec["name"]) else []
+        if kind == "draw":
+            return [{}] if (p.deck and spec["n"] > 0) else []
+        return []
+
+    def _stadium_use_available(self, p: PlayerState) -> bool:
+        return bool(self._stadium_use_actions(p))
 
     def _do_stadium_use(self, p: PlayerState, action: dict) -> dict:
         """场地「每回合一次」的主动使用（S3 2026-10-27）"""
@@ -1276,13 +1343,68 @@ class Battle:
                     fp.damage = max(0, fp.damage - spec["n"])
                     healed += 1
             detail = f"heal {spec['n']} x{healed}"
+        elif kind == "switch_typed":
+            bi = int(action.get("bench", 0))
+            if p.active is None or not (0 <= bi < len(p.bench)):
+                raise ValueError("换位目标越界")
+            incoming = p.bench[bi]
+            if spec["type"] and str(incoming.pdef.ptype).lower() != spec["type"]:
+                raise ValueError("换上的宝可梦属性不符")
+            old = p.active
+            old.clear_status()           # 官方规则：换下即解除特殊状态（同 Switch）
+            p.active = p.bench.pop(bi)
+            p.bench.append(old)
+            detail = f"switch {old.name} -> {p.active.name}"
+        elif kind == "draw_to_count":
+            hi = action.get("hand")
+            idx = None
+            if hi is not None and 0 <= int(hi) < len(p.hand) \
+                    and isinstance(p.hand[int(hi)], EnergyRef):
+                idx = int(hi)
+            if idx is None:
+                idx = next((i for i in reversed(range(len(p.hand)))
+                            if isinstance(p.hand[i], EnergyRef)), None)
+            if idx is None:
+                raise ValueError("手牌无能量可弃（代价无法支付）")
+            dropped = _card_label(p.hand[idx])
+            self._to_discard(p, p.hand.pop(idx))
+            target = _typed_in_play(p, spec["type"])
+            got = self._safe_draw(self.current, max(0, target - len(p.hand)),
+                                  source="stadium")
+            detail = f"discard {dropped}, draw {got} (to {target})"
+        elif kind == "search_basic_bench":
+            if not p.bench_has_room(self.cfg):
+                raise ValueError("后备区已满")
+            ref = _take_basic_from_deck(p)
+            if ref is None:
+                raise ValueError("牌库无基础宝可梦")
+            self.rng.shuffle(p.deck)
+            fp = make_pokemon(ref.pdef)
+            fp.just_played = True
+            p.bench.append(fp)
+            self._on_bench_placed(self.current, fp)   # 与「手牌上场」走同一钩子
+            detail = f"search {fp.name} to bench"
+        elif kind == "search_name":
+            got = _take_name_from_deck(p, spec["n"] or 1, spec["name"])
+            if not got:
+                raise ValueError("牌库无可检索目标")
+            self.rng.shuffle(p.deck)
+            detail = f"search {got} by name to hand"
+        elif kind == "draw":
+            got = self._safe_draw(self.current, spec["n"], source="stadium")
+            detail = f"draw {got}"
         else:
             raise ValueError(f"未知场地上使用形态：{kind}")
         self._stadium_used_flags()[self.current] = 1
         self._log("stadium_use", {"player": self.current,
                                   "name": (self.stadium or {}).get("name"),
                                   "kind": kind, "detail": detail})
-        return {"ok": True, "event": self.events[-1]}
+        ev = self.events[-1]
+        if spec["end_turn"]:
+            # 「If a player searches their deck in this way, their turn ends.」
+            # 必须放在日志之后：`_end_turn` 会切换 current，再记日志就记到对手头上了。
+            self._end_turn()
+        return {"ok": True, "event": ev}
 
     def _stadium_hp_delta(self, fp: FieldPokemon) -> int:
         m = self._stadium_meta()
@@ -2330,6 +2452,70 @@ def _kind_matches(c, kind: str) -> bool:
 
 def _deck_has_kind(p: PlayerState, kind: str) -> bool:
     return any(_kind_matches(c, kind) for c in p.deck)
+
+
+_NAME_KEY_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _name_key(name) -> str:
+    """卡名 → 归一化检索键（小写 + 只留 a-z0-9）
+
+    为什么需要：场地/道具的 tag 是 ``:`` 分隔的紧凑字符串，而卡名里可能有空格、
+    撇号、非 ASCII（"Team Rocket's Factory"、"N's Castle"）。把卡名归一化成
+    ``teamrocketsfactory`` 之后既能安全放进 tag，也天然实现「忽略大小写/标点」的
+    子串匹配（官方卡面说的是 "has "Team Rocket" in its name"）。
+    """
+    return _NAME_KEY_RE.sub("", str(name or "").lower())
+
+
+def _card_name_key(c) -> str:
+    from .cards import PokeRef, TrainerRef
+    if isinstance(c, PokeRef):
+        return _name_key(c.pdef.name)
+    if isinstance(c, TrainerRef):
+        return _name_key(c.tdef.name)
+    return ""
+
+
+def _deck_name_hits(p: PlayerState, key: str) -> bool:
+    return bool(key) and any(key in _card_name_key(c) for c in p.deck)
+
+
+def _take_name_from_deck(p: PlayerState, n: int, key: str) -> int:
+    """从牌库检索 ≤n 张「归一化卡名含 key」的卡入手 → 实际入手数"""
+    if not key:
+        return 0
+    got = 0
+    for i in range(len(p.deck) - 1, -1, -1):
+        if got >= n:
+            break
+        if key in _card_name_key(p.deck[i]):
+            p.hand.append(p.deck.pop(i))
+            got += 1
+    return got
+
+
+def _deck_has_basic(p: PlayerState) -> bool:
+    from .cards import PokeRef
+    return any(isinstance(c, PokeRef) and c.pdef.stage == 0 for c in p.deck)
+
+
+def _take_basic_from_deck(p: PlayerState):
+    """从牌库取出 1 张基础宝可梦（调用方负责洗牌与落位）→ PokeRef | None"""
+    from .cards import PokeRef
+    for i in range(len(p.deck) - 1, -1, -1):
+        c = p.deck[i]
+        if isinstance(c, PokeRef) and c.pdef.stage == 0:
+            return p.deck.pop(i)
+    return None
+
+
+def _typed_in_play(p: PlayerState, ptype) -> int:
+    """己方场上（战斗位 + 后备）指定属性的宝可梦数量"""
+    if not ptype:
+        return 0
+    return sum(1 for fp in p.all_field()
+               if str(fp.pdef.ptype).lower() == str(ptype).lower())
 
 
 def _zone_search_available(p: PlayerState, tag: str) -> bool:

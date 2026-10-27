@@ -34,7 +34,7 @@ AI_NOTICE = ("本解析结果由机器/AI 自动生成，仅供研究参考，�
              "请以官方规则与卡面原文为准。")
 
 # ---------------- Schema 常量 ----------------
-KINDS = ("attack", "ability", "item", "supporter", "energy", "rule")
+KINDS = ("attack", "ability", "item", "supporter", "energy", "rule", "stadium")
 TRIGGERS = ("on_use", "on_knockout", "static", "on_attach", "on_evolve")
 ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 "search", "evolve", "spread", "move_damage", "knockout",
@@ -1051,6 +1051,21 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             if text and not _CJK_RE.search(str(text))
             else _parse_rule_zh(text, kind=kind, name=name))
     actions = spec.get("actions") or []
+    # 场地卡（Stadium）：卡面效果**只能**由 `_detect_stadium` 解释。
+    # ⚠ 绝不能落到通用解析 —— 实测踩到两例**静默错映射**（比未建模危险得多）：
+    #   · Dizzying Valley「Confused Pokémon don't recover from that condition…」
+    #     被通用分支读成 `confuse` → 凭空让某只宝可梦混乱；
+    #   · Grand Tree「search … Stage 1 … to evolve it」被读成 `candy`
+    #     → 变成跳过进化阶。
+    # 两者都不报错、局面正常，只有对账才看得出，因此这里做**硬分流**。
+    if kind == "stadium":
+        stadium = _detect_stadium(str(text or ""))
+        if stadium:
+            spec["actions"] = list(stadium)
+        else:
+            spec["actions"] = [{"type": "rule", "target": None, "amount": None,
+                                "extra": {"note": "场地形态未建模（S3 未覆盖）"}}]
+        return spec
     # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
     stadium = _detect_stadium(str(text or ""))
     if stadium:
@@ -1182,6 +1197,17 @@ _EN_SYMBOL_COLOR = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
                     "P": "psychic", "F": "fighting", "D": "darkness",
                     "M": "metal", "C": "colorless", "N": "dragon",
                     "Y": "psychic"}
+
+
+def _tag_name_key(name: str) -> str:
+    """卡名 → tag 安全的检索键（小写 + 只留 a-z0-9）
+
+    卡名里有空格/撇号（"Team Rocket"、"Marnie's"），而引擎 tag 是 ``:`` 分隔的
+    紧凑串 —— 原样塞进去会让 ``split(":")`` 与审计脚本的键值解析变脆。
+    归一化后 ``"Team Rocket"`` → ``teamrocket``，引擎侧用同样的归一化做子串匹配。
+    ⚠ 必须与 `engine/battle.py::_name_key` **同规则**，否则匹配永远不成立。
+    """
+    return re.sub(r"[^a-z0-9]+", "", str(name or "").lower())
 
 
 # 专名所有格（Cynthia’s / Iono’s / Ethan’s / Team Rocket’s）→ 「某一小类」而非总数
@@ -1506,6 +1532,20 @@ def _detect_stadium(text: str) -> list:
     t = _norm_apostrophe(text)
     low = t.lower()
 
+    # C8（前置）Spikemuth Gym：检索**专名所有格**指定的宝可梦入手
+    #   ⚠ 必须先于下面的「阵营限定一律放弃」守卫：那条守卫针对的是
+    #   「Marnie's Pokémon 减伤」这类需要**卡名归属元数据**的修正器；而这里专名
+    #   是**检索目标**，靠卡名归一化子串就能精确表达。放在守卫之后会被整卡吞掉。
+    #   只认 "<Name>'s Pokémon" 且动作是「揭示后入手」——Grand Tree 的
+    #   「search … Stage 1 … to evolve it」不匹配（那是进化，不是入手）。
+    if re.search(r"once during each player'?s turn", low):
+        m = re.search(r"search their deck for a ([a-z0-9]+)'s pok[eé]mon, "
+                      r"reveal it, and put it into their hand", low)
+        if m:
+            return [act("stadium", 1, "any",
+                        {"kind": "use", "use_kind": "search_name",
+                         "name_key": m.group(1)})]
+
     # 卡名/阵营限定 → 引擎无卡名归属元数据
     if re.search(r"\b(steven|n|hop|marnie|erika|team rocket)'?s\s+pok[eé]mon", low):
         return []
@@ -1532,8 +1572,45 @@ def _detect_stadium(text: str) -> list:
             return [act("stadium", int(m.group(1)), "any",
                         {"kind": "use", "use_kind": "heal_all",
                          "require": "supporter"})]
-        # 其余「每回合一次」形态（检索/换位/弃牌换抽）需要目标选择或额外代价，
-        # 本轮不建模 —— 让整卡落进未建模，而不是硬套成上面三种。
+        # C4 Surfing Beach：己方战斗位 ↔ 后备**同属性**换位（要选目标）
+        m = re.search(r"switch their active \{([a-z])\} pok[eé]mon with 1 of "
+                      r"their benched \{([a-z])\} pok[eé]mon", low)
+        if m and m.group(1) == m.group(2):
+            color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+            if color:
+                return [act("stadium", None, "any",
+                            {"kind": "use", "use_kind": "switch_typed",
+                             "ptype": color})]
+        # C5 Mystery Garden：弃 1 张手牌能量 → 抽到「手牌数 = 该属性在场数」
+        m = re.search(r"discard an energy card from their hand in order to draw "
+                      r"cards until they have as many cards in their hand as "
+                      r"they have \{([a-z])\} pok[eé]mon in play", low)
+        if m:
+            color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+            if color:
+                return [act("stadium", 1, "any",
+                            {"kind": "use", "use_kind": "draw_to_count",
+                             "ptype": color, "cost": "discard_energy"})]
+        # C6 Lumiose City：检索基础宝可梦直接铺后备，**然后回合结束**
+        if re.search(r"search their deck for a basic pok[eé]mon and put it onto "
+                     r"their bench", low) and re.search(r"their turn ends", low):
+            return [act("stadium", 1, "any",
+                        {"kind": "use", "use_kind": "search_basic_bench",
+                         "end_turn": True})]
+        # C7 Team Rocket's Factory：本回合打出过**名字含 X 的**支援者 → 抽 n
+        m = re.search(r"if they played a supporter card that has \"([^\"]{1,40})\" "
+                      r"in its name from their hand this turn, "
+                      r"they may draw (\d+) cards?", low)
+        if m:
+            key = _tag_name_key(m.group(1))
+            if key:
+                return [act("stadium", int(m.group(2)), "any",
+                            {"kind": "use", "use_kind": "draw",
+                             "require": "supporter_name", "name_key": key})]
+        # C8 Spikemuth Gym：检索专名指定的宝可梦入手 —— 已在函数开头前置判定
+        #   （必须早于阵营豁免守卫，见上方注释）
+        # 其余「每回合一次」形态（进化检索/多步代价等）需要目标选择或额外代价，
+        # 本轮不建模 —— 让整卡落进未建模，而不是硬套成上面几种。
         return []
 
     # B 触发式（S3 第三步 2026-10-27）
@@ -2724,6 +2801,12 @@ def to_engine_tags(specs: list) -> dict:
                         tail += f":type:{extra['ptype']}"
                     if extra.get("require"):
                         tail += f":require:{extra['require']}"
+                    if extra.get("name_key"):
+                        tail += f":name:{extra['name_key']}"
+                    if extra.get("cost"):
+                        tail += f":cost:{extra['cost']}"
+                    if extra.get("end_turn"):
+                        tail += ":end:1"
                     tags.append(f"stadium:use:{extra['use_kind']}{tail}")
                 else:
                     unsupported.append({"type": t,

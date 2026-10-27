@@ -38,6 +38,10 @@ class PlayerState:
     # 回合内一次性资源
     attached_energy_this_turn: int = 0
     supporter_used: int = 0                           # E4: 每回合支援者使用标志
+    # S3: 本回合打出过的支援者**卡名**（供「名字含 X 的支援者」类场地上判定）
+    #   为何要存名字而不只存标志：Team Rocket's Factory 之类只认名字含特定词的支援者，
+    #   只有 used 标志无法区分"打的是不是那一张"。
+    supporter_name: str = ""
     # v1.4「in this way」计数：本回合已弃置的牌数
     # （供 dmg_plus:N:per:own_discarded_this_turn / …_energy_this_turn）
     discarded_this_turn: int = 0

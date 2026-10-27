@@ -361,8 +361,14 @@ def parse_effects_pass(cards: list[dict], backend: str = "rule") -> dict:
             tags += m["tags"]; unsup += m["unsupported"]
         # 无招式卡（训练家/能量/规则）的整段效果
         if c["other_text"]:
-            k = "supporter" if c["subtype"] == "Supporter" else kind_map.get(
-                c["supertype"], "rule")
+            if c["subtype"] == "Supporter":
+                k = "supporter"
+            elif c["subtype"] == "Stadium":
+                # 场地单独成 kind：卡面效果只能由 `_detect_stadium` 解释，
+                # 落回通用解析会把「混乱不恢复」「检索进化」读成 confuse/candy
+                k = "stadium"
+            else:
+                k = kind_map.get(c["supertype"], "rule")
             r = E.parse_effects(c["other_text"], kind=k,
                                 name=c["name"], backend=backend)
             m = E.to_engine_tags(r["specs"])

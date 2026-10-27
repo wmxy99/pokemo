@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 435,
+      "kept": 440,
       "by_Pokemon": 367,
-      "by_Trainer": 68,
+      "by_Trainer": 73,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 498,
+        "存在未建模项（整卡不收）": 496,
         "Energy 不可执行": 3,
         "Pokemon 不可执行": 111,
         "人工卡池已有（人工优先）": 26,
-        "Trainer 不可执行": 49
+        "Trainer 不可执行": 46
       }
     }
   },
@@ -17777,6 +17777,36 @@
       "source_card_id": 1254
     },
     {
+      "name": "Team Rocket's Factory",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:draw:2:require:supporter_name:name:teamrocket",
+      "desc": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards.",
+      "real": {
+        "set": "DRI",
+        "number": "173"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1257
+    },
+    {
+      "name": "Spikemuth Gym",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:search_name:1:name:marnie",
+      "desc": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck.",
+      "real": {
+        "set": "DRI",
+        "number": "169"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1259
+    },
+    {
       "name": "Risky Ruins",
       "name_zh": "",
       "supertype": "Trainer",
@@ -17790,6 +17820,51 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1260
+    },
+    {
+      "name": "Surfing Beach",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:switch_typed:type:water",
+      "desc": "Once during each player’s turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon.",
+      "real": {
+        "set": "MEG",
+        "number": "129"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1262
+    },
+    {
+      "name": "Mystery Garden",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:draw_to_count:1:type:psychic:cost:discard_energy",
+      "desc": "Once during each player’s turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play.",
+      "real": {
+        "set": "MEG",
+        "number": "122"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1263
+    },
+    {
+      "name": "Lumiose City",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:use:search_basic_bench:1:end:1",
+      "desc": "Once during each player’s turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends.",
+      "real": {
+        "set": "POR",
+        "number": "77"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1267
     }
   ]
 }

@@ -73,8 +73,7 @@ def _want_snipe(tgt: str, per: int):
         return "self"
     if "bench" not in t and ("active pok" in t or "defending pok" in t):
         return "none"                        # 战斗位由招式 damage 字段承载
-    if re.search(r"\{|that (?:has|have|is|are|don|doesn)|named|for each|in any way",
-                 t):
+    if re.search(r"\{|that (?:has|have|is|are|don|doesn)|named|for each", t):
         return "unmodeled"                   # 子集/条件/缩放 → 不该进池
     if re.search(r"each of your opponent'?s? benched", t):
         return "snipe:opp_bench"
@@ -90,6 +89,19 @@ def _want_snipe(tgt: str, per: int):
         return "snipe:opp"
     if re.search(r"\d+\s+of your (?:own )?benched", t):
         return "snipe:own_bench"
+    # 自由分配：把伤害/指示物「任意方式」放到**对手后备** → 引擎 spread_free 精确支持
+    # （E5 任意分配：opp.bench 任意分配，位置码由调用方 plan 指定）。spread_free 只覆盖
+    # 后备、不覆盖战斗位，且不含「that has / which / with a / for each / named」等子集
+    # 条件 —— 否则仍是未建模（落到下面 unmodeled）。放在 each/digit 之后：纯「in any way」
+    # 自由分配才命中，带「each of / N of」的均按 snipe 处理。
+    if ("bench" in t and "opponent" in t
+            and re.search(
+                r"in any way|any way you|however you like|as you like|however you choose",
+                t)
+            and not re.search(
+                r"that (?:has|have|is|are|don|doesn)|which |with a |for each|named|\beach\b",
+                t)):
+        return "spread_free"
     return "unmodeled"
 
 

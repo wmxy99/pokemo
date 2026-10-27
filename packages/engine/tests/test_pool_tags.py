@@ -21,6 +21,8 @@ import unittest
 from pathlib import Path
 
 from engine import battle as B
+from engine.families import fx_ability_block as FX_AB
+from engine.families import known as fx_known
 
 POOL = (Path(__file__).resolve().parents[2] / "engine" / "engine" / "data"
         / "cards_pool_ext.json")
@@ -66,6 +68,9 @@ class TestPoolTagVocabulary(unittest.TestCase):
                         tags.append(it["tag"])
                     for t in tags:
                         yield c.get("name"), it.get("name"), str(t)
+            # 场地卡：顶层 tag 也参与词汇表一致性检查
+            if c.get("kind") == "stadium" and c.get("tag"):
+                yield c.get("name"), c.get("name"), str(c["tag"])
 
     def test_pool_exists_and_nonempty(self):
         self.assertGreater(len(self.cards), 0, "扩展池为空 → 守卫失效（假绿）")
@@ -99,6 +104,37 @@ class TestPoolTagVocabulary(unittest.TestCase):
             if parts[1] in ("counter", "discard_energy") and not parts[2].isdigit():
                 bad.append(f"{name} · {item}：{tag}（缺数值）")
         self.assertEqual(bad, [], "受击反应 tag 形态非法：\n" + "\n".join(bad))
+
+    def test_fx_tags_recognized_by_engine(self):
+        """解析侧产出的 `fx:` tag 必须被引擎「效果族」词表认识
+
+        漂移后果：卡进了池却出手即 `ValueError`（卡打不出招），或静默不生效。
+        `families.known` 是解析链准入与引擎派发的共用入口，逐字比对。
+        """
+        bad = []
+        for name, item, tag in self._iter_tags():
+            if not tag.startswith("fx:"):
+                continue
+            if not fx_known(tag):
+                bad.append(f"{name} · {item}：{tag}（引擎无对应效果族）")
+        self.assertEqual(bad, [], "解析侧产出了引擎不认识的 fx tag：\n"
+                                  + "\n".join(bad))
+
+    def test_stadium_ability_block_scope_known(self):
+        """`stadium:ability_block:<scope>` 的 scope 必须落在引擎识别范围内
+
+        范围词表由 `engine/families/fx_ability_block.py` 的
+        `_STADIUM_ABILITY_BLOCK_SCOPES` 单一来源，解析侧不得超出。
+        """
+        prefix = "stadium:ability_block:"
+        bad = []
+        for name, item, tag in self._iter_tags():
+            if not tag.startswith(prefix):
+                continue
+            scope = tag[len(prefix):]
+            if not scope or scope not in FX_AB._STADIUM_ABILITY_BLOCK_SCOPES:
+                bad.append(f"{name} · {item}：{tag}（引擎未识别的场地封锁范围）")
+        self.assertEqual(bad, [], "场地封锁范围超出引擎词表：\n" + "\n".join(bad))
 
 
 if __name__ == "__main__":

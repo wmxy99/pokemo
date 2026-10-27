@@ -20,6 +20,8 @@ from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield, STATUSES)
 # 名称型字段的优先顺序（与 engine.commands 同源，避免两处漂移）
 from .commands import NAME_KEYS as _NAME_KEYS
+# 效果族插件层（fx · 2026-10-27）：长尾机制按族拆到 engine/families/fx_*.py
+from . import families
 
 WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
 
@@ -277,7 +279,7 @@ class Battle:
             blocked = _NO_ATTACK_STATUS & p.active.status
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
-                    if p.active.can_pay(atk.cost):
+                    if self._can_pay_attack(p.active, atk):
                         acts.append({"verb": "attack", "attack": ai,
                                      "name": atk.name,
                                      "name_zh": atk.name_zh,
@@ -286,7 +288,7 @@ class Battle:
                                      "cost_map": list(atk.cost),
                                      "desc_zh": atk.desc_zh,
                                      "display_desc": atk.display_desc})
-                if p.active.total_energy() >= _retreat_cost(p.active) \
+                if p.active.total_energy() >= _retreat_cost(p.active, self) \
                         and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
         # E2 进化：手牌 x → 场上同名 evolves_from 目标
@@ -317,9 +319,16 @@ class Battle:
             for ab in fp.pdef.abilities:
                 if ab.location != "field" or ab.name in fp.ability_used:
                     continue
+                # 静态封印（「场上的宝可梦没有特性」等，效果族提供）
+                if families.ability_blocked(self, fp, ab):
+                    continue
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
                 if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
                                       "passive:", "on_damaged:")):
+                    continue
+                # 效果族纯静态钩子（无 act 一次性动作，如 ability_blocked）→ 被动，
+                # 不进合法动作表（封锁由结算路径在 ability_blocked 自动施加）
+                if ab.tag.startswith("fx:") and not families.has_act(ab.tag):
                     continue
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
@@ -365,6 +374,9 @@ class Battle:
                 continue
             tag, kind = c.tdef.tag, c.tdef.kind
             if kind == "supporter" and p.supporter_used:
+                continue
+            # 静态禁令（「对手不能从手牌打出物品卡」等）
+            if families.blocked_play(self, p, c):
                 continue
             # 统一带上标识（英文键 name / 中文 name_zh / 展示名 display / tag），
             # 供前端、AI 与「按名称下达指令」（engine.commands.find_action）使用。
@@ -610,7 +622,7 @@ class Battle:
             raise ValueError("无法撤退")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中无法撤退")
-        cost = _retreat_cost(p.active)
+        cost = _retreat_cost(p.active, self)
         if not p.active.remove_any(cost):
             raise ValueError("能量不足")
         bi = int(action.get("bench", 0))
@@ -783,6 +795,14 @@ class Battle:
                                      "from": fp.name, "target": opp.active.name,
                                      "status": tag})
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("fx:"):
+                # 效果族（fx）：一次性动作，语义由 engine/families/fx_*.py 定义
+                detail = families.apply_action(
+                    self, tag, {"kind": "ability", "holder": fp,
+                                "action": action, "player": self.current})
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             raise ValueError(f"未知 field tag {tag}")
         if "hand" in action:
             # ---- hand 特性（弃自身） ----
@@ -809,6 +829,13 @@ class Battle:
                 if tgt.is_ko:
                     self._resolve_ko(1 - self.current, tgt)
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("fx:"):
+                detail = families.apply_action(
+                    self, tag, {"kind": "ability_hand", "card": c,
+                                "action": action, "player": self.current})
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": c.pdef.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             raise ValueError(f"未知 hand tag {tag}")
         raise ValueError("ability 动作缺少 pos/hand")
 
@@ -824,6 +851,9 @@ class Battle:
         if not isinstance(c, TrainerRef):
             raise ValueError("该牌不是训练家")
         tag, kind = c.tdef.tag, c.tdef.kind
+        # 静态禁令（「你的对手不能从手牌打出物品卡」等，效果族提供）
+        if families.blocked_play(self, p, c):
+            raise ValueError("场上效果禁止打出该卡")
         if kind == "supporter":
             if p.supporter_used:
                 raise ValueError("本回合已使用支援者")
@@ -897,8 +927,11 @@ class Battle:
             placed = self._trainer_discard_all(p, tag, hi)
         elif tag.startswith("mill:"):
             placed = self._trainer_mill(tag)
+        elif tag.startswith("fx:"):
+            placed = families.apply_action(
+                self, tag, {"kind": "trainer", "card": c, "action": action,
+                            "player": self.current, "hand_index": hi})
         else:
-
             raise ValueError(f"未知训练家 tag={tag}")
         # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
         # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
@@ -1236,6 +1269,22 @@ class Battle:
         return f"rare candy: {old} -> {tgt.name}"
 
     # ---------- 攻击 ----------
+    def _can_pay_attack(self, fp: FieldPokemon, atk) -> bool:
+        """招式费用校验（含效果族的费用改写：`attack_cost`）"""
+        mod = families.attack_cost(self, fp, atk)
+        if mod.get("ignore_all"):
+            return True
+        delta = int(mod.get("colorless") or 0)
+        if not delta:
+            return fp.can_pay(atk.cost)
+        cost = []
+        for t, n in atk.cost:
+            if t == COLORLESS:
+                n = max(0, n + delta)
+            if n:
+                cost.append((t, n))
+        return fp.can_pay(tuple(cost))
+
     def _do_attack(self, p: PlayerState, action: dict) -> dict:
         if p.active is None:
             raise ValueError("无 active")
@@ -1252,7 +1301,7 @@ class Battle:
         if ai >= len(p.active.pdef.attacks):
             raise ValueError("招式越界")
         atk = p.active.pdef.attacks[ai]
-        if not p.active.can_pay(atk.cost):
+        if not self._can_pay_attack(p.active, atk):
             raise ValueError("能量不足（无法支付招式费用）")
         attacker = p.active
         self._log("attack", {"player": self.current, "attack": atk.name,
@@ -1278,7 +1327,7 @@ class Battle:
             return {"ok": True, "event": None}
         # v1.4 伤害修正层：抛币（coin:）与条件/计数缩放（dmg_plus:）必须先于伤害结算，
         # 因为它们会改写基础伤害；`dmg_zero` 则直接把本次伤害归零。
-        mods = self._attack_mods(attacker, atk.effects, action)
+        mods = self._attack_mods(attacker, atk.effects, action, defender)
         base = 0 if mods["zero"] else max(0, atk.damage + mods["plus"])
         # 「被招式击倒」标记：仅本段内（含招式附加效果）的击倒计入
         prev_ko_flag = self._ko_from_attack
@@ -1805,7 +1854,8 @@ class Battle:
 
     # ---------- v1.4 伤害修正层（抛币 / 计数缩放 / 条件加伤） ----------
     def _attack_mods(self, attacker: FieldPokemon, effects: tuple,
-                     action: Optional[dict]) -> dict:
+                     action: Optional[dict],
+                     defender: Optional[FieldPokemon] = None) -> dict:
         """解析招式效果里的伤害修正，返回
 
         ``{"plus": int, "zero": bool, "ignore_weakness": bool,
@@ -1836,6 +1886,9 @@ class Battle:
                 self._accum_dmg_plus(tag, out)
             elif tag.startswith("coin:") or tag.startswith("coin_each:"):
                 self._resolve_coin_tag(attacker, tag, out)
+        # 效果族静态加伤（「attacks used by your X do N more damage …」）
+        # 在弱点/抗性**之前**叠加（卡面通常写明 before applying Weakness…）
+        out["plus"] += families.static_dmg_plus(self, attacker, defender)
         return out
 
     def _accum_dmg_plus(self, tag: str, out: dict) -> None:
@@ -2259,6 +2312,13 @@ class Battle:
                                           "to": dst.name if dst else None})
                 if dst is not None and dst.is_ko:
                     self._resolve_ko(1 - self.current, dst)
+            elif tag.startswith("fx:"):
+                # 效果族（fx）：一次性动作，语义由 engine/families/fx_*.py 定义
+                detail = families.apply_action(
+                    self, tag, {"kind": "attack", "attacker": attacker,
+                                "action": action, "player": self.current})
+                self._log("fx", {"player": self.current, "tag": tag,
+                                 "detail": detail})
 
     # ---------- 选定目标伤害（snipe） ----------
     def _snipe_candidates(self, scope: str) -> list:
@@ -2386,6 +2446,8 @@ class Battle:
         if self._ko_from_attack:
             self._ko_flags()[owner] += 1
         give = self.cfg.ex_prizes if fp.pdef.is_ex else 1
+        # 效果族奖赏卡修正（「你的对手少拿 1 张奖赏卡」/「多拿 1 张」）
+        give = max(0, give + families.prize_delta(self, opp, fp))
         opp.prizes_left = max(0, opp.prizes_left - give)
         self._log("prize", {"player": 1 - owner, "take": give,
                             "left": opp.prizes_left})
@@ -3366,10 +3428,13 @@ def _qual_ok(qual, fp: Optional[FieldPokemon]) -> bool:
     return False
 
 
-def _retreat_cost(fp: Optional[FieldPokemon]) -> int:
-    """撤退费用（含 `passive:no_retreat` 静态修正，下限 0）"""
+def _retreat_cost(fp: Optional[FieldPokemon], battle=None) -> int:
+    """撤退费用（含 `passive:no_retreat` 与效果族覆盖，下限 0）"""
     if fp is None:
         return 0
+    over = families.retreat_cost(battle, fp) if battle is not None else None
+    if over is not None:
+        return max(0, int(over))
     if _static_mods(fp)["no_retreat"]:
         return 0
     base = int(fp.pdef.retreat) - _tool_value(fp.tool, "retreat_less")

@@ -90,6 +90,8 @@ ABILITY_TAG_PREFIXES = (
     # 受击反应特性（2026-10-27）：`on_damaged:<kind>:<arg>`
     # ⚠ 与道具侧 `tool:on_damaged:*` 是两套独立实现（字段不同：tool / abilities）
     "on_damaged:",
+    # fx 效果族（2026-10-27）：特性侧「no Abilities」静态封锁等可插拔机制
+    "fx:",
 )
 
 # 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）

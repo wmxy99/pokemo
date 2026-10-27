@@ -46,7 +46,9 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # S3 场地（2026-10-27）：全场唯一、双方共用
                 "stadium",
                 # 受击反应（2026-10-27）：己方挨打时由**攻击者**承担后果
-                "on_damaged")
+                "on_damaged",
+                # fx 效果族（2026-10-27 起）：解析侧产出、引擎 engine/families/fx_*.py 执行
+                "fx")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -1458,6 +1460,54 @@ def _trigger_of(text: str, kind: str) -> str:
     return "on_use"
 
 
+# ---------------- 效果族插件层（fx · 2026-10-27） ----------------
+def _fx_known(tag: str) -> bool:
+    """该 fx tag 是否已被引擎的某个效果族注册（未注册即为未建模）"""
+    try:
+        import sys as _sys
+        eng = str(REPO / "packages" / "engine")
+        if eng not in _sys.path:
+            _sys.path.insert(0, eng)
+        from engine.families import known as _known          # noqa: E402
+        return bool(_known(tag))
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
+def _needs_fx(spec: dict) -> bool:
+    """解析结果是否「未完成」—— 交给效果族插件层再试一次
+
+    判据：没有动作，或存在**未映射的 rule 兜底动作**（weak_change 之类已是
+    真正映射，不算未完成）。
+    """
+    actions = spec.get("actions") or []
+    if not actions:
+        return True
+    for a in actions:
+        if a.get("type") == "rule" and not (a.get("extra") or {}).get("weak_change"):
+            return True
+    return False
+
+
+def _apply_fx(spec: dict, text: str, kind: str, name: str) -> dict:
+    """把未完成的解析交给「效果族」插件层（整段认领制）
+
+    族模块约定见 `agent/fx/__init__.py`：认领整段文本才返回，否则 None。
+    认领成功后写 `spec["actions"]` 并标注 `fx_family`（便于对账与度量）。
+    """
+    if not _needs_fx(spec):
+        return spec
+    from .fx import detect_all                              # noqa: WPS433
+    hit = detect_all(text, kind, name)
+    if not hit:
+        return spec
+    spec["actions"] = list(hit.get("actions") or [])
+    if hit.get("trigger"):
+        spec["trigger"] = hit["trigger"]
+    spec["fx_family"] = hit.get("family") or ""
+    return spec
+
+
 def parse_rule(text: str, kind: str = "attack", name: str = "",
                name_zh: str = "") -> dict:
     """规则后端入口：语言分流 + **修正器后置识别**（v1.4）
@@ -1488,7 +1538,7 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
         else:
             spec["actions"] = [{"type": "rule", "target": None, "amount": None,
                                 "extra": {"note": "场地形态未建模（S3 未覆盖）"}}]
-        return spec
+        return _apply_fx(spec, text, kind, name)
     # 已有具体动作的句式不再追加 rule 兜底之外的东西；无论有无都尝试识别修正器
     stadium = _detect_stadium(str(text or ""))
     if stadium:
@@ -1516,7 +1566,7 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     elif tools or stadium:
         # 只有道具/场地时也要写回（否则识别到了却没进 spec —— 实测踩过）
         spec["actions"] = actions
-    return spec
+    return _apply_fx(spec, text, kind, name)
 
 
 def _note_starts_with(action: dict, prefixes: tuple) -> bool:
@@ -3446,6 +3496,10 @@ def to_engine_tags(specs: list) -> dict:
                     if extra.get("end_turn"):
                         tail += ":end:1"
                     tags.append(f"stadium:use:{extra['use_kind']}{tail}")
+                elif k == "ability_block" and extra.get("scope"):
+                    # 「no Abilities」静态封锁（fx 族）：引擎靠 battle.stadium["name"]
+                    # 在 ability_blocked 钩子里具体判定范围/例外
+                    tags.append(f"stadium:ability_block:{extra['scope']}")
                 else:
                     unsupported.append({"type": t,
                                         "reason": f"场地形态未建模（{k}）"})
@@ -3526,6 +3580,17 @@ def to_engine_tags(specs: list) -> dict:
                 unsupported.append(
                     {"type": t,
                      "reason": "击倒效果需引擎新机制（未建模动作清单 B4）"})
+            elif t == "fx":
+                # 效果族插件（fx）：tag 必须由已注册的族产出，否则如实未建模
+                tag = str(extra.get("tag") or "")
+                if not tag.startswith("fx:"):
+                    unsupported.append(
+                        {"type": t, "reason": "fx 动作缺少合法 tag"})
+                elif not _fx_known(tag):
+                    unsupported.append(
+                        {"type": t, "reason": f"fx 族未注册：{tag}"})
+                else:
+                    tags.append(tag)
             else:
                 unsupported.append({"type": t, "reason": "引擎未建模该动作类型"})
     # 按出现顺序去重

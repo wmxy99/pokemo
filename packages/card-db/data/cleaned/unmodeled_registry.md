@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-10-27 10:25:13
+- 生成时间：2026-10-27 11:57:07
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **635** 条 · 已映射 tag 910 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：618 张**
-- 解析层面「无未建模动作」卡：565 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **632** 条 · 已映射 tag 913 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：621 张**
+- 解析层面「无未建模动作」卡：568 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -23,12 +23,12 @@
 | B4 | static_lock | `rule` | 15 | 15 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B4 | coin_flip | `rule` | 10 | 10 | 静态/未建模（英文） |
 | B4 | scaling_damage | `rule` | 4 | 4 | 静态/未建模（英文） |
-| B4 | static_lock | `rule` | 4 | 4 | 场地形态未建模（S3 未覆盖） |
-| B4 | static_lock | `rule` | 3 | 3 | 静态/未建模（英文） |
 | B4 | extra_damage_target | `damage` | 3 | 3 | 附加伤害目标未建模（itself） |
 | B4 | scaling_damage | `rule` | 3 | 3 | 条件伤害缩放：计数源未识别（damage counter on all of your ） |
+| B4 | static_lock | `rule` | 3 | 3 | 场地形态未建模（S3 未覆盖） |
 | B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each Energy attached to thi） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each Benched Pokémon that has any damage counters on it） |
+| B4 | static_lock | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Benched Pokémon） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（itself for each damage counter on it） |
@@ -117,18 +117,6 @@
 - `Tyrogue`：Flip a coin until you get tails. This attack does 30 more damage for each heads.
 - `Mega Kangaskhan ex`：Flip a coin until you get tails. This attack does 50 more damage for each heads.
 
-**B4 · static_lock**（4 条）
-
-- `Neutralization Zone`：Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pok
-- `Team Rocket's Watchtower`：{C} Pokémon in play (both yours and your opponent’s) have no Abilities.
-- `Granite Cave`：Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance).
-
-**B4 · static_lock**（3 条）
-
-- `Iron Thorns ex`：As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (P
-- `Flutter Mane`：As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.
-- `Gastrodon`：As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.
-
 **B4 · extra_damage_target**（3 条）
 
 - `Gurdurr`：You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.
@@ -141,6 +129,12 @@
 - `Cynthia's Spiritomb`：This attack does 10 damage for each damage counter on all of your Benched Cynthia’s Pokémon. This attack’s damage isn’t affected by Weakness.
 - `Gigalith`：This attack does 20 damage for each damage counter on all of your Benched {F} Pokémon.
 
+**B4 · static_lock**（3 条）
+
+- `Neutralization Zone`：Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pok
+- `Granite Cave`：Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance).
+- `Battle Cage`：Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent’s) by effects of attacks and Abilities from the opponent’s Pokémo
+
 **B4 · extra_damage_target**（2 条）
 
 - `Raging Bolt`：This attack does 30 damage to 1 of your opponent’s Pokémon for each Energy attached to this Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)
@@ -149,6 +143,10 @@
 **B4 · extra_damage_target**（1 条）
 
 - `Hippowdon`：This attack also does 40 damage to each Benched Pokémon that has any damage counters on it (both yours and your opponent’s). (Don’t apply Weakness and Resistanc
+
+**B4 · static_lock**（1 条）
+
+- `Iron Thorns ex`：As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (P
 
 **B4 · extra_damage_target**（1 条）
 

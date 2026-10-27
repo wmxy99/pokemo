@@ -17,7 +17,7 @@ from .cards import (PokeRef, EnergyRef, TrainerRef, FieldPokemon,
                     make_pokemon, _tool_value, COLORLESS)
 from .state import GameConfig, PlayerState
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
-                    distribute_damage, apply_shield)
+                    distribute_damage, apply_shield, STATUSES)
 # 名称型字段的优先顺序（与 engine.commands 同源，避免两处漂移）
 from .commands import NAME_KEYS as _NAME_KEYS
 
@@ -319,7 +319,7 @@ class Battle:
                     continue
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
                 if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
-                                      "passive:")):
+                                      "passive:", "on_damaged:")):
                     continue
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
@@ -337,6 +337,9 @@ class Battle:
                 if ab.tag.startswith("move_damage:"):
                     if fp.damage < 10 or opp.active is None:
                         continue
+                # 主动施加状态（`burn`/`poison`/…）：对手无战斗位则不可发动
+                if ab.tag in STATUSES and (opp.active is None or opp.active.is_ko):
+                    continue
                 out.append({"verb": "ability", "name": ab.name,
                             "name_zh": ab.name_zh,
                             "display": ab.name_zh or ab.name,
@@ -767,6 +770,19 @@ class Battle:
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("evolve_attach:"):
                 raise ValueError("evolve_attach 为被动触发特性，不可主动发动")
+            if tag in STATUSES:
+                # 主动施加特殊状态（2026-10-27）：「make your opponent's Active
+                # Pokémon Burned」。目标恒为对手战斗位。
+                # ⚠ 只有解析侧确认过「正向施加」措辞的特性才会带这类 tag ——
+                # 免疫 / checkup 追加伤害 / 换位触发 在解析时已被拒绝。
+                opp = self.players[1 - self.current]
+                if opp.active is None or opp.active.is_ko:
+                    raise ValueError("对手无战斗位可施加状态")
+                opp.active.status.add(tag)
+                self._log("status", {"player": 1 - self.current, "name": name,
+                                     "from": fp.name, "target": opp.active.name,
+                                     "status": tag})
+                return {"ok": True, "event": self.events[-1]}
             raise ValueError(f"未知 field tag {tag}")
         if "hand" in action:
             # ---- hand 特性（弃自身） ----
@@ -1309,6 +1325,8 @@ class Battle:
                                        pre_mods=mods)
             # S2 第二阶段：道具触发钩子（卡面写 even if Knocked Out → 先于击倒结算）
             self._trigger_tool_on_damaged(defender, attacker, damage_dealt)
+            # 2026-10-27：受击反应**特性**（`on_damaged:*`），同一时点
+            self._trigger_ability_on_damaged(defender, attacker, damage_dealt)
             if defender.is_ko and was_full and self._tool_survive(defender):
                 pass                      # 免击倒：伤害已改为「剩 M 点」
             if defender.is_ko:
@@ -1713,6 +1731,58 @@ class Battle:
             name = _drop_tool(defender)
             self._log("tool_discard", {"player": owner, "tool": name,
                                        "target": defender.name})
+
+    def _trigger_ability_on_damaged(self, defender: FieldPokemon,
+                                    attacker: FieldPokemon, dmg: int) -> None:
+        """受击反应特性（``on_damaged:<kind>:<arg>``，2026-10-27）
+
+        卡面原型：「If this Pokémon is in the Active Spot and is damaged by an
+        attack from your opponent's Pokémon (even if this Pokémon is Knocked Out),
+        the Attacking Pokémon is now Burned.」
+
+        这是**被动**特性，不进合法动作表（见 `_ability_legals` 的跳过项）：
+          · `defender` 必为对手战斗位（调用点即「被打的那只」）；
+          · `dmg > 0` 才算被伤害（护盾全挡住不触发）；
+          · 卡面写 "even if … Knocked Out" → 调用点在 `_resolve_ko` **之前**。
+        支持 kind：`status`（攻击者陷入状态）/ `counter`（攻击者吃伤害）/
+        `discard_energy`（攻击者弃能量）。
+        """
+        if dmg <= 0:
+            return
+        owner = 1 - self.current
+        for ab in defender.pdef.abilities:
+            tag = str(ab.tag or "")
+            if not tag.startswith("on_damaged:"):
+                continue
+            parts = tag.split(":")
+            # `on_damaged:<kind>:<arg>` —— 下标从 1 起（没有 `ability:` 前缀，
+            # 与 cards_real.json 其余特性 tag 一致：recon:3 / ko_draw:3 …）
+            kind = parts[1] if len(parts) > 1 else ""
+            arg = parts[2] if len(parts) > 2 else ""
+            if kind == "status" and arg in STATUSES:
+                attacker.status.add(arg)
+                self._log("ability_trigger", {
+                    "player": owner, "ability": ab.name, "kind": "status",
+                    "status": arg, "target": attacker.name})
+            elif kind == "counter" and arg.isdigit():
+                n = int(arg)
+                attacker.damage += n
+                self._log("damage", {"target": attacker.name,
+                                     "player": self.current, "dmg": n,
+                                     "ability": ab.name})
+                self._log("ability_trigger", {
+                    "player": owner, "ability": ab.name, "kind": "counter",
+                    "n": n, "target": attacker.name})
+                if attacker.is_ko:
+                    self._resolve_ko(self.current, attacker)
+            elif kind == "discard_energy" and arg.isdigit():
+                n = int(arg)
+                avail = min(n, attacker.total_energy())
+                done = bool(avail) and attacker.remove_any(avail)
+                self._log("ability_trigger", {
+                    "player": owner, "ability": ab.name,
+                    "kind": "discard_energy", "n": n if done else 0,
+                    "target": attacker.name})
 
     def _tool_survive(self, defender: FieldPokemon) -> bool:
         """``tool:survive:<m>`` —— 满 HP 时免于被招式击倒，剩 m 点 HP，道具自身弃置

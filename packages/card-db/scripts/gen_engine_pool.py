@@ -87,7 +87,13 @@ ABILITY_TAG_PREFIXES = (
     "heal:",
     # 特性检索铺场（2026-10-27）
     "search_bench:",
+    # 受击反应特性（2026-10-27）：`on_damaged:<kind>:<arg>`
+    # ⚠ 与道具侧 `tool:on_damaged:*` 是两套独立实现（字段不同：tool / abilities）
+    "on_damaged:",
 )
+
+# 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）
+ABILITY_EXACT_TAGS = ("poison", "burn", "sleep", "paralyze", "confuse")
 
 
 def _supported_attack_tags(tags) -> list:
@@ -103,7 +109,8 @@ def _supported_attack_tags(tags) -> list:
 def _supported_ability_tags(tags, location: str) -> list:
     out = []
     for t in tags or []:
-        if any(str(t).startswith(p) for p in ABILITY_TAG_PREFIXES):
+        if any(str(t).startswith(p) for p in ABILITY_TAG_PREFIXES) \
+                or str(t) in ABILITY_EXACT_TAGS:
             out.append(t)
         else:
             return []

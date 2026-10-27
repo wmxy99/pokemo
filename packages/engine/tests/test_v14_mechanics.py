@@ -1869,5 +1869,72 @@ class TestTrainerNonSearch(unittest.TestCase):
         self.assertFalse(r["ok"])
 
 
+class TestAbilityOnDamaged(unittest.TestCase):
+    """受击反应特性（``on_damaged:<kind>:<arg>``，2026-10-27）
+
+    卡面：「If this Pokémon is in the Active Spot and is damaged by an attack from
+    your opponent's Pokémon (even if this Pokémon is Knocked Out), …」——效果落在
+    **攻击方**身上。三条纪律：
+      · 只在**真受伤**时触发（被盾挡下不算）；
+      · 被动特性**不进合法动作表**（不能主动发动）；
+      · 「even if Knocked Out」→ 先在攻击方身上结算，再处理击倒。
+    """
+
+    def _setup(self, tag, def_hp=200, atk_damage=30, ab_name="Revenge"):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "Atk", hp=200, ptype="colorless",
+            attacks=(AttackDef("Hit", cost=0, damage=atk_damage, effects=()),)))
+        b.players[1].active = make_pokemon(PokemonDef(
+            "Def", hp=def_hp, ptype="colorless",
+            abilities=(AbilityDef(ab_name, tag=tag, location="field"),)))
+        b.players[0].active.energy["fire"] = 1
+        return b
+
+    def test_status_goes_to_attacker(self):
+        """「the Attacking Pokémon is now Burned」→ 攻击方被烧伤（不是防守方）"""
+        b = self._setup("on_damaged:status:burn")
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIn("burn", b.players[0].active.status, "烧伤应落在攻击方")
+        self.assertNotIn("burn", b.players[1].active.status, "防守方不该被烧伤")
+
+    def test_counter_damages_attacker(self):
+        b = self._setup("on_damaged:counter:30")
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 30)
+
+    def test_discard_energy_from_attacker(self):
+        b = self._setup("on_damaged:discard_energy:1")
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.total_energy(), 0,
+                         "攻击方的能量应被弃置")
+
+    def test_not_triggered_without_damage(self):
+        """被打 0 点（盾全挡）不算"被伤害" → 不触发"""
+        b = self._setup("on_damaged:status:burn", atk_damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertNotIn("burn", b.players[0].active.status)
+
+    def test_passive_ability_not_in_legal_actions(self):
+        """被动特性不得出现在合法动作表里（否则可无限主动发动）"""
+        b = self._setup("on_damaged:status:burn")
+        b.current = 1
+        names = [a.get("name") for a in b.legal_actions() if a.get("verb") == "ability"]
+        self.assertNotIn("Revenge", names)
+
+    def test_triggers_even_if_defender_knocked_out(self):
+        """「even if this Pokémon is Knocked Out」→ 防守方被击倒也要先结算反应"""
+        b = self._setup("on_damaged:counter:30", def_hp=10, atk_damage=50)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(b.players[1].active, "防守方应被击倒")
+        self.assertEqual(b.players[0].active.damage, 30,
+                         "击倒前仍须在攻击方身上放指示物")
+
+
 if __name__ == "__main__":
     unittest.main()

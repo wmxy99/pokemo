@@ -1300,6 +1300,129 @@ class TestActionOrdering(unittest.TestCase):
         self.assertTrue(r["unsupported"])
 
 
+class TestReactiveDamageSplit(unittest.TestCase):
+    """「受击反应」语义分流（2026-10-27）
+
+    卡面：「If this Pokémon is in the Active Spot and is damaged by an attack from
+    your opponent's Pokémon (even if this Pokémon is Knocked Out), …」——
+    效果落在**攻击方**身上，不是「发动特性让对手陷入状态」。
+
+    历史缺陷：只按「句子含状态词」判定 → Heatran / Numel / Scolipede 产出了
+    **无条件** `burn`/`poison`，一旦特性状态 tag 放进白名单，就会在**没人挨打**
+    的时候凭空给对手上状态。
+    """
+
+    P = ("If this Pok\u00e9mon is in the Active Spot and is damaged by an attack "
+         "from your opponent's Pok\u00e9mon (even if this Pok\u00e9mon is "
+         "Knocked Out), ")
+
+    @classmethod
+    def _tags(cls, text, kind="ability", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    # ---- 正向：三类可表达形态 → on_damaged ----
+    def test_status_reaction(self):
+        r = self._tags(self.P + "the Attacking Pok\u00e9mon is now Burned.")
+        self.assertEqual(r["tags"], ["on_damaged:status:burn"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_counter_reaction(self):
+        r = self._tags(self.P + "put 3 damage counters on the Attacking Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["on_damaged:counter:30"])
+
+    def test_discard_energy_reaction(self):
+        r = self._tags(self.P + "discard an Energy from the Attacking Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["on_damaged:discard_energy:1"])
+
+    # ---- 反向：不可表达形态必须**如实未建模**，且不得产出状态 tag ----
+    def test_no_active_status_leak(self):
+        """状态 tag 必须挂在 `on_damaged:status:*` 下，**不能**是裸 `poison`
+
+        （裸 `poison` 在特性侧＝「主动让对手战斗位中毒」，会被每回合无代价发动）
+        """
+        r = self._tags(self.P + "the Attacking Pok\u00e9mon is now Poisoned.")
+        self.assertNotIn("poison", r["tags"], "不得当作主动施加状态")
+        self.assertEqual(r["tags"], ["on_damaged:status:poison"])
+
+    def test_scaled_counters_rejected(self):
+        r = self._tags(self.P + "place 2 damage counters on the Attacking "
+                                "Pok\u00e9mon for each {M} Energy attached to "
+                                "this Pok\u00e9mon.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"], "数值随计数源变化 → 不得按固定值映射")
+
+    def test_next_turn_temporary_rejected(self):
+        """「During your opponent's next turn, …」是**临时**效果（需延迟队列）"""
+        r = self._tags("During your opponent's next turn, if this Pok\u00e9mon is "
+                       "damaged by an attack (even if this Pok\u00e9mon is "
+                       "Knocked Out), put 6 damage counters on the Attacking "
+                       "Pok\u00e9mon.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_history_condition_rejected(self):
+        """「was damaged … during your opponent's last turn」需回合级历史"""
+        r = self._tags("If this Pok\u00e9mon was damaged by an attack during "
+                       "your opponent's last turn, this attack does that much "
+                       "more damage.", kind="attack")
+        self.assertFalse([t for t in r["tags"] if t.startswith("dmg_plus")],
+                         "不得按固定值映射「that much more」")
+        self.assertTrue(r["unsupported"])
+
+    # ---- 特性状态词：只有「主动施加」才放通 ----
+    def test_active_infliction_passes(self):
+        r = self._tags("Once during your turn, if this Pok\u00e9mon is in the "
+                       "Active Spot, you may make your opponent's Active "
+                       "Pok\u00e9mon Burned.")
+        self.assertEqual(r["tags"], ["burn"])
+
+    def test_immunity_is_not_infliction(self):
+        """「This Pokémon can't be Asleep.」= 免疫，不是让对手睡眠"""
+        r = self._tags("This Pok\u00e9mon can't be Asleep.")
+        self.assertNotIn("sleep", r["tags"])
+        self.assertTrue(r["unsupported"])
+
+    def test_checkup_extra_damage_is_not_infliction(self):
+        """「put 3 more damage counters on your opponent's Burned Pokémon」= 追加伤害"""
+        r = self._tags("During Pok\u00e9mon Checkup, put 3 more damage counters "
+                       "on your opponent's Burned Pok\u00e9mon.")
+        self.assertNotIn("burn", r["tags"])
+        self.assertTrue(r["unsupported"])
+
+    def test_switch_trigger_is_not_infliction(self):
+        r = self._tags("As long as this Pok\u00e9mon is in the Active Spot, "
+                       "whenever your opponent's Active Pok\u00e9mon moves to the "
+                       "Bench during their turn, their new Active Pok\u00e9mon is "
+                       "now Confused.")
+        self.assertNotIn("confuse", r["tags"])
+        self.assertTrue(r["unsupported"])
+
+    def test_ability_cost_rejected(self):
+        """卡面带「in order to use this Ability」代价 → 引擎无代价结算，拒"""
+        r = self._tags("You must discard a Basic {R} Energy card from your hand "
+                       "in order to use this Ability. Once during your turn, you "
+                       "may make your opponent's Active Pok\u00e9mon Burned.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_evolve_trigger_status_rejected(self):
+        """「when you play this Pokémon … to evolve」只能一次性用，引擎会每回合可用"""
+        r = self._tags("Once during your turn, when you play this Pok\u00e9mon "
+                       "from your hand to evolve 1 of your Pok\u00e9mon, you may "
+                       "use this Ability. Make your opponent's Active "
+                       "Pok\u00e9mon Confused.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    # ---- 道具侧不受影响（另有 tool:on_damaged 实现）----
+    def test_tool_reaction_unchanged(self):
+        r = self._tags("If the Pok\u00e9mon this card is attached to is in the "
+                       "Active Spot and is damaged by an attack from your "
+                       "opponent's Pok\u00e9mon (even if this Pok\u00e9mon is "
+                       "Knocked Out), draw 2 cards.", kind="item")
+        self.assertEqual(r["tags"], ["tool:on_damaged:draw:2"])
+
+
 class TestGoldenSetIntegrity(unittest.TestCase):
     """黄金集自身的不变量（防止数据漂移导致评测失真）"""
 

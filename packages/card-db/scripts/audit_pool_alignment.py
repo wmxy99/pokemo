@@ -64,6 +64,11 @@ def _norm(s: str) -> str:
 def _want_snipe(tgt: str, per: int):
     """目标子句 → 期望的 snipe tag 前缀（``None`` = 无需 tag 或不该进池）"""
     t = _norm(tgt)
+    # 「攻击方」= 受击反应特性的专属目标（2026-10-27）。它**只能**由
+    # `on_damaged:counter:<dmg>` 表达：走 snipe/self 都会打错对象
+    # （attack 结算时攻击方＝自己，退化成反伤或打自己战斗位）。
+    if re.search(r"attacking\s+pok", t):
+        return "on_damaged:counter"
     if re.search(r"\bitself\b", t) or "this pok" in t:
         return "self"
     if "bench" not in t and ("active pok" in t or "defending pok" in t):
@@ -116,6 +121,13 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         if f"self:{per}" not in effects:
             return [f"{card_name} · {item_name}：反伤 `{raw[:60]}` "
                     f"缺 `self:{per}` tag"]
+        return []
+    if want == "on_damaged:counter":
+        # 数值必须**逐字对上**：多打/少打一个指示物都是静默错映射
+        if f"on_damaged:counter:{per}" not in effects:
+            return [f"{card_name} · {item_name}：受击反应 `{raw[:60]}` "
+                    f"缺 `on_damaged:counter:{per}` tag（现为 "
+                    f"{[e for e in effects if str(e).startswith('on_damaged')]}）"]
         return []
     if not any(str(t).startswith(want + ":") for t in effects):
         return [f"{card_name} · {item_name}：`{raw[:60]}` 缺 `{want}:…` tag"]

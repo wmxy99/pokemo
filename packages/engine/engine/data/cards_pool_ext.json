@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 489,
-      "by_Pokemon": 410,
+      "kept": 494,
+      "by_Pokemon": 415,
       "by_Trainer": 79,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 557,
+        "存在未建模项（整卡不收）": 562,
         "Energy 不可执行": 2,
         "人工卡池已有（人工优先）": 26,
-        "Pokemon 不可执行": 43,
-        "Trainer 不可执行": 5
+        "Pokemon 不可执行": 34,
+        "Trainer 不可执行": 4
       }
     }
   },
@@ -1820,6 +1820,55 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 113,
       "name_key": "timburr"
+    },
+    {
+      "name": "Heatran",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 140,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 4,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Steel Burst",
+          "cost": {
+            "metal": 1,
+            "colorless": 2
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_plus:50:per:own_discarded_this_turn"
+          ],
+          "desc": "Discard all {M} Energy from this Pokémon. This attack does 50 damage for each card you discarded in this way.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Incandescent Body",
+          "name_zh": "",
+          "tag": "on_damaged:status:burn",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Burned.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "123"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 118,
+      "name_key": "heatran"
     },
     {
       "name": "Tatsugiri",
@@ -8752,6 +8801,55 @@
       "name_key": "whirlipede"
     },
     {
+      "name": "Scolipede",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 160,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": "Whirlipede",
+      "attacks": [
+        {
+          "name": "Venoshock",
+          "cost": {
+            "darkness": 1,
+            "colorless": 1
+          },
+          "damage": 90,
+          "effects": [
+            "dmg_plus:90:if:opp_active_status:poison"
+          ],
+          "desc": "If your opponent’s Active Pokémon is Poisoned, this attack does 90 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Poison Point",
+          "name_zh": "",
+          "tag": "on_damaged:status:poison",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Poisoned.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "BLK",
+        "number": "56"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 537,
+      "name_key": "scolipede"
+    },
+    {
       "name": "Escavalier",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -11641,6 +11739,54 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 681,
       "name_key": "marshadow"
+    },
+    {
+      "name": "Spiritomb",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Mountain Breaker",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 10,
+          "effects": [
+            "mill:1:opp"
+          ],
+          "desc": "Discard the top card of your opponent’s deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Spiteful Swirl",
+          "name_zh": "",
+          "tag": "on_damaged:counter:10",
+          "location": "field",
+          "desc": "If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "87"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 688,
+      "name_key": "spiritomb"
     },
     {
       "name": "Thievul",
@@ -14990,6 +15136,53 @@
       "name_key": "cascoon"
     },
     {
+      "name": "Numel",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Combustion",
+          "cost": {
+            "fire": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Incandescent Body",
+          "name_zh": "",
+          "tag": "on_damaged:status:burn",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Burned.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "27"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 856,
+      "name_key": "numel"
+    },
+    {
       "name": "Camerupt",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -18014,6 +18207,55 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1026,
       "name_key": "salazzleex"
+    },
+    {
+      "name": "Turtonator",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Heat Breath",
+          "cost": {
+            "fire": 2,
+            "colorless": 1
+          },
+          "damage": 80,
+          "effects": [
+            "coin:heads:dmg_plus:80"
+          ],
+          "desc": "Flip a coin. If heads, this attack does 80 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Shell Spikes",
+          "name_zh": "",
+          "tag": "on_damaged:discard_energy:1",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), discard an Energy from the Attacking Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "POR",
+        "number": "17"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1027,
+      "name_key": "turtonator"
     },
     {
       "name": "Amaura",

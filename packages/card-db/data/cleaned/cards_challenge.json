@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-27 10:00:47"
+  "reparsed_at": "2026-10-27 10:13:01"
  },
  "stats": {
   "rows_in": 2022,
@@ -86,7 +86,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 596,
+  "engine_ready": 600,
   "engine_match_alias": 7,
   "with_zh": 36,
   "with_image": 0,
@@ -111,22 +111,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 28369,
-   "engine_unmatched": 43850,
-   "engine_approximated": 26319
+   "zh_backfill": 29565,
+   "engine_unmatched": 45188,
+   "engine_approximated": 27443
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 0,
-   "engine_tags": 900,
-   "unsupported": 641,
+   "engine_tags": 895,
+   "unsupported": 646,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 560
+  "engine_approximated": 564
  },
  "cards": [
   {
@@ -924,18 +924,9 @@
        {
         "kind": "energy",
         "name": "Spiky Energy",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
-         {
-          "type": "tool",
-          "amount": 20,
-          "target": "self",
-          "extra": {
-           "kind": "on_damaged_counter",
-           "holder_type": null
-          }
-         },
          {
           "type": "tool",
           "amount": 20,
@@ -960,18 +951,9 @@
      {
       "kind": "energy",
       "name": "Spiky Energy",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 20,
-        "target": "self",
-        "extra": {
-         "kind": "on_damaged_counter",
-         "holder_type": null
-        }
-       },
        {
         "type": "tool",
         "amount": 20,
@@ -15510,12 +15492,13 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "set:number",
    "parse": {
     "items": [
      {
@@ -15560,14 +15543,15 @@
        {
         "kind": "ability",
         "name": "Incandescent Body",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "on_damaged",
           "amount": null,
           "target": "active_opponent",
           "extra": {
+           "kind": "status",
            "status": "burn"
           }
          }
@@ -15577,7 +15561,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "on_damaged:status:burn"
       ],
       "unsupported": []
      }
@@ -15610,14 +15594,15 @@
      {
       "kind": "ability",
       "name": "Incandescent Body",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "on_damaged",
         "amount": null,
         "target": "active_opponent",
         "extra": {
+         "kind": "status",
          "status": "burn"
         }
        }
@@ -15628,7 +15613,7 @@
     "errors": [],
     "engine_tags": [
      "dmg_plus:50:per:own_discarded_this_turn",
-     "burn"
+     "on_damaged:status:burn"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -19057,11 +19042,11 @@
         ],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "self",
+          "target": "any",
           "extra": {
-           "status": "poison"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -19069,10 +19054,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "poison"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -19113,11 +19101,11 @@
       ],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "self",
+        "target": "any",
         "extra": {
-         "status": "poison"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -19126,10 +19114,14 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:60:per:opp_prizes_taken",
-     "poison"
+     "dmg_plus:60:per:opp_prizes_taken"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -19884,11 +19876,11 @@
         ],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "active_opponent",
+          "target": "any",
           "extra": {
-           "status": "burn"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -19896,10 +19888,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "burn"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -19938,11 +19933,11 @@
       ],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "active_opponent",
+        "target": "any",
         "extra": {
-         "status": "burn"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -19950,13 +19945,15 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "burn"
-    ],
+    "engine_tags": [],
     "unsupported": [
      {
       "type": "rule",
       "reason": "条件伤害缩放：计数源未识别（Special Condition affecting yo）"
+     },
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
      }
     ],
     "generated_by": "rule",
@@ -24613,15 +24610,16 @@
        {
         "kind": "ability",
         "name": "Counterattack",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "on_damaged",
+          "amount": 30,
+          "target": "active_opponent",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "kind": "counter",
+           "counters": 3
           }
          }
         ],
@@ -24629,13 +24627,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "on_damaged:counter:30"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -24659,15 +24654,16 @@
      {
       "kind": "ability",
       "name": "Counterattack",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "on_damaged",
+        "amount": 30,
+        "target": "active_opponent",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "kind": "counter",
+         "counters": 3
         }
        }
       ],
@@ -24675,15 +24671,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "on_damaged:counter:30"
+    ],
     "unsupported": [
      {
       "type": "rule",
       "reason": "静态/未建模（英文）"
-     },
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
      }
     ],
     "generated_by": "rule",
@@ -31545,11 +31539,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "active_opponent",
+          "target": "any",
           "extra": {
-           "status": "poison"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -31557,10 +31551,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "poison"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -31588,11 +31585,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "active_opponent",
+        "target": "any",
         "extra": {
-         "status": "poison"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -31601,10 +31598,14 @@
     ],
     "errors": [],
     "engine_tags": [
-     "poison",
      "poison"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -32063,7 +32064,7 @@
        {
         "kind": "attack",
         "name": "Ready to Ram",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
@@ -32071,7 +32072,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -32083,7 +32084,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      },
@@ -32120,7 +32121,7 @@
      {
       "kind": "attack",
       "name": "Ready to Ram",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
@@ -32128,7 +32129,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -32159,7 +32160,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -35071,11 +35072,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "self",
+          "target": "any",
           "extra": {
-           "status": "sleep"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -35083,10 +35084,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "sleep"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -35097,11 +35101,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "self",
+        "target": "any",
         "extra": {
-         "status": "sleep"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -35109,10 +35113,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "sleep"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -35793,11 +35800,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "active_opponent",
+          "target": "any",
           "extra": {
-           "status": "burn"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -35805,10 +35812,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "burn"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -35836,11 +35846,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "active_opponent",
+        "target": "any",
         "extra": {
-         "status": "burn"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -35849,10 +35859,14 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn",
      "burn"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -60643,15 +60657,15 @@
        {
         "kind": "ability",
         "name": "Smog Signals",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 2,
-          "target": "deck",
+          "type": "rule",
+          "amount": null,
+          "target": "any",
           "extra": {
-           "what": "pokemon"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -60662,8 +60676,8 @@
       "engine_tags": [],
       "unsupported": [
        {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
+        "type": "rule",
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      }
@@ -60672,15 +60686,15 @@
      {
       "kind": "ability",
       "name": "Smog Signals",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 2,
-        "target": "deck",
+        "type": "rule",
+        "amount": null,
+        "target": "any",
         "extra": {
-         "what": "pokemon"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -60691,8 +60705,8 @@
     "engine_tags": [],
     "unsupported": [
      {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
+      "type": "rule",
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -61466,7 +61480,7 @@
        {
         "kind": "attack",
         "name": "Strong Bash",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
@@ -61474,7 +61488,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -61486,7 +61500,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      }
@@ -61495,7 +61509,7 @@
      {
       "kind": "attack",
       "name": "Strong Bash",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
@@ -61503,7 +61517,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -61515,7 +61529,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -64999,10 +65013,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "burn"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "status",
+        "reason": "特性发动代价未建模（B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -65031,10 +65048,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "burn"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "status",
+      "reason": "特性发动代价未建模（B4）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -70139,12 +70159,13 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "set:number",
    "parse": {
     "items": [
      {
@@ -70183,14 +70204,15 @@
        {
         "kind": "ability",
         "name": "Poison Point",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "on_damaged",
           "amount": null,
           "target": "active_opponent",
           "extra": {
+           "kind": "status",
            "status": "poison"
           }
          }
@@ -70200,7 +70222,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "poison"
+       "on_damaged:status:poison"
       ],
       "unsupported": []
      }
@@ -70227,14 +70249,15 @@
      {
       "kind": "ability",
       "name": "Poison Point",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "on_damaged",
         "amount": null,
         "target": "active_opponent",
         "extra": {
+         "kind": "status",
          "status": "poison"
         }
        }
@@ -70245,7 +70268,7 @@
     "errors": [],
     "engine_tags": [
      "dmg_plus:90:if:opp_active_status:poison",
-     "poison"
+     "on_damaged:status:poison"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -87801,12 +87824,13 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "set:number",
    "parse": {
     "items": [
      {
@@ -87845,15 +87869,16 @@
        {
         "kind": "ability",
         "name": "Spiteful Swirl",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "on_damaged",
+          "amount": 10,
+          "target": "active_opponent",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "kind": "counter",
+           "counters": 1
           }
          }
         ],
@@ -87861,13 +87886,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "on_damaged:counter:10"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -87892,15 +87914,16 @@
      {
       "kind": "ability",
       "name": "Spiteful Swirl",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "on_damaged",
+        "amount": 10,
+        "target": "active_opponent",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "kind": "counter",
+         "counters": 1
         }
        }
       ],
@@ -87909,14 +87932,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "mill:1:opp"
+     "mill:1:opp",
+     "on_damaged:counter:10"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -98775,7 +98794,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -98787,7 +98806,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      },
@@ -98833,7 +98852,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -98865,7 +98884,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -102326,11 +102345,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "active_opponent",
+          "target": "any",
           "extra": {
-           "status": "confuse"
+           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
           }
          }
         ],
@@ -102338,10 +102357,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "confuse"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -102369,11 +102391,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "active_opponent",
+        "target": "any",
         "extra": {
-         "status": "confuse"
+         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
         }
        }
       ],
@@ -102382,10 +102404,14 @@
     ],
     "errors": [],
     "engine_tags": [
-     "draw_to:6",
-     "confuse"
+     "draw_to:6"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -102942,10 +102968,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "confuse"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "status",
+        "reason": "进化时发动的状态特性需「仅当回合可用」约束（B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -102968,10 +102997,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "confuse"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "status",
+      "reason": "进化时发动的状态特性需「仅当回合可用」约束（B4）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -107390,7 +107422,7 @@
    "aliases": [],
    "engine_status": "approximated",
    "engine_note": "由解析链自动生成（非人工逐卡校对）",
-   "engine_match": "name_key",
+   "engine_match": "set:number",
    "parse": {
     "items": [
      {
@@ -107400,14 +107432,15 @@
        {
         "kind": "ability",
         "name": "Incandescent Body",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "on_damaged",
           "amount": null,
           "target": "active_opponent",
           "extra": {
+           "kind": "status",
            "status": "burn"
           }
          }
@@ -107417,7 +107450,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "on_damaged:status:burn"
       ],
       "unsupported": []
      }
@@ -107426,14 +107459,15 @@
      {
       "kind": "ability",
       "name": "Incandescent Body",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "on_damaged",
         "amount": null,
         "target": "active_opponent",
         "extra": {
+         "kind": "status",
          "status": "burn"
         }
        }
@@ -107443,7 +107477,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn"
+     "on_damaged:status:burn"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -112490,15 +112524,16 @@
        {
         "kind": "ability",
         "name": "Counterattacking Crest",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "on_damaged",
+          "amount": 50,
+          "target": "active_opponent",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+           "kind": "counter",
+           "counters": 5
           }
          }
         ],
@@ -112506,13 +112541,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "on_damaged:counter:50"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -112537,15 +112569,16 @@
      {
       "kind": "ability",
       "name": "Counterattacking Crest",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "on_damaged",
+        "amount": 50,
+        "target": "active_opponent",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
+         "kind": "counter",
+         "counters": 5
         }
        }
       ],
@@ -112554,14 +112587,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "mill:1:opp"
+     "mill:1:opp",
+     "on_damaged:counter:50"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -120964,7 +120993,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -120976,7 +121005,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      }
@@ -121017,7 +121046,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -121031,7 +121060,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -122463,12 +122492,13 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_match": "name_key",
    "parse": {
     "items": [
      {
@@ -123922,7 +123952,7 @@
        {
         "kind": "ability",
         "name": "Pummeling Payback",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
@@ -123930,7 +123960,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon for each {M} Energ）"
+           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
           }
          }
         ],
@@ -123942,7 +123972,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon for each {M} Energ）"
+        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
        }
       ]
      }
@@ -123968,7 +123998,7 @@
      {
       "kind": "ability",
       "name": "Pummeling Payback",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
@@ -123976,7 +124006,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon for each {M} Energ）"
+         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
         }
        }
       ],
@@ -123992,7 +124022,7 @@
      },
      {
       "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Attacking Pokémon for each {M} Energ）"
+      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
      }
     ],
     "generated_by": "rule",
@@ -127978,7 +128008,7 @@
    "aliases": [],
    "engine_status": "approximated",
    "engine_note": "由解析链自动生成（非人工逐卡校对）",
-   "engine_match": "name_key",
+   "engine_match": "set:number",
    "parse": {
     "items": [
      {
@@ -128019,15 +128049,15 @@
        {
         "kind": "ability",
         "name": "Shell Spikes",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "on_damaged",
+          "amount": 1,
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "discard_energy"
           }
          }
         ],
@@ -128035,13 +128065,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "on_damaged:discard_energy:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -128068,15 +128095,15 @@
      {
       "kind": "ability",
       "name": "Shell Spikes",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "on_damaged",
+        "amount": 1,
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "discard_energy"
         }
        }
       ],
@@ -128085,14 +128112,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "coin:heads:dmg_plus:80"
+     "coin:heads:dmg_plus:80",
+     "on_damaged:discard_energy:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141756,14 +141779,15 @@
        {
         "kind": "item",
         "name": "Team Rocket’s Hypnotizer",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "on_damaged",
           "amount": null,
           "target": "active_opponent",
           "extra": {
+           "kind": "status",
            "status": "sleep"
           }
          }
@@ -141772,24 +141796,28 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "sleep"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "on_damaged",
+        "reason": "受击反应仅实现特性侧（B4）"
+       }
+      ]
      }
     ],
     "specs": [
      {
       "kind": "item",
       "name": "Team Rocket’s Hypnotizer",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "on_damaged",
         "amount": null,
         "target": "active_opponent",
         "extra": {
+         "kind": "status",
          "status": "sleep"
         }
        }
@@ -141798,10 +141826,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "sleep"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "on_damaged",
+      "reason": "受击反应仅实现特性侧（B4）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141855,14 +141886,6 @@
           "extra": {
            "kind": "survive"
           }
-         },
-         {
-          "type": "tool",
-          "amount": 10,
-          "target": "self",
-          "extra": {
-           "kind": "survive"
-          }
          }
         ],
         "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discar"
@@ -141882,14 +141905,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 10,
-        "target": "self",
-        "extra": {
-         "kind": "survive"
-        }
-       },
        {
         "type": "tool",
         "amount": 10,
@@ -141950,17 +141965,9 @@
        {
         "kind": "item",
         "name": "Lucky Helmet",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
-         {
-          "type": "tool",
-          "amount": 2,
-          "target": "self",
-          "extra": {
-           "kind": "on_damaged_draw"
-          }
-         },
          {
           "type": "tool",
           "amount": 2,
@@ -141984,17 +141991,9 @@
      {
       "kind": "item",
       "name": "Lucky Helmet",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 2,
-        "target": "self",
-        "extra": {
-         "kind": "on_damaged_draw"
-        }
-       },
        {
         "type": "tool",
         "amount": 2,
@@ -142253,14 +142252,6 @@
           "extra": {
            "kind": "hp_plus"
           }
-         },
-         {
-          "type": "tool",
-          "amount": 100,
-          "target": "self",
-          "extra": {
-           "kind": "hp_plus"
-          }
          }
         ],
         "source_text": "The Pokémon this card is attached to gets +100 HP."
@@ -142280,14 +142271,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 100,
-        "target": "self",
-        "extra": {
-         "kind": "hp_plus"
-        }
-       },
        {
         "type": "tool",
         "amount": 100,
@@ -142436,17 +142419,9 @@
        {
         "kind": "item",
         "name": "Handheld Fan",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
-         {
-          "type": "tool",
-          "amount": 1,
-          "target": "self",
-          "extra": {
-           "kind": "on_damaged_move_energy"
-          }
-         },
          {
           "type": "tool",
           "amount": 1,
@@ -142470,17 +142445,9 @@
      {
       "kind": "item",
       "name": "Handheld Fan",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 1,
-        "target": "self",
-        "extra": {
-         "kind": "on_damaged_move_energy"
-        }
-       },
        {
         "type": "tool",
         "amount": 1,
@@ -142729,16 +142696,6 @@
            "from_type": "psychic",
            "discard": true
           }
-         },
-         {
-          "type": "tool",
-          "amount": 60,
-          "target": "self",
-          "extra": {
-           "kind": "dmg_reduce",
-           "from_type": "psychic",
-           "discard": true
-          }
          }
         ],
         "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
@@ -142758,16 +142715,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 60,
-        "target": "self",
-        "extra": {
-         "kind": "dmg_reduce",
-         "from_type": "psychic",
-         "discard": true
-        }
-       },
        {
         "type": "tool",
         "amount": 60,
@@ -143018,19 +142965,9 @@
        {
         "kind": "item",
         "name": "Deluxe Bomb",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
-         {
-          "type": "tool",
-          "amount": 120,
-          "target": "self",
-          "extra": {
-           "kind": "on_damaged_counter",
-           "holder_type": null,
-           "discard": true
-          }
-         },
          {
           "type": "tool",
           "amount": 120,
@@ -143056,19 +142993,9 @@
      {
       "kind": "item",
       "name": "Deluxe Bomb",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 120,
-        "target": "self",
-        "extra": {
-         "kind": "on_damaged_counter",
-         "holder_type": null,
-         "discard": true
-        }
-       },
        {
         "type": "tool",
         "amount": 120,
@@ -143325,16 +143252,6 @@
            "from_type": "dragon",
            "discard": true
           }
-         },
-         {
-          "type": "tool",
-          "amount": 60,
-          "target": "self",
-          "extra": {
-           "kind": "dmg_reduce",
-           "from_type": "dragon",
-           "discard": true
-          }
          }
         ],
         "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
@@ -143354,16 +143271,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 60,
-        "target": "self",
-        "extra": {
-         "kind": "dmg_reduce",
-         "from_type": "dragon",
-         "discard": true
-        }
-       },
        {
         "type": "tool",
         "amount": 60,
@@ -143712,14 +143619,6 @@
           "extra": {
            "kind": "retreat_less"
           }
-         },
-         {
-          "type": "tool",
-          "amount": 2,
-          "target": "self",
-          "extra": {
-           "kind": "retreat_less"
-          }
          }
         ],
         "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C}{C} less."
@@ -143739,14 +143638,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 2,
-        "target": "self",
-        "extra": {
-         "kind": "retreat_less"
-        }
-       },
        {
         "type": "tool",
         "amount": 2,
@@ -143901,18 +143792,9 @@
        {
         "kind": "item",
         "name": "Punk Helmet",
-        "trigger": "on_knockout",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
-         {
-          "type": "tool",
-          "amount": 40,
-          "target": "self",
-          "extra": {
-           "kind": "on_damaged_counter",
-           "holder_type": "darkness"
-          }
-         },
          {
           "type": "tool",
           "amount": 40,
@@ -143937,18 +143819,9 @@
      {
       "kind": "item",
       "name": "Punk Helmet",
-      "trigger": "on_knockout",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 40,
-        "target": "self",
-        "extra": {
-         "kind": "on_damaged_counter",
-         "holder_type": "darkness"
-        }
-       },
        {
         "type": "tool",
         "amount": 40,
@@ -144021,15 +143894,6 @@
            "kind": "dmg_reduce",
            "from_ability": true
           }
-         },
-         {
-          "type": "tool",
-          "amount": 30,
-          "target": "self",
-          "extra": {
-           "kind": "dmg_reduce",
-           "from_ability": true
-          }
          }
         ],
         "source_text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent’s Pokémon that have an Ability (after applying Weakness and Resistance)."
@@ -144049,15 +143913,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 30,
-        "target": "self",
-        "extra": {
-         "kind": "dmg_reduce",
-         "from_ability": true
-        }
-       },
        {
         "type": "tool",
         "amount": 30,
@@ -144230,21 +144085,6 @@
            ],
            "holder_type": "dragon"
           }
-         },
-         {
-          "type": "tool",
-          "amount": 50,
-          "target": "self",
-          "extra": {
-           "kind": "dmg_reduce",
-           "from_types": [
-            "grass",
-            "fire",
-            "water",
-            "lightning"
-           ],
-           "holder_type": "dragon"
-          }
          }
         ],
         "source_text": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent’s {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance)."
@@ -144264,21 +144104,6 @@
       "trigger": "on_use",
       "conditions": [],
       "actions": [
-       {
-        "type": "tool",
-        "amount": 50,
-        "target": "self",
-        "extra": {
-         "kind": "dmg_reduce",
-         "from_types": [
-          "grass",
-          "fire",
-          "water",
-          "lightning"
-         ],
-         "holder_type": "dragon"
-        }
-       },
        {
         "type": "tool",
         "amount": 50,

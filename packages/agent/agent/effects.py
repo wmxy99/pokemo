@@ -44,7 +44,9 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # S2 道具（2026-10-26）：附着在宝可梦上的常驻修正
                 "tool",
                 # S3 场地（2026-10-27）：全场唯一、双方共用
-                "stadium")
+                "stadium",
+                # 受击反应（2026-10-27）：己方挨打时由**攻击者**承担后果
+                "on_damaged")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -342,6 +344,142 @@ def _status_word_is_condition(text: str, word: str) -> bool:
                 and low_s.strip().startswith("if "):
             return True
     return False
+
+
+# ---------- 「受击触发」从句分流（2026-10-27） ----------
+# 卡面原型：「If this Pokémon is in the Active Spot and is damaged by an attack from
+# your opponent's Pokémon (even if this Pokémon is Knocked Out), the Attacking
+# Pokémon is now Burned.」
+# 语义是**被动反应**：己方宝可梦挨打时由攻击者承担后果，不是「发动特性让对手陷入
+# 状态」。早期实现只看「句子含状态词」就产出无条件 `status` 动作 —— 在特性状态
+# tag 尚未放通时它表现为「未建模」而被白名单挡下，一旦放通就会**凭空给对手上状态**
+# （Heatran / Numel / Scolipede 实测命中）。
+# 引擎目前只有道具侧的 `tool:on_damaged:*`，宝可梦特性侧没有对应钩子 → 如实登记
+# 未建模，绝不当成主动效果结算。
+_REACTIVE_DAMAGE_RE = re.compile(
+    r"\b(?:is|are|was|were)\s+damaged\s+by\s+an\s+attack", re.I)
+_SENT_BOUND_RE = re.compile(r"[.!?](?=\s|$)")
+
+
+def _sentence_spans(text: str) -> list:
+    """句子级字符区间（左闭右开），用于「整句屏蔽」"""
+    out, start = [], 0
+    for m in _SENT_BOUND_RE.finditer(text):
+        out.append((start, m.end()))
+        start = m.end()
+    if start < len(text):
+        out.append((start, len(text)))
+    return out
+
+
+def _reactive_damage_spans(text: str) -> list:
+    """「受击触发」所在**整句**的字符区间
+
+    屏蔽整句而不是只屏蔽到触发词：该句的后半段（「the Attacking Pokémon is now
+    Burned」/「put N damage counters on the Attacking Pokémon」）就是反应效果本身，
+    留着同样会被通用分支读成主动效果。
+    """
+    if not text or not _REACTIVE_DAMAGE_RE.search(text):
+        return []
+    return [(a, b) for a, b in _sentence_spans(text)
+            if _REACTIVE_DAMAGE_RE.search(text[a:b])]
+
+
+def _mask_spans(text: str, spans: list) -> str:
+    """把区间替换成**等长空格** —— 保持全部字符位置不变
+
+    位置必须守恒：`_in_coin_branch` / `_order_actions_by_text` / `_sentence_at`
+    都按下标判定「这段文字在哪个从句里」，整体删除会让后面的偏移全部错位。
+    """
+    if not spans:
+        return text
+    buf = list(text)
+    for a, b in spans:
+        for i in range(a, b):
+            if buf[i] not in "\r\n":
+                buf[i] = " "
+    return "".join(buf)
+
+
+# 特性侧「主动施加状态」的**正向**判据（2026-10-27）
+# 只有明确写「让你的对手战斗位陷入某状态」才允许产出 `status`。反例（真实卡面）：
+#   · Hoothoot「This Pokémon can't be Asleep.」            → 免疫，不是施加
+#   · Magmortar「put 3 more damage counters on your opponent's Burned Pokémon」→ 追加伤害
+#   · Mismagius ex「whenever … moves to the Bench … their new Active is now Confused」
+#     → 换位触发，引擎没有该钩子
+# 这三类若按「句子含状态词」放通，都会变成**主动给对手上状态**。
+_STATUS_INFLICT_RE = re.compile(
+    r"(?:make|makes|making|leave|leaves|leaving)\s+"
+    r"(?:your opponent'?s|the opponent'?s|their|your)\s+active\s+pok[eé]mon\b"
+    r"[^.]{0,60}?\b(?:asleep|burned|confused|paralyzed|poisoned)\b"
+    r"|(?:your opponent'?s|the opponent'?s|their)\s+active\s+pok[eé]mon\s+"
+    r"is\s+now\s+(?:asleep|burned|confused|paralyzed|poisoned)\b", re.I)
+
+
+def _status_is_active_infliction(text: str, word: str) -> bool:
+    """特性侧：状态词所在**句子**是否真的是「让对手战斗位陷入该状态」
+
+    只看含该状态词的那一句，避免同一张卡另一句的措辞把结论带偏。
+    """
+    for sent in re.split(r"(?<=[.!?])\s+", _norm_apostrophe(text)):
+        low_s = sent.lower()
+        if word in low_s and _STATUS_INFLICT_RE.search(low_s):
+            return True
+    return False
+
+
+# 「受击反应」的三类可表达形态（引擎 `on_damaged:<kind>:<arg>`）：
+#   · 攻击者陷入状态：the Attacking Pokémon is now Burned   → status
+#   · 攻击者吃伤害指示物：put N damage counters on the Attacking Pokémon → counter
+#   · 攻击者弃能量：discard an Energy from the Attacking Pokémon → discard_energy
+_ONDMG_STATUS_RE = re.compile(
+    r"attacking\s+pok[eé]mon\s+is\s+now\s+(burned|asleep|poisoned|confused|paraly[sz]ed)",
+    re.I)
+_ONDMG_COUNTER_RE = re.compile(
+    r"(?:put|place)\s+(\d+)\s+damage\s+counters?\s+on\s+(?:the\s+)?attacking\s+pok[eé]mon",
+    re.I)
+_ONDMG_DISCARD_RE = re.compile(
+    r"discard\s+an?\s+energy\s+from\s+(?:the\s+)?attacking\s+pok[eé]mon", re.I)
+
+
+def _detect_on_damaged(text: str) -> list:
+    """把「受击触发」从句解析成 ``on_damaged`` 动作（解析不出 → 空列表）
+
+    只认**常驻**形态。两类必须拒绝：
+      · 「During your opponent's next turn, if this Pokémon is damaged…」
+        —— 只在该回合有效的**临时**效果，引擎没有延迟队列；
+      · 「… for each {M} Energy attached」/「equal to the damage done」
+        —— 数值由计数源决定，引擎无对应参数。
+    """
+    out = []
+    for a, b in _reactive_damage_spans(text):
+        low = _norm_apostrophe(text[a:b]).lower()
+        if re.search(r"during your opponent'?s next turn", low):
+            return []
+        m = _ONDMG_STATUS_RE.search(low)
+        if m:
+            word = m.group(1).replace("paralysed", "paralyzed")
+            tag = _STATUS_WORD_TO_TAG.get(word)
+            if not tag:
+                return []
+            out.append(act("on_damaged", None, "active_opponent",
+                           {"kind": "status", "status": tag}))
+            continue
+        m = _ONDMG_COUNTER_RE.search(low)
+        if m:
+            # 「for each …」= 数值随能量数变化 → 判不出固定值，拒绝
+            if re.search(r"for each|equal to", low[m.end():m.end() + 60]):
+                return []
+            out.append(act("on_damaged", int(m.group(1)) * 10,
+                           "active_opponent", {"kind": "counter",
+                                               "counters": int(m.group(1))}))
+            continue
+        if _ONDMG_DISCARD_RE.search(low):
+            out.append(act("on_damaged", 1, "active_opponent",
+                           {"kind": "discard_energy"}))
+            continue
+        return []          # 形态判不出 → 由调用方登记未建模
+    return out
 # ⚠ 旧的 `_EN_DAMAGE_RE`（`does\s+(\d+)\s+damage`，恒定取第一个且恒标 active_opponent）
 # 已于 2026-09-22 删除：它无法区分反伤 / 后备 / 全体目标，会静默算错（详见 `_DMG_ANY_RE`）。
 _EN_SPREAD_RE = re.compile(r"(?:put|place)\s+(\d+)\s+damage\s+counters?", re.I)
@@ -871,7 +1009,11 @@ def _order_actions_by_text(actions: list, text: str) -> list:
 def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     """规则后端（英文卡面）：抽取 spec（伤害/指示物/抽弃/检索/回复/附能/状态/
     互换/击倒/静态规则 + 触发时机）"""
-    t = str(text or "")
+    t_raw = str(text or "")
+    # 「受击触发」整句屏蔽（等长空格，位置守恒）：见 `_reactive_damage_spans`。
+    # 屏蔽后正文扫描既不会把反应效果读成主动效果，也不会改变其余从句的相对位置。
+    _re_spans = _reactive_damage_spans(t_raw)
+    t = _mask_spans(t_raw, _re_spans)
     actions: list = []
     conditions: list = []
     lower = t.lower()
@@ -1173,6 +1315,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             # 判定只看该词所在的**那一句**：以 if 开头且含 more damage 才算条件。
             if _status_word_is_condition(t, word):
                 continue
+            # 特性侧**必须**是主动施加（2026-10-27）：免疫 / checkup 追加伤害 /
+            # 换位触发 三类都含状态词，却不是「让对手战斗位陷入状态」。
+            if kind == "ability" and not _status_is_active_infliction(t_raw, word):
+                actions.append(act("rule", None, "any", {
+                    "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"}))
+                break
             tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
             actions.append(act("status", None, tgt, {"status": tag}))
             break
@@ -1237,6 +1385,19 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         conditions.append({"field": "limit", "op": "eq",
                            "value": "once_per_turn"})
 
+    if _re_spans:
+        # 被屏蔽的「受击触发」是**真实存在的效果**：
+        #   · 可表达（status / counter / discard_energy）→ 产出 `on_damaged` 动作；
+        #   · 不可表达（回合限定 / 随计数源缩放 / 检索）→ 如实登记未建模。
+        # 绝不能只屏蔽不登记 —— 那等于让卡进池却"挨打时什么都不发生"。
+        _od = _detect_on_damaged(t_raw)
+        if _od:
+            actions.extend(_od)
+        else:
+            actions.append(act("rule", None, "any", {
+                "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 "
+                        "on_damaged 或回合级历史（B4）"}))
+
     if not actions:
         actions.append(act("rule", None, "any", {"note": "静态/未建模（英文）"}))
     else:
@@ -1244,7 +1405,7 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
     return {"kind": kind, "name": name, "trigger": trigger,
             "conditions": conditions, "actions": actions,
-            "source_text": t.strip()[:200]}
+            "source_text": t_raw.strip()[:200]}
 
 
 def _trigger_of(text: str, kind: str) -> str:
@@ -1314,7 +1475,9 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
         # 的准入约束（或更糟：把触发式效果当成无条件效果）。
         actions = list(tools)
     mods = _detect_modifiers(str(text or ""), kind, name)
-    actions = actions + tools
+    # ⚠ 这里**不能**再 `actions + tools`：上面已经整体替换成 tools，再加一次会让
+    # 每条道具效果在 `specs.actions` 里出现两遍（tag 侧靠去重看不出来，但
+    # `_amounts` / 黄金集比对会把它当成多重集 → 假失败）。
     if mods:
         # 修正器出现时，移除「静态未建模」兜底 rule（已被真正识别）
         has_coin = any(m.get("type") == "coin_flip" for m in mods)
@@ -2838,10 +3001,24 @@ def to_engine_tags(specs: list) -> dict:
                     notes.append("damage 由招式 damage 字段承载，无需 tag")
             elif t == "status":
                 st = extra.get("status")
-                if st in ENGINE_STATUS_TAGS:
-                    tags.append(st)
-                else:
+                _src = str(s.get("source_text") or "")
+                if st not in ENGINE_STATUS_TAGS:
                     unsupported.append({"type": t, "reason": f"未知状态 {st}"})
+                elif kind == "ability" and trigger == "on_evolve":
+                    # 「when you play this Pokémon from your hand to evolve …」只能
+                    # 在进化那一刻用一次；引擎的特性是**每回合都能再发动** →
+                    # 放通等于把一次性效果变成每回合免费（Brambleghast 实测）。
+                    unsupported.append(
+                        {"type": t, "reason": "进化时发动的状态特性需「仅当回合可用」"
+                                              "约束（B4）"})
+                elif kind == "ability" and re.search(
+                        r"in order to use this ability", _src, re.I):
+                    # 卡面带发动代价（弃手牌能量等），引擎特性侧无代价结算 →
+                    # 直接放通等于免除代价（Volcarona 实测）。
+                    unsupported.append(
+                        {"type": t, "reason": "特性发动代价未建模（B4）"})
+                else:
+                    tags.append(st)
             elif t == "spread":
                 counters = extra.get("counters")
                 if extra.get("free_distribute") and amt is not None:
@@ -3164,6 +3341,23 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     unsupported.append({"type": t,
                                         "reason": f"道具形态未建模（{k}）"})
+            elif t == "on_damaged":
+                # 受击反应：`on_damaged:<kind>:<arg>`
+                # 只允许特性侧（道具侧是 `tool:on_damaged:*`，实现独立）
+                k = extra.get("kind")
+                if kind != "ability":
+                    unsupported.append(
+                        {"type": t, "reason": "受击反应仅实现特性侧（B4）"})
+                elif k == "status" and extra.get("status") in ENGINE_STATUS_TAGS:
+                    tags.append(f"on_damaged:status:{extra['status']}")
+                elif k == "counter" and amt:
+                    tags.append(f"on_damaged:counter:{int(amt)}")
+                elif k == "discard_energy":
+                    tags.append(f"on_damaged:discard_energy:"
+                                f"{int(amt or 1)}")
+                else:
+                    unsupported.append(
+                        {"type": t, "reason": f"受击反应形态未建模（{k}）"})
             elif t == "passive":
                 kind_ = extra.get("kind")
                 if kind_ == "bench_immune":

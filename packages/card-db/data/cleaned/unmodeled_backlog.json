@@ -1,6 +1,6 @@
 {
- "snapshot": "s3step4",
- "generated_at": "2026-10-27 09:14:54",
+ "snapshot": "s4heal",
+ "generated_at": "2026-10-27 10:00:11",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 971,
-  "unsupported": 575,
-  "cards_with_unsupported": 503,
-  "cards_fully_mapped": 616,
-  "cards_with_supported_tag": 804,
-  "cards_engine_ready": 551,
+  "engine_tags": 900,
+  "unsupported": 641,
+  "cards_with_unsupported": 564,
+  "cards_fully_mapped": 555,
+  "cards_with_supported_tag": 750,
+  "cards_engine_ready": 596,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -83,10 +83,10 @@
    "goal": "把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发",
    "fix": "agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支",
    "priority": 2,
-   "groups": 2,
-   "entries": 9,
-   "cards": 9,
-   "share": 0.0157
+   "groups": 8,
+   "entries": 56,
+   "cards": 56,
+   "share": 0.0874
   },
   {
    "id": "B3",
@@ -94,10 +94,10 @@
    "goal": "英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底",
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
-   "groups": 31,
-   "entries": 96,
-   "cards": 96,
-   "share": 0.167
+   "groups": 36,
+   "entries": 109,
+   "cards": 109,
+   "share": 0.17
   },
   {
    "id": "B4",
@@ -105,10 +105,10 @@
    "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
-   "groups": 30,
-   "entries": 67,
-   "cards": 67,
-   "share": 0.1165
+   "groups": 32,
+   "entries": 69,
+   "cards": 69,
+   "share": 0.1076
   },
   {
    "id": "B5",
@@ -116,10 +116,10 @@
    "goal": "原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现",
    "fix": "S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）",
    "priority": 5,
-   "groups": 37,
-   "entries": 403,
-   "cards": 387,
-   "share": 0.7009
+   "groups": 39,
+   "entries": 407,
+   "cards": 391,
+   "share": 0.6349
   }
  ],
  "items": [
@@ -128,24 +128,163 @@
    "sub": "trainer_search",
    "desc": "训练家检索（需通用 search tag）",
    "action_type": "search",
-   "reason": "检索并**附着**（非入手）需引擎新机制（B4）",
-   "entries": 5,
-   "cards": 5,
+   "reason": "检索带属性/阶段限定（引擎检索无该筛选，B4）",
+   "entries": 18,
+   "cards": 18,
    "samples": [
     {
-     "card": "Farfetch'd",
+     "card": "Fan Rotom",
      "name_zh": "",
-     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck."
+     "text": "Once during your first turn, you may search your deck for up to 3 {C} Pokémon with 100 HP or less, reveal them, and put them into your hand. Then, shuffle your deck. You can’t use more than 1 Fan Call"
     },
     {
-     "card": "Yanmega ex",
+     "card": "Tapu Koko",
      "name_zh": "",
-     "text": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may search your deck for up to 3 Basic {G} Energy cards and attach them to this Pokémon. Then, shuffle your deck."
+     "text": "Search your deck for up to 2 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
     },
     {
-     "card": "Marnie's Grimmsnarl ex",
+     "card": "Genesect ex",
      "name_zh": "",
-     "text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way "
+     "text": "Once during your turn, you may search your deck for up to 2 Evolution {M} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Heatmor",
+     "name_zh": "",
+     "text": "Search your deck for up to 3 in any combination of {R} Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Purrloin",
+     "name_zh": "",
+     "text": "Search your deck for up to 3 {D} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索去向不可判（B4）",
+   "entries": 12,
+   "cards": 12,
+   "samples": [
+    {
+     "card": "Telepath Psychic Energy",
+     "name_zh": "",
+     "text": "As long as this card is attached to a Pokémon, it provides {P} Energy.\nWhen you attach this card from your hand to a {P} Pokémon, search your deck for up to 2 Basic {P} Pokémon and put them onto your "
+    },
+    {
+     "card": "Drilbur",
+     "name_zh": "",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck."
+    },
+    {
+     "card": "Palafin",
+     "name_zh": "",
+     "text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Spec"
+    },
+    {
+     "card": "Noctowl",
+     "name_zh": "",
+     "text": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to 2 Trainer cards, reveal them, and"
+    },
+    {
+     "card": "Team Rocket's Koffing",
+     "name_zh": "",
+     "text": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), search your deck for up to 2 Pokémon that have “Koffing” in their "
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索数量由计数源决定（B4）",
+   "entries": 8,
+   "cards": 8,
+   "samples": [
+    {
+     "card": "Scrafty",
+     "name_zh": "",
+     "text": "Search your deck for a number of cards up to the number of your Benched Pokémon and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Team Rocket's Nidorina",
+     "name_zh": "",
+     "text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck."
+    },
+    {
+     "card": "Reuniclus",
+     "name_zh": "",
+     "text": "For each of your Benched Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck."
+    },
+    {
+     "card": "Gholdengo",
+     "name_zh": "",
+     "text": "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Mega Gardevoir ex",
+     "name_zh": "",
+     "text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索附能需自行分配目标（B4）",
+   "entries": 6,
+   "cards": 6,
+   "samples": [
+    {
+     "card": "Miraidon",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck."
+    },
+    {
+     "card": "Joltik",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+    },
+    {
+     "card": "Altaria",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+    },
+    {
+     "card": "Terapagos",
+     "name_zh": "",
+     "text": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck."
+    },
+    {
+     "card": "Whimsicott ex",
+     "name_zh": "",
+     "text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索附能目标在后备（引擎附到战斗位，B4）",
+   "entries": 4,
+   "cards": 4,
+   "samples": [
+    {
+     "card": "Smoochum",
+     "name_zh": "",
+     "text": "Search your deck for up to 2 Basic {P} Energy cards and attach them to 1 of your Benched Pokémon. Then, shuffle your deck."
+    },
+    {
+     "card": "Cinderace",
+     "name_zh": "",
+     "text": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck."
     },
     {
      "card": "Toxtricity",
@@ -153,9 +292,9 @@
      "text": "Once during your turn, you may use this Ability. Search your deck for a Basic {D} Energy card and attach it to 1 of your Benched {D} Pokémon. Then, shuffle your deck. If you attached Energy to a Pokém"
     },
     {
-     "card": "Heliolisk",
+     "card": "Shaymin",
      "name_zh": "",
-     "text": "Once during your turn, if you played Canari from your hand this turn, you may use this Ability. Search your deck for up to 2 Basic {L} Energy cards and attach them to this Pokémon. Then, shuffle your "
+     "text": "Search your deck for an Energy card and attach it to 1 of your Benched {G} Pokémon. Then, shuffle your deck."
     }
    ]
   },
@@ -187,6 +326,48 @@
      "card": "Archeops",
      "name_zh": "",
      "text": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent’s evolved Pokémon by putting the highest Stage Evolution card on it into your opponent’s hand."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索后放到牌库顶/底（B4）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Dialga",
+     "name_zh": "",
+     "text": "Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order."
+    },
+    {
+     "card": "Ciphermaniac’s Codebreaking",
+     "name_zh": "",
+     "text": "Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "抛币分支内的检索（需 coin 嵌套，B4）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Team Rocket's Great Ball",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put i"
+    },
+    {
+     "card": "Energy Coin",
+     "name_zh": "",
+     "text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck."
     }
    ]
   },
@@ -372,6 +553,42 @@
   },
   {
    "batch": "B3",
+   "sub": "draw",
+   "desc": "抽牌（draw … card）",
+   "action_type": "rule",
+   "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）",
+   "entries": 6,
+   "cards": 6,
+   "samples": [
+    {
+     "card": "Unfair Stamp",
+     "name_zh": "",
+     "text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2"
+    },
+    {
+     "card": "Billy & O'Nare",
+     "name_zh": "",
+     "text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards."
+    },
+    {
+     "card": "Lacey",
+     "name_zh": "",
+     "text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead."
+    },
+    {
+     "card": "Emcee's Hype",
+     "name_zh": "",
+     "text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards."
+    },
+    {
+     "card": "Team Rocket's Archer",
+     "name_zh": "",
+     "text": "You can use this card only if any of your Team Rocket’s Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your op"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
    "sub": "attach",
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
@@ -424,6 +641,32 @@
      "card": "Team Rocket's Golbat",
      "name_zh": "",
      "text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may put 2 damage counters on 1 of your opponent’s Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
+   "action_type": "rule",
+   "reason": "回复范围/限定不可精确表达（B4）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Hydrapple ex",
+     "name_zh": "",
+     "text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."
+    },
+    {
+     "card": "Magearna",
+     "name_zh": "",
+     "text": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon."
+    },
+    {
+     "card": "Jumbo Ice Cream",
+     "name_zh": "",
+     "text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached."
     }
    ]
   },
@@ -539,6 +782,27 @@
      "card": "Toxtricity",
      "name_zh": "",
      "text": "Once during your turn, you may use this Ability. Search your deck for a Basic {D} Energy card and attach it to 1 of your Benched {D} Pokémon. Then, shuffle your deck. If you attached Energy to a Pokém"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "draw",
+   "desc": "抽牌（draw … card）",
+   "action_type": "rule",
+   "reason": "按计数源抽牌（for each，B4）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Awakening Drum",
+     "name_zh": "",
+     "text": "Draw a card for each of your Ancient Pokémon in play."
+    },
+    {
+     "card": "Morty’s Conviction",
+     "name_zh": "",
+     "text": "You can use this card only if you discard another card from your hand.\n\nDraw a card for each of your opponent’s Benched Pokémon."
     }
    ]
   },
@@ -795,6 +1059,38 @@
      "card": "Lana’s Aid",
      "name_zh": "",
      "text": "Put up to 3 in any combination of Pokémon that don’t have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "discard_self",
+   "desc": "弃自身/弃手牌（含对手）",
+   "action_type": "rule",
+   "reason": "回合末才执行的弃手牌（需延迟队列，B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Amarys",
+     "name_zh": "",
+     "text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "draw",
+   "desc": "抽牌（draw … card）",
+   "action_type": "rule",
+   "reason": "抽到指定张数带分支替换（B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Team Rocket's Ariana",
+     "name_zh": "",
+     "text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket’s Pokémon, draw cards until you have 8 cards in your hand instead."
     }
    ]
   },
@@ -1401,6 +1697,22 @@
   },
   {
    "batch": "B4",
+   "sub": "coin_flip",
+   "desc": "抛币判定（Flip a coin）",
+   "action_type": "rule",
+   "reason": "抛币分支内的回复（需 coin 嵌套，B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Floragato",
+     "name_zh": "",
+     "text": "Flip a coin. If heads, this attack does 30 more damage, and heal 30 damage from this Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
    "sub": "extra_damage_target",
    "desc": "附加伤害目标（选定 1 只 / n 只 / 我方后备 / 带条件带缩放）需引擎支持目标选择",
    "action_type": "damage",
@@ -1428,6 +1740,22 @@
      "card": "Team Rocket's Venture Bomb",
      "name_zh": "",
      "text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B4",
+   "sub": "coin_flip",
+   "desc": "抛币判定（Flip a coin）",
+   "action_type": "rule",
+   "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Harlequin",
+     "name_zh": "",
+     "text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
     }
    ]
   },
@@ -1860,6 +2188,32 @@
      "card": "Rotom",
      "name_zh": "",
      "text": "This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "回复范围/限定不可精确表达（B4）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Munna",
+     "name_zh": "",
+     "text": "This Pokémon is now Asleep. Heal 30 damage from it."
+    },
+    {
+     "card": "Super Potion",
+     "name_zh": "",
+     "text": "Heal 60 damage from 1 of your Pokémon. If you healed any damage in this way, discard an Energy from that Pokémon."
+    },
+    {
+     "card": "Arven's Sandwich",
+     "name_zh": "",
+     "text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead."
     }
    ]
   },
@@ -2305,6 +2659,22 @@
      "card": "Doublade",
      "name_zh": "",
      "text": "Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way."
+    }
+   ]
+  },
+  {
+   "batch": "B5",
+   "sub": "S6",
+   "desc": "待拆解（需人工判定机制）",
+   "action_type": "rule",
+   "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Lucian",
+     "name_zh": "",
+     "text": "Each player shuffles their hand and puts it on the bottom of their deck. If either player put any cards on the bottom of their deck in this way, each player flips a coin. If heads, that player draws 6"
     }
    ]
   }

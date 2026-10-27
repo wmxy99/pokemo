@@ -51,10 +51,17 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "shuffle_draw", "switch_self", "recover",
                 "discard_search_energy", "search_energy", "candy",
                 "search_pokemon", "search_trainer", "search_any",
+                # 2026-10-27：检索**铺场**（去向是后备，不是入手）
+                "search_bench",
                 # S2 道具（2026-10-26）：附着型训练家
                 "tool:",
                 # S3 场地（2026-10-27）：全场唯一
-                "stadium:")
+                "stadium:",
+                # 2026-10-27：训练家/整卡级「非检索类」效果（引擎机能早已存在，
+                # 只是派发链没接）。前缀互不包含：`draw_to:` vs `draw:`、
+                # `discard_search_energy:` vs `discard:` 的第 5/8 位都是 `_`。
+                "draw:", "draw_to:", "heal:", "attach", "gust", "discard:",
+                "mill:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -63,6 +70,11 @@ ATTACK_TAG_PREFIXES = (
     "discard_energy:", "switch_self", "gust", "attach", "move_damage:",
     "recover:", "dmg_plus:", "dmg_zero", "ignore_weakness", "ignore_resistance",
     "coin:", "coin_each:", "shield:", "evolve_from_deck", "mill:",
+    # 招式侧全牌库检索（2026-10-27）——语义与特性侧一致（检索入手）。
+    # ⚠ 不等于 `recon:`（检视牌库顶 N 取 1）也不等于「检索后铺场/附着」。
+    "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",
+    # 检索**铺场**（2026-10-27）
+    "search_bench:",
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
@@ -71,6 +83,10 @@ ABILITY_TAG_PREFIXES = (
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:",
     # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",
+    # 特性回复（2026-10-27）：范围语义见 battle._apply_heal
+    "heal:",
+    # 特性检索铺场（2026-10-27）
+    "search_bench:",
 )
 
 

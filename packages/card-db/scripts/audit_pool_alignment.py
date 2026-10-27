@@ -179,13 +179,46 @@ def audit_mill(card_name: str, item_name: str, desc: str,
 
 def audit_search_kind(card_name: str, item_name: str, desc: str,
                       effects: list) -> list:
-    """检索类别只看「search … for …」子句（不能因全文出现 Pokémon 就判成宝可梦）"""
+    """检索的**去向**与**类别**两级对账（2026-10-27 扩展）
+
+    此前只对账类别，于是两类错映射都能混过去：
+      · 「search for a Basic Pokémon **and put it onto your Bench**」被放通成
+        ``search_pokemon``（入手）—— 实际去向是**后备**（`search_bench`）；
+      · 「search for a **Pokémon Tool** card」被判成 ``search_pokemon`` ——
+        Tool 属于**训练家卡**（`search_trainer`）。
+    现在先判去向（evolve / attach / bench），只有「入手」才继续判类别。
+    """
     errs = []
     m = SEARCH_FOR.search(desc or "")
     if not m:
         return errs
     seg = _norm(m.group(1))
-    if "energy" in seg:
+    clause = _norm(re.split(r"[.]", (desc or "")[m.start():], maxsplit=1)[0])
+    got = [t for t in effects if str(t).startswith(("search_", "attach",
+                                                    "evolve_from_deck"))]
+
+    # ---- ① 去向 ----
+    if "to evolve it" in clause or "to evolve that" in clause:
+        if not any(str(t).startswith("evolve_from_deck") for t in effects):
+            errs.append(f"{card_name} · {item_name}：检索后**直接进化** "
+                        f"→ 应为 `evolve_from_deck`，实际 {got}")
+        return errs
+    if re.search(r"\band attach\b", clause):
+        if not any(str(t).startswith("attach") for t in effects):
+            errs.append(f"{card_name} · {item_name}：检索后**附着**（非入手）"
+                        f"→ 应为 `attach:…`，实际 {got}")
+        return errs
+    if "onto your bench" in clause or "onto their bench" in clause:
+        if not any(str(t).startswith("search_bench") for t in effects):
+            errs.append(f"{card_name} · {item_name}：检索后**铺到后备**"
+                        f"→ 应为 `search_bench:…`，实际 {got}")
+        return errs
+
+    # ---- ② 类别（仅「入手」形态）----
+    if re.search(r"\btool card\b|\bitem card\b|\bstadium card\b|"
+                 r"\bsupporter card\b|\btrainer card\b", seg):
+        want = "search_trainer"
+    elif "energy" in seg:
         want = "search_energy"
     elif "pokemon" in seg or "pok\u00e9mon" in seg:
         want = "search_pokemon"
@@ -193,10 +226,10 @@ def audit_search_kind(card_name: str, item_name: str, desc: str,
         want = "search_trainer"
     else:
         return errs
-    got = [t for t in effects if str(t).startswith("search_")]
-    if got and not any(str(t).startswith(want) for t in got):
+    got_hand = [t for t in effects if str(t).startswith("search_")]
+    if got_hand and not any(str(t).startswith(want) for t in got_hand):
         errs.append(f"{card_name} · {item_name}：检索子句是 `{seg[:50]}` "
-                    f"→ 应为 `{want}`，实际 {got}")
+                    f"→ 应为 `{want}`，实际 {got_hand}")
     return errs
 
 

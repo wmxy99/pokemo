@@ -642,7 +642,12 @@ def _in_coin_branch(text: str, pos: int) -> bool:
     """
     head = text[:pos]
     last = None
-    for m in re.finditer(r"if\s+(heads|tails)\b", head, re.I):
+    # 「flip 2 coins. If **both of them are** heads, …」也是分支——早期正则只认
+    # 「if heads / if tails」，于是 Energy Coin 这类**双币**分支里的检索被当成
+    # 无条件效果（必然发生的检索 + 附能，强度翻倍）。
+    for m in re.finditer(
+            r"if\s+(?:both|all)(?:\s+of\s+them\s+are)?\s+(heads|tails)\b"
+            r"|if\s+(heads|tails)\b", head, re.I):
         last = m
     if last is None:
         return False
@@ -673,6 +678,13 @@ def _en_search_what(lower: str) -> str:
     if m:
         seg = m.group(1)
     seg = re.split(r",| and | then |\.|\(", seg, maxsplit=1)[0]
+    # ⚠ 顺序关键：**先判训练家子类**。「a Pokémon Tool card」「an Item card」
+    # 都含 "pokémon" 字样，先判 pokemon 会把它们错映射成「检索宝可梦」
+    # → 引擎去牌库拿宝可梦（静默拿错东西）。实测 4 张（Meltan / Wiglett /
+    #   Team Rocket's Mareep / Hop's Silicobra / Team Rocket's Murkrow）。
+    if re.search(r"\btool card\b|\bitem card\b|\bstadium card\b|"
+                 r"\bsupporter card\b|\btrainer card\b", seg):
+        return "trainer"
     if "pokémon" in seg or "pokemon" in seg:
         return "pokemon"
     if "trainer" in seg:
@@ -680,6 +692,180 @@ def _en_search_what(lower: str) -> str:
     if "energy" in seg:
         return "energy"
     return "any"
+
+
+def _search_destination(text: str, pos: int) -> str:
+    """检索的**去向** → ``hand`` | ``bench`` | ``attach`` | ``evolve`` |
+    ``deck_top`` | ``unknown``
+
+    为什么必须判（2026-10-27 审计）：早期只判「检索什么类别」，不看「放到哪里」，
+    于是卡面
+      · 「search for a Basic Pokémon **and put it onto your Bench**」→ 映射成
+        ``search_pokemon:1``（**入手**）——实际应是**直接铺场**；
+      · 「search for up to 2 Basic Energy **and attach them**」→ ``search_energy:2``
+        （入手）——实际是**附着**；
+      · 「search for a card that **evolves from this Pokémon** … to evolve it」→
+        ``search_pokemon:1``——实际是``evolve_from_deck``。
+    引擎据此会「把牌拿进手牌」，少执行一步（铺场/附能/进化），局面上看不出来。
+    判不出返回 ``unknown``（调用方登记未建模），绝不默认成入手。
+    """
+    seg = re.split(r"[.]", text[pos:], maxsplit=1)[0].lower()
+    if re.search(r"to evolve (?:it|that pok[eé]mon)", seg):
+        return "evolve"
+    if re.search(r"\band attach\b", seg):
+        return "attach"
+    if re.search(r"onto (?:your|their) bench", seg):
+        return "bench"
+    if re.search(r"on top of (?:it|your deck|their deck)|on the bottom of", seg):
+        return "deck_top"
+    if re.search(r"into (?:your|their) hand|into the hand", seg):
+        return "hand"
+    return "unknown"
+
+
+def _is_delayed(text: str, pos: int) -> bool:
+    """该动作是否被「回合末 / 下个回合」**延后**执行
+
+    引擎没有延迟队列（效果一律即时结算），所以延后类效果必须整条拒绝，
+    否则会把「回合末再弃」变成「现在立刻弃」——方向相反，且不可见。
+    真实案例：Amarys「Draw 4 cards. At the end of this turn, if you have 5 or more
+    cards in your hand, discard your hand.」立即执行会把刚抽的 4 张一起弃掉。
+
+    判据取 **pos 所在句子**（回溯到最近句号），不看全文。
+    """
+    sent = re.split(r"[.]", text[:pos])[-1].lower()
+    return bool(re.search(
+        r"at the end of (?:this|your) turn|during your next turn", sent))
+
+
+def _draw_extra_of(text: str, m) -> Optional[dict]:
+    """抽牌 tag 的**完整性守卫** → ``extra``（可精确表达）或 ``None``（不可）
+
+    ``None`` 的四种情形都是有真实卡面的（2026-10-27 审计）：
+      · ``for each …``        按计数源抽（Awakening Drum / Morty's Conviction）
+      · ``each player …`` / ``opponent draws``  对手也抽（Unfair Stamp / Harlequin）
+      · ``draw N more``       条件追加（Billy & O'Nare / Emcee's Hype）
+      · ``draw M instead``    分支替换（Lacey / Lillie's Determination）
+    此前这些统统被压成固定 ``draw:N`` ——局面上正常、不报错，只是**少抽/多抽**，
+    属静默错映射。判不出就返回 None，由调用方登记未建模（绝不静默近似）。
+    """
+    low = text.lower()
+    seg = re.split(r"[.]", text[m.start():], maxsplit=1)[0]
+    tail = low[m.end():]
+    if "for each" in seg:
+        return None
+    if "each player" in seg or "opponent draws" in low:
+        return None
+    if "instead" in seg or re.search(r"draw\s+\d+\s+more", seg):
+        return None
+    # 同一段后面还有第二段抽牌（"Draw 2 cards. Then … draw 2 more cards."）
+    # 注意数字与 "cards" 之间可夹修饰词（"2 more cards"），不能要求紧邻
+    if re.search(r"draw\s+(?:up to\s+)?(?:\d+|a|1)\s+(?:\w+\s+){0,2}cards?", tail):
+        if re.search(r"\bmore\b|instead", tail):
+            return None
+    return {}
+
+
+def _heal_scope_of(clause: str) -> tuple:
+    """回复的**范围与属性限定** → ``(scope, ptype)``；不可精确表达返回 ``(None, None)``
+
+    为什么必须按子句判（2026-10-27 真实缺陷）：早期只要文本里有
+    ``heal (\\d+) damage`` 就无条件产出 ``heal:N``，而引擎侧 ``heal:N`` 恒指
+    **施术者自身**。于是卡面
+      · 「回复**己方全部**」   → 只回了攻击方一只（Leafeon ex / Ethan's Ho-Oh ex /
+        Leavanny / Erika's Vileplume ex / Fennel）
+      · 「回复**后备 {P} 一只**」→ 回了自身、且不限属性（Meloetta / Jacinthe）
+    这类错映射在局面上完全正常、也不报错，只能靠对账发现 —— 属最高优先级缺陷。
+    判不出的形态（条件限定 / 依赖前序动作的后续）一律返回 None，由调用方登记未建模。
+
+    scope 取值：``""``（this Pokémon）· ``active`` · ``choose`` · ``all`` ·
+    ``bench`` · ``basic`` · ``bench_one``
+    """
+    low = clause.lower()
+    # ① 依赖前序动作的后续（Super Potion「若回复了就弃那张的能量」）——只能做一半，
+    #    宁可未建模
+    if re.search(r"in this way|from that pok[eé]mon|that pok[eé]mon['\u2019]s", low):
+        return None, None
+    # ② 条件限定（Jumbo Ice Cream「有 3 个以上能量的战斗位」）——引擎无该条件
+    if re.search(r"that has \d+ or more", low):
+        return None, None
+    # ③ 卡名阵营条件（Arven's Sandwich「若是 Arven 的宝可梦则改为 100」）
+    if re.search(r"if that pok[eé]mon is", low):
+        return None, None
+
+    ptype = None
+    m = re.search(r"\{([a-z])\}", low)
+    if m:
+        ptype = _EN_ENERGY_LETTER.get(m.group(1).upper())
+        if ptype is None:                    # 未知属性符号 → 不猜
+            return None, None
+
+    # ④ 全体形态：不得带属性符号（「己方每只 {X}」无此句式，出现即异常）
+    if re.search(r"from each of your benched pok[eé]mon", low):
+        return ("bench", None) if ptype is None else (None, None)
+    if re.search(r"from each of your basic pok[eé]mon", low):
+        return ("basic", None) if ptype is None else (None, None)
+    if re.search(r"from each of your pok[eé]mon", low):
+        return ("all", None) if ptype is None else (None, None)
+    # ⑤ 单只形态
+    if re.search(r"from 1 of your benched", low):
+        return "bench_one", ptype
+    if re.search(r"from 1 of your", low):
+        return "choose", ptype
+    if re.search(r"from your active", low):
+        # 「your Active {X} Pokémon」属性符号在中间，不能用固定词序匹配
+        return "active", ptype
+    if re.search(r"from this pok[eé]mon", low):
+        return "", ptype
+    return None, None
+
+
+_ACTION_POS_PAT = {
+    "coin_flip": r"\bflip a coin\b",
+    "discard": r"\bdiscard\b",
+    "draw": r"\bdraw\b",
+    "heal": r"\bheal\b",
+    "search": r"\bsearch\b",
+    "attach": r"\battach\b",
+    "switch": r"\bswitch\b",
+    "recover": r"\binto (?:your|their) hand\b",
+    "move_damage": r"\bmove\b[^.]{0,30}damage",
+    "evolve": r"\bevolv",
+    "damage": r"\bdoes \d+ damage\b|\bdamage counter",
+    "spread": r"\bdamage counter",
+    "status": r"\bis now (?:asleep|burned|confused|paralyzed|poisoned)\b",
+    "knockout": r"\bknocked out\b|\bknocks out\b",
+    "shield": r"\btakes? \d+ less damage\b|\bprevent all\b",
+    "damage_mod": r"\bdoes \d+ more damage\b",
+}
+
+
+def _order_actions_by_text(actions: list, text: str) -> list:
+    """按卡面**词序**重排 actions（稳定排序；判不出位置的保持相对原序）
+
+    为什么必需（2026-10-27 真实缺陷）：解析器是**按代码分支顺序**追加 action 的，
+    与卡面词序无关。「Discard your hand and draw 5 cards.」（Carmine）原先产出
+    ``[draw:5, discard:all]`` → 引擎先抽 5 张，再把**整手牌（含刚抽到的 5 张）**
+    弃掉，效果从「弃光后重抽 5」变成「直接空手」。不报错、局面上也"跑得通"，
+    只能靠对账或逐局复盘发现 —— 属静默错映射。
+
+    判不出位置时给一个大值（排在后面），不改变同位置元素的相对顺序。
+    """
+    low = str(text or "").lower()
+    if not low or len(actions) < 2:
+        return actions
+    big = len(low) + 9999
+    keyed = []
+    for i, a in enumerate(actions):
+        pat = _ACTION_POS_PAT.get(str(a.get("type")))
+        pos = None
+        if pat:
+            m = re.search(pat, low)
+            if m:
+                pos = m.start()
+        keyed.append((pos if pos is not None else big, i, a))
+    keyed.sort(key=lambda x: (x[0], x[1]))
+    return [a for _, _, a in keyed]
 
 
 def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
@@ -792,19 +978,61 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
     m = _EN_HEAL_RE.search(t)
     if m:
-        actions.append(act("heal", int(m.group(1)), "self"))
+        # 传**匹配处之后的整段**（不止首个句号）：跨句依赖如
+        # 「Heal 60 … . If you healed any damage **in this way**, discard …」
+        # 的后半段在下一句里，只截到句号会漏掉 → 会被当成可精确表达（Super Potion）。
+        tail_txt = t[m.start():]
+        if _in_coin_branch(t, m.start()):
+            # 抛币分支内的回复：本应产出 `coin:heads:heal:N`（引擎 coin 层暂不支持
+            # 非伤害子效果嵌套），**不能**退化成无条件 heal（那是实质性加强）。
+            actions.append(act("rule", None, "self",
+                               {"note": "抛币分支内的回复（需 coin 嵌套，B4）"}))
+        else:
+            scope, ptype = _heal_scope_of(tail_txt)
+            if scope is None:
+                actions.append(act("rule", None, "self",
+                                   {"note": "回复范围/限定不可精确表达（B4）"}))
+            else:
+                extra = {"heal_scope": scope} if scope else {}
+                if ptype:
+                    extra["heal_type"] = ptype
+                actions.append(act("heal", int(m.group(1)), "self", extra))
     elif re.search(r"heal all damage", t, re.I):
         actions.append(act("rule", None, "self",
                            {"note": "全量回复（需引擎新机制 · B4）"}))
 
     m = _EN_DRAW_RE.search(t)
     if m:
-        actions.append(act("draw", int(m.group(1)), "deck"))
+        if _in_coin_branch(t, m.start()):
+            actions.append(act("rule", None, "deck",
+                               {"note": "抛币分支内的抽牌（需 coin 嵌套，B4）"}))
+        elif _draw_extra_of(t, m) is None:
+            actions.append(act("rule", None, "deck",
+                               {"note": "抽牌句式不可精确表达（按计数/对手同抽/"
+                                        "条件追加/分支替换，B4）"}))
+        else:
+            actions.append(act("draw", int(m.group(1)), "deck"))
     elif _EN_DRAW_TO_RE.search(t):
-        actions.append(act("draw", None, "deck",
-                           {"to_hand_size": int(_EN_DRAW_TO_RE.search(t).group(1))}))
+        mt = _EN_DRAW_TO_RE.search(t)
+        if _in_coin_branch(t, mt.start()):
+            actions.append(act("rule", None, "deck",
+                               {"note": "抛币分支内的抽牌（需 coin 嵌套，B4）"}))
+        elif "instead" in t.lower() or re.search(r"draw\s+\d+\s+more", t, re.I):
+            actions.append(act("rule", None, "deck",
+                               {"note": "抽到指定张数带分支替换（B4）"}))
+        else:
+            actions.append(act("draw", None, "deck",
+                               {"to_hand_size": int(mt.group(1))}))
     elif re.search(r"draw (?:a|1) card", t, re.I):
-        actions.append(act("draw", 1, "deck"))
+        ma = re.search(r"draw (?:a|1) card", t, re.I)
+        if _in_coin_branch(t, ma.start()):
+            actions.append(act("rule", None, "deck",
+                               {"note": "抛币分支内的抽牌（需 coin 嵌套，B4）"}))
+        elif _draw_extra_of(t, ma) is None:
+            actions.append(act("rule", None, "deck",
+                               {"note": "按计数源抽牌（for each，B4）"}))
+        else:
+            actions.append(act("draw", 1, "deck"))
 
     # 弃牌堆回收（Put [up to] N / a … from your discard pile into your hand）
     mr = _EN_RECOVER_RE.search(t)
@@ -846,7 +1074,13 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         actions.append(act("discard", n, "deck",
                            {"from_deck": True, "side": side}))
 
-    if _EN_DISCARD_ALL_RE.search(t):
+    _da = _EN_DISCARD_ALL_RE.search(t)
+    if _da and _is_delayed(t, _da.start()):
+        # Amarys：「Draw 4 cards. At the end of this turn, … discard your hand.」
+        # 引擎没有「回合末延迟队列」，立即弃手牌会把刚抽的牌一并弃掉（时序错）。
+        actions.append(act("rule", None, "hand",
+                           {"note": "回合末才执行的弃手牌（需延迟队列，B4）"}))
+    elif _da:
         actions.append(act("discard", None, "hand", {"all": True}))
     elif (_m := _EN_DISCARD_OPP_ENERGY_RE.search(t)) and not _in_coin_branch(t, _m.start()):
         # 冠词型「弃对手战斗位能量」——必须带 target，否则 tag 会退化成弃自身。
@@ -1005,6 +1239,8 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
 
     if not actions:
         actions.append(act("rule", None, "any", {"note": "静态/未建模（英文）"}))
+    else:
+        actions = _order_actions_by_text(actions, t)
 
     return {"kind": kind, "name": name, "trigger": trigger,
             "conditions": conditions, "actions": actions,
@@ -2633,7 +2869,14 @@ def to_engine_tags(specs: list) -> dict:
                 if amt is None:
                     unsupported.append({"type": t, "reason": "回复量未识别"})
                 else:
-                    tags.append(f"heal:{int(amt)}")
+                    # 范围（全体/后备/战斗位/属性限定）必须写进 tag —— 省略 = 回**施术者自身**，
+                    # 与「回己方全部」差着一个数量级（见 battle._apply_heal 的历史缺陷说明）
+                    sc = extra.get("heal_scope") or ""
+                    pt = extra.get("heal_type")
+                    tail = f":{sc}" if sc else ""
+                    if pt:
+                        tail += f":type:{pt}"
+                    tags.append(f"heal:{int(amt)}{tail}")
             elif t == "attach":
                 n = int(amt) if amt is not None else 1
                 et = extra.get("energy_type")
@@ -2686,45 +2929,118 @@ def to_engine_tags(specs: list) -> dict:
                     unsupported.append(
                         {"type": t, "reason": "招式/特性驱动的进化需卡级 tag"})
             elif t == "search":
-                if kind == "ability":
-                    # ⚠ 特性侧的检索有**两种语义**，早期一律映射成 `recon:N`，
-                    #   结果把「全牌库检索」错当成「检视牌库顶 N 取 1」：
-                    #   引擎的 recon 只能从**顶部 N 张里随机**拿 1 张 →
-                    #   「Search your deck for a Pokémon」变成"只能从牌堆顶碰运气"。
-                    #   实测池内 **16 条**此类错映射（Sawsbuck / Drilbur / Farfetch'd /
-                    #   Mamoswine ex / Genesect ex / Toxtricity / Dragonair …）。
-                    look_top = extra.get("look_top")
-                    if look_top:
-                        tags.append(f"recon:{int(look_top)}")
-                    elif re.search(r"search[^.]{0,80}?\battach\b",
-                                    str(s.get("source_text") or ""), re.I):
-                        # 「Search your deck for a Basic {D} Energy card **and attach
-                        # it** to 1 of your Benched {D} Pokémon」——效果是**附能**，
-                        # 不是「检索入手」。映射成 `search_energy:N` 会让引擎把能量
-                        # 拿进手牌（少打出一张能量）→ 如实登记未建模。
-                        unsupported.append({
-                            "type": t,
-                            "reason": "检索并**附着**（非入手）需引擎新机制（B4）"})
-                    else:
-                        what = extra.get("what") or "any"
-                        n = amt if amt is not None else 1
-                        tags.append(f"search_{what}:{n}")
+                # 特性 / 训练家 / 招式**共用**同一套判定：先去向，再类别。
+                # 特性侧特有的是「检视牌库顶 N 张取 1」（`recon`），与全牌库检索
+                # 语义不同 —— 早期一律映射成 recon，把「Search your deck for a
+                # Pokémon」变成"只能从牌堆顶碰运气"（池内实测 16 条）。
+                src = str(s.get("source_text") or "")
+                _mp = re.search(r"\bsearch\b", src, re.I)
+                look_top = extra.get("look_top") if kind == "ability" else None
+                if look_top:
+                    tags.append(f"recon:{int(look_top)}")
                 else:
-                    # 训练家检索：按检索目标选 tag（pokemon/trainer/energy/any）
+                    # ⚠ 无 source_text（手工 spec / 上游已确定语义）时不做去向判定 ——
+                    # 此时没有「卡面词序」可依据，硬判 unknown 会把明确的 spec 拒掉。
+                    dest = (_search_destination(src, _mp.start() if _mp else 0)
+                            if src else "hand")
                     what = extra.get("what") or "any"
                     n = amt if amt is not None else 1
-                    if tgt == "discard":
+                    dynamic_n = re.search(
+                        r"a number of|up to the number of|for each", src, re.I)
+                    if _mp and _in_coin_branch(src, _mp.start()):
+                        # 抛币分支内的检索：应由 coin 层产出（coin:heads:<sub>），
+                        # 不能退化成「必定检索」（否则强度翻倍）
+                        unsupported.append(
+                            {"type": t, "reason": "抛币分支内的检索（需 coin 嵌套，B4）"})
+                    elif tgt == "discard":
                         unsupported.append(
                             {"type": t, "reason": "从弃牌堆检索（非回收）需引擎"
                                                   "新机制（B4）"})
-                    elif what == "energy":
-                        tags.append(f"search_energy:{n}")
-                    elif what == "pokemon":
-                        tags.append(f"search_pokemon:{n}")
-                    elif what == "trainer":
-                        tags.append(f"search_trainer:{n}")
+                    elif dynamic_n:
+                        unsupported.append(
+                            {"type": t, "reason": "检索数量由计数源决定（B4）"})
+                    elif dest == "evolve":
+                        # 「检索可进化此宝可梦的卡并直接进化」——引擎已有该机制
+                        if "evolve_from_deck" not in tags:
+                            tags.append("evolve_from_deck")
+                    elif dest == "hand":
+                        # 类别之外若还带**属性/阶段**限定，引擎的检索没有这层筛选
+                        # （`_take_kind_from_deck` 只按 pokemon/trainer/any 过滤），
+                        # 直接放通等于把检索范围放宽 → 拒绝而不是近似。
+                        seg = re.split(r"[.]", src[_mp.start():],
+                                       maxsplit=1)[0].lower() if _mp else ""
+                        has_type = bool(re.search(r"\{[a-z]\}", seg))
+                        has_stage = bool(re.search(
+                            r"\bbasic pok[eé]mon\b|\bstage 1\b|\bstage 2\b"
+                            r"|\bevolution pok[eé]mon\b", seg))
+                        if has_type or (has_stage and what != "energy"):
+                            unsupported.append(
+                                {"type": t,
+                                 "reason": "检索带属性/阶段限定（引擎检索无该筛选，B4）"})
+                        elif what == "energy":
+                            tags.append(f"search_energy:{n}")
+                        elif what == "pokemon":
+                            tags.append(f"search_pokemon:{n}")
+                        elif what == "trainer":
+                            tags.append(f"search_trainer:{n}")
+                        else:
+                            tags.append(f"search_any:{n}")
+                    elif dest == "bench":
+                        # 「检索基础宝可梦直接铺后备」——引擎有该去向（search_bench）
+                        seg = re.split(r"[.]", src[_mp.start():],
+                                       maxsplit=1)[0].lower() if _mp else ""
+                        pm = re.search(r"\{([a-z])\}", seg)
+                        pt = _EN_ENERGY_LETTER.get(pm.group(1).upper()) if pm else None
+                        if pm and pt is None:
+                            unsupported.append(
+                                {"type": t, "reason": "检索属性符号未识别（B4）"})
+                        else:
+                            tail = ":basic" if re.search(
+                                r"\bbasic pok[eé]mon\b", seg) else ""
+                            if pt:
+                                tail += f":type:{pt}"
+                            tags.append(f"search_bench:{n}{tail}")
+                    elif dest == "attach":
+                        # 「检索能量**并附着**」——去向是附着，不是入手。
+                        # 必须把区域钉死为牌库（zone=deck）：默认 `any` 会先翻手牌，
+                        # 从手牌拿一张能量"附"上去，等于放宽了代价。
+                        seg = re.split(r"[.]", src[_mp.start():],
+                                       maxsplit=1)[0].lower() if _mp else ""
+                        # ⚠ 只认「{X} **Energy**」这种紧邻写法：卡面
+                        # 「an Energy card and attach it to 1 of your Benched
+                        #  {G} **Pokémon**」里的 {G} 修饰的是**目标宝可梦**，
+                        # 不是能量属性——按 `\{.\}` 取会把它当成"草能量"。
+                        pm = re.search(r"\{([a-z])\}\s*energy", seg)
+                        pt = _EN_ENERGY_LETTER.get(pm.group(1).upper()) if pm else None
+                        if pm and pt is None:
+                            unsupported.append(
+                                {"type": t, "reason": "附能属性符号未识别（B4）"})
+                        elif re.search(r"\bbenched\b", seg):
+                            # 引擎的招式/训练家附能固定落到**战斗位**，
+                            # 而卡面写「attach it to 1 of your **Benched** {G}
+                            # Pokémon」——能量落在哪只宝可梦身上完全不同，
+                            # 不能"就近附给战斗位"糊过去。
+                            unsupported.append(
+                                {"type": t,
+                                 "reason": "检索附能目标在后备（引擎附到战斗位，B4）"})
+                        elif re.search(r"in any way you like|to your pok[eé]mon",
+                                       seg) and not re.search(
+                                           r"to (?:this|1 of your|your active)",
+                                           seg):
+                            # 「distribute among your Pokémon in any way you like」
+                            # 要玩家分配 → 引擎无该选择界面
+                            unsupported.append(
+                                {"type": t,
+                                 "reason": "检索附能需自行分配目标（B4）"})
+                        else:
+                            tags.append(
+                                f"attach:{n}" + (f":{pt}" if pt else "") + ":deck")
+                    elif dest == "deck_top":
+                        unsupported.append(
+                            {"type": t, "reason": "检索后放到牌库顶/底（B4）"})
                     else:
-                        tags.append(f"search_any:{n}")
+                        unsupported.append(
+                            {"type": t, "reason": "检索去向不可判（B4）"})
             elif t == "recover":
                 n = int(amt) if amt is not None else 1
                 kd = extra.get("kind") or "any"

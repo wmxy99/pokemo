@@ -931,18 +931,25 @@ class TestClauseScopedTargets(unittest.TestCase):
         Benched {G} **Pokémon**」——检索的是能量卡，此前因全文出现 Pokémon
         被映射成 `search_pokemon`（引擎去拿宝可梦，**静默拿错东西**）。
         全库 28 条此类误判。
+
+        ⚠ 2026-10-27 更新：这张卡的去向是**附着到后备**，而引擎固定附到战斗位
+        （能量落在哪只宝可梦上完全不同），因此现在**拒绝**而不是映射成入手。
+        关键回归点：绝不能出现 `search_pokemon`（拿错东西）。
         """
         r = self._tags("Search your deck for an Energy card and attach it to "
                        "1 of your Benched {G} Pok\u00e9mon. Then, shuffle "
                        "your deck.")
-        self.assertIn("search_energy:1", r["tags"])
         self.assertNotIn("search_pokemon:1", r["tags"])
+        self.assertNotIn("search_energy:1", r["tags"])
+        self.assertTrue(r["unsupported"])
 
     def test_search_target_pokemon_still_works(self):
+        """类别判定仍归 pokemon（不被 energy 抢走）；带属性/抗性限定时如实拒绝"""
         r = self._tags("Search your deck for up to 2 Pok\u00e9mon with {F} "
                        "Resistance, reveal them, and put them into your hand. "
                        "Then, shuffle your deck.")
-        self.assertIn("search_pokemon:2", r["tags"])
+        self.assertNotIn("search_energy:2", r["tags"])
+        self.assertTrue(r["unsupported"], "带 {F} 抗性限定的检索应如实登记未建模")
 
     def test_choose_one_switch_is_self_not_gust(self):
         """`Choose 1:` 多选项卡：换位目标只看换位子句
@@ -1146,6 +1153,151 @@ class TestExtractJson(unittest.TestCase):
         self.assertIsNone(E.extract_json('{"a":1}'))
         self.assertIsNone(E.extract_json(""))
         self.assertIsNone(E.extract_json("[{bad json}]"))
+
+
+class TestHealScopeParsing(unittest.TestCase):
+    """回复「范围」解析（2026-10-27）
+
+    历史缺陷：只要文本含 ``heal (\\d+) damage`` 就产出 ``heal:N``，
+    而引擎的 ``heal:N`` 恒指**施术者自身** → 「回己方全部」被压成「只回一只」。
+    池内实测 5 处（Leafeon ex / Ethan's Ho-Oh ex / Leavanny / Meloetta / Floragato）。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_each_of_your_pokemon(self):
+        r = self._tags("Heal 50 damage from each of your Pok\u00e9mon.")
+        self.assertIn("heal:50:all", r["tags"])
+
+    def test_each_of_your_benched(self):
+        r = self._tags("Heal 100 damage from each of your Benched Pok\u00e9mon.")
+        self.assertIn("heal:100:bench", r["tags"])
+
+    def test_each_of_your_basic(self):
+        r = self._tags("Heal 100 damage from each of your Basic Pok\u00e9mon.")
+        self.assertIn("heal:100:basic", r["tags"])
+
+    def test_one_of_your_pokemon_is_choose(self):
+        r = self._tags("Heal 30 damage from 1 of your Pok\u00e9mon.", "item")
+        self.assertIn("heal:30:choose", r["tags"])
+
+    def test_benched_one_with_type(self):
+        r = self._tags("Heal 120 damage from 1 of your Benched {P} Pok\u00e9mon.")
+        self.assertIn("heal:120:bench_one:type:psychic", r["tags"])
+
+    def test_this_pokemon_has_no_scope(self):
+        """`this Pokémon` 必须保持无 scope（引擎回施术者自身）——不能被当成 choose"""
+        r = self._tags("Heal 30 damage from this Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["heal:30"])
+
+    def test_active_pokemon_uses_active_scope(self):
+        r = self._tags("Heal 70 damage from your Active Pok\u00e9mon.",
+                       "supporter")
+        self.assertIn("heal:70:active", r["tags"])
+
+    def test_active_with_type_symbol(self):
+        r = self._tags("Heal 60 damage from your Active {N} Pok\u00e9mon.",
+                       "item")
+        self.assertIn("heal:60:active:type:dragon", r["tags"])
+
+    def test_conditional_heal_refused(self):
+        """「that has 3 or more Energy」引擎无该条件 → 必须登记未建模"""
+        r = self._tags("Heal 80 damage from your Active Pok\u00e9mon that has "
+                       "3 or more Energy attached.", "item")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_dependent_followup_refused(self):
+        """Super Potion：依赖「本次回复」的后续弃能无法只做一半"""
+        r = self._tags("Heal 60 damage from 1 of your Pok\u00e9mon. If you "
+                       "healed any damage in this way, discard an Energy from "
+                       "that Pok\u00e9mon.", "item")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_coin_branch_heal_refused(self):
+        """Floragato：抛币分支内的回复不得退化成无条件"""
+        r = self._tags("Flip a coin. If heads, this attack does 30 more "
+                       "damage, and heal 30 damage from this Pok\u00e9mon.")
+        self.assertEqual([t for t in r["tags"] if t.startswith("heal")], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestDrawCompletenessGuard(unittest.TestCase):
+    """抽牌「完整性」解析守卫（2026-10-27）
+
+    此前只要出现 "draw a card" 就产出 ``draw:1``，完全不看后面的 ``for each``：
+    「Draw a card for each of your Ancient Pokémon in play」→ ``draw:1``。
+    不报错、局面上"能跑"，只是少抽。
+    """
+
+    @staticmethod
+    def _tags(text, kind="item", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_plain_draw_ok(self):
+        self.assertIn("draw:3", self._tags("Draw 3 cards.", "supporter")["tags"])
+
+    def test_for_each_refused(self):
+        r = self._tags("Draw a card for each of your Ancient Pok\u00e9mon "
+                       "in play.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_conditional_more_refused(self):
+        r = self._tags("Draw 2 cards. Then, if you have 10 or more cards in "
+                       "your hand, draw 2 more cards.", "supporter")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_opponent_also_draws_refused(self):
+        r = self._tags("Each player shuffles their hand into their deck. "
+                       "Then, you draw 5 cards, and your opponent draws 2 "
+                       "cards.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_coin_branch_draw_refused(self):
+        r = self._tags("Flip a coin. If heads, draw 2 cards.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestActionOrdering(unittest.TestCase):
+    """多动作卡的**执行顺序**必须与卡面词序一致（2026-10-27）
+
+    Carmine「Discard your hand and draw 5 cards.」原先产出
+    ``[draw:5, discard:all]`` → 引擎先抽 5 张再把整手牌（含刚抽的）弃光，
+    效果从「弃光后重抽 5」变成「直接空手」。
+    """
+
+    @staticmethod
+    def _tags(text, kind="supporter", name="X"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_discard_before_draw(self):
+        tags = self._tags("Discard your hand and draw 5 cards.")["tags"]
+        self.assertEqual(tags, ["discard:all", "draw:5"])
+
+    def test_draw_before_discard_when_text_says_so(self):
+        tags = self._tags("Draw 2 cards. Then, discard 2 cards from your "
+                          "hand.")["tags"]
+        self.assertEqual(tags[0], "draw:2")
+        self.assertIn("discard:2", tags)
+
+    def test_status_before_draw(self):
+        tags = self._tags("Your opponent\u2019s Active Pok\u00e9mon is now "
+                          "Burned. Draw 2 cards.", "attack")["tags"]
+        self.assertEqual(tags[0], "burn")
+
+    def test_delayed_discard_refused(self):
+        """Amarys：「回合末才弃手牌」引擎无延迟队列 → 拒绝而不是立即弃"""
+        r = self._tags("Draw 4 cards. At the end of this turn, if you have 5 "
+                       "or more cards in your hand, discard your hand.")
+        self.assertNotIn("discard:all", r["tags"])
+        self.assertTrue(r["unsupported"])
 
 
 class TestGoldenSetIntegrity(unittest.TestCase):

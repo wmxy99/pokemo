@@ -434,6 +434,11 @@ def load_engine_index() -> dict:
         解析链推导、非人工逐卡校对）标记为 ``approximated``。
     """
     idx: dict = {}
+    # 同名多卡计数：用于识别「靠卡名命中、实为另一张同名卡」的假就绪。
+    # 真实反例（2026-10-27）：卡库里有 4 张 Applin（TWM 126 / TWM 17 / SCR 12 /
+    # DRI 16），扩展池只收了其中 2 张，另外 2 张**凭卡名**被判为可对战——
+    # 卡面招式完全不同（检索 vs 抛币加伤）。这类"同名冒充"在局面上看不出来。
+    name_variants: dict = {}
     pool_files = [ENGINE_CARDS]
     _ext = ENGINE_CARDS.parent / "cards_pool_ext.json"
     if _ext.exists():
@@ -460,10 +465,7 @@ def load_engine_index() -> dict:
                         st = "approximated"
                     reason = reason or "由解析链自动生成（非人工逐卡校对）"
                 key = norm_key(c.get("name"))
-                # 人工卡池优先：同名时人工条目胜出，且不被扩展池降级
-                if key in idx and derived and idx[key]["status"] != "unsupported":
-                    continue
-                idx[key] = {
+                entry = {
                     "name": c.get("name"),
                     "name_zh": c.get("name_zh") or "",
                     "supertype": c.get("supertype"),
@@ -471,22 +473,59 @@ def load_engine_index() -> dict:
                     "status": st,
                     "reason": reason,
                 }
+                # (set, number) 精确索引：与卡库的 series/number 同源，可消除同名歧义
+                real = c.get("real") or {}
+                sn = (str(real.get("set") or "").strip().upper(),
+                      str(real.get("number") or "").strip())
+                if sn[0] and sn[1]:
+                    name_variants.setdefault(key, set()).add(sn)
+                    idx[("__setnum__",) + sn] = entry
+                # 人工卡池优先：同名时人工条目胜出，且不被扩展池降级
+                if key in idx and derived and idx[key]["status"] != "unsupported":
+                    continue
+                idx[key] = entry
     except Exception as e:                            # noqa: BLE001
         print(f"[warn] 引擎卡池读取失败（中文名回填跳过）：{e}")
+    # 打上歧义标记：同名但对应**多张不同卡**时，卡名不足以确认身份
+    for key, names in name_variants.items():
+        if len(names) > 1 and isinstance(idx.get(key), dict):
+            idx[key]["ambiguous"] = sorted(names)
     return idx
+
+
+def _match_engine(card: dict, engine_index: dict) -> tuple:
+    """卡 → 引擎卡池条目 → ``(entry|None, matched_by|None)``
+
+    匹配顺序（严格）：
+      1. ``(series, number)`` —— 精确到印刷批次，无歧义；
+      2. 卡名 / 别名 —— 仅在**该卡名在池里唯一**时接受；
+         同名多卡（``ambiguous``）一律拒绝，宁可判未收录也不冒充。
+
+    为什么必须有第 2 步的歧义拒绝：卡库 1267 张里同名不同卡很常见
+    （同名但不同 set/number、招式完全不同），靠卡名匹配会把「另一张卡的能力」
+    算到这张卡头上 —— 属静默错映射，且只有按编号对账才看得出。
+    """
+    series = str(card.get("series") or "").strip().upper()
+    number = str(card.get("number") or "").strip()
+    if series and number:
+        e = engine_index.get(("__setnum__", series, number))
+        if e is not None:
+            return e, "set:number"
+    for cand, how in [(card.get("name_key"), "name_key")] + [
+            (norm_key(al), f"alias:{al}") for al in (card.get("aliases") or [])]:
+        e = engine_index.get(cand)
+        if e is None:
+            continue
+        if e.get("ambiguous"):
+            return None, None          # 同名歧义：拒绝冒充
+        return e, how
+    return None, None
 
 
 def apply_engine_match(card: dict, engine_index: dict, issues: dict) -> dict:
     """回填引擎映射（中文名 / 可对战状态）；幂等，可脱离原始 CSV 重跑"""
     card["aliases"] = aliases_for(card)
-    eng = engine_index.get(card["name_key"])
-    matched_by = "name_key" if eng else None
-    if not eng:
-        for al in card["aliases"]:
-            eng = engine_index.get(norm_key(al))
-            if eng:
-                matched_by = f"alias:{al}"
-                break
+    eng, matched_by = _match_engine(card, engine_index)
     card["engine_ready"] = False
     card["engine_status"] = "unmatched"
     card["engine_note"] = "引擎卡池未收录"

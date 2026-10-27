@@ -11,16 +11,16 @@
     "precedence": "人工卡池 cards_real.json 优先，同名卡不覆盖",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 440,
-      "by_Pokemon": 367,
-      "by_Trainer": 73,
+      "kept": 489,
+      "by_Pokemon": 410,
+      "by_Trainer": 79,
       "skipped": {
         "无解析产物": 145,
-        "存在未建模项（整卡不收）": 496,
-        "Energy 不可执行": 3,
-        "Pokemon 不可执行": 111,
+        "存在未建模项（整卡不收）": 557,
+        "Energy 不可执行": 2,
         "人工卡池已有（人工优先）": 26,
-        "Trainer 不可执行": 46
+        "Pokemon 不可执行": 43,
+        "Trainer 不可执行": 5
       }
     }
   },
@@ -270,6 +270,56 @@
       "name_key": "magcargoex"
     },
     {
+      "name": "Froakie",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Flock",
+          "cost": {
+            "water": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2"
+          ],
+          "desc": "Search your deck for up to 2 Froakie and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Flop",
+          "cost": {
+            "water": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "56"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 33,
+      "name_key": "froakie"
+    },
+    {
       "name": "Frogadier",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -401,6 +451,163 @@
       "name_key": "girafarig"
     },
     {
+      "name": "Greninja ex",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 310,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "evolves_from": "Frogadier",
+      "attacks": [
+        {
+          "name": "Shinobi Blade",
+          "cost": {
+            "water": 1
+          },
+          "damage": 170,
+          "effects": [
+            "search_any:1"
+          ],
+          "desc": "You may search your deck for a card and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Mirage Barrage",
+          "cost": {
+            "water": 1,
+            "colorless": 2
+          },
+          "damage": 0,
+          "effects": [
+            "discard_energy:2",
+            "snipe:opp:120:2"
+          ],
+          "desc": "Discard 2 Energy from this Pokémon. This attack does 120 damage to 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "106"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 40,
+      "name_key": "greninjaex"
+    },
+    {
+      "name": "Applin",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 40,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Find a Friend",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_pokemon:1"
+          ],
+          "desc": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Rolling Tackle",
+          "cost": {
+            "grass": 1,
+            "fire": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "126"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 42,
+      "name_key": "applin"
+    },
+    {
+      "name": "Eevee",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 50,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Ascension",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Quick Attack",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 20,
+          "effects": [
+            "coin:heads:dmg_plus:20"
+          ],
+          "desc": "Flip a coin. If heads, this attack does 20 more damage.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "135"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 43,
+      "name_key": "eevee"
+    },
+    {
       "name": "Croconaw",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -438,6 +645,58 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 48,
       "name_key": "croconaw"
+    },
+    {
+      "name": "Wiglett",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Lucky Find",
+          "cost": {
+            "water": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for an Item card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Aqua Bomb",
+          "cost": {
+            "water": 2
+          },
+          "damage": 40,
+          "effects": [
+            "self:20"
+          ],
+          "desc": "This Pokémon also does 20 damage to itself.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "47"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 50,
+      "name_key": "wiglett"
     },
     {
       "name": "Bronzor",
@@ -640,8 +899,8 @@
           },
           "damage": 0,
           "effects": [
-            "draw:6",
-            "discard:all"
+            "discard:all",
+            "draw:6"
           ],
           "desc": "Discard your hand and draw 6 cards.",
           "name_zh": "",
@@ -855,7 +1114,7 @@
         {
           "name": "Changing Seasons",
           "name_zh": "",
-          "tag": "search_any:1",
+          "tag": "search_trainer:1",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for a Stadium card, reveal it, and put it into your hand. Then, shuffle your deck.",
           "desc_zh": ""
@@ -986,53 +1245,6 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 77,
       "name_key": "litten"
-    },
-    {
-      "name": "Drilbur",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 0,
-      "hp": 70,
-      "types": [
-        "fighting"
-      ],
-      "weakness": "grass",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "evolves_from": null,
-      "attacks": [
-        {
-          "name": "Sand Spray",
-          "cost": {
-            "fighting": 1,
-            "colorless": 1
-          },
-          "damage": 20,
-          "effects": [],
-          "desc": "",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Dig Dig Dig",
-          "name_zh": "",
-          "tag": "search_energy:3",
-          "location": "field",
-          "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "TEF",
-        "number": "85"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 81,
-      "name_key": "drilbur"
     },
     {
       "name": "Excadrill",
@@ -1274,6 +1486,59 @@
       "name_key": "applin"
     },
     {
+      "name": "Teal Mask Ogerpon",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Mountain Stroll",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_energy:2"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Ogre Comeback",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:20:per:opp_bench"
+          ],
+          "desc": "This attack does 20 more damage for each of your opponent’s Benched Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "24"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 95,
+      "name_key": "tealmaskogerpon"
+    },
+    {
       "name": "Teal Mask Ogerpon ex",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -1306,7 +1571,7 @@
         {
           "name": "Teal Dance",
           "name_zh": "",
-          "tag": "draw:1",
+          "tag": "attach_energy:1:grass:hand",
           "location": "field",
           "desc": "Once during your turn, you may attach a Basic {G} Energy card from your hand to this Pokémon. If you attached Energy to a Pokémon in this way, draw a card.",
           "desc_zh": ""
@@ -1320,6 +1585,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 96,
       "name_key": "tealmaskogerponex"
+    },
+    {
+      "name": "Litwick",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:1:basic"
+          ],
+          "desc": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Live Coal",
+          "cost": {
+            "fire": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "36"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 97,
+      "name_key": "litwick"
     },
     {
       "name": "Hearthflame Mask Ogerpon ex",
@@ -1374,6 +1690,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 99,
       "name_key": "hearthflamemaskogerponex"
+    },
+    {
+      "name": "Jynx",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 90,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Inviting Kiss",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:1:basic"
+          ],
+          "desc": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck. If you put any Pokémon onto your Bench in this way, move an Energy from this Pokémon to the new Benched Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Icy Snow",
+          "cost": {
+            "water": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "46"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 101,
+      "name_key": "jynx"
     },
     {
       "name": "Slurpuff",
@@ -1703,6 +2069,56 @@
       "name_key": "varoom"
     },
     {
+      "name": "Eevee",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Colorful Catch",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_energy:3"
+          ],
+          "desc": "Search your deck for up to 3 Basic Energy cards of different types, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Headbutt",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SFA",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 145,
+      "name_key": "eevee"
+    },
+    {
       "name": "Scorbunny",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -1934,6 +2350,57 @@
       "name_key": "klang"
     },
     {
+      "name": "Meltan",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Knickknack Carrying",
+          "cost": {
+            "metal": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for a Pokémon Tool card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Ram",
+          "cost": {
+            "metal": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SCR",
+        "number": "103"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 168,
+      "name_key": "meltan"
+    },
+    {
       "name": "Duraludon",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -2024,52 +2491,6 @@
       "name_key": "hoothoot"
     },
     {
-      "name": "Noctowl",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 1,
-      "hp": 100,
-      "types": [
-        "colorless"
-      ],
-      "weakness": "lightning",
-      "resistance": "fighting",
-      "retreat": 1,
-      "is_ex": false,
-      "evolves_from": "Hoothoot",
-      "attacks": [
-        {
-          "name": "Speed Wing",
-          "cost": {
-            "colorless": 2
-          },
-          "damage": 60,
-          "effects": [],
-          "desc": "",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Jewel Seeker",
-          "name_zh": "",
-          "tag": "search_trainer:2",
-          "location": "field",
-          "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to 2 Trainer cards, reveal them, and put them into your hand. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "SCR",
-        "number": "115"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 173,
-      "name_key": "noctowl"
-    },
-    {
       "name": "Terapagos ex",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -2122,6 +2543,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 176,
       "name_key": "terapagosex"
+    },
+    {
+      "name": "Exeggcute",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 30,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Precocious Evolution",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "1"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 177,
+      "name_key": "exeggcute"
     },
     {
       "name": "Black Kyurem ex",
@@ -2214,6 +2674,107 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 185,
       "name_key": "flittle"
+    },
+    {
+      "name": "Gimmighoul",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Minor Errand-Running",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_energy:2"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Tackle",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "97"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 186,
+      "name_key": "gimmighoul"
+    },
+    {
+      "name": "Trapinch",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Bite",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "104"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 187,
+      "name_key": "trapinch"
     },
     {
       "name": "Iron Crown",
@@ -2356,6 +2917,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 197,
       "name_key": "swablu"
+    },
+    {
+      "name": "Scatterbug",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 40,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:1:basic"
+          ],
+          "desc": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "5"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 199,
+      "name_key": "scatterbug"
     },
     {
       "name": "Spewpa",
@@ -2829,7 +3429,7 @@
           },
           "damage": 230,
           "effects": [
-            "heal:100"
+            "heal:100:bench"
           ],
           "desc": "Heal 100 damage from each of your Benched Pokémon.",
           "name_zh": "",
@@ -3267,6 +3867,56 @@
       "name_key": "lilliescutiefly"
     },
     {
+      "name": "Swinub",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Lunge Out",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "JTG",
+        "number": "77"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 281,
+      "name_key": "swinub"
+    },
+    {
       "name": "Mamoswine ex",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -3391,6 +4041,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 285,
       "name_key": "pupitar"
+    },
+    {
+      "name": "Hop’s Silicobra",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Turf Maker",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for a Stadium card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Gnaw",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "JTG",
+        "number": "86"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 288,
+      "name_key": "hopssilicobra"
     },
     {
       "name": "N’s Klink",
@@ -4225,6 +4926,45 @@
       "name_key": "yanma"
     },
     {
+      "name": "Dwebble",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Ascension",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "11"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 344,
+      "name_key": "dwebble"
+    },
+    {
       "name": "Applin",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -4507,7 +5247,7 @@
           },
           "damage": 160,
           "effects": [
-            "heal:50"
+            "heal:50:all"
           ],
           "desc": "Heal 50 damage from each of your Pokémon.",
           "name_zh": "",
@@ -4532,6 +5272,59 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 357,
       "name_key": "ethanshoohex"
+    },
+    {
+      "name": "Hearthflame Mask Ogerpon",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Fire Kagura",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:1:fire:deck"
+          ],
+          "desc": "Search your deck for a Basic {R} Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Searing Flame",
+          "cost": {
+            "fire": 2,
+            "colorless": 1
+          },
+          "damage": 80,
+          "effects": [
+            "burn"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Burned.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "44"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 358,
+      "name_key": "hearthflamemaskogerpon"
     },
     {
       "name": "Misty's Staryu",
@@ -4619,6 +5412,57 @@
       "name_key": "mistysmagikarp"
     },
     {
+      "name": "Misty's Lapras",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Swim Together",
+          "cost": {
+            "water": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_pokemon:3"
+          ],
+          "desc": "Search your deck for up to 3 Misty’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Surf",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 364,
+      "name_key": "mistyslapras"
+    },
+    {
       "name": "Cynthia's Feebas",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -4696,6 +5540,59 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 366,
       "name_key": "cynthiasmilotic"
+    },
+    {
+      "name": "Wellspring Mask Ogerpon",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Water Kagura",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:1:water:deck"
+          ],
+          "desc": "Search your deck for a Basic {W} Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Bubble Drain",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 100,
+          "effects": [
+            "heal:30"
+          ],
+          "desc": "Heal 30 damage from this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "67"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 370,
+      "name_key": "wellspringmaskogerpon"
     },
     {
       "name": "Ethan's Pichu",
@@ -5022,6 +5919,59 @@
       "name_key": "arvenstoedscruel"
     },
     {
+      "name": "Cornerstone Mask Ogerpon",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Rock Kagura",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:1:fighting:deck"
+          ],
+          "desc": "Search your deck for a Basic {F} Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Mountain Ramming",
+          "cost": {
+            "fighting": 2,
+            "colorless": 1
+          },
+          "damage": 100,
+          "effects": [
+            "mill:1:opp"
+          ],
+          "desc": "Discard the top card of your opponent’s deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "111"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 386,
+      "name_key": "cornerstonemaskogerpon"
+    },
+    {
       "name": "Tauros",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -5182,7 +6132,7 @@
           },
           "damage": 0,
           "effects": [
-            "heal:40"
+            "heal:40:choose"
           ],
           "desc": "Heal 40 damage from 1 of your Pokémon.",
           "name_zh": "",
@@ -5348,8 +6298,8 @@
           },
           "damage": 120,
           "effects": [
-            "snipe:opp_bench:120:1",
-            "discard_energy:2"
+            "discard_energy:2",
+            "snipe:opp_bench:120:1"
           ],
           "desc": "Discard 2 Energy from this Pokémon. This attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "",
@@ -5532,6 +6482,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 422,
       "name_key": "barraskewda"
+    },
+    {
+      "name": "Team Rocket's Mareep",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Procurement",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for an Item card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Tiny Bolt",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "72"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 426,
+      "name_key": "teamrocketsmareep"
     },
     {
       "name": "Team Rocket's Flaaffy",
@@ -5881,6 +6881,45 @@
       "name_key": "teamrocketslarvitar"
     },
     {
+      "name": "Team Rocket's Pupitar",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Team Rocket's Larvitar",
+      "attacks": [
+        {
+          "name": "Explosive Ascension",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "95"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 441,
+      "name_key": "teamrocketspupitar"
+    },
+    {
       "name": "Meditite",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -6098,53 +7137,6 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 456,
       "name_key": "teamrocketszubat"
-    },
-    {
-      "name": "Team Rocket's Koffing",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 0,
-      "hp": 70,
-      "types": [
-        "darkness"
-      ],
-      "weakness": "fighting",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "evolves_from": null,
-      "attacks": [
-        {
-          "name": "Leaking Gas",
-          "cost": {
-            "darkness": 1,
-            "colorless": 1
-          },
-          "damage": 30,
-          "effects": [],
-          "desc": "",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Smog Signals",
-          "name_zh": "",
-          "tag": "search_pokemon:2",
-          "location": "field",
-          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), search your deck for up to 2 Pokémon that have “Koffing” in their name and put them onto your Bench. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "DRI",
-        "number": "125"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 461,
-      "name_key": "teamrocketskoffing"
     },
     {
       "name": "Team Rocket's Weezing",
@@ -6991,6 +7983,56 @@
       "name_key": "cryogonal"
     },
     {
+      "name": "Emolga",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Static Shock",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "29"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 510,
+      "name_key": "emolga"
+    },
+    {
       "name": "Tynamo",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -7130,6 +8172,59 @@
       "name_key": "eelektross"
     },
     {
+      "name": "Thundurus",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Charge",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:1:lightning:deck"
+          ],
+          "desc": "Search your deck for a Basic {L} Energy card and attach it to this Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Disaster Volt",
+          "cost": {
+            "lightning": 1,
+            "colorless": 2
+          },
+          "damage": 110,
+          "effects": [
+            "discard_energy:1"
+          ],
+          "desc": "Discard an Energy from this Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "33"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 514,
+      "name_key": "thundurus"
+    },
+    {
       "name": "Zekrom ex",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -7182,42 +8277,43 @@
       "name_key": "zekromex"
     },
     {
-      "name": "Munna",
+      "name": "Musharna",
       "name_zh": "",
       "supertype": "Pokemon",
-      "stage": 0,
-      "hp": 70,
+      "stage": 1,
+      "hp": 120,
       "types": [
         "psychic"
       ],
       "weakness": "darkness",
       "resistance": "fighting",
-      "retreat": 1,
+      "retreat": 2,
       "is_ex": false,
-      "evolves_from": null,
+      "evolves_from": "Munna",
       "attacks": [
         {
-          "name": "Rest",
+          "name": "Dream Calling",
           "cost": {
             "colorless": 1
           },
           "damage": 0,
           "effects": [
-            "heal:30",
-            "sleep"
+            "search_any:1"
           ],
-          "desc": "This Pokémon is now Asleep. Heal 30 damage from it.",
+          "desc": "You may search your deck for any number of Fennel cards, reveal them, and put them into your hand. Then, shuffle your deck.",
           "name_zh": "",
           "desc_zh": ""
         },
         {
-          "name": "Mumble",
+          "name": "Sleep Pulse",
           "cost": {
             "psychic": 1
           },
-          "damage": 10,
-          "effects": [],
-          "desc": "",
+          "damage": 50,
+          "effects": [
+            "sleep"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Asleep.",
           "name_zh": "",
           "desc_zh": ""
         }
@@ -7225,12 +8321,12 @@
       "abilities": [],
       "real": {
         "set": "BLK",
-        "number": "35"
+        "number": "36"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 516,
-      "name_key": "munna"
+      "source_card_id": 517,
+      "name_key": "musharna"
     },
     {
       "name": "Beheeyem",
@@ -7746,53 +8842,43 @@
       "name_key": "bisharp"
     },
     {
-      "name": "Genesect ex",
+      "name": "Axew",
       "name_zh": "",
       "supertype": "Pokemon",
       "stage": 0,
-      "hp": 220,
+      "hp": 70,
       "types": [
-        "metal"
+        "dragon"
       ],
-      "weakness": "fire",
-      "resistance": "grass",
+      "weakness": null,
+      "resistance": null,
       "retreat": 2,
-      "is_ex": true,
+      "is_ex": false,
       "evolves_from": null,
       "attacks": [
         {
-          "name": "Protect Charge",
+          "name": "Gather Strength",
           "cost": {
-            "metal": 2,
             "colorless": 1
           },
-          "damage": 150,
+          "damage": 0,
           "effects": [
-            "shield:reduce:30"
+            "search_energy:2"
           ],
-          "desc": "During your opponent’s next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
+          "desc": "Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
           "name_zh": "",
           "desc_zh": ""
         }
       ],
-      "abilities": [
-        {
-          "name": "Metallic Signal",
-          "name_zh": "",
-          "tag": "search_pokemon:2",
-          "location": "field",
-          "desc": "Once during your turn, you may search your deck for up to 2 Evolution {M} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
+      "abilities": [],
       "real": {
         "set": "BLK",
-        "number": "67"
+        "number": "68"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 547,
-      "name_key": "genesectex"
+      "source_card_id": 548,
+      "name_key": "axew"
     },
     {
       "name": "Tranquill",
@@ -8004,6 +9090,53 @@
       "name_key": "cinccino"
     },
     {
+      "name": "Swadloon",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 80,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Sewaddle",
+      "attacks": [
+        {
+          "name": "Bug Buzz",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Healing Leaves",
+          "name_zh": "",
+          "tag": "heal:20:active",
+          "location": "field",
+          "desc": "Once during your turn, you may heal 20 damage from your Active Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "WHT",
+        "number": "2"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 558,
+      "name_key": "swadloon"
+    },
+    {
       "name": "Leavanny",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -8025,7 +9158,7 @@
           },
           "damage": 0,
           "effects": [
-            "heal:100"
+            "heal:100:basic"
           ],
           "desc": "Heal 100 damage from each of your Basic Pokémon.",
           "name_zh": "",
@@ -9315,6 +10448,56 @@
       "name_key": "klang"
     },
     {
+      "name": "Patrat",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Procurement",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for an Item card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Gnaw",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "WHT",
+        "number": "72"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 626,
+      "name_key": "patrat"
+    },
+    {
       "name": "Lillipup",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -9502,6 +10685,56 @@
       "name_key": "braviary"
     },
     {
+      "name": "Steven's Baltoy",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Summoning Sign",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2"
+          ],
+          "desc": "Search your deck for up to 2 Basic Steven’s Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Psychic Sphere",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "83"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 635,
+      "name_key": "stevensbaltoy"
+    },
+    {
       "name": "Steven's Claydol",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -9604,53 +10837,6 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 638,
       "name_key": "stevensskarmory"
-    },
-    {
-      "name": "Steven's Metagross ex",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 2,
-      "hp": 340,
-      "types": [
-        "metal"
-      ],
-      "weakness": "fire",
-      "resistance": "grass",
-      "retreat": 3,
-      "is_ex": true,
-      "evolves_from": "Steven's Metang",
-      "attacks": [
-        {
-          "name": "Metal Stomp",
-          "cost": {
-            "metal": 1,
-            "colorless": 2
-          },
-          "damage": 200,
-          "effects": [],
-          "desc": "",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "X-Boot",
-          "name_zh": "",
-          "tag": "search_energy:1",
-          "location": "field",
-          "desc": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "DRI",
-        "number": "145"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 641,
-      "name_key": "stevensmetagrossex"
     },
     {
       "name": "Marnie's Purrloin",
@@ -9911,6 +11097,45 @@
       "name_key": "marniesmorpeko"
     },
     {
+      "name": "Exeggcute",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Jam-Packed",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:1:grass:deck"
+          ],
+          "desc": "Search your deck for a Basic {G} Energy card and attach it to this Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "4"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 653,
+      "name_key": "exeggcute"
+    },
+    {
       "name": "Exeggutor",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -10063,6 +11288,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 660,
       "name_key": "ninetales"
+    },
+    {
+      "name": "Numel",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Flare",
+          "cost": {
+            "fire": 1,
+            "colorless": 2
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "21"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 661,
+      "name_key": "numel"
     },
     {
       "name": "Scorbunny",
@@ -10638,6 +11914,53 @@
       "name_key": "bayleef"
     },
     {
+      "name": "Shuckle",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Rollout",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Fermented Juice",
+          "name_zh": "",
+          "tag": "heal:30:choose",
+          "location": "field",
+          "desc": "Once during your turn, if this Pokémon has any {G} Energy attached, you may use this Ability. Heal 30 damage from 1 of your Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "11"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 711,
+      "name_key": "shuckle"
+    },
+    {
       "name": "Ninjask",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -10671,7 +11994,7 @@
         {
           "name": "Cast-Off Shell",
           "name_zh": "",
-          "tag": "search_any:1",
+          "tag": "search_bench:1",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Search your deck for a Shedinja and put it onto your Bench. Then, shuffle your deck.",
           "desc_zh": ""
@@ -10736,6 +12059,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 718,
       "name_key": "centiskorch"
+    },
+    {
+      "name": "Mantine",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Waterfall",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "32"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 720,
+      "name_key": "mantine"
     },
     {
       "name": "Clawitzer",
@@ -11336,6 +12710,56 @@
       "name_key": "ralts"
     },
     {
+      "name": "Kirlia",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": "Ralts",
+      "attacks": [
+        {
+          "name": "Call Sign",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_pokemon:3"
+          ],
+          "desc": "Search your deck for up to 3 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Psyshot",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "59"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 746,
+      "name_key": "kirlia"
+    },
+    {
       "name": "Spoink",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -11424,6 +12848,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 752,
       "name_key": "greavard"
+    },
+    {
+      "name": "Delibird",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 90,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Quick Gift",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_any:1"
+          ],
+          "desc": "If you go first, you can use this attack during your first turn. Search your deck for a card and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Gentle Slap",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "105"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 757,
+      "name_key": "delibird"
     },
     {
       "name": "Lopunny",
@@ -11528,6 +13002,57 @@
       "name_key": "granbull"
     },
     {
+      "name": "Cresselia",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Swelling Light",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach:2:psychic:deck"
+          ],
+          "desc": "Search your deck for up to 2 Basic {P} Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Aurora Beam",
+          "cost": {
+            "psychic": 2,
+            "colorless": 1
+          },
+          "damage": 90,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "39"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 764,
+      "name_key": "cresselia"
+    },
+    {
       "name": "Meloetta",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -11549,7 +13074,7 @@
           },
           "damage": 0,
           "effects": [
-            "heal:120"
+            "heal:120:bench_one:type:psychic"
           ],
           "desc": "Heal 120 damage from 1 of your Benched {P} Pokémon.",
           "name_zh": "",
@@ -11577,6 +13102,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 765,
       "name_key": "meloetta"
+    },
+    {
+      "name": "Mimikyu",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:1:basic"
+          ],
+          "desc": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Scratch",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "42"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 767,
+      "name_key": "mimikyu"
     },
     {
       "name": "Milcery",
@@ -11729,8 +13304,8 @@
           },
           "damage": 0,
           "effects": [
-            "snipe:opp:120:1",
-            "discard_energy:2"
+            "discard_energy:2",
+            "snipe:opp:120:1"
           ],
           "desc": "Discard 2 Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "",
@@ -11876,6 +13451,53 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 783,
       "name_key": "lombre"
+    },
+    {
+      "name": "Ludicolo",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 160,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": "Lombre",
+      "attacks": [
+        {
+          "name": "Lunge Out",
+          "cost": {
+            "grass": 1,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Excited Heal",
+          "name_zh": "",
+          "tag": "heal:60:choose",
+          "location": "field",
+          "desc": "Once during your turn, if you have any {G} Mega Evolution Pokémon {ex} in play, you may use this Ability. Heal 60 damage from 1 of your Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "PFL",
+        "number": "7"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 784,
+      "name_key": "ludicolo"
     },
     {
       "name": "Nymble",
@@ -12131,6 +13753,56 @@
       "name_key": "oricorioex"
     },
     {
+      "name": "Charcadet",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Gather Strength",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_energy:2"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Chop",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "19"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 796,
+      "name_key": "charcadet"
+    },
+    {
       "name": "Ceruledge",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -12308,6 +13980,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 801,
       "name_key": "piloswine"
+    },
+    {
+      "name": "Piplup",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Support",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Tackle",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "27"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 804,
+      "name_key": "piplup"
     },
     {
       "name": "Prinplup",
@@ -12764,6 +14486,57 @@
       "name_key": "krookodile"
     },
     {
+      "name": "Toxel",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Playful Kick",
+          "cost": {
+            "darkness": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "67"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 833,
+      "name_key": "toxel"
+    },
+    {
       "name": "Bronzor",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -12812,6 +14585,56 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 836,
       "name_key": "bronzor"
+    },
+    {
+      "name": "Togedemaru",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Find a Friend",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_pokemon:1"
+          ],
+          "desc": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Gnaw",
+          "cost": {
+            "metal": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "73"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 838,
+      "name_key": "togedemaru"
     },
     {
       "name": "Duraludon",
@@ -12974,8 +14797,8 @@
           },
           "damage": 0,
           "effects": [
-            "snipe:opp:60:2",
-            "discard_energy:2"
+            "discard_energy:2",
+            "snipe:opp:60:2"
           ],
           "desc": "Discard 2 Energy from this Pokémon, and this attack does 60 damage to each of 2 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "",
@@ -13112,7 +14935,7 @@
         {
           "name": "Multiplying Cocoon",
           "name_zh": "",
-          "tag": "search_any:1",
+          "tag": "search_bench:1",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Search your deck for a Silcoon or a Cascoon and put it onto your Bench. Then, shuffle your deck.",
           "desc_zh": ""
@@ -13220,6 +15043,57 @@
       "name_key": "camerupt"
     },
     {
+      "name": "N's Vanillite",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Icy Snow",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "49"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 862,
+      "name_key": "nsvanillite"
+    },
+    {
       "name": "Tapu Koko",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -13241,8 +15115,8 @@
           },
           "damage": 0,
           "effects": [
-            "draw:5",
-            "discard:all"
+            "discard:all",
+            "draw:5"
           ],
           "desc": "If you go first, you can use this attack during your first turn. Discard your hand and draw 5 cards.",
           "name_zh": "",
@@ -13311,6 +15185,45 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 873,
       "name_key": "teamrocketsexeggcute"
+    },
+    {
+      "name": "Misdreavus",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Ascension",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "85"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 875,
+      "name_key": "misdreavus"
     },
     {
       "name": "Hop's Phantump",
@@ -13385,8 +15298,8 @@
           },
           "damage": 0,
           "effects": [
-            "snipe:opp:120:1",
-            "discard_energy:all"
+            "discard_energy:all",
+            "snipe:opp:120:1"
           ],
           "desc": "Discard all Energy from this Pokémon and place 12 damage counters on 1 of your opponent’s Pokémon.",
           "name_zh": "",
@@ -13766,51 +15679,55 @@
       "name_key": "bisharp"
     },
     {
-      "name": "Dragonair",
+      "name": "Noibat",
       "name_zh": "",
       "supertype": "Pokemon",
-      "stage": 1,
-      "hp": 100,
+      "stage": 0,
+      "hp": 70,
       "types": [
         "dragon"
       ],
       "weakness": null,
       "resistance": null,
-      "retreat": 2,
+      "retreat": 1,
       "is_ex": false,
-      "evolves_from": "Dratini",
+      "evolves_from": null,
       "attacks": [
         {
-          "name": "Tail Snap",
+          "name": "Knickknack Carrying",
           "cost": {
-            "water": 1,
-            "lightning": 1
+            "colorless": 1
           },
-          "damage": 60,
+          "damage": 0,
+          "effects": [
+            "search_trainer:1"
+          ],
+          "desc": "Search your deck for a Pokémon Tool card, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Bite",
+          "cost": {
+            "psychic": 1,
+            "darkness": 1
+          },
+          "damage": 30,
           "effects": [],
           "desc": "",
           "name_zh": "",
           "desc_zh": ""
         }
       ],
-      "abilities": [
-        {
-          "name": "Evolutionary Guidance",
-          "name_zh": "",
-          "tag": "search_pokemon:1",
-          "location": "field",
-          "desc": "Once during your turn, if this Pokémon has any Energy attached, you may use this Ability. Search your deck for an Evolution Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
+      "abilities": [],
       "real": {
         "set": "ASC",
-        "number": "151"
+        "number": "156"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 903,
-      "name_key": "dragonair"
+      "source_card_id": 907,
+      "name_key": "noibat"
     },
     {
       "name": "Erika's Oddish",
@@ -13890,6 +15807,55 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 910,
       "name_key": "erikasgloom"
+    },
+    {
+      "name": "Erika's Vileplume ex",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 310,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "evolves_from": "Erika's Gloom",
+      "attacks": [
+        {
+          "name": "Bloom Powder",
+          "cost": {
+            "grass": 2,
+            "colorless": 1
+          },
+          "damage": 160,
+          "effects": [
+            "sleep"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Lovely Fragrance",
+          "name_zh": "",
+          "tag": "heal:30:all",
+          "location": "field",
+          "desc": "Once during your turn, you may use this Ability. Heal 30 damage from each of your Pokémon.",
+          "desc_zh": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "3"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 911,
+      "name_key": "erikasvileplumeex"
     },
     {
       "name": "Erika's Tangela",
@@ -14057,46 +16023,6 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 922,
       "name_key": "sprigatito"
-    },
-    {
-      "name": "Floragato",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 1,
-      "hp": 90,
-      "types": [
-        "grass"
-      ],
-      "weakness": "fire",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "evolves_from": "Sprigatito",
-      "attacks": [
-        {
-          "name": "Magical Leaf",
-          "cost": {
-            "colorless": 2
-          },
-          "damage": 30,
-          "effects": [
-            "heal:30",
-            "coin:heads:dmg_plus:30"
-          ],
-          "desc": "Flip a coin. If heads, this attack does 30 more damage, and heal 30 damage from this Pokémon.",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [],
-      "real": {
-        "set": "JTG",
-        "number": "17"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 923,
-      "name_key": "floragato"
     },
     {
       "name": "Magmar",
@@ -14565,8 +16491,8 @@
           },
           "damage": 0,
           "effects": [
-            "snipe:opp:120:1",
-            "discard_energy:all"
+            "discard_energy:all",
+            "snipe:opp:120:1"
           ],
           "desc": "Discard all Energy from this Pokémon, and this attack does 120 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "",
@@ -15000,6 +16926,56 @@
       "name_key": "beheeyem"
     },
     {
+      "name": "Fidough",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Pleasant Aroma",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:1:basic"
+          ],
+          "desc": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Stampede",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SCR",
+        "number": "66"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 967,
+      "name_key": "fidough"
+    },
+    {
       "name": "Hitmontop",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -15255,6 +17231,57 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 986,
       "name_key": "brutebonnet"
+    },
+    {
+      "name": "Mawile",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 90,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Call for Family",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:2:basic"
+          ],
+          "desc": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Bite",
+          "cost": {
+            "metal": 1,
+            "colorless": 2
+          },
+          "damage": 90,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "144"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 987,
+      "name_key": "mawile"
     },
     {
       "name": "Registeel ex",
@@ -15580,6 +17607,56 @@
       "name_key": "zangooseex"
     },
     {
+      "name": "Larry's Starly",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Minor Errand-Running",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_energy:2"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Glide",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "168"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1003,
+      "name_key": "larrysstarly"
+    },
+    {
       "name": "Larry's Rufflet",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -15640,8 +17717,8 @@
           },
           "damage": 0,
           "effects": [
-            "draw:2",
-            "sleep"
+            "sleep",
+            "draw:2"
           ],
           "desc": "This Pokémon is now Asleep. Draw 2 cards.",
           "name_zh": "",
@@ -15785,6 +17862,56 @@
       "name_key": "spewpa"
     },
     {
+      "name": "Rowlet",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Find a Friend",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_pokemon:1"
+          ],
+          "desc": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Tackle",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "10"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1020,
+      "name_key": "rowlet"
+    },
+    {
       "name": "Dartrix",
       "name_zh": "",
       "supertype": "Pokemon",
@@ -15817,8 +17944,8 @@
           },
           "damage": 0,
           "effects": [
-            "snipe:opp:90:1",
-            "discard_energy:all"
+            "discard_energy:all",
+            "snipe:opp:90:1"
           ],
           "desc": "Discard all Energy from this Pokémon, and this attack does 90 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "",
@@ -15834,6 +17961,59 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1021,
       "name_key": "dartrix"
+    },
+    {
+      "name": "Salazzle ex",
+      "name_zh": "",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 260,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "evolves_from": "Salandit",
+      "attacks": [
+        {
+          "name": "Nasty Plot",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_any:2"
+          ],
+          "desc": "Search your deck for up to 2 cards and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "",
+          "desc_zh": ""
+        },
+        {
+          "name": "Dire Nails",
+          "cost": {
+            "fire": 2
+          },
+          "damage": 100,
+          "effects": [
+            "burn",
+            "switch_self"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Burned and Poisoned. Switch this Pokémon with 1 of your Benched Pokémon.",
+          "name_zh": "",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "16"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1026,
+      "name_key": "salazzleex"
     },
     {
       "name": "Amaura",
@@ -16183,7 +18363,7 @@
           },
           "damage": 0,
           "effects": [
-            "heal:30"
+            "heal:30:choose"
           ],
           "desc": "Heal 30 damage from 1 of your Pokémon.",
           "name_zh": "",
@@ -16210,55 +18390,6 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1044,
       "name_key": "spritzee"
-    },
-    {
-      "name": "Aromatisse",
-      "name_zh": "",
-      "supertype": "Pokemon",
-      "stage": 1,
-      "hp": 120,
-      "types": [
-        "psychic"
-      ],
-      "weakness": "metal",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "evolves_from": "Spritzee",
-      "attacks": [
-        {
-          "name": "Draining Kiss",
-          "cost": {
-            "psychic": 1,
-            "colorless": 1
-          },
-          "damage": 50,
-          "effects": [
-            "heal:30"
-          ],
-          "desc": "Heal 30 damage from this Pokémon.",
-          "name_zh": "",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Scent Collection",
-          "name_zh": "",
-          "tag": "search_energy:2",
-          "location": "field",
-          "desc": "Once during your turn, you may use this Ability. Search your deck for up to 2 Basic {P} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
-          "desc_zh": ""
-        }
-      ],
-      "real": {
-        "set": "POR",
-        "number": "36"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1045,
-      "name_key": "aromatisse"
     },
     {
       "name": "Probopass",
@@ -16772,34 +18903,19 @@
       "name_key": "diggersby"
     },
     {
-      "name": "Roto-Stick",
+      "name": "Hole-Digging Shovel",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
-      "desc": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "tag": "mill:2",
+      "desc": "Discard the top 2 cards of your deck.",
       "real": {
-        "set": "PRE",
-        "number": "127"
+        "set": "POR",
+        "number": "74"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1077
-    },
-    {
-      "name": "Hyper Aroma",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "item",
-      "tag": "search_pokemon:3",
-      "desc": "Search your deck for up to 3 Stage 1 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-      "real": {
-        "set": "TWM",
-        "number": "152"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1082
+      "source_card_id": 1078
     },
     {
       "name": "Love Ball",
@@ -16832,6 +18948,36 @@
       "source_card_id": 1084
     },
     {
+      "name": "Prime Catcher",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "gust",
+      "desc": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon.",
+      "real": {
+        "set": "TEF",
+        "number": "157"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1088
+    },
+    {
+      "name": "Reboot Pod",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "attach:1:discard",
+      "desc": "Attach a Basic Energy card from your discard pile to each of your Future Pokémon.",
+      "real": {
+        "set": "TEF",
+        "number": "158"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1089
+    },
+    {
       "name": "Ogre’s Mask",
       "name_zh": "",
       "supertype": "Trainer",
@@ -16847,34 +18993,34 @@
       "source_card_id": 1090
     },
     {
-      "name": "Secret Box",
+      "name": "Poké Vital A",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
-      "desc": "You can use this card only if you discard 3 other cards from your hand.\n\nSearch your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "tag": "heal:150:choose",
+      "desc": "Heal 150 damage from 1 of your Pokémon.\n\nThis card can’t be put into your hand or deck from the discard pile.",
       "real": {
-        "set": "TWM",
-        "number": "163"
+        "set": "SFA",
+        "number": "62"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1092
+      "source_card_id": 1096
     },
     {
-      "name": "Bug Catching Set",
+      "name": "Glass Trumpet",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
-      "desc": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "tag": "attach:1:discard",
+      "desc": "You can use this card only if you have any Tera Pokémon in play.\n\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
       "real": {
-        "set": "TWM",
-        "number": "143"
+        "set": "SCR",
+        "number": "135"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1094
+      "source_card_id": 1098
     },
     {
       "name": "Energy Search Pro",
@@ -16896,7 +19042,7 @@
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
+      "tag": "search_trainer:1",
       "desc": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
       "real": {
         "set": "SSP",
@@ -16905,6 +19051,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1101
+    },
+    {
+      "name": "Dragon Elixir",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "heal:60:active:type:dragon",
+      "desc": "Heal 60 damage from your Active {N} Pokémon.",
+      "real": {
+        "set": "SSP",
+        "number": "172"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1105
     },
     {
       "name": "Scramble Switch",
@@ -16967,11 +19128,26 @@
       "source_card_id": 1111
     },
     {
+      "name": "N’s PP Up",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "attach:1:discard",
+      "desc": "Attach a Basic Energy card from your discard pile to 1 of your Benched N’s Pokémon.",
+      "real": {
+        "set": "JTG",
+        "number": "153"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1113
+    },
+    {
       "name": "Hop’s Bag",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_pokemon:2",
+      "tag": "search_bench:2",
       "desc": "Search your deck for up to 2 Basic Hop’s Pokémon and put them onto your Bench. Then, shuffle your deck.",
       "real": {
         "set": "JTG",
@@ -16980,6 +19156,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1115
+    },
+    {
+      "name": "Potion",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "heal:30:choose",
+      "desc": "Heal 30 damage from 1 of your Pokémon.",
+      "real": {
+        "set": "SVI",
+        "number": "188"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1117
     },
     {
       "name": "Energy Retrieval",
@@ -17012,19 +19203,19 @@
       "source_card_id": 1119
     },
     {
-      "name": "Pokégear 3.0",
+      "name": "Pokémon Catcher",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
-      "desc": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "tag": "gust",
+      "desc": "Flip a coin. If heads, switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
       "real": {
         "set": "SVI",
-        "number": "186"
+        "number": "187"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1122
+      "source_card_id": 1124
     },
     {
       "name": "Master Ball",
@@ -17046,7 +19237,7 @@
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_pokemon:1",
+      "tag": "search_bench:1:basic",
       "desc": "Search your deck for any number of Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
       "real": {
         "set": "SSP",
@@ -17072,41 +19263,11 @@
       "source_card_id": 1127
     },
     {
-      "name": "Brilliant Blender",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "item",
-      "tag": "search_any:5",
-      "desc": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck.",
-      "real": {
-        "set": "SSP",
-        "number": "164"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1128
-    },
-    {
-      "name": "Team Rocket's Great Ball",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "item",
-      "tag": "search_pokemon:1",
-      "desc": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-      "real": {
-        "set": "DRI",
-        "number": "175"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1132
-    },
-    {
       "name": "Team Rocket's Transceiver",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_any:1",
+      "tag": "search_trainer:1",
       "desc": "Search your deck for a Supporter card that has “Team Rocket” in its name, reveal it, and put it into your hand. Then, shuffle your deck.",
       "real": {
         "set": "DRI",
@@ -17117,34 +19278,19 @@
       "source_card_id": 1134
     },
     {
-      "name": "Energy Coin",
+      "name": "Repel",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_energy:1",
-      "desc": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
-      "real": {
-        "set": "BLK",
-        "number": "81"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1135
-    },
-    {
-      "name": "Fighting Gong",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "item",
-      "tag": "search_pokemon:1",
-      "desc": "Search your deck for a Basic {F} Energy card or a Basic {F} Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "tag": "gust",
+      "desc": "Switch out your opponent’s Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
       "real": {
         "set": "MEG",
-        "number": "116"
+        "number": "126"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1142
+      "source_card_id": 1143
     },
     {
       "name": "Strange Timepiece",
@@ -17162,19 +19308,19 @@
       "source_card_id": 1144
     },
     {
-      "name": "Mega Signal",
+      "name": "Wondrous Patch",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "item",
-      "tag": "search_pokemon:1",
-      "desc": "Search your deck for a Mega Evolution Pokémon {ex}, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "tag": "attach:1:psychic:discard",
+      "desc": "Attach a Basic {P} Energy card from your discard pile to 1 of your Benched {P} Pokémon.",
       "real": {
-        "set": "MEG",
-        "number": "121"
+        "set": "PFL",
+        "number": "94"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1145
+      "source_card_id": 1146
     },
     {
       "name": "Poké Pad",
@@ -17190,6 +19336,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1152
+    },
+    {
+      "name": "Lumiose Galette",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "heal:20:active",
+      "desc": "Heal 20 damage and remove a Special Condition from your Active Pokémon.",
+      "real": {
+        "set": "POR",
+        "number": "78"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1153
     },
     {
       "name": "Survival Brace",
@@ -17357,6 +19518,21 @@
       "source_card_id": 1179
     },
     {
+      "name": "Boss’s Orders",
+      "name_zh": "老大的指令",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "gust",
+      "desc": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
+      "real": {
+        "set": "PAL",
+        "number": "172"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1182
+    },
+    {
       "name": "Perrin",
       "name_zh": "",
       "supertype": "Trainer",
@@ -17387,26 +19563,11 @@
       "source_card_id": 1185
     },
     {
-      "name": "Ciphermaniac’s Codebreaking",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "supporter",
-      "tag": "search_any:2",
-      "desc": "Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order.",
-      "real": {
-        "set": "TEF",
-        "number": "145"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1188
-    },
-    {
       "name": "Salvatore",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_any:1",
+      "tag": "candy",
       "desc": "Search your deck for a card that has no Abilities and evolves from 1 of your Pokémon, and put it onto that Pokémon to evolve it. Then, shuffle your deck. You can use this card on a Pokémon you put down when you were setting up to play or on a Pokémon that was put into play this turn.",
       "real": {
         "set": "TEF",
@@ -17432,26 +19593,26 @@
       "source_card_id": 1191
     },
     {
-      "name": "Hassel",
+      "name": "Carmine",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_any:1",
-      "desc": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+      "tag": "discard:all",
+      "desc": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards.",
       "real": {
         "set": "TWM",
-        "number": "151"
+        "number": "145"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1193
+      "source_card_id": 1192
     },
     {
       "name": "Colress’s Tenacity",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_any:1",
+      "tag": "search_trainer:1",
       "desc": "Search your deck for a Stadium card and an Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
       "real": {
         "set": "SFA",
@@ -17460,21 +19621,6 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1194
-    },
-    {
-      "name": "Janine’s Secret Art",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "supporter",
-      "tag": "search_energy:1",
-      "desc": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
-      "real": {
-        "set": "SFA",
-        "number": "59"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1195
     },
     {
       "name": "Cassiopeia",
@@ -17492,19 +19638,19 @@
       "source_card_id": 1196
     },
     {
-      "name": "Drayton",
+      "name": "Kofu",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_any:1",
-      "desc": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "tag": "draw:4",
+      "desc": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can’t put 2 cards from your hand on the bottom of your deck, you can’t use this card.)",
       "real": {
-        "set": "SSP",
-        "number": "174"
+        "set": "SCR",
+        "number": "138"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1202
+      "source_card_id": 1200
     },
     {
       "name": "Surfer",
@@ -17520,6 +19666,21 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1203
+    },
+    {
+      "name": "Lisia’s Appeal",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "gust",
+      "desc": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+      "real": {
+        "set": "SSP",
+        "number": "179"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1204
     },
     {
       "name": "Cyrano",
@@ -17541,7 +19702,7 @@
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:1",
+      "tag": "discard:all",
       "desc": "Discard your hand and search your deck for a Pokémon, a Supporter card, and a Basic Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
       "real": {
         "set": "PRE",
@@ -17552,34 +19713,49 @@
       "source_card_id": 1206
     },
     {
-      "name": "Brock’s Scouting",
+      "name": "Iris’s Fighting Spirit",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:2",
-      "desc": "Search your deck for up to 2 Basic Pokémon or 1 Evolution Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "tag": "draw_to:6",
+      "desc": "You can use this card only if you discard another card from your hand.\n\nDraw cards until you have 6 cards in your hand.",
       "real": {
         "set": "JTG",
-        "number": "146"
+        "number": "149"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1210
+      "source_card_id": 1208
     },
     {
-      "name": "Ethan's Adventure",
+      "name": "Cook",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:3",
-      "desc": "Search your deck for up to 3 in any combination of Ethan’s Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "tag": "heal:70:active",
+      "desc": "Heal 70 damage from your Active Pokémon.",
       "real": {
-        "set": "DRI",
-        "number": "165"
+        "set": "TWM",
+        "number": "147"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1215
+      "source_card_id": 1212
+    },
+    {
+      "name": "Team Rocket's Giovanni",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "gust",
+      "desc": "Switch your Active Team Rocket’s Pokémon with 1 of your Benched Team Rocket’s Pokémon. If you do, switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
+      "real": {
+        "set": "DRI",
+        "number": "174"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1218
     },
     {
       "name": "Team Rocket's Petrel",
@@ -17612,64 +19788,109 @@
       "source_card_id": 1220
     },
     {
-      "name": "Hilda",
+      "name": "Fennel",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:1",
-      "desc": "Search your deck for an Evolution Pokémon and an Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "tag": "heal:40:all",
+      "desc": "Heal 40 damage from each of your Pokémon.",
+      "real": {
+        "set": "BLK",
+        "number": "82"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1222
+    },
+    {
+      "name": "Cheren",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw:3",
+      "desc": "Draw 3 cards.",
       "real": {
         "set": "WHT",
+        "number": "81"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1224
+    },
+    {
+      "name": "Lt. Surge's Bargain",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw:4",
+      "desc": "Ask your opponent if each player may take a Prize card. If yes, each player takes a Prize card. If no, you draw 4 cards.",
+      "real": {
+        "set": "MEG",
+        "number": "120"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1226
+    },
+    {
+      "name": "Urbain",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw:3",
+      "desc": "Draw 3 cards.",
+      "real": {
+        "set": "ASC",
+        "number": "214"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1236
+    },
+    {
+      "name": "Naveen",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_to:5",
+      "desc": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can’t draw any cards in this way, you can’t use this card.)",
+      "real": {
+        "set": "POR",
+        "number": "79"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1239
+    },
+    {
+      "name": "Rosa's Encouragement",
+      "name_zh": "",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "attach:2:discard",
+      "desc": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
+      "real": {
+        "set": "POR",
         "number": "84"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1225
+      "source_card_id": 1240
     },
     {
-      "name": "Dawn",
+      "name": "Jacinthe",
       "name_zh": "",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:1",
-      "desc": "Search your deck for a Basic Pokémon, a Stage 1 Pokémon, and a Stage 2 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "tag": "heal:150:choose:type:psychic",
+      "desc": "Heal 150 damage from 1 of your {P} Pokémon.",
       "real": {
-        "set": "PFL",
-        "number": "87"
+        "set": "POR",
+        "number": "75"
       },
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
-      "source_card_id": 1231
-    },
-    {
-      "name": "Firebreather",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "supporter",
-      "tag": "search_energy:7",
-      "desc": "Search your deck for up to 7 Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
-      "real": {
-        "set": "PFL",
-        "number": "89"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1232
-    },
-    {
-      "name": "Canari",
-      "name_zh": "",
-      "supertype": "Trainer",
-      "kind": "supporter",
-      "tag": "search_pokemon:4",
-      "desc": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-      "real": {
-        "set": "ASC",
-        "number": "185"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 1233
+      "source_card_id": 1241
     },
     {
       "name": "Community Center",

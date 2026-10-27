@@ -1,6 +1,6 @@
 # PokéLab AI · 未建模动作清单（backlog）
 
-- 快照：`s3step4` · 生成时间：2026-10-27 09:14:54
+- 快照：`s4heal` · 生成时间：2026-10-27 10:00:11
 - 数据源：`packages/card-db/data/db/pokelab.db`（K2 解析后端：rule（离线确定性基线））
 
 ## 0. 总量
@@ -11,21 +11,21 @@
 | 已跑解析卡数 | 1119 |
 | 解析条目（item） | 1481 |
 | 解析动作条目（spec.actions） | 1481 |
-| 已映射引擎 tag 条目 | 971 |
-| **未建模动作条目** | **575** |
-| 含未建模条目的卡数 | 503 |
-| 全效果可映射卡数 | 616 |
-| 至少 1 条引擎 tag 的卡数 | 804 |
+| 已映射引擎 tag 条目 | 900 |
+| **未建模动作条目** | **641** |
+| 含未建模条目的卡数 | 564 |
+| 全效果可映射卡数 | 555 |
+| 至少 1 条引擎 tag 的卡数 | 750 |
 
 ## 1. 批次总览（按优先级）
 
 | 批次 | 主题 | 条目 | 影响卡数 | 占比 | 建模动作 |
 |---|---|---:|---:|---:|---|
 | **B1** | 预设卡组关键卡 | 0 | 0 | 0.0% | 为每张卡补引擎原生 tag（训练家 tag / 特性 tag），并补引擎派发 |
-| **B2** | tag 家族扩展 | 9 | 9 | 1.6% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
-| **B3** | 解析召回补齐（英文卡面） | 96 | 96 | 16.7% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
-| **B4** | 需新引擎机制（P1 登记） | 67 | 67 | 11.7% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
-| **B5** | 静态规则与新卡种（**实现队列**） | 403 | 387 | 70.1% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
+| **B2** | tag 家族扩展 | 56 | 56 | 8.7% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
+| **B3** | 解析召回补齐（英文卡面） | 109 | 109 | 17.0% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
+| **B4** | 需新引擎机制（P1 登记） | 69 | 69 | 10.8% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
+| **B5** | 静态规则与新卡种（**实现队列**） | 407 | 391 | 63.5% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
 
 ## 2. B1 · 预设卡组关键卡（最高优先，逐卡建模）
 
@@ -36,33 +36,56 @@
 
 ## 3. B2–B5 · 分组明细
 
-### B2 · tag 家族扩展（9 条 / 9 卡）
+### B2 · tag 家族扩展（56 条 / 56 卡）
 
 - 目标：把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发
 - 动作：agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| trainer_search | search | 5 | 5 | 检索并**附着**（非入手）需引擎新机制（B4） |
+| trainer_search | search | 18 | 18 | 检索带属性/阶段限定（引擎检索无该筛选，B4） |
+| trainer_search | search | 12 | 12 | 检索去向不可判（B4） |
+| trainer_search | search | 8 | 8 | 检索数量由计数源决定（B4） |
+| trainer_search | search | 6 | 6 | 检索附能需自行分配目标（B4） |
+| trainer_search | search | 4 | 4 | 检索附能目标在后备（引擎附到战斗位，B4） |
 | evolve_skip | evolve | 4 | 4 | 招式/特性驱动的进化需卡级 tag |
+| trainer_search | search | 2 | 2 | 检索后放到牌库顶/底（B4） |
+| trainer_search | search | 2 | 2 | 抛币分支内的检索（需 coin 嵌套，B4） |
 
 <details><summary>样例 · trainer_search</summary>
 
-- **Farfetch'd**：`When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck.`
-- **Yanmega ex**：`Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may search your deck for up to 3 Basic {G} Energy cards and attach them to this Pokémon. Then, shuffle your deck.`
-- **Marnie's Grimmsnarl ex**：`When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way `
+- **Fan Rotom**：`Once during your first turn, you may search your deck for up to 3 {C} Pokémon with 100 HP or less, reveal them, and put them into your hand. Then, shuffle your deck. You can’t use more than 1 Fan Call`
+- **Tapu Koko**：`Search your deck for up to 2 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.`
+- **Genesect ex**：`Once during your turn, you may search your deck for up to 2 Evolution {M} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.`
 
 </details>
 
-<details><summary>样例 · evolve_skip</summary>
+<details><summary>样例 · trainer_search</summary>
 
+- **Telepath Psychic Energy**：`As long as this card is attached to a Pokémon, it provides {P} Energy.
+When you attach this card from your hand to a {P} Pokémon, search your deck for up to 2 Basic {P} Pokémon and put them onto your `
+- **Drilbur**：`When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck.`
+- **Palafin**：`Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Spec`
+
+</details>
+
+<details><summary>样例 · trainer_search</summary>
+
+- **Scrafty**：`Search your deck for a number of cards up to the number of your Benched Pokémon and put them into your hand. Then, shuffle your deck.`
 - **Team Rocket's Nidorina**：`Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
-- **Duosion**：`Search your deck for a card that evolves from 1 of your Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
 - **Reuniclus**：`For each of your Benched Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
 
 </details>
 
-### B3 · 解析召回补齐（英文卡面）（96 条 / 96 卡）
+<details><summary>样例 · trainer_search</summary>
+
+- **Miraidon**：`Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.`
+- **Joltik**：`Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.`
+- **Altaria**：`Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.`
+
+</details>
+
+### B3 · 解析召回补齐（英文卡面）（109 条 / 109 卡）
 
 - 目标：英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底
 - 动作：agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）
@@ -74,13 +97,16 @@
 | discard_self | rule | 10 | 10 | 静态/未建模（英文） |
 | search | rule | 8 | 8 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
 | attach | rule | 8 | 8 | 条件伤害缩放：条件未识别（引擎无该条件） |
+| draw | rule | 6 | 6 | 抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4） |
 | attach | rule | 4 | 4 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
 | spread | rule | 3 | 3 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
+| attach | rule | 3 | 3 | 回复范围/限定不可精确表达（B4） |
 | spread | rule | 3 | 3 | 放置伤害指示物：目标/条件未识别（the Attacking Pokémon） |
 | switch | rule | 3 | 3 | 静态/未建模（英文） |
 | attach | rule | 2 | 2 | 全量回复（需引擎新机制 · B4） |
 | spread | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（each Pokémon that has an Ability） |
 | attach | rule | 2 | 2 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
+| draw | rule | 2 | 2 | 按计数源抽牌（for each，B4） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon for each Ba） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Defending Pokémon） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（this Pokémon） |
@@ -97,6 +123,8 @@
 | search | rule | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | draw | rule | 1 | 1 | 静态/未建模（英文） |
 | recover_from_discard | rule | 1 | 1 | 弃牌堆回收：限定子集未识别（in any combination of Pokémon ） |
+| discard_self | rule | 1 | 1 | 回合末才执行的弃手牌（需延迟队列，B4） |
+| draw | rule | 1 | 1 | 抽到指定张数带分支替换（B4） |
 | recover_from_discard | rule | 1 | 1 | 弃牌堆回收：限定子集未识别（in any combination of {F} Poké） |
 | attach | rule | 1 | 1 | 场地形态未建模（S3 未覆盖） |
 | search | rule | 1 | 1 | 场地形态未建模（S3 未覆盖） |
@@ -135,7 +163,7 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-### B4 · 需新引擎机制（P1 登记）（67 条 / 67 卡）
+### B4 · 需新引擎机制（P1 登记）（69 条 / 69 卡）
 
 - 目标：需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮
 - 动作：登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持
@@ -170,8 +198,10 @@ As long as this card is attached to a Pokémon, i`
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon for each {G} Energy attached to） |
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Pokémon） |
 | scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Prize card your opponent took ） |
+| coin_flip | rule | 1 | 1 | 抛币分支内的回复（需 coin 嵌套，B4） |
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
 | coin_flip | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
+| coin_flip | rule | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
 
 <details><summary>样例 · static_lock</summary>
 
@@ -205,7 +235,7 @@ As long as this card is attached to a Pokémon, i`
 
 </details>
 
-### B5 · 静态规则与新卡种（**实现队列**）（403 条 / 387 卡）
+### B5 · 静态规则与新卡种（**实现队列**）（407 条 / 391 卡）
 
 - 目标：原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现
 - 动作：S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）
@@ -224,6 +254,7 @@ As long as this card is attached to a Pokémon, i`
 | S3 | rule | 5 | 5 | 静态/未建模（英文） |
 | S6 | rule | 5 | 5 | 全量回复（需引擎新机制 · B4） |
 | S2 | rule | 5 | 5 | 条件伤害缩放：计数源未识别（Pokémon Tool attached to all o） |
+| S6 | rule | 3 | 3 | 回复范围/限定不可精确表达（B4） |
 | S5 | rule | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（card in your opponent's hand） |
 | S6 | rule | 2 | 2 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
@@ -249,6 +280,7 @@ As long as this card is attached to a Pokémon, i`
 | S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（of your Basic Pokémon in play） |
 | S6 | rule | 1 | 1 | 放置伤害指示物：仅对手战斗位，需引擎新机制（B4） |
 | S6 | rule | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
+| S6 | rule | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
 
 <details><summary>样例 · S6</summary>
 

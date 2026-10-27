@@ -707,6 +707,20 @@ class Battle:
                                       "from": fp.name, "detail": f"draw {n}",
                                       "drew": got})
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("heal:"):
+                # 特性回复：范围语义与招式/训练家共用 `_apply_heal`；
+                # 无 scope 时回**特性持有者**（卡面「from this Pokémon」）
+                healed, n_tgt = _apply_heal(self, p, tag, caster=fp,
+                                            action=action)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": f"heal {healed}",
+                                      "targets": n_tgt})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("search_bench:"):
+                detail = self._search_bench(p, tag)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("search_"):
                 # 特性侧**全牌库检索**（2026-09-22 新增）
                 # 与 `recon:N` 的区别：recon 只能从牌库顶 N 张里**随机**拿 1 张；
@@ -842,12 +856,33 @@ class Battle:
         elif tag.startswith(("search_pokemon:", "search_trainer:",
                              "search_any:")):
             placed = self._trainer_search_kind(p, tag)
+        elif tag.startswith("search_bench:"):
+            placed = self._search_bench(p, tag)
         elif tag.startswith("tool:"):
             placed = self._trainer_attach_tool(p, c, tag,
                                                int(action.get("target", 0)))
         elif tag.startswith("stadium:"):
             placed = self._trainer_play_stadium(p, c, tag)
+        # ---- 2026-10-27：训练家/整卡级「非检索类」效果 ----
+        # 这些能力引擎本来就有（招式侧早已实现），只是训练家派发链没接。
+        # 顺序注意：`draw_to:` 与 `draw:`、`discard:` 与 `discard_search_energy:`
+        # 前缀互不包含（第 5/8 位是 `_` 而非 `:`），但显式按「更具体者先」排列。
+        elif tag.startswith("draw_to:"):
+            placed = self._trainer_draw_to(p, tag, hi)
+        elif tag.startswith("draw:"):
+            placed = self._trainer_draw(p, tag)
+        elif tag.startswith("heal:"):
+            placed = self._trainer_heal(p, tag, action)
+        elif tag.startswith("gust"):
+            placed = self._trainer_boss(opp, int(action.get("target", 0)))
+        elif tag.startswith("attach"):
+            placed = self._trainer_attach_energy(p, tag, action)
+        elif tag.startswith("discard:"):
+            placed = self._trainer_discard_all(p, tag, hi)
+        elif tag.startswith("mill:"):
+            placed = self._trainer_mill(tag)
         else:
+
             raise ValueError(f"未知训练家 tag={tag}")
         # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
         # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
@@ -864,6 +899,80 @@ class Battle:
         return {"ok": True, "event": self.events[-1]}
 
     # --- E4 训练家行为 ---
+    def _trainer_draw(self, p: PlayerState, tag: str) -> str:
+        """训练家/整卡级抽牌（``draw:N``）"""
+        n = int(tag.split(":")[1])
+        got = self._safe_draw(self.current, n, source="trainer")
+        return f"draw {got}"
+
+    def _trainer_draw_to(self, p: PlayerState, tag: str, hi: int) -> str:
+        """抽到指定手牌数（``draw_to:N``）——已达上限则不再抽
+
+        ⚠ 本卡此时**仍在手牌里**（派发结束后才按身份移除并弃置），所以按
+        「结算后的手牌数」计算时要先扣掉它；否则 ``draw_to:5`` 会只抽 4 张
+        （实测：手牌 1 张（本卡）→ need=4 → 移除本卡后只剩 4）。
+        """
+        n = int(tag.split(":")[1])
+        need = n - (len(p.hand) - 1)
+        got = self._safe_draw(self.current, need, source="trainer") if need > 0 else 0
+        return f"draw to {n} (drew {got})"
+
+    def _trainer_heal(self, p: PlayerState, tag: str, action: dict) -> str:
+        """回复（``heal:N[:<scope>][:type:<c>]``），范围语义见 `_apply_heal`"""
+        healed, n_tgt = _apply_heal(self, p, tag, action=action)
+        return f"heal {healed} (x{n_tgt})"
+
+    def _trainer_attach_energy(self, p: PlayerState, tag: str,
+                               action: dict) -> str:
+        """从指定区域附能（``attach:N[:<type>][:<zone>][:target:<pos>]``）
+
+        `target` 段不参与 `_parse_attach_tag`（它把未知 token 当属性名），
+        先剥掉再交给它解析，避免把位置码误读成能量属性。
+        """
+        parts, clean, i = tag.split(":"), [], 0
+        while i < len(parts):
+            if parts[i] == "target" and i + 1 < len(parts):
+                i += 2
+                continue
+            clean.append(parts[i])
+            i += 1
+        n, etype, zone = _parse_attach_tag(":".join(clean))
+        fp = _field_at(p, int(action.get("target", 0)))
+        if fp is None:
+            raise ValueError("附能目标无效")
+        got = _attach_energy_from_zones(self, p, fp, n, etype, zone or "any")
+        if not got:
+            raise ValueError("指定区域无可附着的能量")
+        return f"attach {got} {etype or 'any'} to {fp.name}"
+
+    def _trainer_discard_all(self, p: PlayerState, tag: str, hi: int) -> str:
+        """弃全部手牌（``discard:all``，不含本卡自身）
+
+        ⚠ 循环变量**不能**叫 `c`：函数末尾靠 `c` 的身份移除已使用的训练家卡。
+        """
+        if tag.split(":")[1] != "all":
+            raise ValueError(f"未知弃牌范围：{tag}")
+        others = [x for i, x in enumerate(p.hand) if i != hi]
+        for _dropped in others:
+            self._to_discard(p, _dropped)
+        p.hand = [x for i, x in enumerate(p.hand) if i == hi]
+        return f"discard {len(others)}"
+
+    def _trainer_mill(self, tag: str) -> str:
+        """磨牌（``mill:N[:opp]``）——默认磨自己（已存在于招式侧的同一语义）"""
+        parts = tag.split(":")
+        n = int(parts[1])
+        victim = (1 - self.current
+                  if len(parts) > 2 and parts[2] == "opp" else self.current)
+        vp = self.players[victim]
+        moved = 0
+        for _ in range(n):
+            if not vp.deck:
+                break
+            self._to_discard(vp, vp.deck.pop())
+            moved += 1
+        return f"mill {moved}"
+
     def _trainer_play_stadium(self, p: PlayerState, card, tag: str) -> str:
         """打出场馆：全局唯一，顶替旧场地（旧场地进弃牌堆）
 
@@ -907,6 +1016,41 @@ class Battle:
         self._log("attach_tool", {"player": self.current, "target": fp.name,
                                   "tool": fp.tool_name, "tag": tag})
         return f"attach tool {fp.tool_name} -> {fp.name}"
+
+    def _search_bench(self, p: PlayerState, tag: str) -> str:
+        """从牌库检索 N 张宝可梦**直接铺到后备**（``search_bench:N[:basic][:type:<c>]``）
+
+        卡面：「Search your deck for up to N Basic Pokémon and **put them onto your
+        Bench**」——去向是**后备**，不是手牌。此前一律映射成 ``search_pokemon:N``
+        （拿进手牌），于是「少铺一只、手里多一张」，局面上不报错、也看不出来。
+
+        后备已满 / 牌库无合法目标时**不执行**（官方规则：招式照常可用）。
+        """
+        parts = tag.split(":")
+        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+        basic_only = "basic" in parts[2:]
+        ptype = None
+        for i, x in enumerate(parts):
+            if x == "type" and i + 1 < len(parts):
+                ptype = parts[i + 1].lower()
+        placed = 0
+        for i in reversed(range(len(p.deck))):
+            if placed >= n or not p.bench_has_room(self.cfg):
+                break
+            c = p.deck[i]
+            if not isinstance(c, PokeRef):
+                continue
+            if basic_only and c.pdef.stage != 0:
+                continue
+            if ptype and str(c.pdef.ptype).lower() != ptype:
+                continue
+            fp = make_pokemon(p.deck.pop(i).pdef)
+            fp.just_played = True
+            p.bench.append(fp)
+            self._on_bench_placed(self.current, fp)
+            placed += 1
+        self.rng.shuffle(p.deck)
+        return f"bench {placed}"
 
     def _trainer_poffin(self, p: PlayerState) -> str:
         """检索牌库 2 张基础宝可梦放入后备并洗牌"""
@@ -1905,11 +2049,14 @@ class Battle:
                 self._log("mill", {"player": victim, "n": moved,
                                    "left": len(vp.deck)})
             elif tag.startswith("heal:"):
-                _, amt = tag.split(":")
-                amt = int(amt)
-                attacker.damage = max(0, attacker.damage - amt)
+                # 范围（全体/后备/属性限定）由 `_apply_heal` 统一解释；
+                # 无 scope 时回复攻击方自身（历史语义，保持不变）
+                healed, n_tgt = _apply_heal(self, p, tag, caster=attacker,
+                                            action=action)
                 self._log("heal", {"player": self.current,
-                                   "target": attacker.name, "amt": amt})
+                                   "target": attacker.name, "amt": healed,
+                                   "targets": n_tgt})
+
             elif tag.startswith("self:"):
                 _, amt = tag.split(":")
                 attacker.damage += int(amt)
@@ -1991,6 +2138,23 @@ class Battle:
                                      "target": attacker.name, "n": got,
                                      "etype": etype, "from": "effect",
                                      "zone": zone or "any"})
+            elif tag.startswith("search_bench:"):
+                detail = self._search_bench(p, tag)
+                self._log("search_bench", {"player": self.current,
+                                           "detail": detail})
+            elif tag.startswith("search_"):
+                # 招式侧**全牌库检索**（2026-10-27）：与特性/训练家侧同一语义
+                # （从整副牌库检索指定类别入手，不是 `recon` 的「牌库顶 N 取 1」）。
+                # 规则：牌库无合法目标时**效果不执行**，招式仍可使用 → 不外抛。
+                try:
+                    detail = (self._trainer_search_energy(p, tag)
+                              if tag.startswith("search_energy:")
+                              else self._trainer_search_kind(p, tag))
+                except ValueError as e:
+                    if "无可检索" not in str(e):
+                        raise
+                    detail = "no target"
+                self._log("search", {"player": self.current, "detail": detail})
             elif tag.startswith("recover:"):
                 # 弃牌堆回收（招式侧）：取 n 张（kind=pokemon|energy|any）入手
                 cands = _recover_candidates(p, tag)
@@ -2386,6 +2550,88 @@ def _discard_hand_energy(battle, p: PlayerState, n: int) -> int:
             battle._to_discard(p, p.hand.pop(i))
             dropped += 1
     return dropped
+
+
+def _apply_heal(battle, p: PlayerState, tag: str, *,
+                caster: Optional[FieldPokemon] = None,
+                action: Optional[dict] = None) -> tuple:
+    """回复（``heal:N[:<scope>][:type:<c>]``）→ ``(实际回复总量, 目标数)``
+
+    **scope 是语义的一部分，不是可选修饰**（2026-10-27 修）：
+      · 省略           回复 ``caster``（无 caster 时取己方 active）
+      · ``active``     回复己方**战斗位**（卡面「your Active Pokémon」）
+      · ``choose``     回复己方 1 只（``action["target"]`` 位置码：0=战斗位）
+      · ``all``        回复己方**全体**
+      · ``bench``      回复己方**后备全体**
+      · ``basic``      回复己方全体**基础**宝可梦
+      · ``bench_one``  回复己方后备中 1 只（可带 ``type:<c>`` 属性限定）
+
+    历史缺陷（真实 bug，非假设）：此函数的前身是 ``attacker.damage -= N``，
+    于是卡面「回复**己方全部**」被压成「只回**攻击方自己**」。池内实测 5 处：
+    Leafeon ex（后备全部）/ Ethan's Ho-Oh ex（己方全部）/ Leavanny（基本全部）/
+    Meloetta（后备 {P} 一只）/ Floragato（抛币分支内却记成无条件）。
+    判不出精确范围时**解析层必须返回 None**，引擎绝不兜底——宁可未建模。
+    """
+    parts = tag.split(":")
+    amt = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    scope, ptype = "", None
+    i = 2
+    while i < len(parts):
+        if parts[i] == "type" and i + 1 < len(parts):
+            ptype = parts[i + 1].lower()
+            i += 2
+            continue
+        if parts[i]:
+            scope = parts[i]
+        i += 1
+
+    def _ok(fp: FieldPokemon) -> bool:
+        return not ptype or str(fp.pdef.ptype).lower() == ptype
+
+    field = p.all_field()
+    if scope == "all":
+        targets = [fp for fp in field if _ok(fp)]
+    elif scope == "bench":
+        targets = [fp for fp in p.bench if _ok(fp)]
+    elif scope == "basic":
+        targets = [fp for fp in field if fp.stage == 0 and _ok(fp)]
+    elif scope == "active":
+        fp = p.active
+        if fp is None or not _ok(fp):
+            raise ValueError("回复目标无效（战斗位为空或属性不符）")
+        targets = [fp]
+    elif scope == "choose":
+        fp = _field_at(p, int((action or {}).get("target", 0)))
+        if fp is None or not _ok(fp):
+            raise ValueError("回复目标无效（未指定或属性不符）")
+        targets = [fp]
+    elif scope == "bench_one":
+        cands = [fp for fp in p.bench if _ok(fp)]
+        if not cands:
+            # 官方规则：效果无合法目标时**只是不执行**，招式照常可用
+            #（与 spread_free 在「对手后备为空」时的处理一致）。
+            # 不能抛错——否则 Meloetta「回复后备 {P} 一只」在无 {P} 后备时
+            # 整张招式不可用（池级执行用例实测捕获）。
+            return 0, 0
+        want = int((action or {}).get("target", -1))
+        if 1 <= want <= len(p.bench) and _ok(p.bench[want - 1]):
+            targets = [p.bench[want - 1]]
+        else:
+            targets = [cands[0]]
+    elif scope == "":
+        fp = caster if caster is not None else p.active
+        if fp is None:
+            raise ValueError("无回复目标")
+        targets = [fp]
+    else:
+        raise ValueError(f"未知回复范围：{scope}")
+
+    healed = 0
+    for fp in targets:
+        before = fp.damage
+        fp.damage = max(0, fp.damage - amt)
+        healed += before - fp.damage
+    return healed, len(targets)
 
 
 def _attach_energy_from_zones(battle, p: PlayerState, target: FieldPokemon,

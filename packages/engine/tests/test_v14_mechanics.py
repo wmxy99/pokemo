@@ -1675,5 +1675,199 @@ class TestStadium(unittest.TestCase):
         self.assertEqual(b.current, 1)
 
 
+class TestHealScope(unittest.TestCase):
+    """回复「范围」语义（2026-10-27）
+
+    历史缺陷：``heal:N`` 恒指**攻击方自身**，于是「回复己方全部」被压成「只回一只」。
+    池内实测 5 处错映射（Leafeon ex / Ethan's Ho-Oh ex / Leavanny / Meloetta /
+    Floragato）——局面正常、不报错，只能靠对账发现。
+    """
+
+    def _battle_heal(self, tag):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef(
+            "A", hp=200, ptype="lightning",
+            attacks=(AttackDef("Mend", cost=0, damage=0, effects=(tag,)),)))
+        b.players[1].active = make_pokemon(PokemonDef("D", hp=200,
+                                                     ptype="colorless"))
+        return b
+
+    def _add_bench(self, b, name, ptype, stage=0):
+        fp = make_pokemon(PokemonDef(name, hp=200, ptype=ptype, stage=stage))
+        b.players[0].bench.append(fp)
+        return fp
+
+    def test_heal_without_scope_hits_attacker_only(self):
+        """省略 scope = 回**施术者自身**（历史语义，不能被范围扩展改掉）"""
+        b = self._battle_heal("heal:30")
+        self._add_bench(b, "B1", "water")
+        b.players[0].active.damage = 100
+        b.players[0].bench[0].damage = 100
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 70)
+        self.assertEqual(b.players[0].bench[0].damage, 100, "无 scope 不得波及后备")
+
+    def test_heal_all_hits_every_own_pokemon(self):
+        b = self._battle_heal("heal:30:all")
+        self._add_bench(b, "B1", "water")
+        b._bench_dummy = self._add_bench(b, "B2", "grass", stage=1)
+        for fp in b.players[0].all_field():
+            fp.damage = 100
+        b.step({"verb": "attack", "attack": 0})
+        for fp in b.players[0].all_field():
+            self.assertEqual(fp.damage, 70, fp.name)
+
+    def test_heal_bench_excludes_active(self):
+        """Leafeon ex：Heal 100 from **each of your Benched** Pokémon"""
+        b = self._battle_heal("heal:100:bench")
+        self._add_bench(b, "B1", "water")
+        self._add_bench(b, "B2", "grass")
+        for fp in b.players[0].all_field():
+            fp.damage = 150
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 150, "战斗位不应被回复")
+        self.assertEqual([fp.damage for fp in b.players[0].bench], [50, 50])
+
+    def test_heal_basic_only_hits_stage0(self):
+        """Leavanny：Heal 100 from each of your **Basic** Pokémon"""
+        b = self._battle_heal("heal:100:basic")
+        self._add_bench(b, "B1", "water", stage=0)
+        self._add_bench(b, "B2", "grass", stage=2)
+        for fp in b.players[0].all_field():
+            fp.damage = 150
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 50)       # stage 0
+        self.assertEqual(b.players[0].bench[0].damage, 50)     # stage 0
+        self.assertEqual(b.players[0].bench[1].damage, 150)    # stage 2 不动
+
+    def test_heal_choose_uses_target_codes(self):
+        """`choose`：位置码 0=战斗位，i+1=后备 i"""
+        b = self._battle_heal("heal:40:choose")
+        self._add_bench(b, "B1", "water")
+        self._add_bench(b, "B2", "grass")
+        for fp in b.players[0].all_field():
+            fp.damage = 100
+        b.step({"verb": "attack", "attack": 0, "target": 2})
+        self.assertEqual(b.players[0].active.damage, 100)
+        self.assertEqual(b.players[0].bench[0].damage, 100)
+        self.assertEqual(b.players[0].bench[1].damage, 60)
+
+    def test_heal_bench_one_filters_by_type(self):
+        """Meloetta：Heal 120 from 1 of your Benched **{P}** Pokémon"""
+        b = self._battle_heal("heal:120:bench_one:type:psychic")
+        self._add_bench(b, "W", "water")
+        self._add_bench(b, "P", "psychic")
+        for fp in b.players[0].bench:
+            fp.damage = 150
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].bench[0].damage, 150, "属性不符不得被回复")
+        self.assertEqual(b.players[0].bench[1].damage, 30)
+
+    def test_heal_bench_one_no_target_is_noop(self):
+        """负向守卫：后备没有该属性 → **无效果**（不是抛错，也不是"回第一只"）
+
+        官方规则：效果无合法目标时只是不执行，招式仍可使用。若抛错，Meloetta
+        在无 {P} 后备时整张招式不可用（池级执行用例会捕获）。
+        """
+        b = self._battle_heal("heal:120:bench_one:type:psychic")
+        self._add_bench(b, "W", "water")
+        b.players[0].bench[0].damage = 150
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].bench[0].damage, 150, "属性不符不得被回复")
+
+    def test_heal_active_scope(self):
+        """`active`：卡面「your Active Pokémon」，与施术者是谁无关"""
+        b = self._battle_heal("heal:70:active")
+        b.players[0].active.damage = 100
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 30)
+
+    def test_heal_all_never_goes_negative(self):
+        """回复不得超过已受伤害（damage 下限 0）"""
+        b = self._battle_heal("heal:100:all")
+        b.players[0].active.damage = 10
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[0].active.damage, 0)
+
+
+class TestTrainerNonSearch(unittest.TestCase):
+    """训练家侧「非检索类」效果派发（2026-10-27）
+
+    这些能力引擎早就在招式侧实现，只是训练家派发链没接 —— 于是
+    「Draw 3 cards.」「Heal 30 …」这类最常见的效果卡全部进不了池。
+    """
+
+    def _trainer_battle(self, tag, kind="item", name="T"):
+        b = _arena()
+        b.players[0].active = make_pokemon(PokemonDef("A", hp=200,
+                                                      ptype="lightning"))
+        b.players[1].active = make_pokemon(PokemonDef("D", hp=200,
+                                                      ptype="colorless"))
+        b.players[0].hand = [TrainerRef(TrainerDef(tag, kind=kind, name=name))]
+        return b
+
+    def test_trainer_draw(self):
+        b = self._trainer_battle("draw:3", "supporter", "Cheren")
+        before = len(b.players[0].hand)
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        # 手牌：-1（用掉）+3（抽）
+        self.assertEqual(len(b.players[0].hand), before - 1 + 3)
+
+    def test_trainer_draw_to(self):
+        b = self._trainer_battle("draw_to:5", "supporter")
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 5)
+
+    def test_trainer_heal_active(self):
+        b = self._trainer_battle("heal:70:active", "supporter", "Cook")
+        b.players[0].active.damage = 100
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 30)
+
+    def test_trainer_heal_choose(self):
+        b = self._trainer_battle("heal:30:choose", "item", "Potion")
+        bp = make_pokemon(PokemonDef("B", hp=100, ptype="water"))
+        bp.damage = 50
+        b.players[0].bench = [bp]
+        r = b.step({"verb": "trainer", "hand": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(bp.damage, 20)
+
+    def test_trainer_discard_all_then_draw(self):
+        """Carmine：先弃光手牌再抽 5 —— 顺序反了会变成"直接空手" """
+        b = self._trainer_battle("discard:all", "supporter", "Carmine")
+        b.players[0].hand.append(TrainerRef(TrainerDef("hammer", kind="item",
+                                                      name="Filler")))
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].hand, [], "手牌应被弃光")
+        self.assertTrue(any("Filler" in str(x) for x in b.players[0].discard))
+
+    def test_trainer_gust(self):
+        b = self._trainer_battle("gust", "item", "Catcher")
+        opp_bench = make_pokemon(PokemonDef("OB", hp=100, ptype="water"))
+        b.players[1].bench = [opp_bench]
+        r = b.step({"verb": "trainer", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.name, "OB")
+
+    def test_trainer_mill_opponent(self):
+        b = self._trainer_battle("mill:2:opp", "item")
+        n = len(b.players[1].deck)
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].deck), n - 2)
+
+    def test_trainer_unknown_tag_still_raises(self):
+        """负向守卫：未知训练家 tag 必须抛错，不得静默忽略"""
+        b = self._trainer_battle("definitely_not_a_tag", "item")
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertFalse(r["ok"])
+
+
 if __name__ == "__main__":
     unittest.main()

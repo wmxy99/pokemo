@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 953,
+      "kept": 959,
       "by_Energy": 19,
       "by_Pokemon": 827,
-      "by_Trainer": 107,
+      "by_Trainer": 113,
       "skipped": {
-        "存在未建模项（整卡不收）": 255,
+        "存在未建模项（整卡不收）": 249,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 35,
         "Trainer 不可执行": 9
@@ -40988,6 +40988,23 @@
       "uid": "Scoop Up Cyclone@TWM 162"
     },
     {
+      "name": "Bug Catching Set",
+      "name_zh": "捕虫套装",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "recon:7:2:pokemon-grass+energy-grass",
+      "desc": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "desc_zh": "查看你牌库上方的 7 张卡。你可以展示其中最多 2 张 {G} 宝可梦卡和基本 {G} 能量卡（任意组合）并加入手牌。将其他卡牌洗回你的牌库。",
+      "real": {
+        "set": "TWM",
+        "number": "143"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1094,
+      "uid": "Bug Catching Set@TWM 143"
+    },
+    {
       "name": "Poké Vital A",
       "name_zh": "宝可活力 A",
       "supertype": "Trainer",
@@ -41257,6 +41274,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1119,
       "uid": "Energy Search@SVI 172"
+    },
+    {
+      "name": "Pokégear 3.0",
+      "name_zh": "宝可齿轮 3.0",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "recon:7:1:supporter",
+      "desc": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "desc_zh": "查看你牌库上方的 7 张卡。你可以展示其中 1 张支援者卡并加入手牌。将其他卡牌洗回你的牌库。",
+      "real": {
+        "set": "SVI",
+        "number": "186"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1122,
+      "uid": "Pokégear 3.0@SVI 186"
     },
     {
       "name": "Pokémon Catcher",
@@ -41923,7 +41957,7 @@
       "name_zh": "探险家的指引",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_any:1",
+      "tag": "recon:6:2:any:rest:discard",
       "desc": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards.",
       "desc_zh": "查看你牌库上方的 6 张牌，将其中 2 张加入手牌。弃置其他的牌。",
       "real": {
@@ -41934,6 +41968,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1185,
       "uid": "Explorer’s Guidance@TEF 147"
+    },
+    {
+      "name": "Hassel",
+      "name_zh": "哈塞尔",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "recon:8:3:any:gate:ko_last_turn",
+      "desc": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+      "desc_zh": "仅当你的任意宝可梦在对手的上个回合中被击倒时，才能使用此卡。\n\n查看你牌库上方的 8 张牌，将其中最多 3 张加入手牌。将其他牌洗回你的牌库。",
+      "real": {
+        "set": "TWM",
+        "number": "151"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1193,
+      "uid": "Hassel@TWM 151"
     },
     {
       "name": "Colress’s Tenacity",
@@ -42002,6 +42053,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1200,
       "uid": "Kofu@SCR 138"
+    },
+    {
+      "name": "Drayton",
+      "name_zh": "德拉顿",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "recon:7:2:pokemon+trainer@each",
+      "desc": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "desc_zh": "查看你牌库上方的 7 张牌。你可以展示其中找到的 1 张宝可梦卡和 1 张训练家卡并加入手牌。将其他牌洗回你的牌库。",
+      "real": {
+        "set": "SSP",
+        "number": "174"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1202,
+      "uid": "Drayton@SSP 174"
     },
     {
       "name": "Cyrano",
@@ -42225,6 +42293,23 @@
       "uid": "Wally's Compassion@MEG 132"
     },
     {
+      "name": "Grimsley's Move",
+      "name_zh": "基玛的策略",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "recon:7:1:pokemon-darkness:dest:bench:rest:bottom:gate:not_first_turn",
+      "desc": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
+      "desc_zh": "查看你牌库上方的 7 张牌，将其中找到的 1 只 {D} 宝可梦放到你的后备区。将其他牌洗牌并放到你的牌库底部。你不能在你的第一个回合中使用此卡。",
+      "real": {
+        "set": "PFL",
+        "number": "90"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1230,
+      "uid": "Grimsley's Move@PFL 90"
+    },
+    {
       "name": "Dawn",
       "name_zh": "小光",
       "supertype": "Trainer",
@@ -42257,6 +42342,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1232,
       "uid": "Firebreather@PFL 89"
+    },
+    {
+      "name": "Waitress",
+      "name_zh": "女服务生",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "recon:6:1:basic_energy:dest:attach",
+      "desc": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck.",
+      "desc_zh": "查看你牌库上方的 6 张牌，将其中找到的 1 张基本能量卡附着于你的 1 只宝可梦。将其他牌洗回你的牌库。",
+      "real": {
+        "set": "ASC",
+        "number": "215"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1235,
+      "uid": "Waitress@ASC 215"
     },
     {
       "name": "Urbain",

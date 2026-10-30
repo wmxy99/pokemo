@@ -41,7 +41,9 @@ _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
                            # v1.3（B2 通用检索批次）
                            "search_pokemon", "search_trainer", "search_any",
                            # 化石卡（2026-10-28）：当作 N-HP 基础宝可梦上场
-                           "fossil")
+                           "fossil",
+                           # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 前置条件
+                           "recon")
 
 # 基本能量中文名（占位替换时也用中文展示）
 _ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",

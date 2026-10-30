@@ -580,6 +580,13 @@ class Battle:
                 # 自换位（Switch）：需有后备
                 for bi in range(len(p.bench)):
                     out.append({**base, "target": bi})
+            elif tag.startswith("recon:"):
+                # 检视牌库顶（2026-10-30 第二十批）：牌库非空且**前置条件满足**才可打出。
+                # 条件不满足时这张卡必须**不出现在合法动作表**里 —— 否则 AI 会反复
+                # 尝试一张打不出的卡，且「打得出」本身就是规则错误。
+                if p.deck and self._recon_gate_ok(p,
+                                                  _parse_recon_tag(tag)["gate"]):
+                    out.append(dict(base))
             elif tag.startswith("recover:"):
                 # 弃牌堆回收（Night Stretcher）：需弃牌堆有可回收卡
                 if tag.split(":")[1] == "heads":
@@ -1184,7 +1191,15 @@ class Battle:
                 raise ValueError("该特性本回合已发动")
             fp.ability_used.add(name)
             if tag.startswith("recon:"):
-                n = int(tag.split(":")[1])
+                _rspec = _parse_recon_tag(tag)
+                if not _rspec["legacy"]:
+                    # 扩展口径（2026-10-30 第二十批）：筛选项 + 去向 + 前置条件
+                    self._log("ability", {
+                        "player": self.current, "name": name,
+                        "from": fp.name,
+                        "detail": self._do_recon(p, tag, action)})
+                    return {"ok": True, "event": self.events[-1]}
+                n = _rspec["look_top"]
                 if not p.deck:
                     raise ValueError("牌库为空")
                 top = [p.deck.pop() for _ in range(min(n, len(p.deck)))]
@@ -1452,6 +1467,118 @@ class Battle:
             raise ValueError(f"未知 hand tag {tag}")
         raise ValueError("ability 动作缺少 pos/hand")
 
+    # ---------- 检视牌库顶（2026-10-30 第二十批） ----------
+    def _recon_gate_ok(self, p: PlayerState, gate: Optional[str]) -> bool:
+        """「You can use this card only if …」前置条件；未知条件**抛错**（不默认放行）。"""
+        if not gate:
+            return True
+        if gate == "not_first_turn":
+            # 「You can't use this card during your first turn」= **持有者自己**的首回合
+            return self.turn_counts[self.current] > 1
+        if gate == "ko_last_turn":
+            fn = _CONDITIONS.get("own_ko_last_turn")
+            if fn is None:
+                raise ValueError("recon 前置条件未登记：ko_last_turn")
+            return bool(fn(self, p, self.players[1 - self.current]))
+        raise ValueError(f"未知 recon 前置条件：{gate}")
+
+    def _do_recon(self, p: PlayerState, tag: str, action: dict) -> str:
+        """检视牌库顶 N 张 → 按筛选取 ≤K 张 → 入手 / 铺场 / 附着，其余放回牌库。
+
+        旧口径 ``recon:<N>``（无第三段）保持历史行为：**随机**取 1 张入手、其余按
+        原序放牌库底。扩展口径才有筛选项与去向，两者不共用选择策略。
+        """
+        spec = _parse_recon_tag(tag)
+        if not self._recon_gate_ok(p, spec["gate"]):
+            raise ValueError("不满足该卡的打出前置条件")
+        if not p.deck:
+            raise ValueError("牌库为空")
+        n = min(spec["look_top"], len(p.deck))
+        top = [p.deck.pop() for _ in range(n)]      # top[0] = 牌库顶
+        if spec["legacy"]:
+            pick = self.rng.randrange(len(top))
+            chosen = top.pop(pick)
+            p.hand.append(chosen)
+            for c in reversed(top):                 # 其余放回牌库底
+                p.deck.insert(0, c)
+            return f"top{spec['look_top']} pick1"
+
+        sel, dest, k = spec["sel"], spec["dest"], spec["max"]
+        fp = None
+        if dest == "attach":
+            tpos = action.get("target")
+            fp = (_field_at(p, int(tpos)) if tpos is not None else None) \
+                or p.active
+            if fp is None:
+                raise ValueError("没有可附着的宝可梦")
+
+        picked: list = []
+        seen: set = set()
+        alts = sel.split("@")[0].split("+")
+        each = "@each" in sel
+        if each:
+            # 每种各 1 张（「a Pokémon and a Trainer card」）。**不能**退化成
+            # 「任意 2 张」：那样可能拿 2 只宝可梦 = 静默拿错牌。
+            for alt in alts:
+                for idx, c in enumerate(top):
+                    if idx not in seen and _recon_one(c, alt):
+                        seen.add(idx)
+                        picked.append(idx)
+                        break
+        else:
+            for idx, c in enumerate(top):
+                if len(picked) >= k:
+                    break
+                if idx in seen or not _recon_matches(c, sel):
+                    continue
+                if dest == "bench" and not isinstance(c, PokeRef):
+                    continue
+                if dest == "attach" and not isinstance(c, EnergyRef):
+                    continue
+                seen.add(idx)
+                picked.append(idx)
+
+        # ⚠ `applied` 只记**真正执行成功**的牌：铺场时后备已满、或后续目标不可用，
+        # 该牌必须回到牌库（进 `rest`），否则它会**从牌库消失**（既不在手、不在场、
+        # 也不在弃牌堆）—— 那是静默丢牌，比不执行更糟。
+        applied: set = set()
+        got = 0
+        for idx in picked:
+            c = top[idx]
+            if dest == "hand":
+                p.hand.append(c)
+                applied.add(idx)
+                got += 1
+            elif dest == "bench":
+                if not self._bench_has_room(p):
+                    continue
+                fnew = make_pokemon(c.pdef)
+                fnew.just_played = True
+                p.bench.append(fnew)
+                self._on_bench_placed(self.current, fnew)
+                applied.add(idx)
+                got += 1
+            else:                                   # attach（仅基本能量）
+                fp.add_energy(str(c.edef.type).lower(), 1)
+                applied.add(idx)
+                got += 1
+
+        rest = [c for idx, c in enumerate(top) if idx not in applied]
+        if spec["rest"] == "bottom":
+            for c in reversed(rest):
+                p.deck.insert(0, c)
+        elif spec["rest"] == "discard":
+            # 「Discard the other cards」（Explorer's Guidance）—— 必须真进弃牌堆，
+            # 否则「弃置」被静默改成「洗回」，后续「弃牌堆回收」类效果会凭空多出材料。
+            for c in rest:
+                self._to_discard(p, c)
+        elif spec["rest"] == "shuffle":
+            p.deck.extend(rest)
+            self.rng.shuffle(p.deck)
+        else:
+            raise ValueError(f"未知 recon 余牌去向：{spec['rest']}")
+        return f"top{n} {dest} {got}/{sel}"
+
     def _do_trainer(self, p: PlayerState, action: dict) -> dict:
         hi = _hand_index_from_action(p.hand, action)
         if hi is None:
@@ -1513,6 +1640,10 @@ class Battle:
             placed = self._trainer_discard_search_energy(p, tag, hi)
         elif tag.startswith("search_energy:"):
             placed = self._trainer_search_energy(p, tag)
+        elif tag.startswith("recon:"):
+            # 检视牌库顶（2026-10-30 第二十批）：Pokégear 3.0 / Bug Catching Set /
+            # Drayton / Hassel / Grimsley's Move / Waitress
+            placed = self._do_recon(p, tag, action)
         elif tag == "candy":
             placed = self._trainer_candy(p, action)
         elif tag.startswith(("search_pokemon:", "search_trainer:",
@@ -5871,6 +6002,76 @@ def _attach_counters_of(tag: str) -> int:
         if i + 1 < len(parts) and parts[i + 1].isdigit():
             return int(parts[i + 1])
     return 0
+
+
+def _parse_recon_tag(tag: str) -> dict:
+    """解析「检视牌库顶」tag → dict（2026-10-30 第二十批）
+
+    形态::
+
+        recon:<N>                                  旧口径（随机取 1 张入手，其余放牌库底）
+        recon:<N>:<K>:<sel>[:dest:<d>][:rest:bottom][:gate:<g>]
+
+    ``<sel>``：``any`` / ``supporter`` / ``item`` / ``stadium`` / ``trainer`` /
+    ``pokemon`` / ``pokemon-<type>`` / ``energy`` / ``basic_energy`` /
+    ``energy-<type>`` / ``basic_energy-<type>``，并集用 ``+``，
+    ``@each`` 后缀表示「每种各 1 张」（Drayton「a Pokémon and a Trainer card」）。
+    ``<d>``：``hand``（默认）/ ``bench`` / ``attach``。
+    ``<g>``：``ko_last_turn`` / ``not_first_turn``。
+
+    ``len(parts) == 2`` 即旧口径（``legacy``），引擎保持原行为不变 —— 池内已有
+    多张卡依赖它，改语义会静默改变既有对局。
+    """
+    parts = tag.split(":")
+    if len(parts) < 2 or not parts[1].isdigit():
+        raise ValueError(f"recon tag 缺少张数：{tag}")
+    out = {"look_top": int(parts[1]), "max": 1, "sel": "any",
+           "dest": "hand", "rest": "shuffle", "gate": None,
+           "legacy": len(parts) == 2}
+    if not out["legacy"]:
+        if not parts[2].isdigit():
+            raise ValueError(f"recon tag 缺少筛选张数：{tag}")
+        out["max"] = int(parts[2])
+    i = 3
+    while i < len(parts):
+        if parts[i] in ("dest", "rest", "gate") and i + 1 < len(parts):
+            out[parts[i]] = parts[i + 1]
+            i += 2
+            continue
+        if parts[i]:
+            out["sel"] = parts[i]
+        i += 1
+    return out
+
+
+def _recon_one(c, alt: str) -> bool:
+    """单个筛选项是否命中卡牌引用；未知筛选项**抛错**（不猜、不静默放行）。"""
+    kind, _, arg = alt.partition("-")
+    arg = arg.lower()
+    if kind == "pokemon":
+        if not isinstance(c, PokeRef):
+            return False
+        return not arg or str(c.pdef.ptype).lower() == arg
+    if kind == "trainer":
+        return isinstance(c, TrainerRef)
+    if kind in ("supporter", "item", "stadium", "tool"):
+        return (isinstance(c, TrainerRef)
+                and str(c.tdef.kind).lower() == kind)
+    if kind in ("energy", "basic_energy"):
+        if not isinstance(c, EnergyRef):
+            return False
+        if kind == "basic_energy" and c.edef.is_special:
+            return False
+        return not arg or str(c.edef.type).lower() == arg
+    raise ValueError(f"未知 recon 筛选项：{alt}")
+
+
+def _recon_matches(c, sel: str) -> bool:
+    """`+` 并集匹配（`@each` 只影响选择策略，不影响是否命中）。"""
+    base = str(sel or "any").split("@")[0]
+    if base in ("", "any"):
+        return True
+    return any(_recon_one(c, alt) for alt in base.split("+") if alt)
 
 
 def _parse_attach_tag(tag: str) -> tuple:

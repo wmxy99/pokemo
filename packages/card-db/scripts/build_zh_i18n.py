@@ -123,8 +123,11 @@ def main() -> int:
     payload = {
         "meta": {
             "version": "1.0",
-            "source_manifest": args.manifest.as_posix(),
-            "source_merged": args.merged.as_posix(),
+            # ⚠ 只记**文件名**，不记本机绝对路径：本文件是入库产物，写 `D:/...`
+            # 既绑定某台机器、又泄露本机目录结构（CI 的 redline 守卫会直接拦下）。
+            # 溯源信息够用即可 —— 语料来自人工翻译工程，路径对复现没有价值。
+            "source_manifest": args.manifest.name,
+            "source_merged": args.merged.name,
             "generator": "packages/card-db/scripts/build_zh_i18n.py",
             "items": len(out_items),
             "by_category": dict(by_cat),

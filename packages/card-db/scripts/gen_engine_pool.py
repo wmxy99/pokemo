@@ -76,7 +76,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
                 "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
                 # 化石卡（2026-10-28）：当作 N-HP 基础宝可梦上场
-                "fossil:")
+                "fossil:",
+                # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 打出前置条件
+                "recon:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (

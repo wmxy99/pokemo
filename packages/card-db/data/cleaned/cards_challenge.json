@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-30 16:12:53",
+  "reparsed_at": "2026-10-30 16:53:47",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 968,
+  "engine_ready": 974,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 968,
-   "engine_approximated": 953,
-   "engine_unmatched": 299,
+   "zh_backfill": 974,
+   "engine_approximated": 959,
+   "engine_unmatched": 293,
    "engine_namekey_mismatch": 42
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 94,
-   "engine_tags": 1329,
-   "unsupported": 266,
+   "errors": 102,
+   "engine_tags": 1334,
+   "unsupported": 259,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 953,
+  "engine_approximated": 959,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -141639,7 +141639,7 @@
       "unsupported": [
        {
         "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
+        "reason": "检视牌库顶（非特性侧未精确识别，B4）"
        }
       ]
      }
@@ -141668,7 +141668,7 @@
     "unsupported": [
      {
       "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
+      "reason": "检视牌库顶（非特性侧未精确识别，B4）"
      }
     ],
     "generated_by": "rule",
@@ -143218,14 +143218,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 7 张卡。你可以展示其中最多 2 张 {G} 宝可梦卡和基本 {G} 能量卡（任意组合）并加入手牌。将其他卡牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Bug Catching Set@TWM 143",
    "parse": {
     "items": [
      {
@@ -143239,25 +143241,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "recon",
+          "amount": 2,
+          "target": "hand",
           "extra": {
-           "look_top": 7
+           "look_top": 7,
+           "max": 2,
+           "sel": "pokemon-grass+energy-grass",
+           "dest": "hand",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:7:2:pokemon-grass+energy-grass"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -143268,25 +143275,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "recon",
+        "amount": 2,
+        "target": "hand",
         "extra": {
-         "look_top": 7
+         "look_top": 7,
+         "max": 2,
+         "sel": "pokemon-grass+energy-grass",
+         "dest": "hand",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:7:2:pokemon-grass+energy-grass"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -145977,14 +145989,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 7 张卡。你可以展示其中 1 张支援者卡并加入手牌。将其他卡牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Pokégear 3.0@SVI 186",
    "parse": {
     "items": [
      {
@@ -145998,25 +146012,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "recon",
           "amount": 1,
-          "target": "deck",
+          "target": "hand",
           "extra": {
-           "look_top": 7
+           "look_top": 7,
+           "max": 1,
+           "sel": "supporter",
+           "dest": "hand",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:7:1:supporter"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -146027,25 +146046,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "recon",
         "amount": 1,
-        "target": "deck",
+        "target": "hand",
         "extra": {
-         "look_top": 7
+         "look_top": 7,
+         "max": 1,
+         "sel": "supporter",
+         "dest": "hand",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:7:1:supporter"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -152308,20 +152332,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "recon",
+          "amount": 2,
+          "target": "hand",
           "extra": {
-           "look_top": 6
+           "look_top": 6,
+           "max": 2,
+           "sel": "any",
+           "dest": "hand",
+           "rest": "discard",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards."
+        "source_text": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards.",
+        "citations": []
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
       "engine_tags": [
-       "search_any:1"
+       "recon:6:2:any:rest:discard"
       ],
       "unsupported": []
      }
@@ -152334,20 +152366,28 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "recon",
+        "amount": 2,
+        "target": "hand",
         "extra": {
-         "look_top": 6
+         "look_top": 6,
+         "max": 2,
+         "sel": "any",
+         "dest": "hand",
+         "rest": "discard",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards."
+      "source_text": "Look at the top 6 cards of your deck and put 2 of them into your hand. Discard the other cards.",
+      "citations": []
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：recon"
+    ],
     "engine_tags": [
-     "search_any:1"
+     "recon:6:2:any:rest:discard"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -153095,14 +153135,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你的任意宝可梦在对手的上个回合中被击倒时，才能使用此卡。\n\n查看你牌库上方的 8 张牌，将其中最多 3 张加入手牌。将其他牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Hassel@TWM 151",
    "parse": {
     "items": [
      {
@@ -153116,37 +153158,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "recon",
+          "amount": 3,
+          "target": "hand",
           "extra": {
-           "look_top": 8
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "look_top": 8,
+           "max": 3,
+           "sel": "any",
+           "dest": "hand",
+           "rest": "shuffle",
+           "gate": "ko_last_turn"
           }
          }
         ],
-        "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck."
+        "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       },
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:8:3:any:gate:ko_last_turn"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -153157,37 +153192,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "recon",
+        "amount": 3,
+        "target": "hand",
         "extra": {
-         "look_top": 8
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "look_top": 8,
+         "max": 3,
+         "sel": "any",
+         "dest": "hand",
+         "rest": "shuffle",
+         "gate": "ko_last_turn"
         }
        }
       ],
-      "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck."
+      "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     },
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:8:3:any:gate:ko_last_turn"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -153977,14 +154005,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 7 张牌。你可以展示其中找到的 1 张宝可梦卡和 1 张训练家卡并加入手牌。将其他牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Drayton@SSP 174",
    "parse": {
     "items": [
      {
@@ -153998,25 +154028,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "recon",
+          "amount": 2,
+          "target": "hand",
           "extra": {
-           "look_top": 7
+           "look_top": 7,
+           "max": 2,
+           "sel": "pokemon+trainer@each",
+           "dest": "hand",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:7:2:pokemon+trainer@each"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -154027,25 +154062,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "recon",
+        "amount": 2,
+        "target": "hand",
         "extra": {
-         "look_top": 7
+         "look_top": 7,
+         "max": 2,
+         "sel": "pokemon+trainer@each",
+         "dest": "hand",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 7 cards of your deck. You may reveal a Pokémon and a Trainer card you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:7:2:pokemon+trainer@each"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156705,14 +156745,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 7 张牌，将其中找到的 1 只 {D} 宝可梦放到你的后备区。将其他牌洗牌并放到你的牌库底部。你不能在你的第一个回合中使用此卡。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Grimsley's Move@PFL 90",
    "parse": {
     "items": [
      {
@@ -156726,25 +156768,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": 1,
+          "target": "bench",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 7,
+           "max": 1,
+           "sel": "pokemon-darkness",
+           "dest": "bench",
+           "rest": "bottom",
+           "gate": "not_first_turn"
           }
          }
         ],
-        "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn."
+        "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:7:1:pokemon-darkness:dest:bench:rest:bottom:gate:not_first_turn"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156755,25 +156802,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": 1,
+        "target": "bench",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 7,
+         "max": 1,
+         "sel": "pokemon-darkness",
+         "dest": "bench",
+         "rest": "bottom",
+         "gate": "not_first_turn"
         }
        }
       ],
-      "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn."
+      "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:7:1:pokemon-darkness:dest:bench:rest:bottom:gate:not_first_turn"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -157197,14 +157249,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 6 张牌，将其中找到的 1 张基本能量卡附着于你的 1 只宝可梦。将其他牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Waitress@ASC 215",
    "parse": {
     "items": [
      {
@@ -157218,35 +157272,31 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
+          "type": "recon",
           "amount": 1,
-          "target": "self",
+          "target": "attach",
           "extra": {
-           "zone": "deck"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 6,
+           "max": 1,
+           "sel": "basic_energy",
+           "dest": "attach",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] action.type 非法：recon",
+       "[0] action.target 非法：attach"
+      ],
       "engine_tags": [
-       "attach:1:deck"
+       "recon:6:1:basic_energy:dest:attach"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -157257,35 +157307,31 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
+        "type": "recon",
         "amount": 1,
-        "target": "self",
+        "target": "attach",
         "extra": {
-         "zone": "deck"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 6,
+         "max": 1,
+         "sel": "basic_energy",
+         "dest": "attach",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：recon",
+     "[0] action.target 非法：attach"
+    ],
     "engine_tags": [
-     "attach:1:deck"
+     "recon:6:1:basic_energy:dest:attach"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

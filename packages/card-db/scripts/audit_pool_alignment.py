@@ -443,6 +443,76 @@ def audit_attack_lock(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# 「Look at the top N cards of your deck …」（2026-10-30 第二十批）
+_RECON_TOP = re.compile(r"look at the top\s+(\d+)\s+cards? of your deck", re.I)
+
+
+def audit_recon_top(card_name: str, item_name: str, desc: str,
+                    effects: list) -> list:
+    """检视牌库顶**去向与余牌**对账（2026-10-30 · 第二十八类）
+
+    与既有「检视牌库顶」子句类（只判「是否被当成整库检索」）不同，这一类判**去向**：
+
+    1. **张数不符**：卡面「top 7」却落成 `recon:8` —— 多看一张 = 凭空放宽；
+    2. **去向不符**：卡面「onto your Bench」却落成 `dest:hand`（或反之）
+       —— 牌进了错的地方，手牌凭空多一张；
+    3. **余牌不符**：卡面「Discard the other cards」却落成洗回牌库
+       —— 弃牌堆少 4 张，后续「弃牌堆回收」类效果凭空少材料。
+
+    另加一条**反向**守卫：卡面写了「look at the top N」，却落成 `search_*`
+    （整副牌库检索）—— 检索范围被放大，等于凭空任取。
+    """
+    errs = []
+    d = _norm(desc or "")
+    m = _RECON_TOP.search(d)
+    if not m:
+        return errs
+    n = int(m.group(1))
+    recon_tags = [str(t) for t in (effects or [])
+                  if str(t).startswith("recon:")]
+    search_tags = [str(t) for t in (effects or [])
+                   if str(t).startswith(("search_pokemon:", "search_trainer:",
+                                         "search_any:", "search_energy:"))]
+    if search_tags:
+        errs.append(f"{card_name} · {item_name}：卡面是「look at the top {n}」"
+                    f"（牌库顶局部），却落成整库检索 {search_tags}"
+                    f"—— 检索范围被放大")
+    if not recon_tags:
+        return errs                       # 未建模（如实拒绝）不算错映射
+    for t in recon_tags:
+        parts = t.split(":")
+        if len(parts) < 2 or not parts[1].isdigit():
+            continue                      # 形态非法由引擎侧抛错兜住
+        if int(parts[1]) != n:
+            errs.append(f"{card_name} · {item_name}：卡面是「top {n}」却落成 "
+                        f"`{t}`（张数不符）")
+        want_dest = "hand"
+        if re.search(r"onto your bench", d, re.I):
+            want_dest = "bench"
+        elif re.search(r"attach .{0,40}?to 1 of your pok[eé]mon", d, re.I):
+            want_dest = "attach"
+        got_dest = "hand"
+        for i, x in enumerate(parts):
+            if x == "dest" and i + 1 < len(parts):
+                got_dest = parts[i + 1]
+        if got_dest != want_dest:
+            errs.append(f"{card_name} · {item_name}：卡面去向是 `{want_dest}`，"
+                        f"`{t}` 却是 `{got_dest}`")
+        want_rest = "shuffle"
+        if re.search(r"put them on the bottom of your deck", d, re.I):
+            want_rest = "bottom"
+        elif re.search(r"discard the other cards", d, re.I):
+            want_rest = "discard"
+        got_rest = "shuffle"
+        for i, x in enumerate(parts):
+            if x == "rest" and i + 1 < len(parts):
+                got_rest = parts[i + 1]
+        if got_rest != want_rest:
+            errs.append(f"{card_name} · {item_name}：余牌去向应是 `{want_rest}`，"
+                        f"`{t}` 却是 `{got_rest}`")
+    return errs
+
+
 def audit_search_kind(card_name: str, item_name: str, desc: str,
                       effects: list) -> list:
     """检索的**去向**与**类别**两级对账（2026-10-27 扩展）
@@ -1349,6 +1419,7 @@ def main() -> int:
                 errs += audit_ability_search(c["name"], it.get("name"), desc, eff)
                 errs += audit_mill(c["name"], it.get("name"), desc, eff)
                 errs += audit_attack_lock(c["name"], it.get("name"), desc, eff)
+                errs += audit_recon_top(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
                 errs += audit_coin_forms(c["name"], it.get("name"), desc, eff)
@@ -1397,7 +1468,7 @@ def main() -> int:
           "特殊能量种类 · 静态免伤来源 · 招式击倒范围 · 场地静态规则 · 跨回合伤害修正 · "
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
-          "受击反制 · 对手指定招式封锁 二十七类对账全部一致")
+          "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 二十八类对账全部一致")
     return 0
 
 

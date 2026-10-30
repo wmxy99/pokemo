@@ -1,8 +1,8 @@
 {
  "meta": {
   "version": "1.0",
-  "source_manifest": "D:/pokemo/work/zh/manifest.json",
-  "source_merged": "D:/pokemo/work/zh/merged_zh.json",
+  "source_manifest": "manifest.json",
+  "source_merged": "merged_zh.json",
   "generator": "packages/card-db/scripts/build_zh_i18n.py",
   "items": 3341,
   "by_category": {

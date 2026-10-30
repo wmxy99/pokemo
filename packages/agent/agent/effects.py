@@ -569,6 +569,119 @@ _EN_SEARCH_TOP_RE = re.compile(r"(?:look at|search)\s+the top\s+(\d+)\s+cards",
                                re.I)
 # v1.3：单数形式（Look at the top card of your deck）
 _EN_LOOK_TOP_ONE_RE = re.compile(r"look at the top card\b", re.I)
+
+# ---------------- 检视牌库顶：筛选 / 去向 / 前置条件（2026-10-30 第二十批） ----------
+# 引擎原有的 `recon:N` 只有一种形态：「顶部 N 张里**随机**取 1 张入手，其余放牌库
+# 底」。卡池里另有「检视顶部 N 张 → 按类别/属性筛出 ≤K 张 → 入手 / 铺场 / 附着」
+# 以及「其余**洗回**牌库（不是放牌库底）」等形态，此前一律拒绝（整卡不收）。
+#
+# 这里逐**整句**硬匹配：只有整段命中下面某一条才认领；多一个词、少一个从句都落到
+# 既有的 `rule` 拒绝分支。理由：检视牌库顶一旦被放宽成「任意 N 张入手」，等于凭空
+# 多给一张手牌（池内实测过这类静默加强），所以宁可不收。
+_RECON_TAIL = r"shuffle the other cards back into your deck[.]?"
+# ⚠ 这一组是**可选**的：卡面没有这句前置条件时绝不能凭空加上条件（否则一张
+# 「随时可用」的卡会变成「只在被击倒过的回合可用」= 静默削弱），因此组要具名，
+# 由 `_detect_recon_top` 按**是否命中**决定 gate 有无。
+_RECON_GATE_KO = (r"(?:(?P<gate>you can use this card only if any of your "
+                  r"pok[eé]mon were knocked out during your opponent's last "
+                  r"turn)[.]\s*)?")
+
+_RECON_TOP_PATTERNS: tuple = (
+    # Pokégear 3.0 句式：筛出 1 张 Supporter → 入手
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck[.] you may reveal a "
+        r"supporter card you find there and put it into your hand[.] "
+        + _RECON_TAIL + r"$"),
+     {"k": 1, "sel": "supporter", "dest": "hand", "rest": "shuffle"}),
+    # Bug Catching Set：{G} 宝可梦 与 基本 {G} 能量「任意组合」至多 2 张 → 入手
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck[.] you may reveal up to "
+        r"(?P<k>\d+) in any combination of \{(?P<c1>[a-z])\} pok[eé]mon and "
+        r"basic \{(?P<c2>[a-z])\} energy cards you find there and put them into "
+        r"your hand[.] " + _RECON_TAIL + r"$"),
+     {"sel": "mix", "dest": "hand", "rest": "shuffle"}),
+    # Drayton：1 张宝可梦 + 1 张训练家（**各 1 张**，不是「任意 2 张」）→ 入手
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck[.] you may reveal a "
+        r"pok[eé]mon and a trainer card you find there and put them into your "
+        r"hand[.] " + _RECON_TAIL + r"$"),
+     {"k": 2, "sel": "pokemon+trainer@each", "dest": "hand", "rest": "shuffle"}),
+    # Hassel：至多 K 张、不筛类别 → 入手（带「上回合有宝可梦被击倒」前置条件）
+    (re.compile(
+        r"^" + _RECON_GATE_KO +
+        r"look at the top (?P<n>\d+) cards? of your deck and put up to "
+        r"(?P<k>\d+) of them into your hand[.] " + _RECON_TAIL + r"$"),
+     {"sel": "any", "dest": "hand", "rest": "shuffle",
+      "gate": "ko_last_turn", "gate_grp": "gate"}),
+    # Grimsley's Move：筛出 1 张 {D} 宝可梦**铺后备**，其余放牌库**底**，首回合禁用
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck and put a "
+        r"\{(?P<c1>[a-z])\} pok[eé]mon you find there onto your bench[.] "
+        r"shuffle the other cards and put them on the bottom of your deck[.] "
+        r"you can't use this card during your first turn[.]?$"),
+     {"k": 1, "sel": "pokemon", "dest": "bench", "rest": "bottom",
+      "gate": "not_first_turn"}),
+    # Waitress：筛出 1 张**基本**能量 → 附着给己方 1 只
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck and attach a basic "
+        r"energy card you find there to 1 of your pok[eé]mon[.] "
+        + _RECON_TAIL + r"$"),
+     {"k": 1, "sel": "basic_energy", "dest": "attach", "rest": "shuffle"}),
+    # Explorer's Guidance：取**恰好 K 张**入手，其余**弃置**（不是洗回牌库）
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck and put (?P<k>\d+) of "
+        r"them into your hand[.] discard the other cards[.]?$"),
+     {"sel": "any", "dest": "hand", "rest": "discard", "k": 1}),
+)
+
+
+def _detect_recon_top(t: str) -> Optional[dict]:
+    """整句识别「检视牌库顶 N 张 → 筛选 → 入手/铺场/附着」；认不出返回 None。
+
+    返回::
+
+        {"look_top": N, "max": K, "sel": "<筛选式>",
+         "dest": "hand|bench|attach", "rest": "shuffle|bottom", "gate": str|None}
+
+    ``sel`` 语法（不含 ``:``，便于拼进 tag）：``any`` / ``supporter`` /
+    ``pokemon`` / ``pokemon-<ptype>`` / ``basic_energy`` /
+    ``pokemon-<ptype>+energy-<ptype>``（并集）/ ``pokemon+trainer@each``（各 1 张）。
+    """
+    # `_parse_rule_en` 里的 `t` 是**未归一化**的（保留大小写、弯引号与换行），这里
+    # 自行折叠：否则 `opponent’s` / `can’t` 的弯引号、`.\n\n` 的换行都会让整句匹配
+    # 落空（实测 Hassel / Grimsley's Move 就是这两处）。
+    t = (str(t or "").replace("\u2019", "'").replace("\u2018", "'")
+         .replace("\u201c", '"').replace("\u201d", '"')
+         .replace("\u2013", "-").replace("\u2014", "-"))
+    t = re.sub(r"\s+", " ", t).strip().lower()
+    for rx, meta in _RECON_TOP_PATTERNS:
+        m = rx.match(t)
+        if not m:
+            continue
+        gd = m.groupdict()
+        sel = meta["sel"]
+        if sel == "mix":
+            _pt = _EN_ENERGY_LETTER.get(str(gd.get("c1") or "").upper())
+            _bt = _EN_ENERGY_LETTER.get(str(gd.get("c2") or "").upper())
+            if _pt is None or _bt is None:
+                return None             # 属性符号不认识 → 不猜
+            sel = f"pokemon-{_pt}+energy-{_bt}"
+        elif sel == "pokemon" and gd.get("c1"):
+            _pt = _EN_ENERGY_LETTER.get(str(gd["c1"]).upper())
+            if _pt is None:
+                return None
+            sel = f"pokemon-{_pt}"
+        _n = int(gd["n"])
+        _k = int(gd["k"]) if gd.get("k") else int(meta["k"])
+        if _k < 1 or _k > _n:
+            return None
+        gate = meta.get("gate")
+        _grp = meta.get("gate_grp")
+        if _grp and not gd.get(_grp):
+            gate = None                 # 卡面没写这句前置条件 → 不得凭空加上
+        return {"look_top": _n, "max": _k, "sel": sel, "dest": meta["dest"],
+                "rest": meta["rest"], "gate": gate}
+    return None
 _EN_SEARCH_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?", re.I)
 _EN_SEARCH_ANY_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?"
                                r"[^.]*", re.I)
@@ -2354,6 +2467,20 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         seg = re.split(r"[.,;]", t[_m.start():], maxsplit=1)[0].lower()
         tgt = "opponent_hand" if ("opponent" in seg and "hand" in seg) else "hand"
         actions.append(act("discard", n, tgt))
+
+    # 检视牌库顶 → 筛选 → 入手/铺场/附着（2026-10-30 第二十批）：整段认领。
+    # 必须排在通用 `_EN_SEARCH_TOP_RE` 分支之前 —— 那一支只认「入手」去向，
+    # 其它去向会落成 `rule` 拒绝；而「入手」那一支又完全不看筛选词（会把
+    # 「a Supporter card」当成任意 1 张取走 = 静默拿错牌）。
+    # 只对**训练家**卡生效：招式/特性侧的 tag 白名单（`ATTACK_TAG_PREFIXES` /
+    # `_supported_ability_tags`）不含 `recon:`，认领了反而会被池准入**静默丢弃**。
+    if kind in ("item", "supporter", "stadium", "tool"):
+        _rc = _detect_recon_top(t)
+        if _rc:
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("recon", _rc["max"], _rc["dest"], _rc)],
+                    "source_text": str(text or ""), "citations": []}
 
     m = _EN_SEARCH_TOP_RE.search(t)
     if m:
@@ -5882,6 +6009,28 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     unsupported.append(
                         {"type": t, "reason": "招式/特性驱动的进化需卡级 tag"})
+            elif t == "recon":
+                # 检视牌库顶（2026-10-30 第二十批）：
+                # `recon:<N>:<K>:<sel>[:dest:<d>][:rest:bottom][:gate:<g>]`
+                # 与旧 `recon:<N>`（随机取 1 入手）**不是**同一条语义路径 ——
+                # 旧形态无第三段，引擎按老行为（随机 1 张、其余放底）处理。
+                _lo = extra.get("look_top")
+                _mx = extra.get("max")
+                if not _lo or not _mx:
+                    unsupported.append({"type": t,
+                                        "reason": "检视牌库顶缺少张数/筛选项"})
+                else:
+                    _sel = str(extra.get("sel") or "any")
+                    _tag = f"recon:{int(_lo)}:{int(_mx)}:{_sel}"
+                    _dest = str(extra.get("dest") or "hand")
+                    if _dest != "hand":
+                        _tag += f":dest:{_dest}"
+                    _rest = str(extra.get("rest") or "shuffle")
+                    if _rest != "shuffle":
+                        _tag += f":rest:{_rest}"
+                    if extra.get("gate"):
+                        _tag += f":gate:{extra['gate']}"
+                    tags.append(_tag)
             elif t == "search":
                 # 特性 / 训练家 / 招式**共用**同一套判定：先去向，再类别。
                 # 特性侧特有的是「检视牌库顶 N 张取 1」（`recon`），与全牌库检索
@@ -5889,8 +6038,17 @@ def to_engine_tags(specs: list) -> dict:
                 # Pokémon」变成"只能从牌堆顶碰运气"（池内实测 16 条）。
                 src = str(s.get("source_text") or "")
                 _mp = re.search(r"\bsearch\b", src, re.I)
-                look_top = extra.get("look_top") if kind == "ability" else None
-                if look_top:
+                look_top = extra.get("look_top")
+                if look_top and kind != "ability":
+                    # ⚠ 训练家/招式卡面上的「Look at the top N cards … 入手」**不是**
+                    # 全牌库检索。此前这条路径的 `look_top` 只在特性侧被读取，训练家
+                    # 侧会静默退化成正牌库检索（实测 Explorer's Guidance 从「顶部 6
+                    # 张取 2、其余弃置」变成「整副牌库任取 1 张、其余不动」）。
+                    # 未被本批精确识别的形态一律如实拒绝，不得放大检索范围。
+                    unsupported.append(
+                        {"type": t,
+                         "reason": "检视牌库顶（非特性侧未精确识别，B4）"})
+                elif look_top:
                     tags.append(f"recon:{int(look_top)}")
                 else:
                     # ⚠ 无 source_text（手工 spec / 上游已确定语义）时不做去向判定 ——

@@ -9,7 +9,7 @@
 2. **派发**：引擎能真正执行（`engine/battle.py`，未知 tag 抛错，不静默忽略）
 3. **准入**：`gen_engine_pool.py` 放通该 tag 家族（整卡不收原则不变）
 4. **用例**：正例 + **负向守卫**（不可表达的近邻写法必须仍被拒绝）
-5. **对账**：`audit_pool_alignment.py` 二十七类全过（语义错映射是最高优先级缺陷）
+5. **对账**：`audit_pool_alignment.py` 二十八类全过（语义错映射是最高优先级缺陷）
 6. **度量**：`coverage_backlog.py` 记录该族条目/卡数下降，`engine_ready` 上升
 7. **CI**：本地复刻 8/8 PASS + K1 双盲 200 局不退化
 
@@ -18,10 +18,10 @@
 | 指标 | 值 |
 |---|---:|
 | 卡库总卡数 | 1267 |
-| 引擎可对战（`engine_ready`） | **968（76.4%）** |
-| 不可对战 | **299** |
-| 未建模动作条目 | **266** |
-| 测试总数 | 1545 |
+| 引擎可对战（`engine_ready`） | **974（76.9%）** |
+| 不可对战 | **293** |
+| 未建模动作条目 | **259** |
+| 测试总数 | 1575 |
 
 > ✅ **口径修正（2026-10-27）**：`name_key` 同名回落已收紧为「招式/特性名集合
 > 一致」。此前 152 张 `name_key` 命中里有 150 张宝可梦与池内同名条目**招式完全
@@ -57,7 +57,7 @@
 > ⚠ **本表是 2026-10-27 的快照**：同日后续两批（受击反应 `on_damaged`、条件伤害
 > 缩放第五批 17 条件）已落地，`B4-scaling` / `S6` 两行的实时数字已变动。
 > **实时口径以 `packages/card-db/data/cleaned/unmodeled_registry.md` 为准**
-> （当前：未建模 266 条 · `engine_ready` 968 张）。本表不逐日重排，避免与
+> （当前：未建模 259 条 · `engine_ready` 974 张）。本表不逐日重排，避免与
 > 生成物产生第二份真相。
 
 ## 四、实施顺序（依赖关系决定，不按数字大小）
@@ -185,3 +185,4 @@ S6 不是"一类机制"，而是解析链**一个动作都没产出的兜底桶*
 | 2026-10-28 | **第九批：全量回复 / 招式击倒 / 场地形态 / 牌库顶重排** —— ① 全量回复 `heal:all[:<scope>][:type:<c>]`（范围口径与 `heal:N` 共用 `_heal_scope_of`，补 `from your Benched Pokémon` 与「HP/指示物阈值」负向守卫），抛币条件版走 `coin_all:N:heads:heal:all:<scope>`（Whimsicott / Miltank）。② 招式击倒 `knockout:<scope>`：`opp_active[:basic]` · `opp_bench[:basic]` · `opp_any` · `opp_counters:<n>` · `both_active`，目标位置可由 `action.ko` 指定、缺省按战斗位优先；普通/全中抛币两路都经 `coin…` 子 tag 派发；击倒属**招式效果**，受效果免疫拦截（Hydrapple / Annihilape / Glaceon ex / Team Rocket's Exeggutor / Iono's Electrode / Alolan Exeggutor）。③ 场地形态新增 7 类：`no_tool_effect`（Jamming Tower，道具仍附着但全部失效）、`no_retreat:faction:ns`（N's Castle）、`attack_plus:N:faction:hops`（Postwick，弱点/抗性之前）、`dmg_reduce:N:faction:stevens`（Granite Cave，弱抗之后）、`status_immune:require:energy`（Festival Grounds：施加拦截 + 回合开始恢复）、`evolve_same_turn:type:grass`（Forest of Vitality，仅放宽「本回合从手牌放置」且非首回合）、`dmg_immune:box:none:from:rulebox`（Neutralization Zone）。阵营键按 `_name_key` 前缀精确判定，认不出的一律拒绝。④ 检视牌库顶：`shuffle_top:N[:opp]`（Team Rocket's Dottler，只重排顺序、不移动卡）。对账新增第十三/十四类「招式击倒范围」「场地静态规则」+ 6 个负向自测；engine 624 / agent 480；CI 8/8、对账 14/14、K1 0.795 | **766（60.5%）** |
 | 2026-10-28 | **静态免伤族（第八批）+ 护盾来源限定修正** —— 新被动 `passive:dmg_immune:<self|team_bench>[:from:<src>|:min:<n>|:no_rule_box][:effects]`：来源限定只收**可精确判定**的五种（`basic_ex` / `ex` / `tera` / `has_ability` / `special_energy`）加伤害门槛 `min:N`，范围区分「自身」与「全队后备」（+`no_rule_box`）；`effects` 后缀表示卡面写明「from and effects of attacks」（连效果一起挡），只写 prevent all damage 的**只挡伤害**。引擎侧在 `_do_attack`（伤害）与 `_opp_blocked`（效果）双点拦截，spread/snipe 逐目标判定全队后备免伤。**同时修掉两处池内静默错算**：① 护盾 `shield:prevent_all` 此前把「只挡伤害」与「连效果一起挡」合成一个标志（Metapod/Roggenrola/Bronzong 等把中毒也挡了）→ 拆为 `shield_prevent_effects`；② Metapod/Roggenrola「伤害 ≤N 才挡」、Archaludon/Dipplin「只挡基础宝可梦」、Terapagos ex「Basic non-{C}」的来源/门槛限定此前被丢弃 → 新增 `shield:prevent_all[:from:…|:if_damage:le:N][:effects]` 并在引擎按攻击方与伤害判定；认不出的来源一律如实未建模。另把 Tera 规则 `bench_immune` 拆成 `bench_immune_dmg`（Tera 只挡伤害）。落地 Rabsca / Farigiraf ex / Milotic ex / Sylveon / Crustle / Shaymin / Drednaw / Carracosta；对账新增第十二类「静态免伤来源」+ 6 个负向自测；engine 598 / agent 456；CI 8/8、对账 12/12、K1 0.795 | **751（59.3%）** |
 | 2026-10-30 | **第三十批：对手指定招式的封锁（`attack_lock:opp_name`）** —— 引擎早有 `attack_lock` 的 `all`/`opp_all`/`name` 三种范围，唯独缺「**Choose 1 of your opponent's Active Pokémon's attacks … that Pokémon can't use that attack**」这一类（Klefki「Memory Lock」/ Team Rocket's Murkrow「Torment」）。① 解析侧：新增整段认领正则 `_ATTACK_LOCK_CHOOSE_RE` → `scope=opp_name`；**并把「that attack」从 named 规则里排除**（原先会被当成具体卡名生成 `attack_lock:name:turn:that attack`，锚不到任何招式 → 静默不生效）。② `to_engine_tags` 增 `opp_name` 分支（不再报「对手指定招式的封锁（B4）」）；`gen_engine_pool.py` 的 `attack_lock:` 前缀白名单本就覆盖。③ 引擎 `_apply_attack_lock_tag` 增 `opp_name` 范围：目标=对手战斗位、窗口=对手**下一个**回合（`_lock_until(1-current)`），**招式名由出招动作 `action['lock_attack']` 运行时选择**（沿用 `snipe` 的「无选择→确定性默认」口径：缺省锁对手首个招式，绝不静默不生效）。④ 对账新增**第二十七类**「对手指定招式封锁」：卡面写了「choose 1 … that attack」却缺 tag、或把指代词当卡名，均报错；3 个负向自测证明能拦。新增 engine 3 例 / agent 2 例。池 953 张、`engine_ready` 966 → **968（76.4%）**、未建模 268 → **266**；engine 788 / agent 610；审计 27/27 | **968（76.4%）** |
+| 2026-10-30 | **第三十一批：检视牌库顶族（筛选 / 去向 / 余牌 / 前置条件）** —— 引擎的 `recon:N` 此前只有一种形态「顶部 N 张**随机**取 1 张入手、其余放牌库底」，卡池里「检视顶部 N 张 → 按类别/属性筛出 ≤K 张 → 入手 / 铺场 / 附着」整类被拒。新 tag **`recon:<N>:<K>:<sel>[:dest:<d>][:rest:<r>][:gate:<g>]`**：`sel` 支持 `any` / `supporter` / `item` / `stadium` / `trainer` / `pokemon[-<type>]` / `energy[-<type>]` / `basic_energy[-<type>]`，并集用 `+`、`@each` 表示「每种各 1 张」；`dest` ∈ `hand`/`bench`/`attach`；`rest` ∈ `shuffle`/`bottom`/**`discard`**；`gate` ∈ `ko_last_turn`/`not_first_turn`（不满足时该卡**不进合法动作表**）。① **逐整句硬匹配**：只有整段命中才认领，多一句少一句都落到既有拒绝分支 —— 检视牌库顶一旦放宽成「任意 N 张入手」等于凭空多一张手牌。② **修掉一处既有静默错算**：训练家侧的 `look_top` 此前只被特性侧读取，`Explorer's Guidance`（顶部 6 张取 2、其余**弃置**）被静默放大成 `search_any:1`（整副牌库任取 1 张、其余不动、还漏了弃置）→ 现精确建模为 `recon:6:2:any:rest:discard`，并给非特性侧未识别形态加**拒绝**守卫（不得放大检索范围）。③ **修掉一处新写的缺陷**：铺场时后备已满的牌原先会从牌库**消失**（既不在手/场/弃牌堆）→ 改为「执行成功才移出」。④ 前置条件组做成**具名组**，卡面没写就不加（否则「随时可用」会被静默削弱成「只在被击倒过的回合可用」）。⑤ 对账新增**第二十八类**「检视牌库顶去向」（张数不符 / 去向不符 / 余牌不符 / 落成整库检索 四类），8 个负向自测证明能拦。落地 Pokégear 3.0 · Bug Catching Set · Drayton · Hassel · Grimsley's Move · Waitress（+6），`Explorer's Guidance` 由错模型转正；Roto-Stick「any number of」如实仍未建模。新增 engine 16 例 / agent 14 例。池 953 → **959**、`engine_ready` 968 → **974（76.9%）**、未建模 266 → **259**；engine 804 / agent 624；审计 **28/28** | **974（76.9%）** |

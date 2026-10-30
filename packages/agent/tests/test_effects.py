@@ -2400,12 +2400,22 @@ class TestOppHandParsing(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_choose_specific_card_rejected(self):
-        """「你从对手手牌挑一张弃掉」是隐藏信息选择 → 必须拒绝"""
+    def test_choose_specific_card_now_mapped(self):
+        """「你从对手手牌挑一张弃掉」—— **2026-10-30 第三十二批起改为映射**
+
+        此前这里断言「必须拒绝」，理由是「隐藏信息选择」。该理由在**引擎现状**
+        下不成立：引擎根本不建模信息隐藏（``Battle.view()`` 里双方手牌对决策方
+        都是可见的），所以「我方选」并不带来额外信息优势；真正缺的只是「选哪张」。
+
+        选择内容按项目既有 choose 类口径处理（同 ``snipe``）：动作 dict 可带
+        ``hand_pick``，缺省取**手牌顺序第一张**（确定性、可复现），绝不静默不生效。
+        「随机」口径留给卡面真写「对手自选 / at random」的句式
+        （``discard_opp_random`` / ``discard_opp_to`` / ``shuffle_opp_hand``）。
+        """
         r = self._tags("Your opponent reveals their hand, and you discard a "
                        "card you find there.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["opp_hand:discard:any"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestCoinAll(unittest.TestCase):

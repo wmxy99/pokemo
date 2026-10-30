@@ -1,6 +1,6 @@
 {
  "snapshot": "current",
- "generated_at": "2026-10-29 17:44:07",
+ "generated_at": "2026-10-30 17:04:30",
  "source": {
   "db": "packages/card-db/data/db/pokelab.db",
   "decklists": "packages/engine/engine/data/decklists.json",
@@ -11,12 +11,12 @@
   "cards_parsed": 1119,
   "items": 1481,
   "specs": 1481,
-  "engine_tags": 1327,
-  "unsupported": 268,
-  "cards_with_unsupported": 258,
-  "cards_fully_mapped": 861,
-  "cards_with_supported_tag": 997,
-  "cards_engine_ready": 966,
+  "engine_tags": 1334,
+  "unsupported": 259,
+  "cards_with_unsupported": 250,
+  "cards_fully_mapped": 869,
+  "cards_with_supported_tag": 1003,
+  "cards_engine_ready": 974,
   "cards_ready_no_specs": 0
  },
  "deck_baseline": [
@@ -83,10 +83,10 @@
    "goal": "把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发",
    "fix": "agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支",
    "priority": 2,
-   "groups": 7,
-   "entries": 34,
-   "cards": 34,
-   "share": 0.1269
+   "groups": 8,
+   "entries": 30,
+   "cards": 30,
+   "share": 0.1158
   },
   {
    "id": "B3",
@@ -95,9 +95,9 @@
    "fix": "agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）",
    "priority": 3,
    "groups": 31,
-   "entries": 70,
-   "cards": 70,
-   "share": 0.2612
+   "entries": 67,
+   "cards": 67,
+   "share": 0.2587
   },
   {
    "id": "B4",
@@ -105,10 +105,10 @@
    "goal": "需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮",
    "fix": "登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持",
    "priority": 4,
-   "groups": 22,
-   "entries": 30,
-   "cards": 30,
-   "share": 0.1119
+   "groups": 21,
+   "entries": 28,
+   "cards": 28,
+   "share": 0.1081
   },
   {
    "id": "B5",
@@ -119,7 +119,7 @@
    "groups": 35,
    "entries": 134,
    "cards": 134,
-   "share": 0.5
+   "share": 0.5174
   }
  ],
  "items": [
@@ -129,8 +129,8 @@
    "desc": "训练家检索（需通用 search tag）",
    "action_type": "search",
    "reason": "检索数量由计数源决定（B4）",
-   "entries": 12,
-   "cards": 12,
+   "entries": 11,
+   "cards": 11,
    "samples": [
     {
      "card": "Lillie’s Comfey",
@@ -156,42 +156,6 @@
      "card": "Mega Gardevoir ex",
      "name_zh": "超级沙奈朵 ex",
      "text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck."
-    }
-   ]
-  },
-  {
-   "batch": "B2",
-   "sub": "trainer_search",
-   "desc": "训练家检索（需通用 search tag）",
-   "action_type": "search",
-   "reason": "检索去向不可判（B4）",
-   "entries": 7,
-   "cards": 7,
-   "samples": [
-    {
-     "card": "Drilbur",
-     "name_zh": "螺钉地鼠",
-     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck."
-    },
-    {
-     "card": "Palafin",
-     "name_zh": "海豚侠",
-     "text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Spec"
-    },
-    {
-     "card": "Bug Catching Set",
-     "name_zh": "捕虫套装",
-     "text": "Look at the top 7 cards of your deck. You may reveal up to 2 in any combination of {G} Pokémon and Basic {G} Energy cards you find there and put them into your hand. Shuffle the other cards back into "
-    },
-    {
-     "card": "Pokégear 3.0",
-     "name_zh": "宝可齿轮 3.0",
-     "text": "Look at the top 7 cards of your deck. You may reveal a Supporter card you find there and put it into your hand. Shuffle the other cards back into your deck."
-    },
-    {
-     "card": "Brilliant Blender",
-     "name_zh": "闪耀搅拌机",
-     "text": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck."
     }
    ]
   },
@@ -228,6 +192,32 @@
      "card": "Whimsicott ex",
      "name_zh": "风妖精 ex",
      "text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检索去向不可判（B4）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Drilbur",
+     "name_zh": "螺钉地鼠",
+     "text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck."
+    },
+    {
+     "card": "Palafin",
+     "name_zh": "海豚侠",
+     "text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Spec"
+    },
+    {
+     "card": "Brilliant Blender",
+     "name_zh": "闪耀搅拌机",
+     "text": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck."
     }
    ]
   },
@@ -316,6 +306,22 @@
    ]
   },
   {
+   "batch": "B2",
+   "sub": "trainer_search",
+   "desc": "训练家检索（需通用 search tag）",
+   "action_type": "search",
+   "reason": "检视牌库顶（非特性侧未精确识别，B4）",
+   "entries": 1,
+   "cards": 1,
+   "samples": [
+    {
+     "card": "Roto-Stick",
+     "name_zh": "洛托棒",
+     "text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+    }
+   ]
+  },
+  {
    "batch": "B3",
    "sub": "attach",
    "desc": "附能量（attach … energy）",
@@ -393,8 +399,8 @@
    "desc": "检索（search / look at）",
    "action_type": "rule",
    "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）",
-   "entries": 5,
-   "cards": 5,
+   "entries": 4,
+   "cards": 4,
    "samples": [
     {
      "card": "Morpeko",
@@ -415,42 +421,6 @@
      "card": "Litwick",
      "name_zh": "烛光灵",
      "text": "Look at the top card of your deck. You may discard that card."
-    },
-    {
-     "card": "Grimsley's Move",
-     "name_zh": "基玛的策略",
-     "text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first tu"
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "attach",
-   "desc": "附能量（attach … energy）",
-   "action_type": "rule",
-   "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）",
-   "entries": 4,
-   "cards": 4,
-   "samples": [
-    {
-     "card": "Metang",
-     "name_zh": "金属怪",
-     "text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put "
-    },
-    {
-     "card": "Lapras ex",
-     "name_zh": "拉普拉斯 ex",
-     "text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck."
-    },
-    {
-     "card": "Grumpig",
-     "name_zh": "噗噗猪",
-     "text": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Look at the top 4 cards of your deck and attach any number of Basic Energy cards"
-    },
-    {
-     "card": "Waitress",
-     "name_zh": "女服务生",
-     "text": "Look at the top 6 cards of your deck and attach a Basic Energy card you find there to 1 of your Pokémon. Shuffle the other cards back into your deck."
     }
    ]
   },
@@ -521,6 +491,32 @@
    "sub": "attach",
    "desc": "附能量（attach … energy）",
    "action_type": "rule",
+   "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）",
+   "entries": 3,
+   "cards": 3,
+   "samples": [
+    {
+     "card": "Metang",
+     "name_zh": "金属怪",
+     "text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put "
+    },
+    {
+     "card": "Lapras ex",
+     "name_zh": "拉普拉斯 ex",
+     "text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck."
+    },
+    {
+     "card": "Grumpig",
+     "name_zh": "噗噗猪",
+     "text": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Look at the top 4 cards of your deck and attach any number of Basic Energy cards"
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "attach",
+   "desc": "附能量（attach … energy）",
+   "action_type": "rule",
    "reason": "回复范围/限定不可精确表达（B4）",
    "entries": 3,
    "cards": 3,
@@ -565,32 +561,6 @@
      "card": "Rosa's Encouragement",
      "name_zh": "鸣依的鼓励",
      "text": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon."
-    }
-   ]
-  },
-  {
-   "batch": "B3",
-   "sub": "search",
-   "desc": "检索（search / look at）",
-   "action_type": "rule",
-   "reason": "打出前置条件（You can use this card only if …）未建模（B5）",
-   "entries": 3,
-   "cards": 3,
-   "samples": [
-    {
-     "card": "Call Bell",
-     "name_zh": "呼唤铃",
-     "text": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck."
-    },
-    {
-     "card": "Hassel",
-     "name_zh": "哈塞尔",
-     "text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other car"
-    },
-    {
-     "card": "Canari",
-     "name_zh": "卡娜莉",
-     "text": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
     }
    ]
   },
@@ -654,6 +624,27 @@
      "card": "Ultra Ball",
      "name_zh": "高级球",
      "text": "You can use this card only if you discard 2 other cards from your hand.\n\nSearch your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+    }
+   ]
+  },
+  {
+   "batch": "B3",
+   "sub": "search",
+   "desc": "检索（search / look at）",
+   "action_type": "rule",
+   "reason": "打出前置条件（You can use this card only if …）未建模（B5）",
+   "entries": 2,
+   "cards": 2,
+   "samples": [
+    {
+     "card": "Call Bell",
+     "name_zh": "呼唤铃",
+     "text": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck."
+    },
+    {
+     "card": "Canari",
+     "name_zh": "卡娜莉",
+     "text": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
     }
    ]
   },
@@ -1015,27 +1006,6 @@
      "card": "Dondozo ex",
      "name_zh": "吃吼霸 ex",
      "text": "You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself."
-    }
-   ]
-  },
-  {
-   "batch": "B4",
-   "sub": "type:attack_lock",
-   "desc": "未登记动作类型 attack_lock",
-   "action_type": "attack_lock",
-   "reason": "对手指定招式的封锁（B4）",
-   "entries": 2,
-   "cards": 2,
-   "samples": [
-    {
-     "card": "Team Rocket's Murkrow",
-     "name_zh": "火箭队的黑暗鸦",
-     "text": "Choose 1 of your opponent’s Active Pokémon’s attacks. During your opponent’s next turn, that Pokémon can’t use that attack."
-    },
-    {
-     "card": "Klefki",
-     "name_zh": "钥圈儿",
-     "text": "Choose 1 of your opponent’s Active Pokémon’s attacks. During your opponent’s next turn, that Pokémon can’t use that attack."
     }
    ]
   },

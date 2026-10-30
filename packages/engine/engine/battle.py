@@ -580,6 +580,13 @@ class Battle:
                 # 自换位（Switch）：需有后备
                 for bi in range(len(p.bench)):
                     out.append({**base, "target": bi})
+            elif tag.startswith("opp_hand:"):
+                # 对手手牌操作（2026-10-30 第三十二批）：对手手里**没有**符合
+                # 筛选条件的牌时，这张卡打出去只会「什么都不发生」——必须从
+                # 合法动作表里摘掉，否则 AI 会反复尝试一张空转的卡。
+                if any(_opp_hand_matches(c, _parse_opp_hand_tag(tag)[1])
+                       for c in opp.hand):
+                    out.append(dict(base))
             elif tag.startswith("recon:"):
                 # 检视牌库顶（2026-10-30 第二十批）：牌库非空且**前置条件满足**才可打出。
                 # 条件不满足时这张卡必须**不出现在合法动作表**里 —— 否则 AI 会反复
@@ -1644,6 +1651,9 @@ class Battle:
             # 检视牌库顶（2026-10-30 第二十批）：Pokégear 3.0 / Bug Catching Set /
             # Drayton / Hassel / Grimsley's Move / Waitress
             placed = self._do_recon(p, tag, action)
+        elif tag.startswith("opp_hand:"):
+            # 对手手牌操作（2026-10-30 第三十二批）：Eri / Energy Swatter
+            placed = self._do_opp_hand(p, tag, action)
         elif tag == "candy":
             placed = self._trainer_candy(p, action)
         elif tag.startswith(("search_pokemon:", "search_trainer:",
@@ -2245,6 +2255,57 @@ class Battle:
         self._log("discard_opp_to", {"player": 1 - self.current, "n": done,
                                      "left": len(o.hand)})
         return done
+
+    def _do_opp_hand(self, p: PlayerState, tag: str, action: dict) -> str:
+        """对手手牌操作（``opp_hand:<op>:<sel>[:<n>|:all]``）—— **我方选**口径
+
+        卡面形如「Your opponent reveals their hand, and you discard a card you
+        find there.」：选择权在使用者手里，因此默认按**手牌顺序**取（确定性、
+        可复现），并支持 ``action['hand_pick']`` 显式指定下标（供策略侧挑最优）。
+
+        与 ``discard_opp_random`` 的关键差别：那里卡面写的是对手自选，引擎按
+        随机；这里卡面是**我**选，用随机口径等于把一个可选决策退化成碰运气。
+
+        返回执行摘要（无匹配牌时返回空串：规则上「效果不执行」，不是错误）。
+        """
+        op, sel, n = _parse_opp_hand_tag(tag)
+        o = self.players[1 - self.current]
+        cand = [i for i, c in enumerate(o.hand) if _opp_hand_matches(c, sel)]
+
+        want = action.get("hand_pick") if isinstance(action, dict) else None
+        if want:
+            if not isinstance(want, (list, tuple)):
+                raise ValueError(f"opp_hand hand_pick 必须是下标列表：{want!r}")
+            picked: list = []
+            for i in want:
+                if not isinstance(i, int) or isinstance(i, bool):
+                    raise ValueError(f"opp_hand hand_pick 含非整数下标：{i!r}")
+                if i < 0 or i >= len(o.hand):
+                    raise ValueError(f"opp_hand hand_pick 越界：{i}")
+                if not _opp_hand_matches(o.hand[i], sel):
+                    # 显式选择与筛选条件冲突 → 抛错而不是悄悄换成别的牌：
+                    # 悄悄替换等于「照做了但做的是另一件事」，最难发现。
+                    raise ValueError(
+                        f"opp_hand hand_pick 第 {i} 张不符合筛选条件 {sel}")
+                picked.append(i)
+            cand = picked
+        if n != "all":
+            cand = cand[:int(n)]
+        if not cand:
+            return ""
+
+        moved = 0
+        # 从后往前 pop，避免下标偏移
+        for i in sorted(cand, reverse=True):
+            c = o.hand.pop(i)
+            if op == "discard":
+                self._to_discard(o, c)
+            else:                        # bottom：牌库顶是列表末尾，故插入前端
+                o.deck.insert(0, c)
+            moved += 1
+        self._log("opp_hand", {"player": 1 - self.current, "op": op,
+                               "sel": sel, "n": moved})
+        return f"opp {op} {moved}"
 
     def _trainer_mill(self, tag: str) -> str:
         """磨牌（``mill:N[:opp]``）——默认磨自己（已存在于招式侧的同一语义）"""
@@ -4091,6 +4152,11 @@ class Battle:
                     self._log("status", {"player": 1 - self.current,
                                          "target": opp.active.name,
                                          "status": tag})
+            elif tag.startswith("opp_hand:"):
+                # 对手手牌操作（2026-10-30 第三十二批）：Rotom / Luxray ex /
+                # N's Purrloin / Whimsicott ex 之外的招式形态。
+                # 无「目标免疫」检查：改的是手牌，与战斗位免疫无关。
+                self._do_opp_hand(p, tag, action)
             elif tag.startswith("attack_lock:"):
                 if tag.startswith("attack_lock:opp") \
                         and _opp_blocked(opp.active):
@@ -6072,6 +6138,68 @@ def _recon_matches(c, sel: str) -> bool:
     if base in ("", "any"):
         return True
     return any(_recon_one(c, alt) for alt in base.split("+") if alt)
+
+
+def _parse_opp_hand_tag(tag: str) -> tuple:
+    """解析 ``opp_hand:<op>:<sel>[:<n>|:all]`` → ``(op, sel, n)``
+
+    ``op`` ∈ ``discard``（弃进对手弃牌堆）| ``bottom``（放到对手牌库底）；
+    ``sel`` 为 ``+`` 连接的筛选式并集；``n`` 为 ``int`` 或 ``"all"``（缺省 1）。
+
+    ⚠ 与 ``discard_opp_random:N`` / ``discard_opp_to:N`` / ``shuffle_opp_hand:N``
+    是**相反口径**：那三个是「对手自选 ⇒ 引擎按随机」，本 tag 是「我方选
+    ⇒ 确定性默认 + 可选 ``action['hand_pick']``」。混用会造成「我方明明能挑
+    最有利的那张，却被随机弃」——属于方向性错误，不是近似。
+    """
+    parts = str(tag).split(":")
+    if len(parts) < 3:
+        raise ValueError(f"opp_hand tag 字段不足：{tag}")
+    op, sel = parts[1], parts[2]
+    if op not in ("discard", "bottom"):
+        raise ValueError(f"未知 opp_hand 操作：{op}")
+    if not sel:
+        raise ValueError(f"opp_hand 缺少筛选项：{tag}")
+    n: object = 1
+    if len(parts) > 3:
+        raw = parts[3]
+        if raw == "all":
+            n = "all"
+        else:
+            if not raw.isdigit() or int(raw) < 1:
+                raise ValueError(f"opp_hand 张数非法：{raw}")
+            n = int(raw)
+    return op, sel, n
+
+
+def _opp_hand_one(ref, alt: str) -> bool:
+    """单条筛选项匹配（``sel`` 已按 ``+`` 切开）"""
+    from .cards import EnergyRef, PokeRef, TrainerRef
+    alt = str(alt or "").strip()
+    if alt in ("", "any"):
+        return True
+    if alt in ("item", "tool", "stadium", "supporter"):
+        return isinstance(ref, TrainerRef) and str(ref.tdef.kind) == alt
+    if alt == "trainer":
+        return isinstance(ref, TrainerRef)
+    if alt == "energy":
+        return isinstance(ref, EnergyRef)
+    if alt == "basic_energy":
+        return isinstance(ref, EnergyRef) and not ref.edef.is_special
+    if alt == "special_energy":
+        return isinstance(ref, EnergyRef) and ref.edef.is_special
+    if alt == "pokemon":
+        return isinstance(ref, PokeRef)
+    if alt == "basic_pokemon":
+        return isinstance(ref, PokeRef) and ref.pdef.stage == 0
+    if alt == "evolution":
+        return isinstance(ref, PokeRef) and ref.pdef.stage > 0
+    # 未知筛选词必须抛错：静默按「任意牌」处理 = 效果凭空变宽（拿错牌）。
+    raise ValueError(f"未知 opp_hand 筛选项：{alt}")
+
+
+def _opp_hand_matches(ref, sel: str) -> bool:
+    base = str(sel or "any").split("@")[0]
+    return any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt)
 
 
 def _parse_attach_tag(tag: str) -> tuple:

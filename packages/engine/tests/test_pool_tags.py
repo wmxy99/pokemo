@@ -80,6 +80,12 @@ class TestPoolTagVocabulary(unittest.TestCase):
             # 场地卡 / 特殊能量：顶层 tag 也参与词汇表一致性检查
             if c.get("kind") == "stadium" and c.get("tag"):
                 yield c.get("name"), c.get("name"), str(c["tag"])
+            # 训练家卡（item / supporter / tool）的顶层 tag 同样要查 ——
+            # 2026-10-30 补：此前只覆盖 stadium，导致 `opp_hand:` 这类
+            # **只在训练家侧出现**的带参 tag 完全在守卫盲区里（招式侧有 3 条
+            # 被查、训练家侧 2 条没人查 = 假绿）。
+            elif c.get("supertype") == "Trainer" and c.get("tag"):
+                yield c.get("name"), c.get("name"), str(c["tag"])
             if c.get("supertype") == "Energy" and c.get("tag"):
                 yield c.get("name"), c.get("name"), str(c["tag"])
 
@@ -271,6 +277,46 @@ class TestPoolTagVocabulary(unittest.TestCase):
             else:
                 bad.append(f"{name} · {item}：{tag}（引擎未实现的伤害前效果）")
         self.assertEqual(bad, [], "pre: tag 形态非法：\n" + "\n".join(bad))
+
+    def test_opp_hand_tag_shapes(self):
+        """`opp_hand:` **对手手牌操作**的 op / sel / n 必须都能被引擎解析（第三十二批）
+
+        这条守卫的价值在于**参数**：`opp_hand:burn:any`（op 错）或
+        `opp_hand:discard:nonsense`（sel 错）都能通过准入白名单的前缀匹配，
+        但一出手就 `ValueError` —— 卡在池里却打不出来，正是这一族最常见的
+        落地错误。``_parse_opp_hand_tag`` / ``_opp_hand_matches`` 是引擎侧
+        唯一的解析入口，这里直接用它们做静态校验。
+        """
+        from engine.battle import _opp_hand_matches, _parse_opp_hand_tag
+        from engine.cards import (EnergyDef, EnergyRef, PokeRef, PokemonDef,
+                                  TrainerDef, TrainerRef)
+
+        sample = {
+            "any": PokeRef(PokemonDef("s", hp=10, ptype="colorless")),
+            "pokemon": PokeRef(PokemonDef("s", hp=10, ptype="colorless")),
+            "basic_pokemon": PokeRef(PokemonDef("s", hp=10, ptype="colorless")),
+            "item": TrainerRef(TrainerDef("x", kind="item", name="s")),
+            "energy": EnergyRef(EnergyDef()),
+            "basic_energy": EnergyRef(EnergyDef()),
+        }
+        bad = []
+        for name, item, tag in self._iter_tags():
+            if not tag.startswith("opp_hand:"):
+                continue
+            try:
+                _op, sel, _n = _parse_opp_hand_tag(tag)
+            except ValueError as e:
+                bad.append(f"{name} · {item}：{tag}（{e}）")
+                continue
+            # 每个筛选项都要能被引擎认识：用一条真实 ref 走一遍匹配，
+            # 未知筛选词会在这里抛错（不会静默按「任意牌」放行）
+            for alt in sel.split("+"):
+                ref = sample.get(alt, sample["any"])
+                try:
+                    _opp_hand_matches(ref, alt)
+                except ValueError as e:
+                    bad.append(f"{name} · {item}：{tag}（{e}）")
+        self.assertEqual(bad, [], "opp_hand: tag 形态非法：\n" + "\n".join(bad))
 
 
 if __name__ == "__main__":

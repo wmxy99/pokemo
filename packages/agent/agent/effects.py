@@ -579,6 +579,23 @@ _EN_LOOK_TOP_ONE_RE = re.compile(r"look at the top card\b", re.I)
 # 既有的 `rule` 拒绝分支。理由：检视牌库顶一旦被放宽成「任意 N 张入手」，等于凭空
 # 多给一张手牌（池内实测过这类静默加强），所以宁可不收。
 _RECON_TAIL = r"shuffle the other cards back into your deck[.]?"
+
+
+def _norm_prose(t: str) -> str:
+    """归一化卡面文本，供**整句正则**匹配使用。
+
+    `_parse_rule_en` 传进来的 `t` 是**未归一化**的（保留大小写、弯引号与换行），
+    直接拿去跑整句正则会全部失配：实测踩过 `opponent’s` / `can’t` 的弯引号、
+    以及 `.\n\n` 换行这两处（Hassel / Grimsley's Move / Luxray ex）。
+    与 `agent/fx/__init__.py::normalize()` 口径一致（弯引号与破折号转 ASCII、
+    折叠空白、转小写），只是这里额外要求**必须**先折叠再匹配。
+    """
+    s = (str(t or "").replace("\u2019", "'").replace("\u2018", "'")
+         .replace("\u201c", '"').replace("\u201d", '"')
+         .replace("\u2013", "-").replace("\u2014", "-"))
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
 # ⚠ 这一组是**可选**的：卡面没有这句前置条件时绝不能凭空加上条件（否则一张
 # 「随时可用」的卡会变成「只在被击倒过的回合可用」= 静默削弱），因此组要具名，
 # 由 `_detect_recon_top` 按**是否命中**决定 gate 有无。
@@ -647,13 +664,7 @@ def _detect_recon_top(t: str) -> Optional[dict]:
     ``pokemon`` / ``pokemon-<ptype>`` / ``basic_energy`` /
     ``pokemon-<ptype>+energy-<ptype>``（并集）/ ``pokemon+trainer@each``（各 1 张）。
     """
-    # `_parse_rule_en` 里的 `t` 是**未归一化**的（保留大小写、弯引号与换行），这里
-    # 自行折叠：否则 `opponent’s` / `can’t` 的弯引号、`.\n\n` 的换行都会让整句匹配
-    # 落空（实测 Hassel / Grimsley's Move 就是这两处）。
-    t = (str(t or "").replace("\u2019", "'").replace("\u2018", "'")
-         .replace("\u201c", '"').replace("\u201d", '"')
-         .replace("\u2013", "-").replace("\u2014", "-"))
-    t = re.sub(r"\s+", " ", t).strip().lower()
+    t = _norm_prose(t)
     for rx, meta in _RECON_TOP_PATTERNS:
         m = rx.match(t)
         if not m:
@@ -682,6 +693,73 @@ def _detect_recon_top(t: str) -> Optional[dict]:
         return {"look_top": _n, "max": _k, "sel": sel, "dest": meta["dest"],
                 "rest": meta["rest"], "gate": gate}
     return None
+
+
+# ---------------- 对手手牌操作（2026-10-30 第三十二批） ----------------
+# 引擎此前**完全没有**「我方选牌、改对手手牌」的能力：
+#   · `opp_hand`     只给**张数**；
+#   · `discard_opp_random:N` / `discard_opp_to:N` / `shuffle_opp_hand:N` 是
+#     「对手自选 ⇒ 引擎按随机」的口径（见 battle 里同名方法的注释）。
+# 而这一族卡面写的是 **"you discard a card you find there"** = **使用者选**，
+# 用随机口径是**方向性错误**（我方能挑最有利的那张），必须新开 tag。
+#
+# 「揭示」本身在引擎里没有对应状态（引擎不建模信息隐藏，双方手牌对决策方
+# 可见），因此真正要建模的只是后半句（弃牌 / 放回牌库底）。
+# ⚠ 只有「揭示」而**没有**后续操作的卡（Hoothoot TEF 126 / Espurr SSP 84 /
+# Pidove BLK 71）故意不映射：状态变化为零，收进池只会给 AI 多出一个零收益
+# 合法招式 —— 按 C5 宁可留在未建模，见 docs/RULES_COMPLETION_PLAN.md。
+_OPP_HAND_PATTERNS = (
+    # Rotom SSP 61 → opp_hand:discard:item+tool:all
+    (re.compile(r"your opponent reveals their hand[.]\s*discard all item cards? "
+                r"and pok[eé]mon tool cards? you find there[.]?$"),
+     {"op": "discard", "sel": "item+tool", "n": "all"}),
+    # Energy Swatter POR 73 → opp_hand:bottom:energy:1
+    (re.compile(r"your opponent reveals their hand,? and you choose an? energy card "
+                r"you find there and put it on the bottom of their deck[.]?$"),
+     {"op": "bottom", "sel": "energy", "n": 1}),
+    # N's Purrloin JTG 96 → opp_hand:bottom:any:1
+    (re.compile(r"your opponent reveals their hand,? and you choose a card "
+                r"you find there and put it on the bottom of their deck[.]?$"),
+     {"op": "bottom", "sel": "any", "n": 1}),
+    # Eri TEF 146 → opp_hand:discard:item:<n>
+    # "up to N" 取满 = 规则允许的最大效果（弃对手资源，对使用者总是更优）；
+    # 实际张数受「手牌里符合条件的张数」约束，由引擎侧取 min。
+    (re.compile(r"your opponent reveals their hand,? and you discard up to (\d+) "
+                r"item cards? you find there[.]?$"),
+     {"op": "discard", "sel": "item", "n": None}),
+    # Luxray ex TWM 68 → opp_hand:discard:any:1
+    (re.compile(r"your opponent reveals their hand,? and you discard a card "
+                r"you find there[.]?$"),
+     {"op": "discard", "sel": "any", "n": 1}),
+)
+
+
+def _detect_opp_hand_op(t: str) -> Optional[dict]:
+    """整句识别「揭示对手手牌 + 对其操作」；认不出返回 None。
+
+    返回 ``{"op": "discard|bottom", "sel": "<筛选式>", "n": int|"all"}``。
+
+    两级约束缺一不可：
+      · `match` 锚定**句首** —— 该族唯一标识是开头的 "your opponent reveals
+        their hand"；若允许出现在句中，「A. Your opponent reveals … B.」这类
+        多句式里前半句的正当动作会被整段吞掉；
+      · 正则以 ``$`` 收尾 —— 只认句首却不做整句匹配时，后面若还跟着别的
+        效果会被**静默丢弃**（与 recon 族「凭空加条件」是同一类陷阱的反面）。
+    """
+    t = _norm_prose(t)
+    for rx, meta in _OPP_HAND_PATTERNS:
+        m = rx.match(t)
+        if not m:
+            continue
+        n = meta["n"]
+        if n is None:                   # "up to N"
+            n = int(m.group(1))
+            if n < 1:
+                return None
+        return {"op": meta["op"], "sel": meta["sel"], "n": n}
+    return None
+
+
 _EN_SEARCH_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?", re.I)
 _EN_SEARCH_ANY_RE = re.compile(r"search your deck for\s+(?:up to\s+)?(\d+)?"
                                r"[^.]*", re.I)
@@ -2467,6 +2545,22 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         seg = re.split(r"[.,;]", t[_m.start():], maxsplit=1)[0].lower()
         tgt = "opponent_hand" if ("opponent" in seg and "hand" in seg) else "hand"
         actions.append(act("discard", n, tgt))
+
+    # 对手手牌操作（2026-10-30 第三十二批）：整段认领。
+    # 放在上面的 if/elif 链**之后**用 `return` 覆盖，而不是插进链里 ——
+    # 这一族是「整句认领」，链里先前为同一句误 append 的动作必须一并丢弃
+    # （例：`discard a card you find there` 不会被 `discard <n>` 匹配，但
+    # 卡面若写成 `discard 2 cards` 就会先被链吃掉，方向还是「自己手牌」）。
+    # 对招式与训练家都生效；特性侧不开放（本族卡面的特性形态都带前置语，
+    # 如 Mandibuzz「Once during your turn, you may use this Ability.」，
+    # 且要做「放到对手后备」，不在本批范围）。
+    if kind in ("attack", "item", "supporter", "stadium", "tool"):
+        _oh = _detect_opp_hand_op(t)
+        if _oh:
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("opp_hand", None, "opponent_hand", _oh)],
+                    "source_text": str(text or ""), "citations": []}
 
     # 检视牌库顶 → 筛选 → 入手/铺场/附着（2026-10-30 第二十批）：整段认领。
     # 必须排在通用 `_EN_SEARCH_TOP_RE` 分支之前 —— 那一支只认「入手」去向，
@@ -6009,6 +6103,28 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     unsupported.append(
                         {"type": t, "reason": "招式/特性驱动的进化需卡级 tag"})
+            elif t == "opp_hand":
+                # 对手手牌操作（2026-10-30 第三十二批）：
+                # `opp_hand:<op>:<sel>[:<n>|:all]`
+                # ⚠ 与 `discard_opp_random:N` / `discard_opp_to:N` /
+                # `shuffle_opp_hand:N` **语义相反**：那三个是「对手自选 ⇒
+                # 引擎随机」，本 tag 是「我方选 ⇒ 确定性默认（可选 hand_pick）」。
+                _op = str(extra.get("op") or "")
+                _sel = str(extra.get("sel") or "any")
+                _n = extra.get("n", 1)
+                if _op not in ("discard", "bottom"):
+                    unsupported.append({"type": t,
+                                        "reason": f"对手手牌操作未识别：{_op}"})
+                elif not isinstance(_n, int) and _n != "all":
+                    unsupported.append({"type": t,
+                                        "reason": f"对手手牌张数未识别：{_n}"})
+                else:
+                    _tag = f"opp_hand:{_op}:{_sel}"
+                    if _n == "all":
+                        _tag += ":all"
+                    elif int(_n) != 1:
+                        _tag += f":{int(_n)}"
+                    tags.append(_tag)
             elif t == "recon":
                 # 检视牌库顶（2026-10-30 第二十批）：
                 # `recon:<N>:<K>:<sel>[:dest:<d>][:rest:bottom][:gate:<g>]`

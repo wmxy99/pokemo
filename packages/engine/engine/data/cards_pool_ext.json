@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 959,
+      "kept": 964,
       "by_Energy": 19,
-      "by_Pokemon": 827,
-      "by_Trainer": 113,
+      "by_Pokemon": 830,
+      "by_Trainer": 115,
       "skipped": {
-        "存在未建模项（整卡不收）": 249,
+        "存在未建模项（整卡不收）": 244,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 35,
         "Trainer 不可执行": 9
@@ -6710,6 +6710,61 @@
       "uid": "Magneton@SSP 59"
     },
     {
+      "name": "Rotom",
+      "name_zh": "洛托姆",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Crushing Pulse",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 0,
+          "effects": [
+            "opp_hand:discard:item+tool:all"
+          ],
+          "desc": "Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there.",
+          "name_zh": "碾压脉冲",
+          "desc_zh": "对手展示其手牌。弃置其中找到的所有物品卡和宝可梦道具卡。"
+        },
+        {
+          "name": "Energy Short",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_set:20:per:opp_active_energy"
+          ],
+          "desc": "This attack does 20 damage for each Energy attached to your opponent’s Active Pokémon.",
+          "name_zh": "能量短缺",
+          "desc_zh": "对手的战斗宝可梦身上每附着 1 个能量，此招式就造成 20 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "61"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 212,
+      "name_key": "rotom",
+      "uid": "Rotom@SSP 61"
+    },
+    {
       "name": "Tapu Koko",
       "name_zh": "卡璞・鸣鸣",
       "supertype": "Pokemon",
@@ -9385,6 +9440,49 @@
       "source_card_id": 289,
       "name_key": "hopssandaconda",
       "uid": "Hop’s Sandaconda@JTG 87"
+    },
+    {
+      "name": "N’s Purrloin",
+      "name_zh": "N 的扒手猫",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(N)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Thieving Swipe",
+          "cost": {
+            "darkness": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "opp_hand:bottom:any"
+          ],
+          "desc": "Your opponent reveals their hand, and you choose a card you find there and put it on the bottom of their deck.",
+          "name_zh": "窃取拍击",
+          "desc_zh": "对手展示其手牌，你从中选择 1 张卡，并将其放到对手的牌库下方。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "JTG",
+        "number": "96"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 291,
+      "name_key": "nspurrloin",
+      "uid": "N’s Purrloin@JTG 96"
     },
     {
       "name": "N’s Zorua",
@@ -36154,6 +36252,61 @@
       "uid": "Zapdos@TWM 65"
     },
     {
+      "name": "Luxray ex",
+      "name_zh": "伦琴猫 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 310,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Luxio",
+      "attacks": [
+        {
+          "name": "Piercing Gaze",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 120,
+          "effects": [
+            "opp_hand:discard:any"
+          ],
+          "desc": "Your opponent reveals their hand, and you discard a card you find there.",
+          "name_zh": "锐利目光",
+          "desc_zh": "对手展示其手牌，你从中弃置 1 张卡。"
+        },
+        {
+          "name": "Volt Strike",
+          "cost": {
+            "lightning": 2
+          },
+          "damage": 250,
+          "effects": [
+            "discard_energy:all"
+          ],
+          "desc": "Discard all Energy from this Pokémon.",
+          "name_zh": "伏特打击",
+          "desc_zh": "弃置此宝可梦身上的所有能量。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "68"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 954,
+      "name_key": "luxrayex",
+      "uid": "Luxray ex@TWM 68"
+    },
+    {
       "name": "Helioptile",
       "name_zh": "伞电蜥",
       "supertype": "Pokemon",
@@ -41512,6 +41665,23 @@
       "uid": "Wondrous Patch@PFL 94"
     },
     {
+      "name": "Energy Swatter",
+      "name_zh": "能量拍打器",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "opp_hand:bottom:energy",
+      "desc": "Your opponent reveals their hand, and you choose an Energy card you find there and put it on the bottom of their deck.",
+      "desc_zh": "对手展示其手牌，你选择其中 1 张能量卡并将其放到其牌库下方。",
+      "real": {
+        "set": "POR",
+        "number": "73"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1149,
+      "uid": "Energy Swatter@POR 73"
+    },
+    {
       "name": "Antique Jaw Fossil",
       "name_zh": "古代颚化石",
       "supertype": "Trainer",
@@ -41968,6 +42138,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1185,
       "uid": "Explorer’s Guidance@TEF 147"
+    },
+    {
+      "name": "Eri",
+      "name_zh": "艾莉",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "opp_hand:discard:item:2",
+      "desc": "Your opponent reveals their hand, and you discard up to 2 Item cards you find there.",
+      "desc_zh": "对手展示其手牌，你从其中弃置最多 2 张物品卡。",
+      "real": {
+        "set": "TEF",
+        "number": "146"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1186,
+      "uid": "Eri@TEF 146"
     },
     {
       "name": "Hassel",

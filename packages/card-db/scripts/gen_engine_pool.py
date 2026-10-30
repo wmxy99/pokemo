@@ -78,7 +78,12 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 化石卡（2026-10-28）：当作 N-HP 基础宝可梦上场
                 "fossil:",
                 # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 打出前置条件
-                "recon:")
+                "recon:",
+                # 对手手牌操作（2026-10-30 第三十二批）：**我方选**口径
+                # ⚠ 与上面的 `discard_opp_random:` / `discard_opp_to:` /
+                # `shuffle_opp_hand:` 相反：那三个是「对手自选 ⇒ 引擎随机」，
+                # 本族卡面写的是 «you discard a card you find there»（使用者选）。
+                "opp_hand:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -126,7 +131,10 @@ ATTACK_TAG_PREFIXES = (
     # （「Then, shuffle those Energy cards into your deck」，Kyogre / Sinistcha ex）
     "energy_to_deck:",
     # 第二十九批（2026-10-29）：下回合「受击反制」（Bouffalant / Zamazenta）
-    "retaliate_next:"
+    "retaliate_next:",
+    # 第三十二批（2026-10-30）：对手手牌操作（**我方选**）
+    # Rotom / Luxray ex / N's Purrloin / Energy Swatter / Eri
+    "opp_hand:"
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）

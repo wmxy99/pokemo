@@ -513,6 +513,94 @@ def audit_recon_top(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_opp_hand(card_name: str, item_name: str, desc: str,
+                   effects: list) -> list:
+    """对手手牌操作**方向/张数/类别/去向**对账（2026-10-30 · 第二十九类）
+
+    这一族最危险的不是「没建模」，而是**建错了但看起来正常**：
+
+    1. **方向反转**：卡面是「you discard a card you find there」（**使用者**选），
+       却落成随机口径 —— 引擎池里 `discard_opp_random` / `discard_opp_to` /
+       `shuffle_opp_hand` 都是「对手自选 ⇒ 随机」，写法相邻、语义相反；
+    2. **张数不符**：卡面「up to 2」却落成 1（效果变弱）或 `all`（凭空变强）；
+    3. **类别不符**：卡面限定 Item / Energy，却落成 `any` —— 拿错牌；
+    4. **去向不符**：卡面「bottom of their deck」却落成 `discard`（或反之）
+       —— 对手要么少一张牌、要么多一次弃牌堆回收的材料。
+
+    另加**反向**守卫：卡面没有「reveals their hand」却出现 `opp_hand:` tag
+    （多半是句首锚定失效、把别的句式吃进来了）。
+    """
+    errs = []
+    d = _norm(desc or "")
+    has_reveal = bool(re.search(r"reveals? their hand", d, re.I))
+    tags = [str(t) for t in (effects or []) if str(t).startswith("opp_hand:")]
+    if not has_reveal:
+        if tags:
+            errs.append(f"{card_name} · {item_name}：卡面没有「reveals their "
+                        f"hand」，却出现 {tags} —— 认领越界")
+        return errs
+    if not tags:
+        # 只揭示、没有后续操作的同族卡：如实未建模，不算错映射。
+        # 但「有后续操作却没 tag」是漏映射 —— 注意 Rotom 是**祈使句**
+        # （"Discard all Item cards …"），没有 "you"，所以不能按 "you discard"
+        # 判，否则最典型的漏映射反而抓不到。
+        if re.search(r"\b(?:discard|put|choose)\b", d, re.I):
+            wrong = [str(t) for t in (effects or [])
+                     if str(t).startswith(("discard_opp_random:",
+                                           "discard_opp_to:",
+                                           "shuffle_opp_hand:"))]
+            if wrong:
+                errs.append(
+                    f"{card_name} · {item_name}：卡面是「揭示了手牌后**由使用者**"
+                    f"选牌」，却落成随机口径 {wrong} —— 把一个可选决策退化成碰运气"
+                    f"（方向反转）")
+            else:
+                errs.append(
+                    f"{card_name} · {item_name}：卡面有「揭示手牌 + 后续操作」，"
+                    f"却没有 `opp_hand:` tag（漏映射）")
+        return errs
+
+    # 卡面期望值
+    want_op = "bottom" if re.search(r"bottom of their deck", d, re.I) else "discard"
+    if re.search(r"\bitem cards?\b.*\bpok[eé]mon tool cards?\b", d, re.I):
+        want_sel = "item+tool"
+    elif re.search(r"\bitem cards?\b", d, re.I):
+        want_sel = "item"
+    elif re.search(r"\bspecial energy card\b", d, re.I):
+        want_sel = "special_energy"
+    elif re.search(r"\bbasic energy card\b", d, re.I):
+        want_sel = "basic_energy"
+    elif re.search(r"\benergy card\b", d, re.I):
+        want_sel = "energy"
+    elif re.search(r"\bsupporter card\b", d, re.I):
+        want_sel = "supporter"
+    else:
+        want_sel = "any"
+    m_up = re.search(r"discard up to (\d+)|choose up to (\d+)", d, re.I)
+    if m_up:
+        want_n = str(int(m_up.group(1) or m_up.group(2)))
+    elif re.search(r"\bdiscard all\b", d, re.I):
+        want_n = "all"
+    else:
+        want_n = "1"
+
+    for t in tags:
+        parts = t.split(":")
+        got_op = parts[1] if len(parts) > 1 else ""
+        got_sel = parts[2] if len(parts) > 2 else ""
+        got_n = parts[3] if len(parts) > 3 else "1"
+        if got_op != want_op:
+            errs.append(f"{card_name} · {item_name}：卡面操作是 `{want_op}`，"
+                        f"`{t}` 却是 `{got_op}`（去向不符）")
+        if got_sel != want_sel:
+            errs.append(f"{card_name} · {item_name}：卡面筛选是 `{want_sel}`，"
+                        f"`{t}` 却是 `{got_sel}`（类别不符）")
+        if got_n != want_n:
+            errs.append(f"{card_name} · {item_name}：卡面张数是 `{want_n}`，"
+                        f"`{t}` 却是 `{got_n}`（张数不符）")
+    return errs
+
+
 def audit_search_kind(card_name: str, item_name: str, desc: str,
                       effects: list) -> list:
     """检索的**去向**与**类别**两级对账（2026-10-27 扩展）
@@ -1420,6 +1508,7 @@ def main() -> int:
                 errs += audit_mill(c["name"], it.get("name"), desc, eff)
                 errs += audit_attack_lock(c["name"], it.get("name"), desc, eff)
                 errs += audit_recon_top(c["name"], it.get("name"), desc, eff)
+                errs += audit_opp_hand(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
                 errs += audit_coin_forms(c["name"], it.get("name"), desc, eff)
@@ -1468,7 +1557,8 @@ def main() -> int:
           "特殊能量种类 · 静态免伤来源 · 招式击倒范围 · 场地静态规则 · 跨回合伤害修正 · "
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
-          "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 二十八类对账全部一致")
+          "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 "
+          "二十九类对账全部一致")
     return 0
 
 

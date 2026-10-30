@@ -187,7 +187,9 @@ class TestI18nZhNames(unittest.TestCase):
         self.assertEqual(names["Phantom Dive"], "幻影俯冲")
         self.assertEqual(names["Jet Headbutt"], "喷射头击")
         self.assertEqual(cat["Drakloak"]["def"].abilities[0].name_zh, "侦察指令")
-        self.assertEqual(cat["Dusknoir"]["def"].abilities[0].name_zh, "诅咒爆破")
+        # 同名多印刷：卡名默认取**数据集最新印刷**（SFA 20），其 i18n 为「诅咒爆裂」；
+        # 预设卡表锁定的人工印刷（SIT 70）仍是「诅咒爆破」。
+        self.assertEqual(cat["Dusknoir"]["def"].abilities[0].name_zh, "诅咒爆裂")
         # 英文数据键必须保持不变（Limitless 文本匹配以此为准）
         self.assertEqual(drag.name, "Dragapult ex")
 
@@ -280,7 +282,16 @@ class TestColorlessCostPayment(unittest.TestCase):
     def _fp(self, name):
         from engine.cards import make_pokemon
         from engine import reallib
-        return make_pokemon(reallib.catalog()[name]["def"])
+        # 预设锁定的人工印刷（同名数据集新印刷不会替换这些手校卡）
+        uid = None
+        for aid in reallib.archetype_ids():
+            for e in reallib.decklist(aid):
+                if e.get("name") == name and e.get("uid"):
+                    uid = e["uid"]
+                    break
+            if uid:
+                break
+        return make_pokemon(reallib.item_for(uid or name)["def"])
 
     def test_colorless_payable_by_any_color(self):
         fp = self._fp("Meowth ex")            # 乱抓：2 无色

@@ -24,7 +24,7 @@ import random
 import unittest
 
 from engine import decklib as dl
-from engine.battle import Battle
+from engine.battle import Battle, _retreat_cost, _eval_counter
 from engine.cards import (AbilityDef, AttackDef, EnergyDef, EnergyRef, PokeRef,
                           PokemonDef, TrainerDef, TrainerRef, make_pokemon)
 from engine.state import GameConfig, PlayerState
@@ -183,6 +183,67 @@ class TestDamageMods(unittest.TestCase):
         b.step({"verb": "attack", "attack": 0})
         self.assertEqual(b.players[1].active.damage, 10 + 50)
 
+    # ---- 2026-10-27：新增公开计数源 ----
+    def test_plus_per_own_basic(self):
+        """「Basic Pokémon in play」= 场上（含战斗位）stage==0 的数量"""
+        b = _arena()
+        _bench(b, 0, 2)                     # active + 2 bench = 3 basic
+        b.players[0].bench.append(make_pokemon(PokemonDef(
+            "Stage1", hp=100, ptype="colorless", stage=1)))
+        _equip(b, ("dmg_plus:10:per:own_basic",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10 + 30,
+                         "进化型不得计入 Basic 数")
+
+    def test_plus_per_own_evolution(self):
+        b = _arena()
+        for name, stage in (("Stage1", 1), ("Stage2", 2)):
+            b.players[0].bench.append(make_pokemon(PokemonDef(
+                name, hp=100, ptype="colorless", stage=stage)))
+        _equip(b, ("dmg_plus:40:per:own_evolution",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10 + 80,
+                         "战斗位是基础型，不应计入 Evolution 数")
+
+    def test_plus_per_opp_hand(self):
+        b = _arena()
+        b.players[1].hand = [EnergyRef() for _ in range(4)]
+        _equip(b, ("dmg_plus:30:per:opp_hand",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10 + 120)
+
+    def test_plus_per_opp_field_counters(self):
+        """对手全场指示物 = 战斗位 + 后备（按 10 点/个）"""
+        b = _arena()
+        _bench(b, 1, 3)
+        b.players[1].active.damage = 20
+        b.players[1].bench[0].damage = 30
+        b.players[1].bench[1].damage = 10
+        _equip(b, ("dmg_plus:10:per:opp_field_counters",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 20 + 10 + 60)
+
+    def test_plus_per_opp_active_status_count(self):
+        """多特殊状态并存时按**个数**计（不是"有无"）
+
+        用 sleep/confuse 而非 poison/burn：后者在回合结束的 checkup 里会追加
+        伤害，干扰对加伤数值的断言。
+        """
+        b = _arena()
+        b.players[1].active.status.update({"sleep", "confuse"})
+        _equip(b, ("dmg_plus:50:per:opp_active_status_count",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10 + 100)
+
+    def test_plus_per_own_field_tools(self):
+        b = _arena()
+        _bench(b, 0, 2)
+        holder = _equip(b, ("dmg_plus:30:per:own_field_tools",))
+        holder.tool = "tool:test"
+        b.players[0].bench[0].tool = "tool:test"
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10 + 60)
+
     def test_plus_if_opp_ko_last_turn_not_set(self):
         b, r = self._go(("dmg_plus:60:if:opp_ko_last_turn",))
         self.assertTrue(r["ok"], r.get("error"))
@@ -205,6 +266,16 @@ class TestDamageMods(unittest.TestCase):
         _equip(b, ("ignore_weakness",))
         b.step({"verb": "attack", "attack": 0})
         self.assertEqual(b.players[1].active.damage, 10, "忽略弱点后不应 ×2")
+
+    def test_ignore_resistance(self):
+        b = _arena()
+        b.players[1].active = make_pokemon(
+            PokemonDef("ResistGuy", hp=200, ptype="water",
+                       resistance="colorless", attacks=()))
+        _equip(b, ("ignore_resistance",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.damage, 10,
+                         "忽略抗性后不应 −30")
 
     def test_weakness_applies_without_ignore(self):
         b = _arena()
@@ -255,10 +326,26 @@ class TestShields(unittest.TestCase):
         self.assertEqual(b.players[1].active.damage, 0)
 
     def test_shield_prevent_all_blocks_effects(self):
+        """「prevent all damage **from and effects of** attacks」→ 连效果一起挡"""
+        b, _ = self._hit(damage=80, effects=("poison",))
+        b.players[1].active.shield_prevent_all = True
+        b.players[1].active.shield_prevent_effects = True
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.players[1].active.status, set(), "免疫应挡住效果")
+
+    def test_shield_prevent_damage_only_lets_effects_through(self):
+        """只写「prevent all damage …」的护盾**不挡效果**（2026-10-28 语义拆分）
+
+        把两者合成一个标志会静默放大防护范围：Metapod「Harden」只挡伤害，
+        原先却连中毒/睡眠一起挡掉。
+        """
         b, _ = self._hit(damage=80, effects=("poison",))
         b.players[1].active.shield_prevent_all = True
         b.step({"verb": "attack", "attack": 0})
-        self.assertEqual(b.players[1].active.status, set(), "免疫应挡住效果")
+        # 招式伤害被挡下；10 来自对手回合开始时的中毒检查
+        self.assertEqual(b.players[1].active.damage, 10, "伤害应被挡下")
+        self.assertEqual(b.players[1].active.status, {"poison"},
+                         "只挡伤害的护盾不应挡住效果")
 
     def test_effects_land_without_shield(self):
         b, _ = self._hit(damage=80, effects=("poison",))
@@ -865,6 +952,106 @@ class TestAbilitySearch(unittest.TestCase):
         names = [a.get("name") for a in b.legal_actions()]
         self.assertNotIn("Fetch", names)
 
+    def _filter_battle(self, tag, cards):
+        b = _arena()
+        ab = AbilityDef("Fetch", name_zh="检索", tag=tag, location="field")
+        b.players[0].active = make_pokemon(
+            PokemonDef("Fetcher", hp=200, ptype="colorless", attacks=(),
+                       abilities=(ab,)))
+        b.players[0].deck = list(cards) + [EnergyRef(E_FIRE) for _ in range(4)]
+        b.players[0].hand = []
+        b._test_tag = tag
+        return b
+
+    def test_search_pokemon_type_filter(self):
+        fire = PokeRef(PokemonDef("FireGuy", hp=60, ptype="fire", attacks=()))
+        water = PokeRef(PokemonDef("WaterGuy", hp=60, ptype="water", attacks=()))
+        b = self._filter_battle("search_pokemon:1:type:fire", [water, fire])
+        r = self._use(b)
+        self.assertTrue(r["ok"], r.get("error"))
+        names = [c.pdef.name for c in b.players[0].hand if isinstance(c, PokeRef)]
+        self.assertEqual(names, ["FireGuy"])
+
+    def test_search_pokemon_stage_and_hp_filter(self):
+        basic = PokeRef(PokemonDef("SmallBasic", hp=60, ptype="fire", attacks=()))
+        evolved = PokeRef(PokemonDef("BigStage1", hp=120, ptype="fire", attacks=(),
+                                     stage=1))
+        b = self._filter_battle("search_pokemon:2:type:fire:hp:60", [evolved, basic])
+        r = self._use(b)
+        self.assertTrue(r["ok"], r.get("error"))
+        names = [c.pdef.name for c in b.players[0].hand if isinstance(c, PokeRef)]
+        self.assertEqual(names, ["SmallBasic"], "HP 60 筛选不得带出 120 HP 的卡")
+
+    def test_filtered_search_not_offered_without_match(self):
+        water = PokeRef(PokemonDef("WaterGuy", hp=60, ptype="water", attacks=()))
+        b = self._filter_battle("search_pokemon:1:type:fire", [water])
+        names = [a.get("name") for a in b.legal_actions()]
+        self.assertNotIn("Fetch", names, "牌库无匹配属性 → 不得列为合法动作")
+
+    def test_search_resistance_filter(self):
+        """B2 剩余：`{F} Resistance` 筛选（Fletchling）"""
+        resist = PokeRef(PokemonDef("Resistor", hp=60, ptype="colorless",
+                                    resistance="fighting", attacks=()))
+        other = PokeRef(PokemonDef("Other", hp=60, ptype="colorless",
+                                   attacks=()))
+        b = self._filter_battle("search_pokemon:2:resistance:fighting",
+                                [other, resist])
+        r = self._use(b)
+        self.assertTrue(r["ok"], r.get("error"))
+        names = [c.pdef.name for c in b.players[0].hand if isinstance(c, PokeRef)]
+        self.assertEqual(names, ["Resistor"])
+
+    def test_search_count_from_counter(self):
+        """B2 剩余：`search_any:N:per:<counter>`（Scrafty「至多后备数」）"""
+        b = self._filter_battle("search_any:1:per:own_bench", [])
+        # `search_any` 的引擎约定是「任意**非能量**卡」（见 `_kind_matches`）
+        b.players[0].deck = [
+            PokeRef(PokemonDef(f"Any{i}", hp=60, ptype="colorless", attacks=()))
+            for i in range(6)]
+        _bench(b, 0, 2)
+        r = self._use(b)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 2, "后备 2 只 → 至多检索 2 张")
+
+    def test_search_energy_typed(self):
+        """B2 剩余：`search_energy:N:type:<c>`（Aromatisse / Firebreather）"""
+        from engine.cards import EnergyDef
+        b = self._filter_battle("search_energy:2:type:water", [])
+        water = EnergyDef("water")
+        b.players[0].deck = ([EnergyRef(water) for _ in range(2)]
+                             + [EnergyRef(E_FIRE) for _ in range(3)])
+        r = self._use(b)
+        self.assertTrue(r["ok"], r.get("error"))
+        got = [c.edef.type for c in b.players[0].hand if isinstance(c, EnergyRef)]
+        self.assertEqual(got, ["water", "water"])
+
+
+class TestSelfStatusEffect(unittest.TestCase):
+    """`status_self:<s>` —— 状态作用于**出招者自己**（2026-10-28）"""
+
+    def test_attack_status_self_targets_attacker(self):
+        b = _arena()
+        me = _equip(b, ("status_self:confuse",))
+        foe = b.players[1].active
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIn("confuse", me.status)
+        self.assertNotIn("confuse", foe.status, "不得给对手上状态")
+
+    def test_ability_status_self_targets_holder(self):
+        b = _arena()
+        ab = AbilityDef("SelfPoison", name_zh="自毒", tag="status_self:poison",
+                        location="field")
+        b.players[0].active = make_pokemon(
+            PokemonDef("Holder", hp=200, ptype="colorless", attacks=(),
+                       abilities=(ab,)))
+        b.players[0].deck = [EnergyRef(E_FIRE) for _ in range(5)]
+        r = b.step({"verb": "ability", "name": "SelfPoison", "pos": 0,
+                    "tag": "status_self:poison"})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIn("poison", b.players[0].active.status)
+        self.assertNotIn("poison", b.players[1].active.status)
+
 
 class TestParameterizedConditions(unittest.TestCase):
     """带参数条件（2026-09-22 新增）：卡面「If this Pokémon has any {L} Energy
@@ -1006,6 +1193,15 @@ class TestFourthBatchConditions(unittest.TestCase):
                   "opp_active_has_damage", "own_active_has_damage"):
             self.assertIn(c, v["conditions"])
         self.assertTrue(any(x.startswith("opp_active_type:") for x in v["condition_params"]))
+
+    def test_public_counters_listed_in_vocab(self):
+        """新增计数源同样必须进入提示词取值域"""
+        from engine.battle import dmg_vocab
+        v = dmg_vocab()
+        for c in ("own_basic", "own_evolution", "opp_hand",
+                  "opp_field_counters", "opp_active_status_count",
+                  "own_field_tools"):
+            self.assertIn(c, v["counters"])
 
 
 class TestStaticMods(unittest.TestCase):
@@ -2066,6 +2262,1144 @@ class TestScalingConditions5(unittest.TestCase):
         b, ev = self._b()
         with self.assertRaises(ValueError):
             ev(b, "definitely_not_a_condition")
+
+
+class TestCrossTurnLocks(unittest.TestCase):
+    """跨回合锁定：攻击封锁 / 撤退封锁（2026-10-27）
+
+    时间窗必须按**卡面**结算：
+      · 「During your next turn」→ 只在**自己**的下一个回合锁；
+      · 「During your opponent's next turn」→ 只在**对手**的下一个回合锁；
+      · 「until it leaves the Active Spot」→ 离场/进化才解除。
+    不能折算成「本回合不能攻击/撤退」——那会在错误回合生效。
+    """
+
+    def _fighter(self, *attacks):
+        return make_pokemon(PokemonDef(
+            "Fighter", hp=200, ptype="colorless", attacks=tuple(attacks)))
+
+    def test_self_attack_lock_expires_after_next_turn(self):
+        b = _arena()
+        _equip(b, ("attack_lock:all:turn",), damage=10, owner=0)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        # 对手回合 → 自己下一个回合：仍锁
+        b.step({"verb": "pass"})
+        acts = b.legal_actions()
+        self.assertFalse(any(a["verb"] == "attack" for a in acts),
+                         "自己下个回合仍应被锁")
+        self.assertTrue(b.step({"verb": "pass"})["ok"])
+        b.step({"verb": "pass"})
+        acts = b.legal_actions()
+        self.assertTrue(any(a["verb"] == "attack" for a in acts),
+                        "再下一个回合应解除")
+
+    def test_named_attack_lock_only_blocks_named_attack(self):
+        b = _arena()
+        b.players[0].active = self._fighter(
+            AttackDef("Giant Wave", cost=0, damage=10,
+                      effects=("attack_lock:name:turn:Giant Wave",)),
+            AttackDef("Tackle", cost=0, damage=10, effects=()))
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        b.step({"verb": "pass"})
+        idx = [a.get("attack") for a in b.legal_actions()
+               if a["verb"] == "attack"]
+        self.assertEqual(idx, [1], "只锁指定招式，不得连带其它招式")
+
+    def test_opponent_attack_lock_applies_on_their_turn(self):
+        b = _arena()
+        atk = AttackDef("Powder Snow", cost=0, damage=10, effects=())
+        b.players[1].active = self._fighter(atk)
+        _equip(b, ("attack_lock:opp_all:turn",), damage=10, owner=0)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        self.assertEqual(b.current, 1)
+        self.assertFalse(any(a["verb"] == "attack"
+                             for a in b.legal_actions()),
+                         "对手的战斗位在其下个回合不能攻击")
+
+    def test_opp_named_attack_lock_runtime_choice(self):
+        """`attack_lock:opp_name:turn`：锁对手战斗位**指定**招式，招式名由
+        出招动作 `lock_attack` 运行时选择（Klefki「Memory Lock」/ Murkrow「Torment」）。"""
+        b = _arena()
+        b.players[1].active = self._fighter(
+            AttackDef("Slash", cost=0, damage=10),
+            AttackDef("Bite", cost=0, damage=10))
+        _equip(b, ("attack_lock:opp_name:turn",), damage=10, owner=0)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0,
+                                "lock_attack": "Bite"})["ok"])
+        self.assertEqual(b.current, 1)
+        idx = [a.get("attack") for a in b.legal_actions()
+               if a["verb"] == "attack"]
+        self.assertEqual(idx, [0], "只锁被选中的 Bite，Slash 仍可用")
+
+    def test_opp_named_attack_lock_defaults_to_first_attack(self):
+        """未给 `lock_attack` 时取确定性默认（对手战斗位首个招式），绝不静默不生效"""
+        b = _arena()
+        b.players[1].active = self._fighter(
+            AttackDef("Slash", cost=0, damage=10),
+            AttackDef("Bite", cost=0, damage=10))
+        _equip(b, ("attack_lock:opp_name:turn",), damage=10, owner=0)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        idx = [a.get("attack") for a in b.legal_actions()
+               if a["verb"] == "attack"]
+        self.assertEqual(idx, [1], "默认锁首个招式 Slash")
+
+    def test_opp_named_attack_lock_expires_after_their_turn(self):
+        """窗口只覆盖对手**下一个**回合，再下一个回合解除"""
+        b = _arena()
+        b.players[1].active = self._fighter(
+            AttackDef("Slash", cost=0, damage=10),
+            AttackDef("Bite", cost=0, damage=10))
+        _equip(b, ("attack_lock:opp_name:turn",), damage=10, owner=0)
+        b.step({"verb": "attack", "attack": 0, "lock_attack": "Bite"})
+        self.assertEqual(b.current, 1)
+        idx = [a.get("attack") for a in b.legal_actions()
+               if a["verb"] == "attack"]
+        self.assertEqual(idx, [0], "对手当前回合 Bite 被锁")
+        b.step({"verb": "pass"})          # 回到己方
+        b.step({"verb": "pass"})          # 对手**下一个**回合 → 应已解除
+        self.assertEqual(b.current, 1)
+        idx = [a.get("attack") for a in b.legal_actions()
+               if a["verb"] == "attack"]
+        self.assertEqual(idx, [0, 1], "窗口只覆盖对手一个回合")
+
+    def test_active_lock_persists_until_leaving_active(self):
+        b = _arena()
+        atk = AttackDef("Blaze Blitz", cost=0, damage=10,
+                        effects=("attack_lock:name:active:Blaze Blitz",))
+        b.players[0].active = self._fighter(atk)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        b.step({"verb": "pass"})
+        self.assertFalse(any(a["verb"] == "attack"
+                             for a in b.legal_actions()))
+        fp = b.players[0].active
+        self.assertIn(fp._attack_key("Blaze Blitz"),
+                      fp.attack_lock_names_active)
+        fp.clear_active_locks()          # 模拟离场（撤退/换位走同一清理点）
+        self.assertNotIn(fp._attack_key("Blaze Blitz"),
+                         fp.attack_lock_names_active)
+        self.assertTrue(any(a["verb"] == "attack"
+                            for a in b.legal_actions()))
+
+    def test_retreat_lock_blocks_retreat_for_one_turn(self):
+        b = _arena()
+        b.players[1].active.pdef = PokemonDef(
+            "Defender", hp=200, ptype="colorless", retreat=1, attacks=())
+        b.players[1].active.add_energy("colorless")
+        _bench(b, 1, 1)
+        _equip(b, ("retreat_lock:opp:turn",), damage=10, owner=0)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        self.assertEqual(b.current, 1)
+        self.assertFalse(any(a["verb"] == "retreat"
+                             for a in b.legal_actions()),
+                         "对手下个回合不能撤退")
+        b.step({"verb": "pass"})
+        b.step({"verb": "pass"})
+        self.assertEqual(b.current, 1)
+        self.assertTrue(any(a["verb"] == "retreat"
+                            for a in b.legal_actions()),
+                        "时限过后应恢复撤退")
+
+    def test_self_retreat_lock_blocks_own_next_turn(self):
+        b = _arena()
+        _equip(b, ("retreat_lock:self:turn",), damage=10, owner=0)
+        b.players[0].active.add_energy("colorless")
+        _bench(b, 0, 1)
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        self.assertEqual(b.current, 1)
+        b.step({"verb": "pass"})        # 回到自己：下个回合
+        self.assertEqual(b.current, 0)
+        self.assertFalse(any(a["verb"] == "retreat"
+                             for a in b.legal_actions()),
+                         "自己下个回合不能撤退")
+        b.step({"verb": "pass"})
+        b.step({"verb": "pass"})
+        self.assertEqual(b.current, 0)
+        self.assertTrue(any(a["verb"] == "retreat"
+                            for a in b.legal_actions()),
+                        "时限过后应恢复撤退")
+
+    def test_item_lock_blocks_opponent_items_only(self):
+        b = _arena()
+        _equip(b, ("play_lock:item:opp:turn",), damage=10, owner=0)
+        opp = b.players[1]
+        opp.hand = [TrainerRef(TrainerDef("poffin", kind="item",
+                                          name="Buddy")),
+                    TrainerRef(TrainerDef("tool:hp_plus:20", kind="tool",
+                                          name="Tool")),
+                    TrainerRef(TrainerDef("research:3", kind="supporter",
+                                          name="Prof"))]
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        kinds = [a.get("kind") for a in b.legal_actions()
+                 if a["verb"] == "trainer"]
+        self.assertNotIn("item", kinds, "对手下个回合不能打物品")
+        self.assertNotIn("tool", kinds, "物品封锁应覆盖 Pokémon Tool")
+        self.assertIn("supporter", kinds, "物品封锁不应误伤支援者")
+        b.step({"verb": "pass"})
+        b.step({"verb": "pass"})
+        kinds = [a.get("kind") for a in b.legal_actions()
+                 if a["verb"] == "trainer"]
+        self.assertIn("item", kinds, "时限过后物品应恢复")
+
+    def test_evolution_lock_blocks_opponent_evolution(self):
+        b = _arena()
+        _equip(b, ("play_lock:evolution:opp:turn",), damage=10, owner=0)
+        opp = b.players[1]
+        opp.hand = [PokeRef(PokemonDef("Evolved", hp=250, ptype="colorless",
+                                       stage=1, evolves_from="Defender"))]
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        self.assertFalse(any(a["verb"] == "evolve"
+                             for a in b.legal_actions()),
+                         "对手下个回合不能从手牌进化")
+        b.step({"verb": "pass"})
+        b.step({"verb": "pass"})
+        self.assertTrue(any(a["verb"] == "evolve"
+                            for a in b.legal_actions()),
+                        "时限过后应恢复进化")
+
+    def test_evolve_clears_locks(self):
+        fp = make_pokemon(PokemonDef("Old", hp=100, ptype="colorless",
+                                     attacks=()))
+        fp.attack_lock_all_until = 9
+        fp.attack_lock_names_until["x"] = 9
+        fp.attack_lock_names_active.add("x")
+        fp.retreat_lock_until = 9
+        fp.evolve_to(PokemonDef("New", hp=120, ptype="colorless", attacks=()))
+        self.assertFalse(fp.attack_locked("x", 1))
+        self.assertFalse(fp.retreat_locked(1))
+
+
+class TestB3DrawFamily(unittest.TestCase):
+    """B3（2026-10-28）：抽牌完整性 —— 双方同抽 / 对手洗回手牌后抽 /
+    按计数源抽 / 条件式抽"""
+
+    def _ability(self, tag, deck=20, hand=()):
+        b = _arena()
+        ab = AbilityDef("Drawer", name_zh="抽", tag=tag, location="field")
+        b.players[0].active = make_pokemon(
+            PokemonDef("Holder", hp=200, ptype="colorless", attacks=(),
+                       abilities=(ab,)))
+        b.players[0].deck = [EnergyRef(E_FIRE) for _ in range(deck)]
+        b.players[1].deck = [EnergyRef(E_FIRE) for _ in range(deck)]
+        b.players[0].hand = list(hand)
+        return b, {"verb": "ability", "name": "Drawer", "pos": 0, "tag": tag}
+
+    def test_draw_both(self):
+        b, act = self._ability("draw_both:1")
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 1)
+        self.assertEqual(len(b.players[1].hand), 1, "对手也必须抽 1 张")
+
+    def test_draw_per_counter(self):
+        b, act = self._ability("draw:1:per:own_bench")
+        _bench(b, 0, 2)
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 2)
+
+    def test_draw_conditional_not_met(self):
+        """`draw:N:if:<cond>` 条件不满足 → 特性不可发动（Fezandipiti 的前置条件）"""
+        b, act = self._ability("draw:3:if:own_ko_last_turn")
+        r = b.step(act)
+        self.assertFalse(r["ok"], "前置条件不满足时不得发动")
+        self.assertEqual(len(b.players[0].hand), 0)
+
+    def test_draw_conditional_met(self):
+        b, act = self._ability("draw:3:if:own_ko_last_turn")
+        b._ko_flags()[0] = 1
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[0].hand), 3)
+
+    def test_conditional_draw_not_offered_when_false(self):
+        b, _act = self._ability("draw:3:if:own_ko_last_turn")
+        self.assertNotIn("Drawer", [a.get("name") for a in b.legal_actions()])
+
+    def test_opp_shuffle_draw_replaces_hand(self):
+        """对手把手牌洗回牌库后抽 N（Gothitelle）：手牌总数变成 N"""
+        b, act = self._ability("opp_shuffle_draw:3")
+        b.players[1].hand = [EnergyRef(E_FIRE) for _ in range(5)]
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 3)
+        self.assertEqual(b.players[0].hand, [], "我方不应该抽牌")
+
+    def test_opp_shuffle_draw_if_hand_skips_empty(self):
+        """Vivillon：手牌为空时「if they put any cards」不成立 → 不抽"""
+        b, act = self._ability("opp_shuffle_draw:4:if_hand")
+        b.players[1].hand = []
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 0)
+
+
+class TestB3RecoverFamily(unittest.TestCase):
+    """B3：`recover:heads:N` 与 `recover:N:combo:<a>+<b>[:type:<c>]`"""
+
+    def _attack_battle(self, effects):
+        b = _arena()
+        _equip(b, effects, damage=0)
+        return b
+
+    def test_recover_heads_counts_coins(self):
+        b = self._attack_battle(("recover:heads:3",))
+        p = b.players[0]
+        p.discard_refs = [EnergyRef(E_FIRE) for _ in range(5)]
+        p.discard = ["Fire Energy"] * 5
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        coin = [e for e in b.events if e.get("type") == "coin"]
+        self.assertEqual(len(coin), 1, "3 枚硬币只记一条事件（结果含正面枚数）")
+        heads = int(str(coin[0]["result"]).split("/")[0])
+        self.assertEqual(len(p.hand), heads)
+        self.assertLessEqual(len(p.hand), 3)
+
+    def test_combo_excludes_rule_box_pokemon(self):
+        """Lana's Aid：ex（有 Rule Box）不得被回收"""
+        b = self._attack_battle(("recover:3:combo:no_rule_pokemon+basic_energy",))
+        p = b.players[0]
+        ex = PokeRef(PokemonDef("Big ex", hp=300, ptype="colorless", attacks=(),
+                                is_ex=True))
+        plain = PokeRef(PokemonDef("Plain", hp=60, ptype="colorless", attacks=()))
+        p.discard_refs = [ex, plain, EnergyRef(E_FIRE)]
+        p.discard = ["Big ex", "Plain", "Fire Energy"]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        names = sorted(c.pdef.name for c in p.hand if isinstance(c, PokeRef))
+        self.assertEqual(names, ["Plain"])
+        self.assertTrue(any(isinstance(c, EnergyRef) for c in p.hand))
+        self.assertEqual(len(p.hand), 2)
+
+    def test_combo_type_filter(self):
+        b = self._attack_battle(
+            ("recover:4:combo:pokemon+basic_energy:type:fighting",))
+        p = b.players[0]
+        fighting = PokeRef(PokemonDef("Fighter", hp=60, ptype="fighting",
+                                      attacks=()))
+        water = PokeRef(PokemonDef("Water", hp=60, ptype="water", attacks=()))
+        p.discard_refs = [fighting, water,
+                          EnergyRef(EnergyDef("fighting")),
+                          EnergyRef(EnergyDef("water"))]
+        p.discard = ["Fighter", "Water", "Fighting Energy", "Water Energy"]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(p.hand), 2, "只应回收 {F} 宝可梦与 {F} 能量")
+        names = sorted(getattr(c, "pdef", None).name if hasattr(c, "pdef")
+                       else c.edef.type for c in p.hand)
+        self.assertEqual(names, ["Fighter", "fighting"])
+
+
+class TestB3TypedHandEnergyDiscard(unittest.TestCase):
+    """B3：带类型手牌弃能 + 失败门（Lurantis / Ceruledge）"""
+
+    def _battle(self, effects, damage=130, hand=()):
+        b = _arena()
+        _equip(b, effects, damage=damage)
+        b.players[0].hand = list(hand)
+        return b
+
+    def test_discards_typed_energy_only(self):
+        fire = EnergyRef(EnergyDef("fire"))
+        grass = [EnergyRef(EnergyDef("grass")) for _ in range(2)]
+        b = self._battle(("discard_hand_energy:2:type:grass:required",),
+                         hand=[fire] + grass)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 130, "弃得出 → 正常伤害")
+        self.assertTrue(any(isinstance(c, EnergyRef) and c.edef.type == "fire"
+                            for c in b.players[0].hand), "火能量不得被弃")
+        self.assertEqual(sum(1 for c in b.players[0].hand
+                             if isinstance(c, EnergyRef)
+                             and c.edef.type == "grass"), 0)
+
+    def test_fail_gate_nulls_damage(self):
+        """手牌只有 1 张草能量 → 本招式什么都不做（且不弃那张）"""
+        b = self._battle(("discard_hand_energy:2:type:grass:required",),
+                         hand=[EnergyRef(EnergyDef("grass"))])
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 0)
+        self.assertEqual(len(b.players[0].hand), 1, "失败门触发时不得弃牌")
+
+
+class TestB3AbilityBenchSwitch(unittest.TestCase):
+    """B3：后备特性自换位 `switch_self[:if:<cond>]`（Linoone「Excited Dash」）"""
+
+    def _battle(self, tag, mega=False, on_bench=True):
+        b = _arena()
+        ab = AbilityDef("Dash", name_zh="冲刺", tag=tag, location="field")
+        holder = make_pokemon(PokemonDef("Linoone", hp=100, ptype="colorless",
+                                         attacks=(), abilities=(ab,)))
+        if on_bench:
+            b.players[0].bench = [holder]
+        else:
+            b.players[0].active = holder
+        if mega:
+            b.players[0].bench.append(make_pokemon(
+                PokemonDef("Mega X ex", hp=300, ptype="colorless", attacks=(),
+                           is_ex=True, is_mega=True)))
+        return b, {"verb": "ability", "name": "Dash",
+                   "pos": 1 if on_bench else 0, "tag": tag}
+
+    def test_bench_switch_swaps_with_active(self):
+        b, act = self._battle("switch_self")
+        old = b.players[0].active
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.pdef.name, "Linoone")
+        self.assertIn(old, b.players[0].bench)
+
+    def test_mega_condition_blocks_without_mega(self):
+        b, act = self._battle("switch_self:if:own_mega_in_play", mega=False)
+        self.assertNotIn("Dash", [a.get("name") for a in b.legal_actions()],
+                         "场上没有 Mega 时该特性不可发动")
+        r = b.step(act)
+        self.assertFalse(r["ok"], "条件不满足必须拒绝执行")
+
+    def test_mega_condition_allows_with_mega(self):
+        b, act = self._battle("switch_self:if:own_mega_in_play", mega=True)
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.pdef.name, "Linoone")
+
+    def test_active_holder_not_offered(self):
+        b, act = self._battle("switch_self", on_bench=False)
+        self.assertNotIn("Dash", [a.get("name") for a in b.legal_actions()])
+
+
+class TestDiscardToolStadium(unittest.TestCase):
+    """S6（2026-10-28）：`discard_tool:N:<scope>` 与 `discard_stadium`"""
+
+    def test_discard_stadium_clears_field(self):
+        b = _arena()
+        _equip(b, ("discard_stadium",), damage=0)
+        b.stadium = {"name": "Test Stadium", "tag": "stadium:hp_plus:10:stage:1",
+                     "owner": "A"}
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(b.stadium, "场地必须被弃置")
+        self.assertIn("Test Stadium", b.players[0].discard)
+
+    def test_discard_tool_opp_active(self):
+        b = _arena()
+        _equip(b, ("discard_tool:all:opp_active",), damage=0)
+        target = b.players[1].active
+        target.tool = "tool:hp_plus:30"
+        target.tool_name = "Cape of Toughness"
+        # 我方战斗位也放一个道具（不得被误弃）
+        b.players[0].active.tool = "tool:hp_plus:20"
+        b.players[0].active.tool_name = "Own Cape"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(target.tool, "对手战斗位道具应被弃")
+        self.assertIsNotNone(b.players[0].active.tool, "不得弃我方道具")
+
+    def test_discard_tool_up_to_two_both_sides(self):
+        b = _arena()
+        _equip(b, ("discard_tool:2:both",), damage=0)
+        b.players[0].active.tool = "tool:hp_plus:20"
+        b.players[1].active.tool = "tool:hp_plus:20"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(b.players[0].active.tool)
+        self.assertIsNone(b.players[1].active.tool)
+
+    def test_discard_stadium_noop_without_stadium(self):
+        b = _arena()
+        _equip(b, ("discard_stadium",), damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error") or "无场地时不应抛错")
+
+
+class TestRetaliateAndCounterPer(unittest.TestCase):
+    """第二十九批（2026-10-29）：下回合受击反制 / 按能量数反制
+
+    · `retaliate_next:<n|equal>` —— 招式挂在自己身上，只在**对手的下一个回合**内
+      生效（Bouffalant「Ready to Ram」/ Zamazenta「Strong Bash」）。
+    · `on_damaged:counter_per:<n>:<color>` —— 每次被攻击伤害，攻击者吃
+      n×10×**持有者该色能量数**（Orthworm ex）。
+    """
+
+    def test_retaliate_fixed_next_turn(self):
+        b = _arena()
+        me = _equip(b, ("retaliate_next:60",), damage=10)
+        enemy = _equip(b, (), owner=1, damage=10)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.retaliate_next_n, 60)
+        r = b.step({"verb": "attack", "attack": 0})       # 对手回合反击
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.damage, 10, "被对手打 10")
+        self.assertEqual(enemy.damage, 70, "反制 60 + 之前的 10")
+
+    def test_retaliate_equal_to_damage(self):
+        b = _arena()
+        me = _equip(b, ("retaliate_next:equal",), damage=10)
+        enemy = _equip(b, (), owner=1, damage=70)
+        b.step({"verb": "attack", "attack": 0})
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.damage, 70)
+        self.assertEqual(enemy.damage, 80, "10（首击）+ 70（等于所受伤害）")
+
+    def test_retaliate_expires_after_next_turn(self):
+        b = _arena()
+        _equip(b, ("retaliate_next:60",), damage=10)
+        enemy = _equip(b, (), owner=1, damage=10)
+        b.step({"verb": "attack", "attack": 0})
+        # 对手回合 → 我方回合 → 再回到对手回合（tc[1] 已 +2，窗口到期）
+        for _ in range(2):
+            self.assertTrue(b.step({"verb": "pass"})["ok"])
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(enemy.damage, 10, "窗口过后不再反制")
+
+    def test_ability_counter_per_energy(self):
+        b = _arena()
+        _equip(b, (), damage=10)                      # 攻击方
+        d = b.players[1].active
+        d.pdef = PokemonDef("Orthworm", hp=200, ptype="metal", attacks=(),
+                            abilities=(AbilityDef("Pummeling Payback",
+                                                  "on_damaged:counter_per:2:metal"),))
+        d.energy["metal"] = 2
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 40, "2 点金属能量 × 20")
+
+    def test_ability_counter_per_zero_energy_noop(self):
+        b = _arena()
+        _equip(b, (), damage=10)
+        d = b.players[1].active
+        d.pdef = PokemonDef("Orthworm", hp=200, ptype="metal", attacks=(),
+                            abilities=(AbilityDef("Pummeling Payback",
+                                                  "on_damaged:counter_per:2:metal"),))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[0].active.damage, 0, "无该色能量则该段不生效")
+
+
+class TestEnergyToDeckAndAbilityCounters(unittest.TestCase):
+    """第二十八批（2026-10-29）：弃牌堆能量洗回牌库 · 双方「有特性者」指示物
+
+    · `energy_to_deck:<color>:all` —— Kyogre「Riptide」/ Sinistcha ex「Re-Brew」：
+      被计数的**基本能量**洗回牌库。⚠ 不洗回会让下一次攻击**重复计数**（静默加强）。
+    · `counters:N:scope:ability:all` —— Cofagrigus「Law of the Underworld」：
+      双方全场**印有特性**的宝可梦各吃 N 个指示物（己方那侧被击倒也由对手取奖赏）。
+    """
+
+    @staticmethod
+    def _energy(color, name="", tag=""):
+        return EnergyRef(EnergyDef(color, name=name, tag=tag))
+
+    def test_energy_to_deck_only_basic_color(self):
+        b = _arena()
+        _equip(b, ("energy_to_deck:water:all",), damage=10)
+        p = b.players[0]
+        w1, w2 = self._energy("water"), self._energy("water")
+        fire = self._energy("fire")
+        sp = self._energy("colorless", "Mist Energy", "senergy:mist")
+        for ref in (w1, w2, fire, sp):
+            Battle._to_discard(p, ref)
+        deck_before = len(p.deck)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([c.edef.type for c in p.discard_refs], ["fire", "colorless"],
+                         "只洗回**指定属性的基本能量**（特殊能量/其它颜色不动）")
+        self.assertEqual(len(p.deck), deck_before + 2)
+        self.assertFalse(any(x in p.discard for x in ("Water Energy",)),
+                         "文本层弃牌堆也要同步移除")
+
+    def test_counters_each_with_ability_both_sides(self):
+        b = _arena()
+        _equip(b, ("counters:6:scope:ability:all",), damage=0)
+        mine = make_pokemon(PokemonDef("Mine", hp=50, ptype="colorless",
+                                       attacks=(),
+                                       abilities=(AbilityDef("A", "draw:1"),)))
+        plain = make_pokemon(PokemonDef("Plain", hp=100, ptype="colorless",
+                                        attacks=()))
+        b.players[0].bench += [mine, plain]
+        theirs = make_pokemon(PokemonDef("Theirs", hp=100, ptype="colorless",
+                                         attacks=(),
+                                         abilities=(AbilityDef("B", "draw:1"),)))
+        b.players[1].bench.append(theirs)
+        prizes_before = b.players[1].prizes_left
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(mine.damage, 60, "己方有特性者也被放（自毁式效果）")
+        self.assertEqual(plain.damage, 0, "没有特性的不得被放")
+        self.assertEqual(theirs.damage, 60)
+        self.assertEqual(b.players[1].prizes_left, prizes_before - 1,
+                         "己方宝可梦被击倒 → 由**对手**取奖赏")
+
+    def test_ability_scope_rejects_count(self):
+        b = _arena()
+        _equip(b, ("counters:6:scope:ability:1",), damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertFalse(r["ok"], "ability 范围只支持 all")
+        self.assertIn("ability", r.get("error") or "")
+
+
+class TestSnipeTargetFilter(unittest.TestCase):
+    """第二十七批（2026-10-29）：`snipe:` 的**目标筛选**与**逐目标缩放**
+
+    · `:target:damaged` —— 只打「身上已有伤害指示物」的目标（Excadrill ex /
+      Hippowdon）。先筛选再选数量：卡面的「1 of …」是**在合格目标里**选 1 个。
+    · `:per:target_counters` —— 每目标按**它自己**的指示物数缩放
+      （Team Rocket's Sneasel）；用全局计数源会把别人的指示物也算进来。
+    """
+
+    def test_filter_before_choice(self):
+        b = _arena()
+        _equip(b, ("snipe:opp_bench:60:1:target:damaged",), damage=10)
+        clean, hurt = _bench(b, 1, 2)
+        hurt.damage = 10
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(clean.damage, 0, "没指示物的目标不得被打")
+        self.assertEqual(hurt.damage, 70, "唯一合格目标应吃满 60")
+
+    def test_no_eligible_target_is_noop(self):
+        b = _arena()
+        _equip(b, ("snipe:opp_bench:60:1:target:damaged",), damage=10)
+        mons = _bench(b, 1, 2)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([m.damage for m in mons], [0, 0])
+
+    def test_per_target_counters(self):
+        b = _arena()
+        _equip(b, ("snipe:opp_bench:20:1:per:target_counters",), damage=10)
+        a, c = _bench(b, 1, 2)
+        a.damage = 10        # 1 个指示物 → 20
+        c.damage = 30        # 3 个指示物 → 60（确定性默认打伤得最重的）
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(c.damage, 90, "3 个指示物 × 20 = 60")
+        self.assertEqual(a.damage, 10, "未被选中")
+
+    def test_per_target_zero_counters_is_noop(self):
+        b = _arena()
+        _equip(b, ("snipe:opp_bench:20:1:per:target_counters",), damage=10)
+        mons = _bench(b, 1, 1)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(mons[0].damage, 0, "0 个指示物 → 0 伤害")
+
+    def test_both_bench_filtered(self):
+        """Hippowdon：双方后备里**只有带指示物的**各吃 40"""
+        b = _arena()
+        _equip(b, ("snipe:both_bench:40:all:target:damaged",), damage=10)
+        mine = _bench(b, 0, 2)
+        theirs = _bench(b, 1, 2)
+        mine[0].damage = 10
+        theirs[1].damage = 20
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(mine[0].damage, 50, "己方合格目标也吃伤害（自己效果）")
+        self.assertEqual(mine[1].damage, 0)
+        self.assertEqual(theirs[1].damage, 60)
+        self.assertEqual(theirs[0].damage, 0)
+
+
+class TestBenchCounterSubsets(unittest.TestCase):
+    """第二十六批（2026-10-29）：**限定后**的指示物计数源
+
+    卡面三句都带限定词，用全体后备 `own_bench_counters` 会**多算伤害**
+    （把别的属性/阵营/没指示物的也算进来）。
+    """
+
+    @staticmethod
+    def _mon(name, ptype="colorless", hp=100):
+        return make_pokemon(PokemonDef(name, hp=hp, ptype=ptype, attacks=()))
+
+    def test_bench_counters_by_type(self):
+        b = _arena()
+        fight = self._mon("F1", "fighting")
+        fight.damage = 30
+        water = self._mon("W1", "water")
+        water.damage = 10
+        b.players[0].bench += [fight, water]
+        self.assertEqual(_eval_counter(b, "own_bench_counters_type:fighting"), 3)
+        self.assertEqual(_eval_counter(b, "own_bench_counters_type:water"), 1)
+
+    def test_bench_counters_named(self):
+        b = _arena()
+        a = self._mon("Cynthia's Garchomp", hp=150)
+        a.damage = 20
+        c = self._mon("Garchomp", hp=150)
+        c.damage = 40
+        b.players[0].bench += [a, c]
+        self.assertEqual(_eval_counter(b, "own_bench_counters_named:cynthia"), 2)
+
+    def test_field_named_with_damage_counts_pokemon(self):
+        """「for each of your Pokémon that has “Tauros” … that has any damage
+        counters on it」——数的是**只数**（一只带 5 个指示物也只算 1）"""
+        b = _arena()
+        b.players[0].active = self._mon("Paldean Tauros", "fighting")
+        b.players[0].active.damage = 10
+        t2 = self._mon("Tauros", "fighting")
+        t2.damage = 50
+        clean = self._mon("Tauros", "fighting")
+        b.players[0].bench += [t2, clean]
+        self.assertEqual(_eval_counter(b, "own_field_named_with_damage:tauros"), 2)
+
+    def test_unknown_counter_still_raises(self):
+        b = _arena()
+        with self.assertRaises(ValueError):
+            _eval_counter(b, "own_bench_counters_type:rainbow")
+
+
+class TestPreAttackPhase(unittest.TestCase):
+    """第二十五批（2026-10-29）：`pre:` **伤害前阶段**
+
+    卡面原型：「Before doing damage, discard all Pokémon Tools [and Special
+    Energy] from your opponent's Active Pokémon.」——这类效果必须在**伤害计算
+    之前**执行：守方道具（减伤/免疫）此刻仍挂着，放到伤害之后执行就等于
+    「先按道具减伤一次，再把道具弃掉」，属静默少做。
+    """
+
+    def test_pre_discard_tool_removes_tool_before_damage(self):
+        b = _arena()
+        _equip(b, ("pre:discard_tool:all:opp_active",), damage=50)
+        d = b.players[1].active
+        d.tool = "tool:dmg_reduce:30"
+        d.tool_name = "Rugged Helmet"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(d.tool, "对手战斗位道具应被弃置")
+        self.assertEqual(d.damage, 50, "道具须在减伤之前被弃（不得先减 30）")
+
+    def test_post_damage_discard_is_late(self):
+        """对照：同一条效果若落在伤害之后（旧行为），伤害会先被道具减掉"""
+        b = _arena()
+        _equip(b, ("discard_tool:all:opp_active",), damage=50)
+        d = b.players[1].active
+        d.tool = "tool:dmg_reduce:30"
+        d.tool_name = "Rugged Helmet"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIsNone(d.tool)
+        self.assertEqual(d.damage, 20, "伤害后才弃道具 → 本次仍吃满 30 减伤")
+
+    def test_if_pre_tool_status_only_with_tool(self):
+        """「If you discarded a Pokémon Tool in this way, … is now Paralyzed.」
+
+        有道具 → 弃置成功 → 施加麻痹；没有道具 → **不得**施加（此前无条件麻痹）。
+        """
+        b = _arena()
+        _equip(b, ("paralyze:if_pre_tool", "pre:discard_tool:all:opp_active"),
+               damage=30)
+        d = b.players[1].active
+        d.tool = "tool:hp_plus:30"
+        d.tool_name = "Cape"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIn("paralyze", d.status)
+
+    def test_if_pre_tool_status_without_tool_is_noop(self):
+        b = _arena()
+        _equip(b, ("paralyze:if_pre_tool", "pre:discard_tool:all:opp_active"),
+               damage=30)
+        d = b.players[1].active
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertNotIn("paralyze", d.status, "没弃到道具就不得施加状态")
+
+    def test_pre_discard_special_energy_keeps_basic(self):
+        """Mow Rotom：「… all Pokémon Tools **and Special Energy** …」"""
+        b = _arena()
+        _equip(b, ("pre:discard_energy:all:opp:special",
+                   "pre:discard_tool:all:opp_active"), damage=30)
+        d = b.players[1].active
+        d.add_energy("fire")
+        d.senergy.append(EnergyRef(EnergyDef(
+            "colorless", name="Enriching Energy", tag="senergy:enriching")))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(d.senergy, [], "特殊能量应被弃置")
+        self.assertEqual(d.energy_of("fire"), 1, "基本能量不得被弃")
+
+    def test_unknown_pre_form_raises(self):
+        b = _arena()
+        _equip(b, ("pre:teleport:all",), damage=10)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertFalse(r["ok"])
+        self.assertIn("未知伤害前效果", r.get("error") or "")
+
+    def test_wrong_scope_raises(self):
+        """伤害前弃道具只支持对手**战斗位**；`:both` 会弃到自家道具 → 必须拒绝"""
+        b = _arena()
+        _equip(b, ("pre:discard_tool:all:both",), damage=10)
+        b.players[0].active.tool = "tool:hp_plus:20"
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertFalse(r["ok"])
+        self.assertIn("未知伤害前效果", r.get("error") or "")
+        self.assertIsNotNone(b.players[0].active.tool, "被拒绝时不得弃自家道具")
+
+
+class TestBounceFamily(unittest.TestCase):
+    """S6（2026-10-28）：回手 / 洗回牌库 / 弃牌堆铺后备"""
+
+    def test_self_to_hand_promotes_bench_and_keeps_attached(self):
+        b = _arena()
+        me = _equip(b, ("bounce:to_hand:self",), damage=0)
+        me.add_energy("fire", 2)
+        ally = _bench(b, 0, 1)[0]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIs(b.players[0].active, ally, "后备应顶上战斗位")
+        names = [c.pdef.name for c in b.players[0].hand
+                 if isinstance(c, PokeRef)]
+        self.assertIn("Holder0", names)
+        self.assertEqual(sum(1 for c in b.players[0].hand
+                             if isinstance(c, EnergyRef)), 2,
+                         "附加能量应随宝可梦回手")
+
+    def test_self_to_hand_with_tool_ref(self):
+        b = _arena()
+        me = _equip(b, ("bounce:to_hand:self",), damage=0)
+        tool = TrainerRef(TrainerDef("tool:hp_plus:20", kind="item",
+                                     name="Cape"))
+        me.tool = "tool:hp_plus:20"
+        me.tool_name = "Cape"
+        me.tool_ref = tool
+        _bench(b, 0, 1)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertTrue(any(isinstance(c, TrainerRef)
+                            and c.tdef.name == "Cape"
+                            for c in b.players[0].hand),
+                        "道具应随宝可梦回手（不是进弃牌堆）")
+
+    def test_self_discard_attached(self):
+        """Crobat ex：附加卡进弃牌堆"""
+        b = _arena()
+        me = _equip(b, ("bounce:to_hand:self:discard_attached",), damage=0)
+        me.add_energy("fire", 1)
+        _bench(b, 0, 1)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len([c for c in b.players[0].hand
+                              if isinstance(c, EnergyRef)]), 0)
+        self.assertIn("Fire Energy", b.players[0].discard)
+
+    def test_shuffle_self_goes_to_deck(self):
+        b = _arena()
+        _equip(b, ("bounce:shuffle_self",), damage=0)
+        _bench(b, 0, 1)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIn("Holder0", [c.pdef.name for c in b.players[0].deck
+                                  if isinstance(c, PokeRef)])
+        self.assertEqual([c for c in b.players[0].hand
+                          if isinstance(c, PokeRef)], [])
+
+    def test_bench_bounce(self):
+        b = _arena()
+        _equip(b, ("bounce:to_hand:bench",), damage=0)
+        bench = _bench(b, 0, 2)
+        r = b.step({"verb": "attack", "attack": 0, "target": 2})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertNotIn(bench[1], b.players[0].bench, "选中的后备应回手")
+        self.assertIn(bench[0], b.players[0].bench)
+
+    def test_choose_bounce_trainer(self):
+        b = _arena()
+        b.players[0].hand = [TrainerRef(TrainerDef("bounce:to_hand:choose",
+                                                   kind="item",
+                                                   name="Scoop Up Cyclone"))]
+        ally = _bench(b, 0, 1)[0]
+        r = b.step({"verb": "trainer", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIs(b.players[0].active, ally)
+
+    def test_active_bounce_without_bench_is_noop(self):
+        """战斗位无替补 → 效果**不执行**（不得直接判负，也不能让场上空掉）"""
+        b = _arena()
+        me = _equip(b, ("bounce:to_hand:self",), damage=0)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertIs(b.players[0].active, me, "场上必须仍有战斗位")
+        self.assertEqual([c for c in b.players[0].hand
+                          if isinstance(c, PokeRef)], [])
+
+    def test_discard_to_bench_by_name(self):
+        b = _arena()
+        _equip(b, ("bounce:discard_to_bench:2:name:duskull",), damage=0)
+        d = PokeRef(PokemonDef("Duskull", hp=60, ptype="psychic", attacks=()))
+        other = PokeRef(PokemonDef("Other", hp=60, ptype="psychic", attacks=()))
+        b.players[0].discard_refs = [d, other]
+        b.players[0].discard = ["Duskull", "Other"]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([fp.pdef.name for fp in b.players[0].bench],
+                         ["Duskull"])
+
+    def test_discard_to_bench_hp_filter(self):
+        b = _arena()
+        _equip(b, ("bounce:discard_to_bench:1:hp:70",), damage=0)
+        big = PokeRef(PokemonDef("Big", hp=100, ptype="psychic", attacks=()))
+        small = PokeRef(PokemonDef("Small", hp=60, ptype="psychic", attacks=()))
+        b.players[0].discard_refs = [big, small]
+        b.players[0].discard = ["Big", "Small"]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual([fp.pdef.name for fp in b.players[0].bench], ["Small"])
+
+
+class TestScalingCountersAndMinus(unittest.TestCase):
+    """S6（2026-10-28）：`dmg_minus` 与新增计数源"""
+
+    def _damage_after(self, effects, prepare=None):
+        b = _arena()
+        fp = _equip(b, effects, damage=100)
+        if prepare:
+            prepare(b, fp)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        return b.players[1].active.damage, b
+
+    def test_dmg_minus_per_energy(self):
+        def prep(b, fp):
+            b.players[1].active.add_energy("water", 1)
+        dmg, _ = self._damage_after(
+            ("dmg_minus:60:per:opp_active_energy",), prep)
+        self.assertEqual(dmg, 40, "100 − 60×1 = 40")
+
+    def test_dmg_minus_floors_at_zero(self):
+        def prep(b, fp):
+            b.players[1].active.add_energy("water", 3)
+        dmg, _ = self._damage_after(
+            ("dmg_minus:60:per:opp_active_energy",), prep)
+        self.assertEqual(dmg, 0, "减伤下限为 0，不得出现负伤害")
+
+    def test_named_counter(self):
+        """`own_named_<key>`：按卡名子串计数（含阵营前缀）"""
+        b = _arena()
+        atk = AttackDef("T", cost=0, damage=10,
+                        effects=("dmg_plus:30:per:own_named_teamrocket",))
+        b.players[0].active = make_pokemon(
+            PokemonDef("Team Rocket's Meowth", hp=200, ptype="colorless",
+                       attacks=(atk,)))
+        b.players[0].bench.append(make_pokemon(
+            PokemonDef("Team Rocket's Porygon", hp=200, ptype="colorless",
+                       attacks=())))
+        b.players[0].bench.append(make_pokemon(
+            PokemonDef("Plain", hp=200, ptype="colorless", attacks=())))
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 10 + 30 * 2)
+
+    def test_opp_discard_item_counter(self):
+        b = _arena()
+        _equip(b, ("dmg_set:30:per:opp_discard_item",), damage=0)
+        b.players[1].discard_refs = [
+            TrainerRef(TrainerDef("hammer", kind="item", name="Item A")),
+            TrainerRef(TrainerDef("hammer", kind="supporter", name="Sup B"))]
+        b.players[1].discard = ["Item A", "Sup B"]
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.players[1].active.damage, 30, "只数 item")
+
+
+class TestEnergyMove(unittest.TestCase):
+    """S6（2026-10-28）：`energy_move:N[:type:<c>]:from:<src>:to:<dst>`"""
+
+    def _battle(self, effects):
+        b = _arena()
+        me = _equip(b, effects, damage=0)
+        ally = _bench(b, 0, 1)[0]
+        return b, me, ally
+
+    def test_active_to_bench(self):
+        b, me, ally = self._battle(("energy_move:2:from:active:to:bench",))
+        me.add_energy("fire", 3)
+        r = b.step({"verb": "attack", "attack": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.total_energy(), 1)
+        self.assertEqual(ally.total_energy(), 2)
+
+    def test_typed_moves_only_that_color(self):
+        b, me, ally = self._battle(
+            ("energy_move:1:type:water:from:active:to:bench",))
+        me.add_energy("water", 1)
+        me.add_energy("fire", 2)
+        r = b.step({"verb": "attack", "attack": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(ally.energy_of("water"), 1)
+        self.assertEqual(me.energy_of("fire"), 2)
+        self.assertEqual(me.energy_of("water"), 0)
+
+    def test_bench_to_active(self):
+        b, me, ally = self._battle(
+            ("energy_move:2:from:bench:to:active",))
+        ally.add_energy("grass", 3)
+        r = b.step({"verb": "attack", "attack": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.total_energy(), 2)
+        self.assertEqual(ally.total_energy(), 1)
+
+    def test_opponent_side_move(self):
+        b, me, _ = self._battle(
+            ("energy_move:1:from:opp_active:to:opp_bench",))
+        opp = b.players[1]
+        target = _bench(b, 1, 1)[0]
+        opp.active.add_energy("darkness", 1)
+        r = b.step({"verb": "attack", "attack": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(opp.active.total_energy(), 0)
+        self.assertEqual(target.energy_of("darkness"), 1)
+
+    def test_any_to_any_picks_source_and_target_trainer(self):
+        b = _arena()
+        me = make_pokemon(PokemonDef("Me", hp=200, ptype="colorless",
+                                     attacks=()))
+        me.add_energy("fire", 1)
+        b.players[0].active = me
+        ally = _bench(b, 0, 1)[0]
+        b.players[0].hand = [TrainerRef(TrainerDef(
+            "energy_move:1:from:any:to:any", kind="item", name="Energy Switch"))]
+        r = b.step({"verb": "trainer", "hand": 0, "source": 0, "target": 1})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(ally.total_energy(), 1)
+        self.assertEqual(me.total_energy(), 0)
+
+    def test_invalid_target_falls_back_to_first_bench(self):
+        """缺省/越界 target 取第一个后备（保证无目标选择时也能执行）"""
+        b, me, ally = self._battle(("energy_move:1:from:active:to:bench",))
+        me.add_energy("fire", 1)
+        r = b.step({"verb": "attack", "attack": 0, "target": 5})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(ally.total_energy(), 1)
+
+
+class TestToolCostRetreat(unittest.TestCase):
+    """S6（2026-10-28）：道具费用 / 撤退修正"""
+
+    def _cost_battle(self, tool, category=""):
+        b = _arena()
+        atk = AttackDef("T", cost=2, damage=10, effects=())
+        fp = make_pokemon(PokemonDef("Holder", hp=100, ptype="colorless",
+                                     attacks=(atk,), category=category))
+        b.players[0].active = fp
+        fp.tool = tool
+        return b, fp, atk
+
+    def test_tera_cost_reduced(self):
+        b, fp, atk = self._cost_battle("tool:cost_less:1:tera",
+                                       category="Tera(Fire)")
+        fp.add_energy("fire", 1)
+        self.assertTrue(b._can_pay_attack(fp, atk), "费用 2 → 1，1 能量应可支付")
+
+    def test_non_tera_not_reduced(self):
+        b, fp, atk = self._cost_battle("tool:cost_less:1:tera", category="")
+        fp.add_energy("fire", 1)
+        self.assertFalse(b._can_pay_attack(fp, atk))
+
+    def test_counter_gain_only_when_behind(self):
+        b, fp, atk = self._cost_battle("tool:cost_less:1:behind")
+        fp.add_energy("fire", 1)
+        b.players[0].prizes_left, b.players[1].prizes_left = 5, 4
+        self.assertTrue(b._can_pay_attack(fp, atk))
+        b.players[0].prizes_left = 3
+        self.assertFalse(b._can_pay_attack(fp, atk))
+
+    def test_retreat_less_and_low_hp(self):
+        b = _arena()
+        fp = make_pokemon(PokemonDef("Holder", hp=100, ptype="colorless",
+                                     attacks=(), retreat=2))
+        b.players[0].active = fp
+        fp.tool = "tool:retreat_less:2:lowhp:30"
+        self.assertEqual(_retreat_cost(fp, b), 0, "2 − 2 = 0")
+        fp.damage = 80
+        self.assertEqual(_retreat_cost(fp, b), 0, "HP ≤30 时无撤退费用")
+
+    def test_gravity_gemstone_both_active(self):
+        b = _arena()
+        mine = make_pokemon(PokemonDef("Mine", hp=100, ptype="colorless",
+                                       attacks=(), retreat=1))
+        b.players[0].active = mine
+        mine.tool = "tool:retreat_plus:1:both"
+        b.players[1].active.pdef = PokemonDef("Foe", hp=100, ptype="colorless",
+                                              attacks=(), retreat=1)
+        self.assertEqual(_retreat_cost(mine, b), 2)
+        self.assertEqual(_retreat_cost(b.players[1].active, b), 2,
+                         "双方战斗位都 +1")
+        mine.tool = None
+        mine.tool_ref = None
+        self.assertEqual(_retreat_cost(b.players[1].active, b), 1)
+
+
+class TestOppHandOps(unittest.TestCase):
+    """S5（2026-10-28）：对手手牌的随机弃置 / 洗回 / 弃到 N 张"""
+
+    def _battle(self, tag):
+        b = _arena()
+        b.players[0].hand = [TrainerRef(TrainerDef(tag, kind="item",
+                                                  name="Op"))]
+        return b, {"verb": "trainer", "hand": 0}
+
+    def test_discard_random(self):
+        b, act = self._battle("discard_opp_random:1")
+        b.players[1].hand = [EnergyRef(E_FIRE) for _ in range(3)]
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 2)
+        self.assertEqual(len(b.players[1].discard_refs), 1)
+
+    def test_shuffle_random_into_deck(self):
+        b, act = self._battle("shuffle_opp_hand:1")
+        b.players[1].hand = [EnergyRef(E_FIRE) for _ in range(2)]
+        deck_before = len(b.players[1].deck)
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 1)
+        self.assertEqual(len(b.players[1].deck), deck_before + 1)
+
+    def test_discard_until_n(self):
+        b, act = self._battle("discard_opp_to:2")
+        b.players[1].hand = [EnergyRef(E_FIRE) for _ in range(5)]
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 2)
+
+    def test_hand_shuffle_same_keeps_count(self):
+        b, act = self._battle("opp_shuffle_draw:same")
+        b.players[1].hand = [EnergyRef(E_FIRE) for _ in range(4)]
+        r = b.step(act)
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(len(b.players[1].hand), 4, "张数不变，内容随机化")
+
+
+class TestCoinAll(unittest.TestCase):
+    """S6（2026-10-28）：`coin_all:N:<side>:<sub>` —— 全部命中才生效"""
+
+    def _run(self, seed):
+        b = _arena(seed=seed)
+        _equip(b, ("coin_all:2:heads:dmg_plus:100",), damage=10)
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        coins = [e for e in b.events if e.get("type") == "coin"]
+        self.assertEqual(len(coins), 2, "N 枚硬币各记一条事件")
+        return b.players[1].active.damage, all(
+            c["result"] == "heads" for c in coins)
+
+    def test_all_heads_adds_damage(self):
+        # 找一个两枚皆正面的 seed
+        for seed in range(1, 40):
+            dmg, all_heads = self._run(seed)
+            if all_heads:
+                self.assertEqual(dmg, 110)
+                return
+        self.fail("未找到两枚皆正面的 seed")
+
+    def test_not_all_heads_no_bonus(self):
+        for seed in range(1, 40):
+            dmg, all_heads = self._run(seed)
+            if not all_heads:
+                self.assertEqual(dmg, 10)
+                return
+        self.fail("未找到非全正面的 seed")
 
 
 if __name__ == "__main__":

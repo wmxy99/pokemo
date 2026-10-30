@@ -31,6 +31,7 @@
         "mill:N[:opp]",
         "evolve_from_deck",
         "dmg_plus:N[:per:<counter>][:if:<cond>]",
+        "dmg_set:N[:per:<counter>]（基础伤害按计数源重算，非加伤）",
         "dmg_zero",
         "ignore_weakness",
         "ignore_resistance",
@@ -52,6 +53,28 @@
         "evolve_attach:N[:type][:zone] (被动 · 进化时)",
         "weak_change:<type>[:<filter>] (被动 · 静态)",
         "passive:bench_immune (被动 · 后备时免疫招式伤害与效果)",
+        "passive:bench_immune_dmg (被动 · 后备时只免疫招式伤害)",
+        "passive:dmg_immune:<self|team_bench>[:from:<src>|:min:<n>|:no_rule_box][:effects] (被动 · 静态免伤)",
+        "shield:prevent_all[:from:<src>|:if_damage:le:<n>][:effects] (下回合护盾；无 :effects 只挡伤害)",
+        "heal:all[:<scope>][:type:<c>] (回满；范围口径同 heal:N)",
+        "knockout:<opp_active|opp_bench|opp_any|opp_counters:N|both_active>[:basic] (招式直接击倒)",
+        "shuffle_top:N[:opp] (只重排顶部 N 张，不移动卡)",
+        "evolve_act:<tag1>|<tag2> (进化那一刻按序执行一次)",
+        "ko_prize_plus:N[:coin] (对手战斗位被击倒时多取奖赏，不叠加)",
+        "on_ko:counter:N (自身被击倒时反制攻击方)",
+        "on_ko:energy_to_hand:<type> (被击倒者身上的基础能量收回手牌)",
+        "on_ko:replay_evolve_act (战斗位被击倒时重放进化特性)",
+        "attach:N[:type][:zone][:target:bench] (附到后备)",
+        "stadium:bench_limit:8:require:tera[:trim:N] (后备上限 8)",
+        "stadium:no_bench_counters (后备不受对手效果指示物)",
+        "stadium:use:evolve_from_deck[:chain:1] (每回合一次检索进化，可链式)",
+        ":if_prev 后缀（in this way：仅当前序动作真的发生）",
+        "stadium:attack_plus:N:faction:<k> (场地加伤，弱点/抗性之前)",
+        "stadium:no_retreat:faction:<k> (场地：阵营宝可梦无撤退费用)",
+        "stadium:no_tool_effect (场地：道具失效)",
+        "stadium:status_immune:require:energy (场地：附着能量者免疫特殊状态)",
+        "stadium:evolve_same_turn:type:<c> (场地：上场当回合可进化)",
+        "stadium:dmg_immune:box:none:from:rulebox (场地：无规则框目标免疫规则框来源)",
         "search_pokemon|trainer|any|energy:N (全牌库检索；与 recon 语义不同)"
       ],
       "trainers": [
@@ -80,6 +103,8 @@
         "own_discard_energy", "own_discard_count",
         "own_discarded_this_turn", "own_discarded_energy_this_turn",
         "own_hand", "own_field", "opp_field", "own_bench_stage2",
+        "own_basic", "own_evolution", "opp_hand",
+        "opp_field_counters", "opp_active_status_count", "own_field_tools",
         "own_prizes_left", "opp_prizes_left"
       ],
       "conditions": [
@@ -451,10 +476,7 @@
         "colorless"
       ],
       "is_ex": true,
-      "real": {
-        "set": "TWM",
-        "number": "150"
-      },
+      "note": "印刷待核：原写 TWM 150，但数据集 TWM 150 是 Handheld Fan（编号撞号），且本卡招式（Fury Swipes 2 无色 50）与数据集内任何 Meowth ex 印刷均不一致 → 不声明印刷（uid=`Meowth ex@-`），待人工核对真实印刷后再补",
       "attacks": [
         {
           "name": "Fury Swipes",
@@ -514,10 +536,7 @@
       "types": [
         "fire"
       ],
-      "real": {
-        "set": "SSP",
-        "number": "33"
-      },
+      "note": "印刷待核：原写 SSP 33，但数据集 SSP 33 是 Charcadet（编号撞号），且数据集内没有「70HP / Ember 30」的火稚鸡印刷 → 不声明印刷（uid=`Torchic@-`），待人工核对真实印刷后再补",
       "attacks": [
         {
           "name": "Ember",
@@ -917,10 +936,10 @@
       "kind": "supporter",
       "tag": "search_energy:2",
       "real": {
-        "set": "SSP",
-        "number": "164"
+        "set": "SCR",
+        "number": "133"
       },
-      "note": "v1.3 建模（子集）：search_energy:2 —— 检索 2 张能量入手；**差异**：官方额外允许向 1 只宝可梦附 1 能，引擎子集未建模（fidelity=approx）"
+      "note": "v1.3 建模（子集）：search_energy:2 —— 检索 2 张能量入手；**差异**：官方额外允许向 1 只宝可梦附 1 能，引擎子集未建模（fidelity=approx）；印刷为 SCR 133（2026-10-29 修正：原误写 SSP 164，与 Brilliant Blender 撞号）"
     },
     {
       "name": "Switch",

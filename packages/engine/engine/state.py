@@ -46,6 +46,19 @@ class PlayerState:
     # （供 dmg_plus:N:per:own_discarded_this_turn / …_energy_this_turn）
     discarded_this_turn: int = 0
     discarded_energy_this_turn: int = 0
+    # 跨回合手牌禁打（2026-10-27）：`until = 施放时 owner turn_counts + 2`，
+    # 只在该玩家**下一个回合**生效（与 FieldPokemon 的 attack/retreat lock 同窗口）。
+    item_lock_until: int = 0
+    evolution_lock_until: int = 0
+    # ---- 回合历史（2026-10-28 第七批）----
+    # 「during your last turn」类条件：每回合开始把「本回合」滚到「上回合」
+    turn_attacks: list = field(default_factory=list)      # 本回合用过的招式名
+    last_turn_attacks: list = field(default_factory=list)  # 上回合用过的招式名
+    # 「1 of your other Ancient Pokémon used an attack during your last turn」
+    turn_ancient_attackers: list = field(default_factory=list)
+    last_turn_ancient_attackers: list = field(default_factory=list)
+    prizes_taken_this_turn: int = 0
+    prizes_taken_last_turn: int = 0
 
     # ---- 便捷查询 ----
     @property
@@ -76,14 +89,28 @@ class PlayerState:
     def bench_has_room(self, cfg: GameConfig) -> bool:
         return len(self.bench) < cfg.max_bench
 
-    def attach_energy_to(self, target: FieldPokemon, cfg: GameConfig) -> bool:
-        """将手牌一张能量附着到目标（按能量类型计入 energy dict）；成功返回 True"""
-        if self.energy_in_hand() <= 0:
-            return False
+    def attach_energy_to(self, target: FieldPokemon, cfg: GameConfig,
+                         index: Optional[int] = None) -> bool:
+        """将手牌一张能量附着到目标（成功返回 True）
+
+        `index` 指定手牌卡位（特殊能量与基本能量必须能分开选）；缺省取手牌里
+        最后一张能量卡（保持既有行为）。特殊能量**不落到 `energy` 计数**，
+        而是把卡对象挂到 `target.senergy`（提供量实时计算）。
+        """
         from .cards import EnergyRef
-        for i in reversed(range(len(self.hand))):
-            if isinstance(self.hand[i], EnergyRef):
-                ref = self.hand.pop(i)
-                break
-        target.add_energy(ref.edef.type)
+        if index is None:
+            for i in reversed(range(len(self.hand))):
+                if isinstance(self.hand[i], EnergyRef):
+                    index = i
+                    break
+        if index is None or not (0 <= index < len(self.hand)):
+            return False
+        ref = self.hand[index]
+        if not isinstance(ref, EnergyRef):
+            return False
+        self.hand.pop(index)
+        if ref.edef.is_special:
+            target.senergy.append(ref)
+        else:
+            target.add_energy(ref.edef.type)
         return True

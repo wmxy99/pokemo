@@ -121,6 +121,16 @@ def static_dmg_plus(battle, attacker, defender) -> int:
     return extra
 
 
+def static_dmg_minus(battle, defender, attacker=None) -> int:
+    """守方受到的**全队常驻减伤**（≥0，在弱点/抗性之后扣减）"""
+    extra = 0
+    for m in modules():
+        fn = getattr(m, "static_dmg_minus", None)
+        if fn is not None:
+            extra += int(fn(battle, defender, attacker) or 0)
+    return extra
+
+
 def retreat_cost(battle, fp) -> Optional[int]:
     best: Optional[int] = None
     for m in modules():
@@ -168,6 +178,18 @@ def ability_blocked(battle, fp, ab) -> bool:
     for m in modules():
         fn = getattr(m, "ability_blocked", None)
         if fn is not None and fn(battle, fp, ab):
+            return True
+    return False
+
+
+def effect_immune(battle, fp, source: str) -> bool:
+    """``fp`` 是否免疫来自 ``source``（attack / ability）的效果
+
+    解析侧只产出可完整表达的自身形态；各族自己校验 tag，未知形态抛错。
+    """
+    for m in modules():
+        fn = getattr(m, "effect_immune", None)
+        if fn is not None and fn(battle, fp, source):
             return True
     return False
 

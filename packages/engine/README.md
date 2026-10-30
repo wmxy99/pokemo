@@ -44,17 +44,22 @@ python run_demo.py dump 20260908
 | 文件 | 内容 |
 |---|---|
 | `engine/data/cards_real.json` | **人工池**：40 张（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注，逐卡人工校对）|
-| `engine/data/cards_pool_ext.json` | **扩展池**：397 条目 / 371 唯一名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）|
-| `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta）|
-| `engine/reallib.py` | 加载器与组装：`catalog()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
+| `engine/data/cards_pool_ext.json` | **扩展池**：951 条目 / 829 唯一卡名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）；条目带 `uid`（`<卡名>@<SET> <number>`）|
+| `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta；**逐卡锁定 uid** 以固定人工校对印刷）|
+| `engine/reallib.py` | 加载器与组装：`catalog()` / `printings()` / `item_for()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
 
-**规模与口径**（`reallib.catalog()`）：
+**规模与口径**：
 
 | 项 | 数值 |
 |---|---|
-| `catalog()` 可加载卡 | **446 张**（人工 40 + 扩展 435 条目；扩展池内重名条目＝同卡不同印刷批次，按名去重）|
-| 数据文件条目合计 | 475（40 + 435）|
-| 库内「引擎可对战」 | **596 / 1267**（`mapped` 36 + `approximated` 560，见 `GET /cards/stats`）|
+| `catalog()`（卡名 → **首选印刷**） | **853 张**（同名多印刷时取数据集最新印刷）|
+| `printings()`（uid → 全部印刷） | **991 条**（人工 40 + 扩展 951）|
+| 库内「引擎可对战」 | **966 / 1267**（`mapped` 15 + `approximated` 951，见 `GET /cards/stats`）|
+
+> **印刷身份（2026-10-29 第二十一批）**：`uid = <卡名>@<SET> <number>`，卡名仍是
+> `PokemonDef.name`（进化链与「同名」类规则不受影响）。卡组可写 uid 精确选印刷；
+> 未指定时按卡名取首选印刷；同名 4 张上限按**卡名**合计（不同印刷不能绕过）。
+> 预设卡表逐卡锁定人工校对印刷 → 同名新印刷不会改变预设行为。
 
 > **近似 ≠ 等价**：扩展池条目标为 `approximated`（解析链推导、未逐卡校对），
 > 与人工池的 `mapped` 在 C5 差异透明口径下**必须区分**，不可混为一谈。
@@ -98,12 +103,20 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | **进化(E2)** | stage 0/1/2 + evolves_from 链；本回合刚放置/进化不可再进化；进化保留能量与伤害、清除特殊状态 |
 | **特性(E3)** | `AbilityDef(location=field/hand)`：field 每回合一次（ability_used，回合重置）；hand 弃卡发动。首批 tag：`recon:n`(检视顶n取1放底) · `cursed:hp`(弃自身→指定对手宝可梦 hp 指示物伤) |
 | **训练家(E4)** | `poffin`(检索2基础铺后备) · `ultra_ball`(弃2检索) · `hammer`(抛币弃对手能) · `boss`(拉后备，supporter)；**supporter 每回合一次，item 不限次** |
-| **抛币(B4)** | `coin:heads:<tag>` / `coin:tails:<tag>` / `coin_each:N\|<counter>:<side>:<tag>`；**一枚币只掷一次**并把结果复用于全部子效果（避免多次随机的语义偏差） |
+| **抛币(B4)** | `coin:heads:<tag>` / `coin:tails:<tag>` / `coin_each:N\|<counter>:<side>:<tag>` / `coin_all:N:<side>:<tag>` / **`coin_until_tails:dmg_plus:N`**（连续抛到反面，每个正面 +N）；**一枚币只掷一次**并把结果复用于全部子效果（避免多次随机的语义偏差）。子效果可**复合**：`dmg_plus:30\|heal:30` 共用同一次抛币（Floragato）。**多币条件子效果**（第二十二批）：`coin_each:N:<side>:<sub>\|cond:<mode>[:<k>]:<sub>`，`mode` ∈ `all_tails` / `all_heads` / `at_least_heads:<k>` / `at_least_tails:<k>`，与伤害子效果**复用同一次抛币结果**（Slurpuff / Butterfree）；状态子效果只认规范名（`paralyze/burn/sleep/confuse/poison`），卡面英文词由引擎归一 |
 | **伤害修正(B4)** | `dmg_plus:N[:per:<counter>][:if:<cond>]` · `dmg_zero` · `ignore_weakness` · `ignore_resistance`；在**伤害结算之前**统一求值 |
-| **护盾(B4)** | `shield:reduce:N` · `shield:prevent_all`（在弱抗**之后**结算；持续到该玩家下个回合开始自动失效） |
-| **被动静态(B4)** | `passive:bench_immune`（仅在后备时免疫招式伤害与效果） |
-| **其他(B4)** | `draw_to:N`(抽到指定手牌数) · `discard:N\|all` · `move_damage:N\|all` · `attach:N[:type][:zone]` · `evolve_from_deck`(招式内检索进化) |
-| **计数源/条件(B4)** | 计数源 22 个 + 条件 6 个（**只取公开信息**）；未知计数源**抛错**而非静默按 0 |
+| **跨回合伤害修正** | **`dmg_taken_plus_next:N`**（受击方在**我方下个回合**多受 N，弱抗**之后**）· **`atk_minus_next:N`**（受击方的招式在**它下个回合** −N，弱抗**之前**）· **`self_attack_plus_next:N:name:<招式>`**（自身**具名招式**在我方下个回合 +N，弱抗**之前**）。到期按**持有者** `turn_counts + 2` 判定（同 attack_lock 口径）；进化清除 |
+| **伤害前阶段(第二十五批)** | **`pre:discard_tool:<n\|all>:opp_active`** · **`pre:discard_energy:<n\|all>:opp:special`** —— 「Before doing damage, …」在**伤害修正与伤害结算之前**执行（守方道具此时仍生效，放到伤害之后 = 本次仍吃道具效果）。配套条件后缀 **`<状态>:if_pre_tool`**（仅当伤害前阶段**真的弃到道具**才施加状态，N's Joltik；否则会变成无条件麻痹 = 静默加强） |
+| **护盾(B4)** | `shield:reduce:N` · `shield:prevent_all[:from:<src>\|:if_damage:le:N][:effects]`（在弱抗**之后**结算；持续到该玩家下个回合开始自动失效）。**只写 prevent all damage 的护盾只挡伤害**，带 `:effects` 才连效果一起挡 |
+| **被动静态(B4)** | `passive:bench_immune`（在后备时免疫招式伤害**与效果**）· `passive:bench_immune_dmg`（Tera 规则：只挡伤害）· `passive:dmg_immune:<self\|team_bench>[:from:<src>\|:min:<n>\|:no_rule_box][:effects]`（常驻免伤，来源限定只收 basic_ex / ex / tera / has_ability / special_energy；判不出来源时**不免疫**）· **`passive:checkup_plus:<status>:<n>[:side:opp][:active_only]`**（检查期追加伤害：Pecharunt / Magmortar）· **`passive:checkup_spread:<dmg>:<scope>[:except:<key>][:active_only]`**（检查期群体放置：Froslass 的 `ability_all` / Tyranitar 的 `opp_basic`） |
+| **选定目标伤害(snipe)** | **`snipe:<opp\|opp_bench\|own_bench\|both_bench>:<per>:<count>[:per:<counter>][:target:damaged][:if:<cond>]`** —— `per` 每目标伤害、`count` = 1/N/all；`:per:` 按计数源缩放（Raging Bolt / Kyurem ex），`:if:` 条件不满足则**整段不结算**（Wo-Chien「deck ≤3」/ Ting-Lu「场上有场地」）。**`:target:damaged`**（第二十七批）：只挑**身上已有伤害指示物**的目标，且**先筛选再按 count 选**（Excadrill ex / Hippowdon，后者 `both_bench:all` 连己方合格目标一起打）。**`:per:target_counters`**：每目标按**它自己**的指示物数缩放（Team Rocket's Sneasel）——确定性默认挑伤得最重的；用全局计数源会多算别人的指示物。⚠ **命中对手战斗位时吃弱点/抗性**，并接静态减伤 / 道具 / 场地 / 护盾（卡面括号只豁免**后备**）；后备按原始值 |
+| **全队常驻减伤(第十九批)** | **`fx:team_reduce:<n>:basic:<color>[:other:<key>]` · `:energy:<color>` · `:faction:<key>[:source_bench]` `[:nonstack]`** —— 效果源在**守方阵营任意一只**的特性上（非受击者自身）→ 全队按类别 / 能量附着 / 阵营筛选，**弱抗之后**扣减；`other` = 需另一只同名牌在场，`source_bench` = 来源须在后备，`nonstack` 按 tag 去重（Curly Wall / Gear Coating / Stone Palace） |
+| **其他(B4)** | `draw_to:N`(抽到指定手牌数) · `discard:N\|all` · `move_damage:N\|all` · `attach:N[:type][:zone][:target:bench\|any\|bench_type:<c>][:counters:N]`（`target` 指定落点；`:counters` = 附能成功后的指示物）· `evolve_from_deck`(招式内检索进化) · **`evolve_each_bench`**（逐只后备各从牌库找下一代进化卡直接进化，Reuniclus）· `:anyenergy`（卡面「an Energy card」可附特殊能量） |
+| **回复/击倒/牌库顶(B4)** | `heal:N[:<scope>][:type:<c>][:discard]` · **`heal:all[:<scope>][:type:<c>][:energy]`（回满）** · `<scope>` 含 `mega`（只在己方 Mega 里选 1 只，Wally's Compassion）；尾缀 `:energy` = 回复后把该目标**全部能量收回手牌**，`:discard` = 回复后弃该目标 **1 个能量**（均隐含「仅当真的回复过才执行」）· **`self:N[:per:<counter>]`**（反伤；Palafin 按自身伤害指示物缩放）· **`knockout:<opp_active\|opp_bench\|opp_any\|opp_counters:N\|both_active>[:basic]`**（直接击倒，受效果免疫拦截）· **`shuffle_top:N[:opp]`**（只重排顶部 N 张）· **`counters:N[:per:<counter>][:scope:opp[:<count>\|all]][:selfko]`**（指示物**直放**，**不吃弱点/抗性**，可击杀取奖赏：Haunter / Alakazam 打战斗位；`:scope:opp` = 对手任意 1 只（Bramblin / Spectrier / Dusclops / Golbat），`:all` = 全体（Uxie）；**`:scope:ability:all`** = 双方全场**印有特性**的逐个（Cofagrigus，第二十八批；己方那侧被击倒也由对手取奖赏）；`:selfko` = 特性持有者随后自毁（Dusclops / Dusknoir「诅咒爆裂」））· **`energy_to_deck:<color|any>:<n\|all>`**（把弃牌堆的**基本能量**洗回牌库：Kyogre「Riptide」/ Sinistcha ex「Re-Brew」——只建模计数不洗回会让下次攻击重复计数）· **`bounce:energy:<self\|opp_active>:<n\|all>[:type:<c>]`**（附着能量收回**手牌**：无色优先、指定属性只取该色；基本能量不足才按整张卡取特殊能量；Chien-Pao / Dipplin / Landorus / Volcanion）· **`checkup_set:<status>:<n>`**（检查期伤害取代默认值，Nidoking ex） |
+| **触发式特性(B4)** | **`evolve_act:<tag1>\|<tag2>`**（进化那一刻按序执行一次；不再每回合可发动）· **`on_ko:replay_evolve_act`**（第二触发时机：战斗位被击倒时重放进化特性）· **`ko_prize_plus:N[:coin]`**（对手战斗位被击倒多取奖赏，不叠加）· **`on_ko:counter:N`**（自身被击倒反制攻击方）· **`on_ko:energy_to_hand:<type>`**（被击倒者身上的基础能量收回手牌）· **`on_damaged:<status\|counter\|discard_energy>:<arg>`**（受击反应）· **`on_damaged:counter_per:<n>:<color>`**（每持有 1 个该色能量 → 攻击者额外吃 n×10，Orthworm ex）· `:if_prev` 后缀（「in this way」：仅当前序动作真的发生时才执行） · `attach:…:target:bench`（附到后备，供「附能后回复同一只」链） |
+| **下回合反制(第二十九批)** | **`retaliate_next:<n\|equal>`** —— 招式挂在**出招者自己**身上，只在**对手的下一个回合**内生效：该 Pokémon 被攻击伤害时，攻击者吃 N 点（`equal` = 与所受伤害相同）；每次被攻击都可触发，进化清除（Bouffalant / Zamazenta） |
+| **场地静态规则(S3)** | `stadium:hp_plus` / `dmg_reduce[:type·:faction]` · **`attack_plus:N:faction:<k>`** · **`no_retreat:faction:<k>`** · **`no_tool_effect`**（道具失效）· **`status_immune:require:energy`** · **`evolve_same_turn:type:<c>`** · **`dmg_immune:box:none:from:rulebox`** · **`bench_limit:8:require:tera[:trim:N]`**（Area Zero；失去 Tera 后裁回且不取奖赏）· **`no_bench_counters`**（Battle Cage：后备指示物拦截）· `stadium:use:*`（每回合一次；`evolve_from_deck[:chain:1]` = Grand Tree 链式进化） |
+| **计数源/条件(B4)** | 计数源 22 个 + 条件 6 个（**只取公开信息**）；未知计数源**抛错**而非静默按 0。**`own_active_extra_energy_at_least:<n>`**（第十九批：战斗位总能量 − **本次招式费用** ≥ n）。第二十六批新增**限定后**的指示物计数源：**`own_bench_counters_type:<color>`**（后备中该属性宝可梦的指示物总数，Gigalith）· **`own_bench_counters_named:<key>`**（具名阵营后备，Cynthia's Spiritomb）· **`own_field_named_with_damage:<key>`**（具名且带指示物的**只数**，Paldean Tauros）——属性拼错直接抛错，绝不静默 0 |
 | 特殊状态 | 中毒(−10/回合) · 烧伤(−20/回合) · 睡眠(抛币醒) · 麻痹(检查阶段恢复) · 混乱(攻击抛币，反面自伤 30 攻击失败；正面攻击后解除)；睡/麻禁攻禁撤 |
 | 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负）；**被招式击倒**的标记按方计数，供下回合条件加伤使用 |
 | 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库；超 `max_turns` 判平 |

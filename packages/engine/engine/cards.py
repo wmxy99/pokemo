@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from . import special_energy
+
 COLORLESS = "colorless"
 TYPES = ("grass", "fire", "water", "lightning", "psychic", "fighting",
          "darkness", "metal", "dragon", "colorless")
@@ -101,6 +103,13 @@ class PokemonDef:
     retreat: int = 1
     attacks: tuple = ()
     is_ex: bool = False
+    # 2026-10-28（B3）：数据集的 `rule` / `category` 两个分类字段进入引擎定义。
+    # 为什么必须带进来：卡面条件「if you have any **Mega Evolution** Pokémon {ex}
+    # in play」（Linoone）与计数源「for each of your **Ancient** Pokémon in play」
+    # （Awakening Drum）都只能由这两个字段判定 —— 用卡名子串猜会误伤
+    # （「Mega」出现在招式名里、「Ancient」出现在文本里）。
+    is_mega: bool = False             # rule == "Mega Pokémon ex"
+    category: str = ""                # Ancient / Future / Tera(...) / Trainer's Pokémon(...)
     stage: int = 0                    # E2: 0=基础 1=一阶 2=二阶 ...
     evolves_from: Optional[str] = None  # E2: 由谁进化而来
     abilities: tuple = ()             # E3: tuple[AbilityDef]
@@ -118,10 +127,16 @@ class PokemonDef:
 
 @dataclass(frozen=True)
 class EnergyDef:
-    """能量牌（v0.2 支持彩色）"""
+    """能量牌（v0.2 支持彩色；2026-10-28 支持特殊能量）
+
+    `tag` 为空 = 基本能量（提供 `type` 一点）；
+    `tag = "senergy:<kind>"` = 特殊能量，提供的能量与附加规则见
+    `engine/special_energy.py`（按持有者实时计算）。
+    """
     type: str = COLORLESS
     name: str = ""                    # 数据键；默认按 type 生成
     name_zh: str = ""                 # 中文展示名（如「基本火能量」）
+    tag: str = ""                     # senergy:<kind>（特殊能量）· "" = 基本能量
 
     def __post_init__(self):
         if not self.name:
@@ -131,6 +146,10 @@ class EnergyDef:
     @property
     def display(self) -> str:
         return self.name_zh or self.name
+
+    @property
+    def is_special(self) -> bool:
+        return str(self.tag or "").startswith("senergy:")
 
 
 @dataclass(frozen=True)
@@ -152,9 +171,13 @@ class TrainerDef:
       "unsupported"                引擎未建模（替换占位，如实标注）
     """
     tag: str                          # poffin / ultra_ball / hammer / boss ...
-    kind: str = "item"                # item | supporter
+    kind: str = "item"                # item | supporter | tool | stadium
     name: str = ""                    # 数据键
     name_zh: str = ""                 # 中文展示名
+    # 化石卡（2026-10-28）：卡面「Play this card as if it were a N-HP Basic {C}
+    # Pokémon」。上场时按这份**宝可梦定义**实例化（含卡面特性），卡本身仍是
+    # 训练家卡（从场上弃置/被击倒时按 TrainerRef 进弃牌堆）。
+    fossil_pdef: Optional["PokemonDef"] = None
 
     @property
     def display(self) -> str:
@@ -198,7 +221,14 @@ class FieldPokemon:
     # （见 battle._begin_turn）。注意与 `passive:*` 被动特性区分：被动写在卡面上、
     # 常驻生效，不占这两个字段。
     shield_reduce: int = 0                       # 受到的招式伤害减少 N（下限 0）
-    shield_prevent_all: bool = False             # 免疫招式伤害**与效果**
+    shield_prevent_all: bool = False             # 挡下招式**伤害**（是否也挡效果见下一字段）
+    # 2026-10-28（第八批）：卡面必须区分「prevent all damage」与「prevent all damage
+    # **from and effects of** attacks」—— 前者只挡伤害，后者连效果一起挡。统一按
+    # 「全挡」处理会静默放大防护范围（例如 Metapod 只挡伤害，却把中毒也挡掉）。
+    shield_prevent_effects: bool = False
+    # 护盾的来源/门槛限定（`from:basic` / `from:basic_non_colorless` /
+    # `if_damage:le:N`；空串 = 无限定）。无来源限定的形态才是真「全挡」。
+    shield_prevent_qual: str = ""
     # ---- 静态修正（v1.5 · S1 静态修正层，2026-10-26）----
     # `passive:hp_plus:N`（**无条件的自身**加 HP）。为什么放在**实例**上而不是
     # 每次现算：`max_hp` 被 `is_ko` / 奖赏结算 / 前端展示广泛使用，而它拿不到
@@ -210,6 +240,83 @@ class FieldPokemon:
     # 存 tag 而不是卡对象：引擎只需要"它能提供什么修正"，不需要卡面文本。
     tool: Optional[str] = None
     tool_name: str = ""              # 展示用（中文优先由上层 fill）
+    # S6 回手族（2026-10-28）：保留**道具卡对象**，使「宝可梦与附加卡一起回手
+    # / 洗回牌库」能精确执行（只存 tag 的话道具只能进弃牌堆，等于少回一张卡）。
+    tool_ref: Optional[object] = None
+    # ---- 跨回合锁定（2026-10-27）----
+    # 「During your next turn, this Pokémon can't use attacks / Giant Wave.」
+    # 「During your opponent's next turn, the Defending Pokémon can't retreat.」
+    # 用 owner 的 `turn_counts` 到期（见 battle._begin_turn 注释）：
+    # `until = 施加时 owner 的回合数 + 2` → 只在 owner 的下一个回合内生效。
+    attack_lock_all_until: int = 0
+    attack_lock_names_until: dict = field(default_factory=dict)  # 名称小写 → until
+    # 「again until it leaves the Active Spot」：离场/进化时清除
+    attack_lock_names_active: set = field(default_factory=set)
+    retreat_lock_until: int = 0
+    # ---- 下回合限制（2026-10-28）----
+    # 「During your opponent's next turn, if the Defending Pokémon tries to use an
+    # attack, your opponent flips a coin. If tails, that attack doesn't happen.」
+    # 到期口径同 `attack_lock_*`（持有者 turn_counts + 2）。
+    attack_denial_until: int = 0
+    # 「… attacks used by the Defending Pokémon cost {C} more, and its Retreat
+    # Cost is {C} more.」（Rillaboom）
+    attack_cost_up_until: int = 0
+    attack_cost_up_n: int = 0
+    retreat_up_until: int = 0
+    retreat_up_n: int = 0
+    # ---- 跨回合**伤害**修正（2026-10-29 第十六批）----
+    # 「During your next turn, the Defending Pokémon takes N more damage from
+    #  attacks (**after** applying Weakness and Resistance).」→ 记在**受击方**
+    # 「During your opponent's next turn, attacks used by the Defending Pokémon
+    #  do N less damage (**before** applying Weakness and Resistance).」→ 记在受击方
+    # 「During your next turn, this Pokémon's <招式> attack does N more damage」
+    #  → 记在**自己**身上，按招式名匹配
+    # 到期口径同 `attack_lock_*`：`until = 施加时 owner 的 turn_counts + 2`。
+    dmg_taken_plus_next_n: int = 0
+    dmg_taken_plus_next_until: int = 0
+    # 到期口径按**施加者**（= 原攻击方）的 turn_counts；只有该方回合内生效。
+    dmg_taken_plus_next_owner: int = -1
+    atk_minus_next_n: int = 0
+    atk_minus_next_until: int = 0
+    self_atk_plus_next: dict = field(default_factory=dict)  # 招式键 → (n, until)
+    # ---- 下回合「受击反制」（2026-10-29 第二十九批）----
+    # 「During your opponent's next turn, if **this Pokémon** is damaged by an
+    #  attack (even if this Pokémon is Knocked Out), put N damage counters on the
+    #  Attacking Pokémon [equal to the damage done to this Pokémon].」
+    # —— 由**进攻方招式**挂在自己身上，窗口 = 对手的下一个回合。
+    retaliate_next_n: int = 0        # 固定反制伤害（点数）；`equal` 时置 0
+    retaliate_next_equal: bool = False   # 反制伤害 = 本次被打的伤害
+    retaliate_until: int = 0         # 到期按**触发方**（= 对手）turn_counts 判定
+    retaliate_owner: int = -1        # 该方回合内触发
+    # ---- 回合历史（2026-10-28 第七批）----
+    # 卡面「If this Pokémon moved from your Bench to the Active Spot **this turn**」
+    # 「evolved from X **during this turn**」「was healed **during this turn**」
+    # —— 只能靠回合级记账精确判定；记录**回合序号**（`battle.turn_number`），
+    # 比较时用「等于当前回合」而不是布尔，避免跨回合残留。
+    moved_active_turn: int = 0
+    evolved_turn: int = 0
+    evolved_from_name: str = ""
+    healed_turn: int = 0
+    # ---- Pokémon Checkup 伤害改写（2026-10-28 第十三批）----
+    # 「During Pokémon Checkup, put N damage counters on that Pokémon instead of
+    # 1.」（Team Rocket's Nidoking ex「Tainted Horn」）—— 由招式作用在**该只**
+    # 身上，取代默认的中毒/烧伤检查期伤害。`{status: dmg}`（dmg 为点数，非指示物数）。
+    checkup_set: dict = field(default_factory=dict)
+    # ---- 化石卡（2026-10-28）----
+    # `fossil=True` 表示这只「宝可梦」由训练家卡（Fossil）上场：不受任何特殊
+    # 状态影响、不能撤退，且可在己方回合任意时刻弃置（`discard_fossil`）。
+    # 进化后回到普通宝可梦（evolve_to 会清空这两个字段）。
+    fossil: bool = False
+    fossil_ref: Optional[object] = None   # 原始 TrainerRef（弃置/击倒时进弃牌堆）
+    # ---- 特殊能量（2026-10-28）----
+    # 附着在**本只**宝可梦上的特殊能量卡（EnergyRef 列表）。能量的**数量与属性**
+    # 不落到 `energy` 里，而是按 `special_energy.provides()` 实时计算 —— 这样
+    # 进化（Stage 1 → Stage 2 / 基础 → 进化）后 Neo Upper / Prism / Ignition 的
+    # 供给会自动重算，不会残留旧值。
+    senergy: list = field(default_factory=list)
+    # Jamming Tower（2026-10-28）：道具**在场时失效**——仍附着但所有修正/触发都不生效。
+    # 由 `battle._refresh_stadium_hp`（场地进入/被顶替/回合开始）统一刷新。
+    tool_disabled: bool = False
 
     # ---- 基本属性 ----
     @property
@@ -219,7 +326,10 @@ class FieldPokemon:
     @property
     def max_hp(self) -> int:
         # 道具的 +HP 在这里叠加（道具是**中途附着**的，不能在 make_pokemon 时固化）
-        return self.pdef.hp + self.bonus_hp + _tool_value(self.tool, "hp_plus")
+        # 特殊能量（Grow Grass）同样中途附着，故一并在此计算
+        return (self.pdef.hp + self.bonus_hp
+                + _tool_value("" if self.tool_disabled else self.tool, "hp_plus")
+                + special_energy.hp_plus(self))
 
     @property
     def hp_remaining(self) -> int:
@@ -237,11 +347,40 @@ class FieldPokemon:
         self.status.clear()
 
     # ---- E1 能量操作 ----
+    def special_map(self) -> dict:
+        """特殊能量提供的能量（实时计算：进化后自动按新物种重算）"""
+        out: dict = {}
+        for ref in self.senergy:
+            for t, n in special_energy.provides(ref.edef, self).items():
+                out[t] = out.get(t, 0) + n
+        return out
+
+    def energy_counts(self) -> dict:
+        """支付用的能量池 = 基本能量 + 特殊能量（含 `any` / `flex:` 键）"""
+        m = dict(self.energy)
+        for t, n in self.special_map().items():
+            m[t] = m.get(t, 0) + n
+        return m
+
     def total_energy(self) -> int:
-        return sum(self.energy.values())
+        return sum(self.energy_counts().values())
 
     def energy_of(self, t: str) -> int:
-        return self.energy.get(t, 0)
+        return self.energy_counts().get(t, 0)
+
+    def energy_of_type(self, t: str) -> int:
+        """可支付 `{t}` 的能量点数（同色 + 双色任选含该色 + 任意属性）
+
+        用途：卡面「for each {W} Energy attached」类计数。基本能量的结果与
+        `energy_of` 完全一致（池内没有 flex/any 时不多算）。
+        """
+        m = self.energy_counts()
+        n = m.get(t, 0) + m.get(special_energy.ANY, 0)
+        for k, v in m.items():
+            if k.startswith(special_energy.FLEX_PREFIX) \
+                    and t in k[len(special_energy.FLEX_PREFIX):].split(","):
+                n += v
+        return n
 
     def add_energy(self, t: str, n: int = 1) -> None:
         self.energy[t] = self.energy.get(t, 0) + n
@@ -249,10 +388,10 @@ class FieldPokemon:
     def can_pay(self, cost: EnergyCost) -> bool:
         """能否支付招式能量需求（不消耗能量——攻击不弃能）
 
-        规则：**彩色需求须同色满足**；**无色需求可由任意能量支付**
-        （先按同色占用扣除彩色需求，再看剩余总能量是否够无色部分）。
-        例：`[('psychic',1),('colorless',1)]` 可由「超 + 火」支付。
+        规则：**彩色需求须同色满足**（可用「双色任选 / 任意属性」能量补足）；
+        **无色需求可由任意能量支付**。
         """
+        pool = self.energy_counts()
         need: dict = {}
         colorless = 0
         for t, n in cost:
@@ -260,24 +399,47 @@ class FieldPokemon:
                 colorless += n
             else:
                 need[t] = need.get(t, 0) + n
-        used = 0
         for t, n in need.items():
-            if self.energy_of(t) < n:
+            take = min(pool.get(t, 0), n)
+            pool[t] = pool.get(t, 0) - take
+            n -= take
+            if n > 0:
+                # 双色任选（Team Rocket's Energy）
+                for key in list(pool):
+                    if n <= 0:
+                        break
+                    if not key.startswith(special_energy.FLEX_PREFIX):
+                        continue
+                    if t not in key[len(special_energy.FLEX_PREFIX):].split(","):
+                        continue
+                    take = min(pool[key], n)
+                    pool[key] = pool[key] - take
+                    n -= take
+            if n > 0:
+                # 任意属性（Legacy / Prism / Neo Upper）
+                take = min(pool.get(special_energy.ANY, 0), n)
+                pool[special_energy.ANY] = pool.get(special_energy.ANY, 0) - take
+                n -= take
+            if n > 0:
                 return False
-            used += n
-        return (self.total_energy() - used) >= colorless
+        return sum(v for v in pool.values()) >= colorless
 
     def remove_any(self, n: int) -> bool:
-        """移除 n 点能量（撤退/干扰用）：无色优先，其次任意颜色"""
+        """移除 n 点能量（撤退/干扰用）：基本能量无色优先 → 其他基本色 →
+        特殊能量卡（规则上弃的是**卡**，故整张移除）
+
+        返回是否支付成功；特殊能量卡被移除时不会回到弃牌堆 —— 与既有的
+        「基本能量卡不落弃牌堆」口径一致（引擎的能量是计数而非卡）。
+        """
         if self.total_energy() < n:
             return False
-        # 先无色
+        # 先无色（基本）
         c = self.energy.get(COLORLESS, 0)
         take_c = min(c, n)
         if take_c:
             self.energy[COLORLESS] = c - take_c
             n -= take_c
-        # 其余按任意类型扣除
+        # 其余基本能量按任意类型扣除
         for t in list(self.energy):
             if n <= 0:
                 break
@@ -290,13 +452,62 @@ class FieldPokemon:
                 del self.energy[t]
         if self.energy.get(COLORLESS, 0) == 0:
             self.energy.pop(COLORLESS, None)
+        # 最后消耗特殊能量卡（整张；后附先弃）
+        while n > 0 and self.senergy:
+            ref = self.senergy.pop()
+            n -= sum(special_energy.provides(ref.edef, self).values())
         return True
+
+    @staticmethod
+    def _attack_key(name: str) -> str:
+        return str(name or "").replace(":", " ").strip().lower()
+
+    def attack_locked(self, attack_name: str, turn_count: int) -> bool:
+        """该招式当前是否被封锁（全部招式 / 指定招式 / 离场前）"""
+        if self.attack_lock_all_until > turn_count:
+            return True
+        key = self._attack_key(attack_name)
+        return (self.attack_lock_names_until.get(key, 0) > turn_count
+                or key in self.attack_lock_names_active)
+
+    def retreat_locked(self, turn_count: int) -> bool:
+        """是否处于「对手下个回合内不能撤退」的时限锁定"""
+        return self.retreat_lock_until > turn_count
+
+    def clear_active_locks(self) -> None:
+        """离开战斗位时清除「直到离场」类攻击封锁"""
+        self.attack_lock_names_active.clear()
+
+    def clear_turn_locks(self) -> None:
+        """进化时清除全部锁定（进化后的宝可梦不再是原效果的目标）"""
+        self.attack_lock_all_until = 0
+        self.attack_lock_names_until.clear()
+        self.attack_lock_names_active.clear()
+        self.retreat_lock_until = 0
+        self.dmg_taken_plus_next_n = 0
+        self.dmg_taken_plus_next_until = 0
+        self.dmg_taken_plus_next_owner = -1
+        self.atk_minus_next_n = 0
+        self.atk_minus_next_until = 0
+        self.self_atk_plus_next.clear()
+        # 进化后不再是原效果的目标 → 下回合反制一并清除
+        self.retaliate_next_n = 0
+        self.retaliate_next_equal = False
+        self.retaliate_until = 0
+        self.retaliate_owner = -1
 
     def evolve_to(self, ndef: PokemonDef) -> None:
         """E2 进化：替换物种；保留能量与伤害，清除状态"""
         self.pdef = ndef
         self.status.clear()
+        self.clear_turn_locks()
+        # 检查期改写作用在「原来那只」身上；进化后按新卡面结算默认规则。
+        self.checkup_set.clear()
         self.just_played = True
+        # 化石被进化后就是普通宝可梦：不再享有「不受特殊状态 / 不可撤退 /
+        # 可随时弃置」这三条化石特权（继续留着会变成**静默加强**）。
+        self.fossil = False
+        self.fossil_ref = None
 
     def summary(self) -> dict:
         return {
@@ -304,6 +515,7 @@ class FieldPokemon:
             "display": self.pdef.display,
             "hp": self.max_hp, "dmg": self.damage,
             "energy": self.total_energy(), "energy_map": dict(self.energy),
+            "senergy": [ref.edef.name for ref in self.senergy],
             "status": sorted(self.status), "stage": self.stage,
         }
 

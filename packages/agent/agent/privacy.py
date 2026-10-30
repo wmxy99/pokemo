@@ -28,7 +28,11 @@ from typing import Optional
 from urllib.parse import urlparse
 
 __all__ = ["desensitize", "local_only", "check_endpoint", "audit",
-           "audit_path", "privacy_status", "SENSITIVE_KEYS"]
+           "audit_path", "privacy_status", "SENSITIVE_KEYS",
+           "ALLOWED_EXTERNAL_HOSTS", "external_audit_forced"]
+
+# 外部外发仅允许这些主机（当前阶段只接 DeepSeek；新增供应商需显式加白）
+ALLOWED_EXTERNAL_HOSTS = frozenset({"api.deepseek.com"})
 
 # ---------------- 脱敏规则 ----------------
 # 顺序有意义：先长模式（卡号/证件），后通用模式
@@ -113,13 +117,22 @@ class PrivacyError(RuntimeError):
 
 
 def check_endpoint(url: str) -> dict:
-    """校验端点是否被允许；本地模式下外部端点直接拒绝"""
+    """校验端点是否被允许；本地模式/未加白外发直接拒绝"""
     external = is_external(url)
-    info = {"url": url, "host": (urlparse(url).hostname or ""), "external": external}
-    if external and local_only():
-        raise PrivacyError(
-            f"本地模式（POKELAB_LOCAL_ONLY=1）禁止外部调用：{info['host']}；"
-            "请改用本机/内网 LLM 端点，或取消本地模式")
+    host = (urlparse(url).hostname or "").lower()
+    info = {"url": url, "host": host, "external": external}
+    if external:
+        if local_only():
+            raise PrivacyError(
+                f"本地模式（POKELAB_LOCAL_ONLY=1）禁止外部调用：{info['host']}；"
+                "请改用本机/内网 LLM 端点，或取消本地模式")
+        if (urlparse(url).scheme or "").lower() != "https":
+            raise PrivacyError(
+                f"外部端点必须使用 HTTPS（当前 {url}），拒绝明文外发")
+        if host not in ALLOWED_EXTERNAL_HOSTS:
+            raise PrivacyError(
+                f"外发主机 {host} 不在白名单内：当前仅允许 DeepSeek"
+                f"（{' / '.join(sorted(ALLOWED_EXTERNAL_HOSTS))}）")
     return info
 
 
@@ -133,11 +146,24 @@ def audit_enabled() -> bool:
     return _truthy(os.environ.get("POKELAB_AUDIT", "1"))
 
 
+def external_audit_forced() -> bool:
+    """外部外发恒写审计（即使 POKELAB_AUDIT=0 也不允许关闭）"""
+    return True
+
+
 def audit(event: str, **fields) -> Optional[Path]:
-    """追加一条审计记录（JSONL，不含原文）。失败静默（不影响主流程）"""
-    if not audit_enabled():
+    """追加一条审计记录（JSONL，不含原文）。
+
+    - 外部外发（``external=True``）**强制审计**，POKELAB_AUDIT=0 也不生效；
+    - 其余事件可按 POKELAB_AUDIT 关闭；失败静默（不影响主流程）。
+    """
+    forced = bool(fields.get("external")) and not audit_enabled()
+    if not audit_enabled() and not forced:
         return None
-    rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": event, **fields}
+    rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": event}
+    if forced:
+        rec["audit_forced"] = True
+    rec.update(fields)
     p = audit_path()
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -174,8 +200,11 @@ def privacy_status() -> dict:
         "local_only": local_only(),
         "desensitize_rules": [name for name, _, _ in _RULES],
         "audit_enabled": audit_enabled(),
+        "audit_forced_for_external": external_audit_forced(),
+        "allowed_external_hosts": sorted(ALLOWED_EXTERNAL_HOSTS),
         "audit_log": str(ap),
         "audit_exists": ap.exists(),
         "notes": ("外部 LLM 调用前对文本脱敏；本地模式禁止任何外部网络调用；"
-                  "审计仅记录端点/字符数/脱敏计数，不记录原文"),
+                  "外部外发仅允许白名单主机且必须 HTTPS；审计强制开启，"
+                  "仅记录端点/字符数/脱敏计数，不记录原文"),
     }

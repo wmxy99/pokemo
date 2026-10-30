@@ -32,13 +32,19 @@ def compute_damage(attacker: FieldPokemon, defender: FieldPokemon, base: int,
     return dmg
 
 
-def apply_shield(defender: FieldPokemon, dmg: int) -> int:
-    """护盾结算：``shield_prevent_all`` 全额挡下；``shield_reduce`` 减伤（下限 0）
+def apply_shield(defender: FieldPokemon, dmg: int,
+                 block: bool | None = None) -> int:
+    """护盾结算：全额挡下（``block``）；``shield_reduce`` 减伤（下限 0）
 
     规则要点：减伤发生在**弱点/抗性之后**（卡面「after applying Weakness and
     Resistance」）→ 必须在 ``compute_damage`` 之后调用。
+
+    ``block`` 由调用方按卡面限定算好（`Battle._shield_blocks`）再传入：
+    护盾可能只挡某类来源（「by attacks from Basic Pokémon」）或只挡
+    伤害不超过 N 的攻击。``None`` = 按无条件的 ``shield_prevent_all`` 处理
+    （兼容直接设置该标志的调用方 / 单元测试）。
     """
-    if defender.shield_prevent_all:
+    if (defender.shield_prevent_all if block is None else block):
         return 0
     if defender.shield_reduce:
         return max(0, dmg - defender.shield_reduce)
@@ -67,7 +73,8 @@ def distribute_damage(bench_count: int, total: int, step: int = 10) -> list:
     return dmg
 
 
-def status_checkup(field: FieldPokemon, rng, phase: str = "start") -> list:
+def status_checkup(field: FieldPokemon, rng, phase: str = "start", *,
+                   bonus=None, override=None) -> list:
     """宝可梦检查阶段：结算中毒/烧伤伤害并处理睡眠苏醒 / 麻痹恢复。
 
     返回事件描述 dict 列表（空表=无事件）。规则要点：
@@ -84,6 +91,13 @@ def status_checkup(field: FieldPokemon, rng, phase: str = "start") -> list:
       因此 `phase="start"` 只做毒/烧/睡眠，`phase="end"` 只做麻痹恢复。
 
     兼容性：`"paralyzed"` 是历史拼写（旧回放/外部构造可能写入），一并清除。
+
+    ``bonus`` / ``override``（2026-10-28 第十三批 · Checkup 改写族）：
+      · ``bonus = {"poison": +N, "burn": +N}``   追加伤害（「put N more damage
+        counters … during Pokémon Checkup」，Pecharunt / Magmortar）
+      · ``override = {"poison": N, "burn": N}``  取代默认值（Nidoking ex
+        「put 8 damage counters … instead of 1」）
+    两者都由 `battle._checkup_mods` 在调用前汇总，本函数只做算术。
     """
     events = []
     if not field or field.is_ko:
@@ -94,11 +108,15 @@ def status_checkup(field: FieldPokemon, rng, phase: str = "start") -> list:
             events.append({"type": "paralyze_recover", "target": field.name})
         return events
     if "poison" in field.status:
-        field.damage += 10
-        events.append({"type": "poison_damage", "target": field.name, "dmg": 10})
+        dmg = int((override or {}).get("poison") or 10) \
+            + int((bonus or {}).get("poison") or 0)
+        field.damage += dmg
+        events.append({"type": "poison_damage", "target": field.name, "dmg": dmg})
     if "burn" in field.status:
-        field.damage += 20
-        events.append({"type": "burn_damage", "target": field.name, "dmg": 20})
+        dmg = int((override or {}).get("burn") or 20) \
+            + int((bonus or {}).get("burn") or 0)
+        field.damage += dmg
+        events.append({"type": "burn_damage", "target": field.name, "dmg": dmg})
     if "sleep" in field.status:
         if rng.random() < 0.5:
             field.status.discard("sleep")

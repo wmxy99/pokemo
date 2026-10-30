@@ -343,16 +343,18 @@ class TestV14Modifiers(unittest.TestCase):
                          "Active Pok\u00e9mon.")
         self.assertIn("discard_energy:1:opp", opp["tags"])
 
-    def test_discard_special_energy_is_refused(self):
-        """⚠ 「Special Energy」引擎分不出基本/特殊 → 必须拒绝（2026-10-27）
+    def test_discard_special_energy_uses_special_tag(self):
+        """第二十四批：引擎已能区分特殊/基本（`senergy`）→ 必须落 `:special`
 
-        `discard_energy:N:opp` 会按**任意色**弃一张；对手只贴基本能量时本不该生效。
+        此前的守卫（2026-10-27）是「引擎分不出基本/特殊 → 拒绝」。现在特殊能量
+        按**卡**存在 `senergy` 里，故改为精确映射 `discard_energy:1:opp:special`；
+        普通 `discard_energy:1:opp` 仍会先弃基本能量（对手只贴基本时错误生效）。
         实测 Cobalion「Discard a Special Energy from your opponent's Active Pokémon」。
         """
         r = self._tags("Discard a Special Energy from your opponent\u2019s "
                        "Active Pok\u00e9mon.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["discard_energy:1:opp:special"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_counter_side_is_not_reversed(self):
         """计数源阵营不得反转（your ↔ opponent's）
@@ -374,37 +376,110 @@ class TestV14Modifiers(unittest.TestCase):
                       "「已取得」不得映射成「剩余」")
 
     def test_subset_phrase_not_mapped_to_total(self):
-        """子集措辞（具名/类别/颜色限定）不得按总数映射（否则系统性多算）"""
+        """子集措辞（具名/类别/颜色限定）不得按总数映射（否则系统性多算）
+
+        2026-10-29 第二十六批起，「Benched Cynthia's Pokémon」「Benched {F}
+        Pokémon」这两句已有**逐项**计数源（`own_bench_counters_named:cynthia` /
+        `own_bench_counters_type:fighting`，见 `TestScalingCounters`）；本条改用
+        引擎仍**无法逐项**判定的子集措辞守护同一不变量。
+        """
         for text in (
             "This attack does 30 more damage for each damage counter on all of "
-            "your opponent\u2019s Pok\u00e9mon.",          # 部位：非"后备"也不是"active"
+            "your Benched Tera Pok\u00e9mon.",           # 类别子集（无指示物版）
             "This attack does 30 more damage for each damage counter on all of "
-            "your Benched Cynthia\u2019s Pok\u00e9mon.",   # 具名子集
-            "This attack does 30 more damage for each damage counter on all of "
-            "your Benched {F} Pok\u00e9mon.",              # 颜色子集
+            "your Benched Pok\u00e9mon that have an Ability.",   # 特性子集
         ):
             r = self._tags(text)
             self.assertEqual(r["tags"], [],
                              f"子集措辞不得映射出 tag：{text[:50]}")
             self.assertTrue(r["unsupported"], "应如实登记为未建模")
 
+    def test_public_count_sources(self):
+        """新增的公开计数源必须按卡面语义精确落 tag（2026-10-27）
+
+        这些都不是"子集近似"：Basic/Evolution 是进化阶段，对手手牌是**张数**
+        （公开信息），全场指示物 / 特殊状态数 / 道具数都是确定性可数的。
+        """
+        cases = (
+            ("This attack does 20 damage for each of your Basic Pok\u00e9mon "
+             "in play.", "dmg_set:20:per:own_basic"),
+            ("This attack does 40 more damage for each of your Evolution "
+             "Pok\u00e9mon in play.", "dmg_plus:40:per:own_evolution"),
+            ("This attack does 30 damage for each card in your opponent\u2019s "
+             "hand.", "dmg_set:30:per:opp_hand"),
+            ("This attack does 10 more damage for each damage counter on all "
+             "of your opponent\u2019s Pok\u00e9mon.",
+             "dmg_plus:10:per:opp_field_counters"),
+            ("This attack does 100 damage for each Special Condition affecting "
+             "your opponent\u2019s Active Pok\u00e9mon.",
+             "dmg_set:100:per:opp_active_status_count"),
+            ("This attack does 30 damage for each Pok\u00e9mon Tool attached "
+             "to all of your Pok\u00e9mon.",
+             "dmg_set:30:per:own_field_tools"),
+        )
+        for text, tag in cases:
+            r = self._tags(text)
+            self.assertEqual(r["tags"], [tag], text)
+            self.assertEqual(r["unsupported"], [], text)
+
+    def test_subset_qualified_basic_still_rejected(self):
+        """「Basic Pokémon in your discard pile」不是在场计数 → 不得套用"""
+        r = self._tags("This attack does 20 damage for each Basic Pok\u00e9mon "
+                       "in your discard pile.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_any_number_of_not_silently_modeled(self):
+        """「any number of」是自由数量，不得静默压成固定 N（2026-10-27）
+
+        实测踩坑：Rotom「search … any number of Pokémon that have Rotom in
+        their name」被压成 `search_bench:1`（少检索 + 忽略卡名筛选）；
+        Gorebyss / Honchkrow / Alakazam 的任意数量子句则被整段丢弃。
+        全部必须留下 unsupported，整卡不进池。
+        """
+        # 检索：数量自由 + 卡名筛选
+        r = self._tags("You may search your deck for any number of Pok\u00e9mon "
+                       "that have \u201cRotom\u201d in their name and put them "
+                       "onto your Bench. Then, shuffle your deck.")
+        self.assertEqual(r["tags"], [], "不得产出固定数量的检索 tag")
+        self.assertTrue(r["unsupported"])
+
+        # 附着 / 移动 / 弃牌：任意数量子句不得被静默丢弃
+        for text in (
+            "Before doing damage, you may attach any number of Basic {W} "
+            "Energy cards from your hand to this Pok\u00e9mon.",
+            "You may move any number of damage counters on your opponent\u2019s "
+            "Pok\u00e9mon to their other Pok\u00e9mon in any way you like.",
+            "You may discard any number of Supporter cards that have "
+            "\u201cTeam Rocket\u201d in their name from your hand, and this "
+            "attack does 60 damage for each card you discarded in this way.",
+        ):
+            r = self._tags(text)
+            self.assertTrue(r["unsupported"],
+                            f"任意数量子句未被登记：{text[:40]}")
+
     def test_unmappable_condition_not_emitted_as_flat_bonus(self):
-        """条件无法表达时**不得**退化成无条件加伤（凭空加伤 = 静默算错）"""
-        r = self._tags("If this Pok\u00e9mon was healed during this turn, this "
-                       "attack does 60 more damage.")
+        """条件无法表达时**不得**退化成无条件加伤（凭空加伤 = 静默算错）
+
+        ⚠ 「本回合被治疗 / 本回合换入」自 2026-10-28 起**已建模**（回合记账），
+        这里改用仍不可表达的「本回合打出过某张卡」形态。
+        """
+        r = self._tags("If you played a Supporter card from your hand during "
+                       "this turn, this attack does 60 more damage.")
         self.assertEqual(r["tags"], [], "条件未知却产出了加伤 tag")
         self.assertTrue(r["unsupported"])
 
-    def test_secondary_action_on_stadium_is_not_dropped(self):
-        """「Then, discard that Stadium.」是**附带动作**，引擎没有弃场地动作
+    def test_secondary_action_on_stadium_is_modeled(self):
+        """「Then, discard that Stadium.」自 2026-10-28 起可精确执行
 
-        只映射条件加伤会把这段效果静默丢掉（Chi-Yu / Mamoswine 实测）——
-        加伤算对了、少弃一张场地，局面正常且无报错。
+        旧行为：引擎没有弃场地动作 → 只映射加伤会把这段效果静默丢掉
+        （Chi-Yu / Mamoswine 实测）。现在产出 `discard_stadium`，两段都执行。
         """
         r = self._tags("If a Stadium is in play, this attack does 60 more "
                        "damage. Then, discard that Stadium.")
-        self.assertTrue(r["unsupported"], "附带动作未建模必须整卡不收")
-        self.assertEqual(r["tags"], ["dmg_plus:60:if:stadium_in_play"])
+        self.assertEqual(sorted(r["tags"]),
+                         ["discard_stadium", "dmg_plus:60:if:stadium_in_play"])
+        self.assertEqual(r["unsupported"], [], "两段都已建模 → 不得再登记未建模")
 
     def test_condition_mappable_to_engine_whitelist(self):
         """条件在引擎白名单内时才映射为 `dmg_plus:N:if:<cond>`"""
@@ -503,31 +578,27 @@ class TestV14Modifiers(unittest.TestCase):
         """⚠ 负向守卫：引擎表达不了的条件**必须继续拒绝**（宁可未建模，不可近似）"""
         # ⚠ 2026-10-27 起「场地在场上」「有道具附着」已进引擎词表（第五批），
         #   从拒绝清单移到 `test_fifth_batch_conditions` 的正向用例。
+        # ⚠ 2026-10-29（第十九批）起「额外能量（费用之外）」也已精确建模：
+        #   引擎按「总能量 − 本次招式费用」求值 → 从拒绝清单移出。
         texts = [
-            # 「额外能量（费用之外）」：用总数会提前触发
-            "If this Pok\u00e9mon has at least 2 extra Energy attached (in "
-            "addition to this attack\u2019s cost), this attack does 90 more damage.",
             # {ex} 或 {V}：并集，引擎不区分 V
             "If your opponent\u2019s Active Pok\u00e9mon is a Pok\u00e9mon {ex} or "
             "Pok\u00e9mon {V}, this attack does 30 more damage.",
-            # 回合历史：本回合是否被治疗
-            "If this Pok\u00e9mon was healed during this turn, this attack does "
-            "50 more damage.",
-            # 回合历史：本回合是否从后备换入
-            "If this Pok\u00e9mon moved from your Bench to the Active Spot this "
-            "turn, this attack does 60 more damage.",
-            # 析取：任一状态（引擎条件只有单值）
-            "If this Pok\u00e9mon is Burned or Poisoned, this attack does 100 more "
-            "damage.",
-            # 合取：两只指定宝可梦同时在后备
-            "If Beldum and Metang are on your Bench, this attack does 150 more "
-            "damage.",
         ]
         for text in texts:
             with self.subTest(text=text[:40]):
                 r = self._tags(text)
                 self.assertEqual(r["tags"], [], "条件不可表达却产出了 tag（静默加强）")
                 self.assertTrue(r["unsupported"])
+
+    def test_extra_energy_condition_exact(self):
+        """第十九批：「额外能量（费用之外）」→ 计数按费用扣除后的余量"""
+        r = self._tags(
+            "If this Pok\u00e9mon has at least 2 extra Energy attached (in "
+            "addition to this attack\u2019s cost), this attack does 90 more damage.")
+        self.assertEqual(
+            r["tags"], ["dmg_plus:90:if:own_active_extra_energy_at_least:2"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_conditional_status_is_not_applied_as_effect(self):
         """⚠ 回归：条件句里的状态词**不得**被当成效果施加
@@ -556,16 +627,25 @@ class TestV14Modifiers(unittest.TestCase):
                 self.assertEqual(r["unsupported"], [])
 
     def test_tool_with_extra_clause_is_refused(self):
-        """⚠ 道具卡面若还有条件/触发从句，说明**还有效果没建模** → 整张放弃
+        """⚠ 道具卡面若还有**未建模**的条件/触发从句 → 整张放弃
 
         反例（真实卡）Rescue Board：撤退 −1 之外还有「剩余 HP ≤30 时无撤退费用」。
         只映射前半段会把卡放进池并静默丢掉后半段 —— 属"部分实现冒充已实现"。
+        ⚠ 2026-10-28 起该条**已建模**（`tool:retreat_less:N:lowhp:M`，引擎按
+        `hp_remaining` 判定），故这里改用另一种仍有未建模从句的道具做反例。
         """
+        r = self._tags("The Pok\u00e9mon this card is attached to gets +30 HP. "
+                       "When you play this card, your opponent reveals their "
+                       "hand.", kind="item", name="X")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_rescue_board_now_modeled(self):
+        """Rescue Board 的后半段已可执行（引擎按剩余 HP 判定）"""
         r = self._tags("The Retreat Cost of the Pok\u00e9mon this card is attached "
                        "to is {C} less. If that Pok\u00e9mon\u2019s remaining HP is "
                        "30 or less, it has no Retreat Cost.", kind="item", name="RB")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["tool:retreat_less:1:lowhp:30"])
 
     def test_tool_damage_reduction_with_qualifier_mapped(self):
         """带对手属性/特性限定的减伤：2026-10-27 起映射为**带限定**的减伤
@@ -603,11 +683,20 @@ class TestV14Modifiers(unittest.TestCase):
                 self.assertIn(tag, r["tags"])
                 self.assertEqual(r["unsupported"], [])
 
-    def test_stadium_faction_qualified_refused(self):
-        """按卡名阵营限定的场地仍拒绝（无卡名归属元数据）"""
+    def test_stadium_faction_reduction(self):
+        """阵营限定场地（2026-10-28）：按**卡名前缀**精确表达，不再整卡拒绝"""
         r = self._tags("Steven\u2019s Pok\u00e9mon (both yours and your "
                        "opponent\u2019s) take 30 less damage from attacks from the "
                        "opponent\u2019s Pok\u00e9mon.", kind="card", name="Granite")
+        self.assertEqual(r["tags"], ["stadium:dmg_reduce:30:faction:stevens"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_stadium_faction_unrecognized_refused(self):
+        """未知阵营写法仍拒绝（不得猜成无条件修正）"""
+        r = self._tags("Cynthia\u2019s Pok\u00e9mon (both yours and your "
+                       "opponent\u2019s) have no Retreat Cost.",
+                       kind="card", name="X")
+        # 已知阵营集合外的写法 → 不产出
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
@@ -665,14 +754,13 @@ class TestV14Modifiers(unittest.TestCase):
 
         两个实测过的静默错映射（局面正常、无报错，只有对账才发现）：
           · Dizzying Valley「Confused Pokémon don't recover from that condition…」
-            被读成 `confuse`（凭空让某只宝可梦混乱）；
-          · Grand Tree「search … Stage 1 … to evolve it」被读成 `candy`（跳过进化阶）。
+            被读成 `confuse`（凭空让某只宝可梦混乱）。
+
+        2026-10-28 第十一批：Grand Tree 已由 `stadium:use:evolve_from_deck` 精确建模，
+        故不再属于本负向清单（它仍**不得**落成 `candy` —— 见
+        `test_flygon_leafeon_stadium` 的正向用例）。
         """
         cases = [
-            ("Once during each player\u2019s turn, that player may search their "
-             "deck for a Stage 1 Pok\u00e9mon that evolves from 1 of their Basic "
-             "Pok\u00e9mon and put it onto that Pok\u00e9mon to evolve it. Then, "
-             "that player shuffles their deck.", "Grand Tree", "candy"),
             ("Confused Pok\u00e9mon (both yours and your opponent\u2019s) "
              "don\u2019t recover from that Special Condition when they evolve "
              "or devolve.", "Dizzying Valley", "confuse"),
@@ -759,14 +847,15 @@ class TestV14Modifiers(unittest.TestCase):
         r = self._tags("Flip a coin. If heads, during your opponent\u2019s next "
                        "turn, prevent all damage from and effects of attacks "
                        "done to this Pok\u00e9mon.")
-        self.assertIn("coin:heads:shield:prevent_all", r["tags"])
-        self.assertNotIn("shield:prevent_all", r["tags"])
+        # 2026-10-28：卡面写「from and effects of attacks」→ 子 tag 必带 `:effects`
+        self.assertIn("coin:heads:shield:prevent_all:effects", r["tags"])
+        self.assertNotIn("shield:prevent_all:effects", r["tags"])
 
     def test_coin_each_tails(self):
         r = self._tags("Your opponent flips a coin for each of their Benched "
                        "Pok\u00e9mon. This attack does 80 damage to your "
                        "opponent\u2019s Active Pok\u00e9mon for each tails.")
-        self.assertIn("coin_each:opp_bench:tails:dmg_plus:80", r["tags"])
+        self.assertIn("coin_each:opp_bench:tails:dmg_set:80", r["tags"])
 
     def test_scaling_opp_bench(self):
         r = self._tags("This attack does 20 more damage for each of your "
@@ -793,10 +882,19 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("shield:reduce:30", r["tags"])
 
     def test_passive_bench_immune(self):
+        """Tera 规则写法只写 prevent all damage → **只挡伤害**（2026-10-28 拆分）"""
         r = self._tags("As long as this Pok\u00e9mon is on your Bench, prevent "
                        "all damage done to this Pok\u00e9mon by attacks (both "
                        "yours and your opponent\u2019s).", kind="ability",
                        name="BenchGuard")
+        self.assertIn("passive:bench_immune_dmg", r["tags"])
+
+    def test_passive_bench_immune_with_effects(self):
+        """写明「from and effects of attacks」→ 伤害+效果一起挡"""
+        r = self._tags("As long as this Pok\u00e9mon is on your Bench, prevent "
+                       "all damage from and effects of attacks from your "
+                       "opponent\u2019s Pok\u00e9mon done to this Pok\u00e9mon.",
+                       kind="ability", name="BenchGuard2")
         self.assertIn("passive:bench_immune", r["tags"])
 
     def test_ko_last_turn_condition(self):
@@ -846,14 +944,16 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
         self.assertEqual(r["unsupported"], [])
 
     def test_conditional_recoil_not_emitted(self):
-        """条件性反伤（抛币/条件从句）不得产出无条件 `self:N`
+        """条件性反伤（抛币/条件从句）不得产出**无条件** `self:N`
 
         否则从「两面都是反面才自伤」变成「必定自伤」，属实质性加强。
+        2026-10-29 第十八批起改为精确的 coin 分支（`coin_all:…:tails:self:N`）。
         """
         r = self._tags("Flip 2 coins. If both of them are tails, this "
                        "Pok\u00e9mon also does 30 damage to itself.")
         self.assertNotIn("self:30", r["tags"])
-        self.assertTrue(r["unsupported"], "应如实登记为未建模")
+        self.assertIn("coin_all:2:tails:self:30", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_bench_all_maps_to_snipe(self):
         """「to each of your opponent's Benched Pokémon」→ `snipe:opp_bench:N:all`"""
@@ -868,23 +968,29 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
         """带缩放（for each …）的全体后备伤害**不得**按固定值映射
 
         否则会静默低估（Kyurem ex：「10 damage to each Benched for each Prize
-        card your opponent has taken」）。
+        card your opponent has taken」）。2026-10-29 第十七批起改为精确缩放：
+        `snipe:opp_bench:10:all:per:opp_prizes_taken`（不再整条拒绝）。
         """
         r = self._tags("This attack also does 10 damage to each of your "
                        "opponent\u2019s Benched Pok\u00e9mon for each Prize "
                        "card your opponent has taken. "
                        "(Don\u2019t apply Weakness and Resistance for "
                        "Benched Pok\u00e9mon.)")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["snipe:opp_bench:10:all:per:opp_prizes_taken"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_conditional_bench_all_not_emitted(self):
-        """句首带条件的全体后备伤害不得产出无条件 tag（Ting-Lu）"""
+        """句首带条件的全体后备伤害不得产出无条件 tag（Ting-Lu）
+
+        2026-10-29 第十七批：条件可精确表达时落 `:if:<cond>`，仍然**不是**无条件。
+        """
         r = self._tags("If a Stadium is in play, this attack also does 30 "
                        "damage to each of your opponent\u2019s Benched "
                        "Pok\u00e9mon, and discard that Stadium.")
         self.assertNotIn("spread:all:30", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("snipe:opp_bench:30:all:if:stadium_in_play", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_benched_one_maps_to_snipe_not_active(self):
         """「to 1 of your opponent's Benched Pokémon」→ `snipe:opp_bench:N:1`
@@ -931,14 +1037,17 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
 
         历史缺陷：整句按 `spread:N:per`（**随机** n 只对手后备）映射 →
         「on **1 of your opponent's Pokémon**」（含战斗位、由玩家选定）算错。
+        第二十批（2026-10-29）：指示物**不吃弱点/抗性** → 落 `counters:…:scope:opp`，
+        **不得**落 `snipe:opp`（snipe 打战斗位会吃弱抗，属静默多算）。
         """
         one = self._tags("Put 2 damage counters on 1 of your opponent\u2019s "
                          "Pok\u00e9mon. (Don\u2019t apply Weakness and "
                          "Resistance for Benched Pok\u00e9mon.)")
-        self.assertIn("snipe:opp:20:1", one["tags"])
+        self.assertIn("counters:2:scope:opp:1", one["tags"])
+        self.assertNotIn("snipe:opp:20:1", one["tags"], "指示物不得走伤害字段")
         each = self._tags("Put 2 damage counters on each of your opponent\u2019s "
                           "Pok\u00e9mon.")
-        self.assertIn("snipe:opp:20:all", each["tags"])
+        self.assertIn("counters:2:scope:opp:all", each["tags"])
         self.assertNotIn("spread:2:10", one["tags"] + each["tags"],
                          "不得退化成「随机 2 只后备」")
 
@@ -1013,24 +1122,28 @@ class TestClauseScopedTargets(unittest.TestCase):
         被映射成 `search_pokemon`（引擎去拿宝可梦，**静默拿错东西**）。
         全库 28 条此类误判。
 
-        ⚠ 2026-10-27 更新：这张卡的去向是**附着到后备**，而引擎固定附到战斗位
-        （能量落在哪只宝可梦上完全不同），因此现在**拒绝**而不是映射成入手。
-        关键回归点：绝不能出现 `search_pokemon`（拿错东西）。
+        ⚠ 2026-10-28 更新（第十五批）：`:target:bench_type:<c>` 落地后已可精确
+        表达（Shaymin「Send Flowers」）——现在**正向**要求 `attach:…:target:
+        bench_type:grass:anyenergy`；关键回归点仍是绝不能出现 `search_pokemon`
+        （拿错东西）。
         """
         r = self._tags("Search your deck for an Energy card and attach it to "
                        "1 of your Benched {G} Pok\u00e9mon. Then, shuffle "
                        "your deck.")
         self.assertNotIn("search_pokemon:1", r["tags"])
         self.assertNotIn("search_energy:1", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("attach:1:deck:target:bench_type:grass:anyenergy",
+                      r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_search_target_pokemon_still_works(self):
-        """类别判定仍归 pokemon（不被 energy 抢走）；带属性/抗性限定时如实拒绝"""
+        """类别判定仍归 pokemon（不被 energy 抢走）；抗性限定已可精确表达"""
         r = self._tags("Search your deck for up to 2 Pok\u00e9mon with {F} "
                        "Resistance, reveal them, and put them into your hand. "
                        "Then, shuffle your deck.")
         self.assertNotIn("search_energy:2", r["tags"])
-        self.assertTrue(r["unsupported"], "带 {F} 抗性限定的检索应如实登记未建模")
+        self.assertEqual(r["tags"], ["search_pokemon:2:resistance:fighting"],
+                         "B2 剩余（2026-10-28）：抗性筛选可精确表达")
 
     def test_choose_one_switch_is_self_not_gust(self):
         """`Choose 1:` 多选项卡：换位目标只看换位子句
@@ -1083,33 +1196,48 @@ class TestDiscardPileRecovery(unittest.TestCase):
         self.assertIn("recover:2:supporter", r["tags"])
 
     def test_any_combination(self):
+        # B3（2026-10-28）：组合写法映射成 **combo**（宝可梦 + 基本能量），
+        # 比旧的 `any` 更精确 —— `any` 还会取到训练家卡，超出卡面范围。
         r = self._tags("Put up to 5 in any combination of Pok\u00e9mon and "
                        "Basic Energy cards from your discard pile into your "
                        "hand.")
-        self.assertIn("recover:5:any", r["tags"])
+        self.assertIn("recover:5:combo:pokemon+basic_energy", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_pokemon_or_basic_energy(self):
         r = self._tags("Put a Pok\u00e9mon or a Basic Energy card from your "
                        "discard pile into your hand.")
         self.assertIn("recover:1:any", r["tags"])
 
-    def test_subset_qualifier_not_mapped(self):
-        """子集限定（「that don't have a Rule Box」/「{F} Pokémon」）不映射
+    def test_subset_qualifier_mapped_as_combo(self):
+        """子集限定（「that don't have a Rule Box」/「{F} Pokémon」）→ combo
 
-        引擎只能按大类回收 → 映射出去会从弃牌堆取到**超出卡面范围**的卡。
+        2026-10-28（B3）：引擎新增 `recover:N:combo:<a>+<b>[:type:<c>]`，
+        可以**精确**表达「无 Rule Box 的宝可梦 + 基本能量」这类组合 ——
+        但**绝不能**退化成 `any`（会取到 ex）。
         """
         r = self._tags("Put up to 3 in any combination of Pok\u00e9mon that "
                        "don\u2019t have a Rule Box and Basic Energy cards "
                        "from your discard pile into your hand.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["recover:3:combo:no_rule_pokemon+basic_energy"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_typed_subset_combo(self):
+        r = self._tags("Put up to 4 in any combination of {F} Pok\u00e9mon and "
+                       "Basic {F} Energy cards from your discard pile into your "
+                       "hand.")
+        self.assertEqual(
+            r["tags"],
+            ["recover:4:combo:pokemon+basic_energy:type:fighting"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_unknown_count_not_guessed(self):
-        """回收数量判不出（抛币决定）→ 绝不兜底成 1"""
+        """回收数量判不出（抛币决定）→ 用 `recover:heads:N`，绝不兜底成 1"""
         r = self._tags("Flip 3 coins. Put a number of cards up to the number "
                        "of heads from your discard pile into your hand.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["recover:heads:3"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestEvolveTriggerFalsePositive(unittest.TestCase):
@@ -1130,7 +1258,9 @@ class TestEvolveTriggerFalsePositive(unittest.TestCase):
             "Once during your turn, when you play this Pok\u00e9mon from your "
             "hand to evolve 1 of your Pok\u00e9mon, you may use this Ability. "
             "Draw 2 cards.")
-        self.assertIn("draw:2", r["tags"])
+        # 2026-10-28 第十批：进化触发特性必须包裹成 `evolve_act:`（只在进化时执行），
+        # 否则引擎会把它当「每回合一次」的 field 特性（静默加强）。
+        self.assertIn("evolve_act:draw:2", r["tags"])
         self.assertEqual(r["unsupported"], [],
                          "触发从句不得产生 evolve 未建模条")
 
@@ -1149,7 +1279,7 @@ class TestEvolveTriggerFalsePositive(unittest.TestCase):
             "your Pok\u00e9mon during your turn, you may search your deck for "
             "a card that evolves from this Pok\u00e9mon and put it onto this "
             "Pok\u00e9mon to evolve it.")
-        self.assertIn("evolve_from_deck", r["tags"])
+        self.assertIn("evolve_act:evolve_from_deck", r["tags"])
 
 
 class TestMillMapping(unittest.TestCase):
@@ -1200,20 +1330,23 @@ class TestParameterizedEnergyCondition(unittest.TestCase):
 
     def test_extra_energy_condition_is_not_approximated(self):
         """「at least N **extra** Energy (in addition to this attack's cost)」
-        ——条件含招式费用，用「总数 ≥ N」会**提前触发**（静默加强）→ 必须不映射
+
+        2026-10-29（第十九批）：引擎按「总能量 − 本次招式费用」求值 → 精确建模，
+        不再落成「总数 ≥ N」的近似（那会提前触发）。
         """
         r = self._tags("If this Pok\u00e9mon has at least 2 extra Energy "
                        "attached (in addition to this attack\u2019s cost), "
                        "this attack does 100 more damage.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(
+            r["tags"], ["dmg_plus:100:if:own_active_extra_energy_at_least:2"])
+        self.assertEqual(r["unsupported"], [])
 
-    def test_special_energy_condition_is_not_approximated(self):
-        """「any Special Energy attached」—— 引擎无「特殊能量」计数源 → 不映射"""
+    def test_special_energy_condition_is_modeled(self):
+        """「any Special Energy attached」—— 2026-10-28 起由特殊能量子系统精确判定"""
         r = self._tags("If this Pok\u00e9mon has any Special Energy attached, "
                        "this attack does 100 more damage.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["dmg_plus:100:if:own_active_special_energy"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestExtractJson(unittest.TestCase):
@@ -1290,20 +1423,30 @@ class TestHealScopeParsing(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_dependent_followup_refused(self):
-        """Super Potion：依赖「本次回复」的后续弃能无法只做一半"""
+    def test_dependent_followup_modeled(self):
+        """Super Potion（2026-10-28 第十二批）：回复 + 「in this way」弃能已可精确表达
+
+        训练家只有单 tag，两个动作合并成 `heal:60:choose:discard`；`:discard`
+        隐含「仅当真的回复过才弃能」。旧实现按「无法只做一半」拒绝 —— 现改为
+        **正向**守卫，防止退回未建模。
+        """
         r = self._tags("Heal 60 damage from 1 of your Pok\u00e9mon. If you "
                        "healed any damage in this way, discard an Energy from "
                        "that Pok\u00e9mon.", "item")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["heal:60:choose:discard"])
+        self.assertEqual(r["unsupported"], [])
 
-    def test_coin_branch_heal_refused(self):
-        """Floragato：抛币分支内的回复不得退化成无条件"""
+    def test_coin_branch_heal_not_unconditional(self):
+        """Floragato：抛币分支内的回复**不得退化成无条件 heal**
+
+        2026-10-29 第十八批：回复与加伤合并进**同一条** coin tag（共享一次抛币）。
+        """
         r = self._tags("Flip a coin. If heads, this attack does 30 more "
                        "damage, and heal 30 damage from this Pok\u00e9mon.")
-        self.assertEqual([t for t in r["tags"] if t.startswith("heal")], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual([t for t in r["tags"] if t.startswith("heal")], [],
+                         "不得产出裸 heal（那是无条件回复）")
+        self.assertEqual(r["tags"], ["coin:heads:dmg_plus:30|heal:30"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestDrawCompletenessGuard(unittest.TestCase):
@@ -1321,11 +1464,26 @@ class TestDrawCompletenessGuard(unittest.TestCase):
     def test_plain_draw_ok(self):
         self.assertIn("draw:3", self._tags("Draw 3 cards.", "supporter")["tags"])
 
-    def test_for_each_refused(self):
+    def test_for_each_mapped_per_counter(self):
+        """`for each` 抽牌 → `draw:1:per:<counter>`（B3 · 2026-10-28）
+
+        旧行为一律拒绝；现在计数源是**当下可读出**的（Ancient 计数 / 对手后备数），
+        可以精确表达。未知计数源仍拒绝。
+        """
         r = self._tags("Draw a card for each of your Ancient Pok\u00e9mon "
                        "in play.")
+        self.assertEqual(r["tags"], ["draw:1:per:own_ancient"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_for_each_unknown_counter_refused(self):
+        r = self._tags("Draw a card for each of your {G} Pok\u00e9mon in play.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
+
+    def test_each_player_draw(self):
+        r = self._tags("Once during your turn, you may have each player draw "
+                       "a card.", "ability")
+        self.assertEqual(r["tags"], ["draw_both:1"])
 
     def test_conditional_more_refused(self):
         r = self._tags("Draw 2 cards. Then, if you have 10 or more cards in "
@@ -1425,19 +1583,53 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertNotIn("poison", r["tags"], "不得当作主动施加状态")
         self.assertEqual(r["tags"], ["on_damaged:status:poison"])
 
-    def test_scaled_counters_rejected(self):
+    def test_scaled_counters_per_energy(self):
+        """「… for each {M} Energy attached to this Pokémon」→ `counter_per`（第二十九批）
+
+        数值随**持有者**的该色能量数变化 —— 引擎按 `energy_of_type` 逐点精确计算，
+        绝不能压成固定值。
+        """
         r = self._tags(self.P + "place 2 damage counters on the Attacking "
                                 "Pok\u00e9mon for each {M} Energy attached to "
                                 "this Pok\u00e9mon.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"], "数值随计数源变化 → 不得按固定值映射")
+        self.assertEqual(r["tags"], ["on_damaged:counter_per:2:metal"])
+        self.assertEqual(r["unsupported"], [])
 
-    def test_next_turn_temporary_rejected(self):
-        """「During your opponent's next turn, …」是**临时**效果（需延迟队列）"""
+    def test_next_turn_retaliate(self):
+        """「During your opponent's next turn, … put 6 damage counters」→ 下回合反制
+
+        2026-10-29 第二十九批：引擎新增 `retaliate_next:<n|equal>`（窗口 = 对手的
+        下一个回合），这类**临时**反制不再是「无延迟队列」的未建模。
+        """
         r = self._tags("During your opponent's next turn, if this Pok\u00e9mon is "
                        "damaged by an attack (even if this Pok\u00e9mon is "
                        "Knocked Out), put 6 damage counters on the Attacking "
-                       "Pok\u00e9mon.")
+                       "Pok\u00e9mon.", kind="attack")
+        self.assertEqual(r["tags"], ["retaliate_next:60"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_next_turn_retaliate_equal(self):
+        r = self._tags("During your opponent's next turn, if this Pok\u00e9mon is "
+                       "damaged by an attack (even if this Pok\u00e9mon is "
+                       "Knocked Out), put damage counters on the Attacking "
+                       "Pok\u00e9mon equal to the damage done to this "
+                       "Pok\u00e9mon.", kind="attack")
+        self.assertEqual(r["tags"], ["retaliate_next:equal"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_search_reaction_still_unmodeled(self):
+        """受击即检索（Koffing）需要新钩子 → 仍如实未建模"""
+        r = self._tags(self.P + "search your deck for up to 2 Pok\u00e9mon that "
+                                "have \u201cKoffing\u201d in their name and put "
+                                "them onto your Bench. Then, shuffle your deck.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_prevent_damage_reaction_still_unmodeled(self):
+        """「prevent that damage」需要伤害预防层 → 仍如实未建模"""
+        r = self._tags("If this Pok\u00e9mon has any {D} Energy attached and is "
+                       "damaged by an attack, flip a coin. If heads, prevent "
+                       "that damage.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
@@ -1464,11 +1656,16 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertTrue(r["unsupported"])
 
     def test_checkup_extra_damage_is_not_infliction(self):
-        """「put 3 more damage counters on your opponent's Burned Pokémon」= 追加伤害"""
+        """「put 3 more damage counters on your opponent's Burned Pokémon」= 追加伤害
+
+        2026-10-28 第十三批起已精确建模（`passive:checkup_plus:*`）；关键是
+        **不得**产出裸 `burn`（那是「让对手陷入烧伤」，会静默加强）。
+        """
         r = self._tags("During Pok\u00e9mon Checkup, put 3 more damage counters "
                        "on your opponent's Burned Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["passive:checkup_plus:burn:30:side:opp"])
         self.assertNotIn("burn", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_switch_trigger_is_not_infliction(self):
         r = self._tags("As long as this Pok\u00e9mon is in the Active Spot, "
@@ -1486,14 +1683,17 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_evolve_trigger_status_rejected(self):
-        """「when you play this Pokémon … to evolve」只能一次性用，引擎会每回合可用"""
+    def test_evolve_trigger_status_wrapped(self):
+        """2026-10-28 第十批：进化触发的状态特性已可建模（包裹 `evolve_act:`）
+
+        引擎在**进化那一刻**执行一次，因此不再有「每回合免费再用」的问题。
+        """
         r = self._tags("Once during your turn, when you play this Pok\u00e9mon "
                        "from your hand to evolve 1 of your Pok\u00e9mon, you may "
                        "use this Ability. Make your opponent's Active "
                        "Pok\u00e9mon Confused.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["evolve_act:confuse"])
+        self.assertEqual(r["unsupported"], [])
 
     # ---- 道具侧不受影响（另有 tool:on_damaged 实现）----
     def test_tool_reaction_unchanged(self):
@@ -1502,6 +1702,92 @@ class TestReactiveDamageSplit(unittest.TestCase):
                        "opponent's Pok\u00e9mon (even if this Pok\u00e9mon is "
                        "Knocked Out), draw 2 cards.", kind="item")
         self.assertEqual(r["tags"], ["tool:on_damaged:draw:2"])
+
+
+class TestSearchFilters(unittest.TestCase):
+    """全牌库检索的属性 / 阶段 / HP 筛选（2026-10-28）
+
+    引擎 `_poke_matches_filter` 支持 type / stage / hp 三层后，解析侧放通
+    对应句式；其它类别（能量/训练家）仍无筛选层，必须继续拒绝。
+    """
+
+    @staticmethod
+    def _tags(text, kind="ability"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name="X")])
+
+    def test_type_filter(self):
+        r = self._tags("Search your deck for up to 2 {L} Pokémon, reveal them, "
+                       "and put them into your hand. Then, shuffle your deck.")
+        self.assertEqual(r["tags"], ["search_pokemon:2:type:lightning"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_stage_filter_with_type_between_words(self):
+        r = self._tags("Search your deck for up to 2 Evolution {M} Pokémon, "
+                       "reveal them, and put them into your hand.")
+        self.assertEqual(r["tags"],
+                         ["search_pokemon:2:type:metal:stage:evolution"])
+
+    def test_hp_filter(self):
+        r = self._tags("Search your deck for up to 3 {C} Pokémon with 100 HP "
+                       "or less, reveal them, and put them into your hand.")
+        self.assertEqual(r["tags"],
+                         ["search_pokemon:3:type:colorless:hp:100"])
+
+    def test_energy_type_filter(self):
+        """B2 剩余（2026-10-28）：能量检索支持属性筛选（Aromatisse / Firebreather）"""
+        r = self._tags("Search your deck for up to 2 Basic {W} Energy cards, "
+                       "reveal them, and put them into your hand.")
+        self.assertEqual(r["tags"], ["search_energy:2:type:water"])
+
+    def test_energy_untyped_still_plain(self):
+        r = self._tags("Search your deck for up to 3 Basic Energy cards, "
+                       "reveal them, and put them into your hand.")
+        self.assertEqual(r["tags"], ["search_energy:3"])
+
+    def test_resistance_filter(self):
+        """`{F} Resistance` 是**抗性**筛选，不得当成属性筛选"""
+        r = self._tags("Search your deck for up to 2 Pok\u00e9mon with {F} "
+                       "Resistance, reveal them, and put them into your hand. "
+                       "Then, shuffle your deck.")
+        self.assertEqual(r["tags"], ["search_pokemon:2:resistance:fighting"])
+        self.assertEqual(r["unsupported"], [], "抗性筛选不得再登记为静态规则修改")
+
+    def test_count_based_search(self):
+        """张数由计数源决定 → `search_any:N:per:<counter>`（Scrafty）"""
+        r = self._tags("Search your deck for a number of cards up to the number "
+                       "of your Benched Pok\u00e9mon and put them into your hand. "
+                       "Then, shuffle your deck.", kind="attack")
+        self.assertEqual(r["tags"], ["search_any:1:per:own_bench"])
+
+    def test_any_number_search_still_rejected(self):
+        """「any number of」是玩家自由选择 → 仍拒绝（交互层未实现）"""
+        r = self._tags("You may search your deck for any number of Fennel "
+                       "cards, reveal them, and put them into your hand. Then, "
+                       "shuffle your deck.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestSelfStatusParsing(unittest.TestCase):
+    """「This Pokémon is now …」必须是自身状态（2026-10-28）
+
+    裸状态 tag 恒作用于对手战斗位；自身状态必须走 `status_self:<s>`，
+    否则方向反转（Larry's Komala 曾长期给对手上睡眠）。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name="X")])
+
+    def test_self_status_tag(self):
+        r = self._tags("This Pokémon is now Confused.")
+        self.assertEqual(r["tags"], ["status_self:confuse"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_opponent_status_remains_bare(self):
+        r = self._tags("Your opponent’s Active Pokémon is now Burned.")
+        self.assertEqual(r["tags"], ["burn"])
+        self.assertNotIn("status_self:burn", r["tags"])
 
 
 class TestGoldenSetIntegrity(unittest.TestCase):
@@ -1535,7 +1821,10 @@ class TestGoldenSetIntegrity(unittest.TestCase):
         """
         from engine import reallib
         pool: dict = {}
-        for name, item in reallib.catalog().items():
+        # ⚠ 必须遍历**全部印刷**（`printings()`），不能只看卡名默认印刷：
+        # 黄金集是照人工池写的，而一些卡名的默认印刷已切换为数据集新印刷，
+        # 只看 catalog 会让人工印刷的招式文本缺席 → 与同名异卡的文本误比。
+        for _uid, item in reallib.printings().items():
             d = item["def"]
             derived = bool(item.get("derived"))
             for a in getattr(d, "attacks", ()) or ():
@@ -1661,12 +1950,672 @@ class TestEvaluation(unittest.TestCase):
 
     def test_card_pool_has_chinese_descs(self):
         from engine import reallib
-        for name, item in reallib.catalog().items():
+        for _uid, item in reallib.printings().items():
             d = item["def"]
             for a in getattr(d, "attacks", ()) or ():
-                if a.name_zh:
+                # 纯伤害招式没有效果文本，desc_zh 与 desc 同为空是正常情况；
+                # 只有卡面**本来就有**效果文本时才要求中文译文。
+                if a.name_zh and a.desc:
                     self.assertTrue(a.display_desc,
-                                    f"{name} 的招式 {a.name} 缺中文效果文本")
+                                    f"{item['name']} 的招式 {a.name} 缺中文效果文本")
+
+
+class TestDiscardToolStadium(unittest.TestCase):
+    """S6 弃道具 / 弃场地族（2026-10-28）
+
+    引擎新增 `discard_tool:N:<scope>` 与 `discard_stadium` 后，这一族从
+    「静态/未建模（英文）」兜底桶里出来了。范围（哪一侧/是否含特殊能量）
+    必须精确进 tag，否则会弃错人的道具。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_stadium_discard(self):
+        r = self._tags("Discard a Stadium in play.")
+        self.assertEqual(r["tags"], ["discard_stadium"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_tools_from_opponent_active(self):
+        """「Before doing damage」→ `pre:` 伤害前阶段（2026-10-29 第二十五批）"""
+        r = self._tags("Before doing damage, discard all Pok\u00e9mon Tools "
+                       "from your opponent\u2019s Active Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["pre:discard_tool:all:opp_active"])
+
+    def test_choose_up_to_tools_both_sides(self):
+        r = self._tags("Choose up to 2 Pok\u00e9mon Tools attached to "
+                       "Pok\u00e9mon (yours or your opponent\u2019s) and "
+                       "discard them.", kind="item")
+        self.assertEqual(r["tags"], ["discard_tool:2:both"])
+
+    def test_tools_plus_special_energy_pre_phase(self):
+        """「…Tools **and Special Energy**…」→ 弃道具 + 弃特殊能量（Mow Rotom）
+
+        第二十四批起引擎能区分特殊能量卡（`senergy`），第二十五批起有伤害前阶段
+        —— 两条 tag 都必须带 `pre:` 前缀（伤害后才弃 = 本次仍吃道具效果）。
+        """
+        r = self._tags("Before doing damage, discard all Pok\u00e9mon Tools and "
+                       "Special Energy from your opponent\u2019s Active "
+                       "Pok\u00e9mon.")
+        self.assertEqual(r["tags"],
+                         ["pre:discard_energy:all:opp:special",
+                          "pre:discard_tool:all:opp_active"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_cetitan_stadium_bonus(self):
+        """「You may discard a Stadium in play. If you do, … +140」——两段都要建模"""
+        r = self._tags("You may discard a Stadium in play. If you do, this "
+                       "attack does 140 more damage.")
+        self.assertEqual(sorted(r["tags"]),
+                         ["discard_stadium",
+                          "dmg_plus:140:if:stadium_in_play"])
+        self.assertEqual(r["unsupported"], [])
+
+
+class TestBounceParsing(unittest.TestCase):
+    """S6 回手 / 洗回牌库族（2026-10-28）
+
+    这一族的关键是**附加卡去向**：卡面写「and all attached cards」时附加卡随行，
+    写「(Discard all cards attached …)」时进弃牌堆 —— 两者必须区分，否则
+    要么多回一张、要么少回一张。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_self_to_hand_with_attached(self):
+        r = self._tags("Put this Pok\u00e9mon and all attached cards into your "
+                       "hand.")
+        self.assertEqual(r["tags"], ["bounce:to_hand:self"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_self_to_hand_discard_attached(self):
+        r = self._tags("You may put this Pok\u00e9mon into your hand. (Discard "
+                       "all cards attached to this Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["bounce:to_hand:self:discard_attached"])
+
+    def test_shuffle_self(self):
+        r = self._tags("Shuffle this Pok\u00e9mon and all attached cards into "
+                       "your deck.")
+        self.assertEqual(r["tags"], ["bounce:shuffle_self"])
+
+    def test_shuffle_pronoun_form(self):
+        """Abra 用代词「shuffle it and all attached cards into your deck」"""
+        r = self._tags("Once during your turn, if this Pok\u00e9mon is in the "
+                       "Active Spot, you may shuffle it and all attached cards "
+                       "into your deck.", kind="ability")
+        self.assertEqual(r["tags"], ["bounce:shuffle_self"])
+
+    def test_bench_bounce(self):
+        r = self._tags("Put 1 of your Benched Pok\u00e9mon and all attached "
+                       "cards into your hand.")
+        self.assertEqual(r["tags"], ["bounce:to_hand:bench"])
+
+    def test_choose_bounce(self):
+        r = self._tags("Put 1 of your Pok\u00e9mon and all attached cards into "
+                       "your hand.", kind="item")
+        self.assertEqual(r["tags"], ["bounce:to_hand:choose"])
+
+    def test_discard_to_bench_by_name(self):
+        r = self._tags("Put up to 3 Duskull from your discard pile onto your "
+                       "Bench.")
+        self.assertEqual(r["tags"], ["bounce:discard_to_bench:3:name:duskull"])
+
+    def test_discard_to_bench_by_hp(self):
+        r = self._tags("Once during your turn, if this Pok\u00e9mon is in the "
+                       "Active Spot, you may put a Basic Pok\u00e9mon with 70 HP "
+                       "or less from your discard pile onto your Bench.",
+                       kind="ability")
+        self.assertEqual(r["tags"], ["bounce:discard_to_bench:1:hp:70"])
+
+    def test_discard_to_bench_unknown_limit_rejected(self):
+        r = self._tags("Put up to 2 Pok\u00e9mon from your discard pile onto "
+                       "your Bench.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestScalingCounters(unittest.TestCase):
+    """S6 计数缩放剩余源（2026-10-28）
+
+    新增计数源全部是**公开且确定性**的：数据集分类字段（Ancient / {ex}）·
+    卡名阵营（own_named_*）· 对手弃牌堆类别（opp_discard_energy / item）·
+    双方道具数 · 战斗位有效撤退费用。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_less_damage(self):
+        """「does N less damage for each X」→ `dmg_minus:N:per:<counter>`"""
+        r = self._tags("This attack does 60 less damage for each Energy attached "
+                       "to your opponent\u2019s Active Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["dmg_minus:60:per:opp_active_energy"])
+
+    def test_retreat_cost_counter(self):
+        r = self._tags("This attack does 30 less damage for each {C} in your "
+                       "opponent\u2019s Active Pok\u00e9mon\u2019s Retreat Cost.")
+        self.assertEqual(r["tags"], ["dmg_minus:30:per:opp_active_retreat"])
+
+    def test_opponent_discard_energy(self):
+        r = self._tags("This attack does 30 damage for each Basic Energy card "
+                       "in your opponent\u2019s discard pile.")
+        self.assertEqual(r["tags"], ["dmg_set:30:per:opp_discard_energy"])
+
+    def test_opponent_discard_item(self):
+        r = self._tags("This attack does 30 damage for each Item card in your "
+                       "opponent\u2019s discard pile.")
+        self.assertEqual(r["tags"], ["dmg_set:30:per:opp_discard_item"])
+
+    def test_named_affiliation(self):
+        r = self._tags("This attack does 30 damage for each of your Team "
+                       "Rocket\u2019s Pok\u00e9mon in play.")
+        self.assertEqual(r["tags"], ["dmg_set:30:per:own_named_teamrocket"])
+        r2 = self._tags("This attack does 40 damage for each of your Erika\u2019s "
+                        "Pok\u00e9mon in play.")
+        self.assertEqual(r2["tags"], ["dmg_set:40:per:own_named_erika"])
+
+    def test_ancient_counter(self):
+        r = self._tags("This attack does 30 damage for each of your Ancient "
+                       "Pok\u00e9mon in play.")
+        self.assertEqual(r["tags"], ["dmg_set:30:per:own_ancient"])
+
+    def test_opponent_ex_counter(self):
+        r = self._tags("This attack does 60 damage for each of your "
+                       "opponent\u2019s Pok\u00e9mon {ex} in play.")
+        self.assertEqual(r["tags"], ["dmg_set:60:per:opp_ex"])
+
+    def test_ex_and_v_rejected(self):
+        """{ex} 与 {V} 混合：引擎没有 V 标记 → 不得只数 ex"""
+        r = self._tags("This attack does 60 damage for each of your "
+                       "opponent\u2019s Pok\u00e9mon {ex} and Pok\u00e9mon {V} "
+                       "in play.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_both_field_tools(self):
+        r = self._tags("This attack does 40 more damage for each Pok\u00e9mon "
+                       "Tool attached to all Pok\u00e9mon in play.")
+        self.assertEqual(r["tags"], ["dmg_plus:40:per:both_field_tools"])
+
+    def test_unknown_counter_still_rejected(self):
+        r = self._tags("This attack does 30 damage for each card you revealed "
+                       "in this way.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    # ---- 第二十六批（2026-10-29）：**限定后**的指示物计数源 ----
+    def test_bench_counters_by_type(self):
+        """「damage counter on all of your Benched {F} Pokémon」（Gigalith）"""
+        r = self._tags("This attack does 20 damage for each damage counter on "
+                       "all of your Benched {F} Pok\u00e9mon.")
+        self.assertEqual(r["tags"],
+                         ["dmg_set:20:per:own_bench_counters_type:fighting"])
+
+    def test_bench_counters_named(self):
+        """具名所有格的后备指示物（Cynthia's Spiritomb）"""
+        r = self._tags("This attack does 10 damage for each damage counter on "
+                       "all of your Benched Cynthia\u2019s Pok\u00e9mon. This "
+                       "attack\u2019s damage isn\u2019t affected by Weakness.")
+        self.assertIn("dmg_set:10:per:own_bench_counters_named:cynthia",
+                      r["tags"])
+        self.assertIn("ignore_weakness", r["tags"])
+
+    def test_field_named_with_damage(self):
+        """「each of your Pokémon that has “Tauros” in its name that has any
+        damage counters on it」（Paldean Tauros）→ 数**只数**"""
+        r = self._tags("This attack does 40 damage for each of your Pok\u00e9mon "
+                       "that has \u201cTauros\u201d in its name that has any "
+                       "damage counters on it.")
+        self.assertEqual(r["tags"],
+                         ["dmg_set:40:per:own_field_named_with_damage:tauros"])
+
+    def test_plain_bench_counters_unchanged(self):
+        """无限定词的全体后备仍走 `own_bench_counters`（不得被新规则改写）"""
+        r = self._tags("This attack does 10 damage for each damage counter on "
+                       "all of your Benched Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["dmg_set:10:per:own_bench_counters"])
+
+
+class TestSnipeTargetFilterParse(unittest.TestCase):
+    """第二十七批（2026-10-29）：`snipe:` 目标筛选 / 逐目标缩放"""
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_target_damaged(self):
+        """Excadrill ex：「1 of … Benched Pokémon **that has any damage
+        counters on it**」→ `:target:damaged`（先筛目标再选 1 个）"""
+        r = self._tags("This attack also does 60 damage to 1 of your "
+                       "opponent\u2019s Benched Pok\u00e9mon that has any damage "
+                       "counters on it. (Don\u2019t apply Weakness and "
+                       "Resistance for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["snipe:opp_bench:60:1:target:damaged"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_both_bench_target_damaged(self):
+        """Hippowdon：「each Benched Pokémon that has any damage counters」
+        （双方）→ `both_bench` + 全量 + 筛选"""
+        r = self._tags("This attack also does 40 damage to each Benched "
+                       "Pok\u00e9mon that has any damage counters on it (both "
+                       "yours and your opponent\u2019s). (Don\u2019t apply "
+                       "Weakness and Resistance for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["snipe:both_bench:40:all:target:damaged"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_per_target_counters(self):
+        """Team Rocket's Sneasel：「for each damage counter **on that
+        Pokémon**」→ 逐目标缩放哨兵"""
+        r = self._tags("This attack does 20 damage to 1 of your opponent\u2019s "
+                       "Benched Pok\u00e9mon for each damage counter on that "
+                       "Pok\u00e9mon. (Don\u2019t apply Weakness and Resistance "
+                       "for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"],
+                         ["snipe:opp_bench:20:1:per:target_counters"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_other_qualifier_still_unmodeled(self):
+        """别的「that has …」限定（如挂能量）仍不得被当成本次的筛选"""
+        r = self._tags("This attack does 60 damage to 1 of your opponent\u2019s "
+                       "Benched Pok\u00e9mon that has any Energy attached to it.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_plain_snipe_unchanged(self):
+        r = self._tags("This attack does 60 damage to 1 of your opponent\u2019s "
+                       "Benched Pok\u00e9mon. (Don\u2019t apply Weakness and "
+                       "Resistance for Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["snipe:opp_bench:60:1"])
+
+
+class TestEnergyToDeckAndAbilityCountersParse(unittest.TestCase):
+    """第二十八批（2026-10-29）：弃牌堆能量洗回牌库 · 双方「有特性者」指示物"""
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_kyogre_riptide(self):
+        """Kyogre：按弃牌堆水能量计数 + **洗回牌库**（缺洗回 = 下次重复计数）"""
+        r = self._tags("This attack does 20 damage for each Basic {W} Energy card "
+                       "in your discard pile. Then, shuffle those cards into your "
+                       "deck.")
+        self.assertEqual(sorted(r["tags"]),
+                         ["dmg_set:20:per:own_discard_energy_water",
+                          "energy_to_deck:water:all"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_sinistcha_ex_rebrew(self):
+        """Sinistcha ex：指示物按弃牌堆草能量计数 + 洗回牌库"""
+        r = self._tags("Put 2 damage counters on 1 of your opponent\u2019s "
+                       "Pok\u00e9mon for each Basic {G} Energy card in your discard "
+                       "pile. Then, shuffle those Energy cards into your deck.")
+        self.assertEqual(sorted(r["tags"]),
+                         ["counters:2:per:own_discard_energy_grass:scope:opp:1",
+                          "energy_to_deck:grass:all"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_ability_counters_both_sides(self):
+        """Cofagrigus：双方全场「有特性」的逐个各 6 个指示物"""
+        r = self._tags("Put 6 damage counters on each Pok\u00e9mon that has an "
+                       "Ability (both yours and your opponent\u2019s).")
+        self.assertEqual(r["tags"], ["counters:6:scope:ability:all"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_shuffle_back_without_discard_energy_rejected(self):
+        """「shuffle those cards」但计数源不是弃牌堆基本能量 → 不猜"""
+        r = self._tags("Discard 2 cards from your hand. Then, shuffle those cards "
+                       "into your deck.")
+        self.assertEqual(r["tags"], ["discard:2"])
+        self.assertTrue(r["unsupported"])
+
+
+class TestEnergyMoveParsing(unittest.TestCase):
+    """S6 能量移动族（2026-10-28）
+
+    源与目标区域必须分别进 tag：把「对手战斗位 → 对手后备」判成己方，
+    或把「后备 → 战斗位」反向，都会让能量落到错误的一方身上（静默算错）。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name=name)])
+
+    def test_active_to_bench(self):
+        r = self._tags("Move an Energy from this Pok\u00e9mon to 1 of your "
+                       "Benched Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["energy_move:1:from:active:to:bench"])
+
+    def test_multiple_energy(self):
+        r = self._tags("Move 3 Energy from this Pok\u00e9mon to 1 of your "
+                       "Benched Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["energy_move:3:from:active:to:bench"])
+
+    def test_typed(self):
+        r = self._tags("Move a {W} Energy from this Pok\u00e9mon to 1 of your "
+                       "Benched Pok\u00e9mon.")
+        self.assertEqual(r["tags"],
+                         ["energy_move:1:type:water:from:active:to:bench"])
+
+    def test_opponent_side(self):
+        r = self._tags("You may move an Energy from your opponent\u2019s Active "
+                       "Pok\u00e9mon to 1 of their Benched Pok\u00e9mon.")
+        self.assertEqual(r["tags"],
+                         ["energy_move:1:from:opp_active:to:opp_bench"])
+
+    def test_opponent_any(self):
+        r = self._tags("Move an Energy from 1 of your opponent\u2019s "
+                       "Pok\u00e9mon to another of their Pok\u00e9mon.")
+        self.assertEqual(r["tags"], ["energy_move:1:from:opp_any:to:opp_any"])
+
+    def test_own_any(self):
+        r = self._tags("Move a Basic Energy from 1 of your Pok\u00e9mon to "
+                       "another of your Pok\u00e9mon.", kind="item")
+        self.assertEqual(r["tags"], ["energy_move:1:from:any:to:any"])
+
+    def test_bench_to_active(self):
+        r = self._tags("Move up to 2 Energy from your Benched Pok\u00e9mon to "
+                       "your Active Pok\u00e9mon.", kind="supporter")
+        self.assertEqual(r["tags"], ["energy_move:2:from:bench:to:active"])
+
+    def test_any_amount_rejected(self):
+        """「any amount … in any way you like」= 玩家自由数量 → 必须拒绝"""
+        r = self._tags("You may move any amount of {M} Energy from your "
+                       "Pok\u00e9mon to your other Pok\u00e9mon in any way you "
+                       "like.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestToolCostRetreat(unittest.TestCase):
+    """S6 道具费用 / 撤退修正（2026-10-28）"""
+
+    @staticmethod
+    def _tags(text):
+        return E.to_engine_tags([E.parse_rule(text, kind="item", name="T")])
+
+    def test_sparkling_crystal_tera_cost(self):
+        r = self._tags("When the Tera Pok\u00e9mon this card is attached to uses "
+                       "an attack, that attack costs 1 Energy less. (The Energy "
+                       "can be of any type.)")
+        self.assertEqual(r["tags"], ["tool:cost_less:1:tera"])
+
+    def test_counter_gain_behind(self):
+        r = self._tags("If you have more Prize cards remaining than your "
+                       "opponent, attacks used by the Pok\u00e9mon this card is "
+                       "attached to cost {C} less.")
+        self.assertEqual(r["tags"], ["tool:cost_less:1:behind"])
+
+    def test_gravity_gemstone(self):
+        r = self._tags("As long as the Pok\u00e9mon this card is attached to is "
+                       "in the Active Spot, the Retreat Cost of both Active "
+                       "Pok\u00e9mon is {C} more.")
+        self.assertEqual(r["tags"], ["tool:retreat_plus:1:both"])
+
+    def test_rescue_board_low_hp(self):
+        r = self._tags("The Retreat Cost of the Pok\u00e9mon this card is "
+                       "attached to is {C}{C} less. If that Pok\u00e9mon\u2019s "
+                       "remaining HP is 30 or less, it has no Retreat Cost.")
+        self.assertEqual(r["tags"], ["tool:retreat_less:2:lowhp:30"])
+
+
+class TestOppHandParsing(unittest.TestCase):
+    """S5 对手手牌信息族（2026-10-28）
+
+    只映射**卡面本身写 random** 或**数量确定**的形态；「你选一张」属隐藏信息
+    交互，引擎绝不代替玩家选择。纯「reveal hand」无局面效果 → 如实未建模。
+    """
+
+    @staticmethod
+    def _tags(text, kind="item"):
+        return E.to_engine_tags([E.parse_rule(text, kind=kind, name="X")])
+
+    def test_discard_random(self):
+        r = self._tags("Discard a random card from your opponent\u2019s hand.")
+        self.assertEqual(r["tags"], ["discard_opp_random:1"])
+
+    def test_shuffle_random_into_deck(self):
+        r = self._tags("Choose a random card from your opponent\u2019s hand. "
+                       "Your opponent reveals that card and shuffles it into "
+                       "their deck.")
+        self.assertEqual(r["tags"], ["shuffle_opp_hand:1"])
+
+    def test_discard_until_n(self):
+        r = self._tags("Your opponent discards cards from their hand until "
+                       "they have 3 cards in their hand.")
+        self.assertEqual(r["tags"], ["discard_opp_to:3"])
+
+    def test_hand_shuffle_same_count(self):
+        r = self._tags("Your opponent counts the cards in their hand, shuffles "
+                       "those cards, and puts them on the bottom of their deck. "
+                       "If they do, they draw that many cards.")
+        self.assertEqual(r["tags"], ["opp_shuffle_draw:same"])
+
+    def test_reveal_only_rejected(self):
+        r = self._tags("Your opponent reveals their hand.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+    def test_choose_specific_card_rejected(self):
+        """「你从对手手牌挑一张弃掉」是隐藏信息选择 → 必须拒绝"""
+        r = self._tags("Your opponent reveals their hand, and you discard a "
+                       "card you find there.")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
+
+
+class TestCoinAll(unittest.TestCase):
+    """「Flip N coins. If **both/all** of them are heads …」（Bewear，2026-10-28）
+
+    与 `coin_each`（每枚正面各生效一次）语义不同：这里是**全部命中**才生效一次。
+    """
+
+    def test_both_heads_damage(self):
+        r = E.to_engine_tags([E.parse_rule(
+            "Flip 2 coins. If both of them are heads, this attack does 100 more "
+            "damage.", kind="attack", name="Bewear")])
+        self.assertEqual(r["tags"], ["coin_all:2:heads:dmg_plus:100"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_each_still_distinct(self):
+        r = E.to_engine_tags([E.parse_rule(
+            "Flip 3 coins. This attack does 30 more damage for each heads.",
+            kind="attack", name="X")])
+        self.assertIn("coin_each:3:heads:dmg_plus:30", r["tags"])
+
+
+class TestCrossTurnLockParsing(unittest.TestCase):
+    """跨回合锁解析（2026-10-27）：攻击 / 撤退 / 手牌禁打
+
+    语音：锁定窗口按**持有者**回合计数，故 tag 必须带方向（self / opp），
+    不能把「自己下回合」和「对手下回合」压成同一种状态。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        r = E.parse_effects(text, kind=kind, name=name)
+        return E.to_engine_tags(r["specs"])
+
+    def test_self_attack_locks(self):
+        tags = self._tags("During your next turn, this Pokémon can’t use attacks.")
+        self.assertEqual(tags["tags"], ["attack_lock:all:turn"])
+        self.assertEqual(tags["unsupported"], [])
+
+        tags = self._tags("During your next turn, this Pokémon can’t use Giant Wave.",
+                          name="Giant Wave")
+        self.assertEqual(tags["tags"], ["attack_lock:name:turn:Giant Wave"])
+
+        tags = self._tags("This Pokémon can’t use Blaze Blitz again until it "
+                          "leaves the Active Spot.", name="Blaze Blitz")
+        self.assertEqual(tags["tags"], ["attack_lock:name:active:Blaze Blitz"])
+
+    def test_opponent_attack_and_retreat_locks(self):
+        tags = self._tags("During your opponent’s next turn, the Defending "
+                          "Pokémon can’t use attacks.")
+        self.assertEqual(tags["tags"], ["attack_lock:opp_all:turn"])
+
+        tags = self._tags("During your opponent’s next turn, the Defending "
+                          "Pokémon can’t retreat.")
+        self.assertEqual(tags["tags"], ["retreat_lock:opp:turn"])
+
+        # Poison Ring：「that Pokémon」指代前文的对手战斗位
+        tags = self._tags("Your opponent’s Active Pokémon is now Poisoned. "
+                          "During your opponent’s next turn, that Pokémon "
+                          "can’t retreat.")
+        self.assertEqual(tags["tags"], ["poison", "retreat_lock:opp:turn"])
+
+    def test_choose_opponent_attack_lock(self):
+        """Klefki「Memory Lock」/ Murkrow「Torment」：锁对手战斗位**指定**招式，
+        招式名运行时选择 → `attack_lock:opp_name:turn`（不得当具体卡名）。"""
+        tags = self._tags(
+            "Choose 1 of your opponent’s Active Pokémon’s attacks. "
+            "During your opponent’s next turn, that Pokémon can’t use that "
+            "attack.")
+        self.assertEqual(tags["tags"], ["attack_lock:opp_name:turn"])
+        self.assertEqual(tags["unsupported"], [])
+
+    def test_choose_opponent_attack_lock_negative(self):
+        """负向守卫：具体招式名的对手封锁仍属 B4（无运行时选择，不得误放通）"""
+        tags = self._tags("During your opponent’s next turn, the Defending "
+                          "Pokémon can’t use Slash.")
+        self.assertEqual(tags["tags"], [])
+        self.assertTrue(tags["unsupported"], "具体卡名的对手封锁应保持未建模")
+
+    def test_self_retreat_lock(self):
+        tags = self._tags("Heal 50 damage from this Pokémon. During your next "
+                          "turn, this Pokémon can’t retreat.")
+        self.assertEqual(tags["tags"], ["heal:50", "retreat_lock:self:turn"])
+
+    def test_item_and_evolution_play_locks(self):
+        tags = self._tags("During your opponent’s next turn, they can’t play "
+                          "any Item cards from their hand.")
+        self.assertEqual(tags["tags"], ["play_lock:item:opp:turn"])
+
+        tags = self._tags("During your opponent’s next turn, they can’t play "
+                          "any Pokémon from their hand to evolve their Pokémon.")
+        self.assertEqual(tags["tags"], ["play_lock:evolution:opp:turn"])
+
+    def test_static_locks_stay_unmodeled(self):
+        tags = self._tags("As long as this Pokémon is in the Active Spot, your "
+                          "opponent’s Active Pokémon can’t retreat.",
+                          kind="ability", name="Static")
+        self.assertEqual(tags["tags"], [])
+        self.assertTrue(tags["unsupported"], "常驻静态锁必须如实登记未建模")
+
+        # 交叉写法（你的回合 + 对手战斗位）没有真实卡例 → 宁缺勿错
+        tags = self._tags("During your next turn, the Defending Pokémon "
+                          "can’t retreat.")
+        self.assertEqual(tags["tags"], [])
+        self.assertTrue(tags["unsupported"])
+
+    def test_first_turn_and_typed_discard_guards(self):
+        tags = self._tags("If you go second, you can’t use this attack during "
+                          "your first turn. This attack does 30 damage for each "
+                          "of your Benched Pokémon.")
+        self.assertIn("dmg_set:30:per:own_bench", tags["tags"])
+        self.assertTrue(any("首回合" in u.get("reason", "")
+                            for u in tags["unsupported"]))
+
+        tags = self._tags("Discard 6 Basic {G} Energy cards from your hand, and "
+                          "Knock Out your opponent’s Active Pokémon. If you "
+                          "can’t discard 6 cards in this way, this attack does "
+                          "nothing.")
+        # B3（2026-10-28）：弃能可精确表达；第九批起**击倒也已建模**
+        # （`knockout:opp_active`）→ Hydrapple 的两段都精确可执行。
+        self.assertIn("discard_hand_energy:6:type:grass:required", tags["tags"])
+        self.assertIn("knockout:opp_active", tags["tags"])
+        self.assertEqual(tags["unsupported"], [])
+
+
+class TestWeaknessResistanceBypassParsing(unittest.TestCase):
+    """弱点 / 抗性无视（2026-10-27）
+
+    引擎按招式 tag 在伤害结算时跳过弱抗步骤；解析侧必须区分：
+      · 干净的无条件句 → bypass tag；
+      · 带「or by any effects on …」→ 引擎无效果无视层，如实未建模；
+      · 带「this attack does nothing」失败门 → 失败门未建模，整卡不得静默收池。
+    """
+
+    @staticmethod
+    def _tags(text, kind="attack", name=""):
+        r = E.parse_effects(text, kind=kind, name=name)
+        return E.to_engine_tags(r["specs"])
+
+    def test_both_weakness_and_resistance(self):
+        tags = self._tags("This attack’s damage isn’t affected by "
+                          "Weakness or Resistance.")
+        self.assertEqual(tags["tags"], ["ignore_weakness",
+                                        "ignore_resistance"])
+        self.assertEqual(tags["unsupported"], [])
+
+    def test_single_axis_variants(self):
+        tags = self._tags("This attack’s damage isn’t affected by Weakness.")
+        self.assertEqual(tags["tags"], ["ignore_weakness"])
+        self.assertEqual(tags["unsupported"], [])
+
+        tags = self._tags("This attack’s damage isn’t affected by Resistance.")
+        self.assertEqual(tags["tags"], ["ignore_resistance"])
+        self.assertEqual(tags["unsupported"], [])
+
+        # 「This damage …」写法（Arboliva ex）
+        tags = self._tags("This damage isn’t affected by Weakness or Resistance.")
+        self.assertEqual(tags["tags"], ["ignore_weakness",
+                                        "ignore_resistance"])
+
+    def test_bypass_combines_with_other_effects(self):
+        tags = self._tags("If you have 3 or more Energy in play, this attack "
+                          "does 70 more damage. This attack’s damage isn’t "
+                          "affected by Weakness.", name="Magnetic Burst")
+        self.assertIn("ignore_weakness", tags["tags"])
+        self.assertIn("dmg_plus:70:if:own_all_energy_at_least:3",
+                      tags["tags"])
+        self.assertEqual(tags["unsupported"], [])
+
+    def test_effect_bypass_clause_stays_unmodeled(self):
+        for text in (
+                "This attack’s damage isn’t affected by Weakness or "
+                "Resistance, or by any effects on those Pokémon.",
+                "This attack’s damage isn’t affected by Weakness or "
+                "Resistance, or by any effects on your opponent’s "
+                "Active Pokémon."):
+            tags = self._tags(text)
+            self.assertEqual(tags["tags"], [],
+                             "效果无视未建模时不得只放通 W/R 绕过")
+            self.assertTrue(any("效果" in u.get("reason", "")
+                                for u in tags["unsupported"]))
+
+        # 只写「any effects」、完全没有 W/R 的形态：2026-10-28 起**已建模**
+        # （`ignore_effects`，Koraidon「Shred」）—— 无视减伤/护盾等**效果**，
+        # 但仍吃弱点抗性；上方「… or by any effects …」的混合句式仍拒绝
+        tags = self._tags("This attack’s damage isn’t affected by any "
+                          "effects on your opponent’s Active Pokémon.")
+        self.assertEqual(tags["tags"], ["ignore_effects"])
+        self.assertEqual(tags["unsupported"], [])
+
+    def test_attack_does_nothing_gate_is_modeled(self):
+        """2026-10-28：条件可精确求值的失败门已由 `nullify_if:<cond>` 建模"""
+        tags = self._tags("If your opponent’s Active Pokémon isn’t a "
+                          "Pokémon {ex}, this attack does nothing. This "
+                          "attack’s damage isn’t affected by Weakness or "
+                          "Resistance.")
+        self.assertIn("nullify_if:not:opp_active_is_ex", tags["tags"])
+        self.assertIn("ignore_weakness", tags["tags"])
+        self.assertFalse(any("失败门" in u.get("reason", "")
+                             for u in tags["unsupported"]))
+
+        # 状态前置条件：既产出失败门，也**不得**被当成主动施加状态
+        tags = self._tags("If your opponent’s Active Pokémon isn’t Burned, "
+                          "this attack does nothing.")
+        self.assertEqual(tags["tags"], ["nullify_if:not:opp_active_status:burn"])
+
+    def test_coin_failure_gate_remains_modeled(self):
+        tags = self._tags("Flip a coin. If tails, this attack does nothing.")
+        self.assertEqual(tags["tags"], ["coin:tails:dmg_zero"])
+        self.assertEqual(tags["unsupported"], [])
 
 
 class TestTargetNormalization(unittest.TestCase):

@@ -38,6 +38,10 @@ VERB_ALIASES = {
     "ability": ("特性", "能力", "ability"),
     "play": ("上场", "放置", "打出", "play"),
     "evolve": ("进化", "evolve"),
+    # 化石卡（2026-10-28）：「At any time during your turn, you may discard this
+    # card from play.」——卡名本身也是合法称呼（见 `labels_of`）
+    "discard_fossil": ("弃置化石", "丢弃化石", "弃置", "discard fossil",
+                       "discard"),
 }
 
 # 位置别名（attach / retreat 的目标）
@@ -156,7 +160,11 @@ def _choice_key(action: dict) -> tuple:
             action.get("name") or action.get("display"),
             action.get("pos"),
             action.get("target"),
-            action.get("bench"))
+            action.get("bench"),
+            # 附能量现在可选「哪种能量」（特殊能量 vs 基本能量语义不同）
+            action.get("energy"),
+            # 借用招式：同一招式借不同来源的招式是**不同**选择
+            tuple(sorted((action.get("borrow") or {}).items())) or None)
 
 
 def find_action(legal: list, text: str, verb: Optional[str] = None) -> dict:
@@ -361,11 +369,15 @@ def command_label(action: dict) -> str:
     verb_zh = {
         "pass": "结束回合", "retreat": "撤退", "attach": "附能量",
         "attack": "攻击", "trainer": "训练家", "ability": "特性",
-        "play": "上场", "evolve": "进化",
+        "play": "上场", "evolve": "进化", "discard_fossil": "弃置化石",
     }.get(verb, verb)
     name = action.get("display") or action.get("name_zh") or action.get("name")
     if verb == "attach":
-        return f"{verb_zh} → {_slot_name(action.get('target', 0))}"
+        # 手牌有多种能量时，label 必须带上能量名 —— 否则两个选项文案相同，
+        # 用户无从区分，且「label 回投」会恒取第一个（静默改选择）。
+        e = action.get("energy_name") or ""
+        return (f"{verb_zh} → {_slot_name(action.get('target', 0))}"
+                + (f"（{e}）" if e else ""))
     if verb == "retreat":
         return f"{verb_zh} → 后备{int(action.get('bench', 0)) + 1}"
     if verb == "evolve":

@@ -37,9 +37,18 @@ ENGINE_SRC = REPO / "packages" / "engine" / "engine"
 ENGINE_TESTS = REPO / "packages" / "engine" / "tests"
 
 
+def _preset_uid(name: str):
+    """预设卡表为该卡锁定的**印刷 uid**（人工校对版；同名新印刷不会替换预设）"""
+    for aid in reallib.archetype_ids():
+        for e in reallib.decklist(aid):
+            if e.get("name") == name and e.get("uid"):
+                return e["uid"]
+    return None
+
+
 def _def_of(name: str):
-    """取真实卡组的引擎定义（找不到 → 断言失败并提示）"""
-    item = reallib.catalog().get(name)
+    """取真实卡组**实际使用**的引擎定义（按预设锁定的印刷，而非卡名默认）"""
+    item = reallib.item_for(_preset_uid(name) or name)
     if item is None:
         raise AssertionError(f"引擎卡池没有 {name}")
     if item.get("unsupported"):

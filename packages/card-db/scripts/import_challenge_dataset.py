@@ -113,6 +113,21 @@ def norm_key(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+def _pokemon_signature(card: dict) -> tuple:
+    """招式名 + 特性名集合 —— 同名不同印刷的**硬判据**
+
+    仅凭卡名匹配会把另一印刷的招式算到这张卡头上（ASC 104 Medicham 与
+    DRI 100 Medicham 同名但招式完全不同）。签名一致才允许 name_key 回落。
+    """
+    atk = tuple(sorted(
+        k for a in (card.get("attacks") or [])
+        if (k := norm_key(a.get("name")))))
+    ab = tuple(sorted(
+        k for a in (card.get("abilities") or [])
+        if (k := norm_key(a.get("name")))))
+    return atk, ab
+
+
 def aliases_for(card: dict) -> list[str]:
     """额外匹配名（不含 name 本身）：基础能量按属性生成英文全名"""
     out: list[str] = []
@@ -465,18 +480,25 @@ def load_engine_index() -> dict:
                         st = "approximated"
                     reason = reason or "由解析链自动生成（非人工逐卡校对）"
                 key = norm_key(c.get("name"))
+                real = c.get("real") or {}
+                _ps = str(real.get("set") or "").strip().upper()
+                _pn = str(real.get("number") or "").strip()
                 entry = {
                     "name": c.get("name"),
+                    "uid": (c.get("uid")
+                            or (f"{c.get('name')}@{_ps} {_pn}"
+                                if _ps and _pn else f"{c.get('name')}@-")),
+                    "printing": (_ps, _pn),
                     "name_zh": c.get("name_zh") or "",
                     "supertype": c.get("supertype"),
                     "tag": c.get("tag") or "",
                     "status": st,
                     "reason": reason,
+                    # 同名回落时用于拒绝「同名不同印刷」：招式/特性名集合
+                    "signature": _pokemon_signature(c),
                 }
                 # (set, number) 精确索引：与卡库的 series/number 同源，可消除同名歧义
-                real = c.get("real") or {}
-                sn = (str(real.get("set") or "").strip().upper(),
-                      str(real.get("number") or "").strip())
+                sn = (_ps, _pn)
                 if sn[0] and sn[1]:
                     name_variants.setdefault(key, set()).add(sn)
                     idx[("__setnum__",) + sn] = entry
@@ -493,13 +515,19 @@ def load_engine_index() -> dict:
     return idx
 
 
-def _match_engine(card: dict, engine_index: dict) -> tuple:
+def _match_engine(card: dict, engine_index: dict, issues: dict | None = None) -> tuple:
     """卡 → 引擎卡池条目 → ``(entry|None, matched_by|None)``
 
     匹配顺序（严格）：
-      1. ``(series, number)`` —— 精确到印刷批次，无歧义；
+      1. ``(series, number)`` —— 精确到印刷批次，**且卡名必须一致**；
+         数据集存在个别 series/number 与卡名不匹配的脏行（如 SSP 164
+         ``Brilliant Blender`` 与手工池 ``Crispin`` 同号），只看编号会把
+         另一张卡的效果算到这张卡头上 —— 属静默错映射；
       2. 卡名 / 别名 —— 仅在**该卡名在池里唯一**时接受；
          同名多卡（``ambiguous``）一律拒绝，宁可判未收录也不冒充。
+         对宝可梦还要求**招式/特性名集合一致**：同名不同印刷（如 ASC 104
+         Medicham 与 DRI 100 Medicham）不满足时同样拒绝。仅凭名字接受会让
+         引擎按名字取到另一印刷的招式 —— 属静默错映射。
 
     为什么必须有第 2 步的歧义拒绝：卡库 1267 张里同名不同卡很常见
     （同名但不同 set/number、招式完全不同），靠卡名匹配会把「另一张卡的能力」
@@ -507,10 +535,16 @@ def _match_engine(card: dict, engine_index: dict) -> tuple:
     """
     series = str(card.get("series") or "").strip().upper()
     number = str(card.get("number") or "").strip()
+    aliases = {card.get("name_key")} | {norm_key(al)
+                                        for al in (card.get("aliases") or [])}
     if series and number:
         e = engine_index.get(("__setnum__", series, number))
         if e is not None:
-            return e, "set:number"
+            if norm_key(e.get("name")) in aliases:
+                return e, "set:number"
+            if issues is not None:
+                issues["engine_setnum_name_mismatch"] = \
+                    issues.get("engine_setnum_name_mismatch", 0) + 1
     for cand, how in [(card.get("name_key"), "name_key")] + [
             (norm_key(al), f"alias:{al}") for al in (card.get("aliases") or [])]:
         e = engine_index.get(cand)
@@ -518,6 +552,16 @@ def _match_engine(card: dict, engine_index: dict) -> tuple:
             continue
         if e.get("ambiguous"):
             return None, None          # 同名歧义：拒绝冒充
+        if e.get("supertype") != card.get("supertype"):
+            continue
+        if card.get("supertype") == "Pokemon" and \
+                e.get("signature") is not None and \
+                _pokemon_signature(card) != e["signature"]:
+            # 同名不同印刷：招式/特性名集合不一致 → 拒绝拿另一张卡的招式冒充
+            if issues is not None:
+                issues["engine_namekey_mismatch"] = \
+                    issues.get("engine_namekey_mismatch", 0) + 1
+            continue
         return e, how
     return None, None
 
@@ -525,20 +569,28 @@ def _match_engine(card: dict, engine_index: dict) -> tuple:
 def apply_engine_match(card: dict, engine_index: dict, issues: dict) -> dict:
     """回填引擎映射（中文名 / 可对战状态）；幂等，可脱离原始 CSV 重跑"""
     card["aliases"] = aliases_for(card)
-    eng, matched_by = _match_engine(card, engine_index)
+    eng, matched_by = _match_engine(card, engine_index, issues)
     card["engine_ready"] = False
     card["engine_status"] = "unmatched"
     card["engine_note"] = "引擎卡池未收录"
     card.pop("engine_match", None)
+    card.pop("engine_uid", None)
     if eng:
         st = eng.get("status", "mapped")
         card["engine_match"] = matched_by
+        # 印刷身份键：卡组/引擎按 uid 精确选印刷（缺省按卡名取最新印刷）
+        card["engine_uid"] = eng.get("uid")
         card["engine_status"] = st
         card["engine_note"] = eng.get("reason") or ""
-        card["name_zh"] = eng.get("name_zh") or ""
+        # 引擎池中文名只作**兜底**：已有 i18n 译文不被空值/旧名覆盖
+        # （卡库中文语料是展示口径，引擎池名字是历史人工口径）。
+        if eng.get("name_zh"):
+            card["name_zh"] = eng["name_zh"]
+        card.setdefault("name_zh", "")
         # 只有 mapped/approximated 才算「可进引擎对战」；unsupported 一律不可
         card["engine_ready"] = st in ("mapped", "approximated")
-    issues["zh_backfill" if eng else "engine_unmatched"] += 1
+    issues["zh_backfill" if eng else "engine_unmatched"] = \
+        issues.get("zh_backfill" if eng else "engine_unmatched", 0) + 1
     if card["engine_status"] == "unsupported":
         issues["engine_unsupported"] = issues.get("engine_unsupported", 0) + 1
     elif card["engine_status"] == "approximated":
@@ -662,6 +714,7 @@ def write_report(cards: list[dict], stats: dict, path: Path) -> None:
          f"| 无招式卡（训练家/能量/规则） | {stats['no_move_cards']} |",
          f"| 引擎可直接对战（已建模） | {stats['engine_ready']} |",
          f"| 回填中文名 | {stats['with_zh']} |",
+         f"| 中文化效果字段 | {stats.get('with_zh_effects', 0)} |",
          "",
          "### 卡牌构成",
          "",
@@ -772,8 +825,8 @@ def write_report(cards: list[dict], stats: dict, path: Path) -> None:
         "- 引擎未建模的卡（"
         f"{stats['cards_out'] - stats['engine_ready']} 张）**可浏览/可组卡但不可对战**，"
         "由 `engine_ready` 标记，UI 与导入校验据此显示灰名单；",
-        "- 中文名仅回填自引擎自撰卡池（"
-        f"{stats['with_zh']} 张）；其余卡的中文名属**待译项**，不做机器硬译以免误导。",
+        "- 中文名与效果文本来自 `data/i18n/zh_card_translations.json`（人工翻译语料，"
+        f"卡名 {stats['with_zh']} 张）；缺译文时回退英文，不做机器硬译以免误导。",
         "",
         ]
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -810,6 +863,15 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
                 if ab["effect"]:
                     rules_parts.append(ab["effect"])
             rules_text = "\n\n".join(rules_parts)
+            # 中文对应文本（缺译文回退英文由前端负责；这里只拼已有中文）
+            rules_zh_parts = [c["other_text_zh"]] if c.get("other_text_zh") else []
+            for a in c["attacks"]:
+                if a.get("effect_zh"):
+                    rules_zh_parts.append(a["effect_zh"])
+            for ab in c["abilities"]:
+                if ab.get("effect_zh"):
+                    rules_zh_parts.append(ab["effect_zh"])
+            rules_text_zh = "\n\n".join(rules_zh_parts)
             attacks_json = json.dumps(
                 {"attacks": c["attacks"], "abilities": c["abilities"]},
                 ensure_ascii=False)
@@ -817,10 +879,13 @@ def load_sqlite(cards: list[dict], db_path: Path) -> dict:
                 "library": {
                     "card_id": c["id"], "subtype": c["subtype"],
                     "stage": c["stage"], "rule": c["rule"],
+                    "rule_zh": c.get("rule_zh") or "",
                     "category": c["category"], "evolves_from": c["evolves_from"],
                     "weakness": c["weakness"], "resistance": c["resistance"],
                     "retreat": c["retreat"], "name_ja": c["name_ja"],
                     "name_zh": c["name_zh"], "engine_ready": c["engine_ready"],
+                    "other_text_zh": c.get("other_text_zh") or "",
+                    "rules_text_zh": rules_text_zh,
                     # 诚实口径（C5）：mapped | approximated | unsupported | unmatched
                     "engine_status": c.get("engine_status", "unmatched"),
                     "engine_note": c.get("engine_note", ""),
@@ -878,6 +943,11 @@ def _reparse_only(args) -> int:
     # 1) 刷新引擎映射（可对战状态口径随卡池变化；无需原始 CSV）
     if "issues" not in stats or not isinstance(stats.get("issues"), dict):
         stats["issues"] = {}
+    # 重跑映射时不要沿用上一次的累计计数（否则每跑一次数字翻倍）
+    for _k in ("zh_backfill", "engine_unmatched", "engine_unsupported",
+               "engine_approximated", "engine_setnum_name_mismatch",
+               "engine_namekey_mismatch"):
+        stats["issues"].pop(_k, None)
     eng_idx = load_engine_index()
     for c in cards:
         apply_engine_match(c, eng_idx, stats["issues"])

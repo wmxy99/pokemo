@@ -93,6 +93,53 @@ class TestPoolExtRoster(unittest.TestCase):
             self.assertEqual(cov["executable_rate"], 1.0, aid)
 
 
+class TestPrintingIdentity(unittest.TestCase):
+    """印刷身份（2026-10-29 第二十一批）：同名不同印刷共存放行
+
+    规则：
+      · `printings()` 按 uid（`<卡名>@<SET> <number>`）收录**全部**印刷；
+      · `catalog()` 按卡名只返回**首选印刷**（数据集最新）；
+      · 预设卡表用 `uid` 锁定人工校对印刷 → 同名新印刷不会替换预设行为。
+    """
+
+    def test_same_name_multiple_printings(self):
+        pr = reallib.printings()
+        self.assertIn("Dusknoir@SIT 70", pr, "人工印刷未收录")
+        self.assertIn("Dusknoir@SFA 20", pr, "同名数据集印刷未共存放行")
+        self.assertEqual(reallib.catalog()["Dusknoir"]["uid"], "Dusknoir@SFA 20",
+                         "卡名默认应取数据集最新印刷")
+
+    def test_uid_addresses_exact_printing(self):
+        manual = reallib.item_for("Dusknoir@SIT 70")["def"]
+        newest = reallib.item_for("Dusknoir@SFA 20")["def"]
+        self.assertTrue(manual.abilities[0].tag.startswith("cursed:"),
+                        f"人工印刷的特性应为 cursed（实际 {manual.abilities})")
+        self.assertEqual(newest.abilities[0].tag, "counters:13:scope:opp:1:selfko")
+        # 卡名本身保持真实卡名（进化链/同名规则不受印刷影响）
+        self.assertEqual(manual.name, "Dusknoir")
+        self.assertEqual(newest.name, "Dusknoir")
+
+    def test_preset_pins_manual_printing(self):
+        """A1 卡表锁定 SIT 70 → 运行时使用人工校对版（而非数据集新印刷）"""
+        deck = reallib.build_deck("A1")
+        dusk = [c for c in deck
+                if getattr(getattr(c, "pdef", None), "name", "") == "Dusknoir"]
+        self.assertTrue(dusk, "A1 未找到 Dusknoir")
+        self.assertTrue(dusk[0].pdef.abilities[0].tag.startswith("cursed:"),
+                        "预设应执行人工印刷的 Cursed Blast")
+
+    def test_all_preset_entries_pin_a_printing(self):
+        for aid in reallib.archetype_ids():
+            for e in reallib.decklist(aid):
+                self.assertTrue(e.get("uid"), f"{aid}·{e['name']} 未锁定印刷")
+                self.assertIsNotNone(reallib.item_for(e["uid"]),
+                                     f"{aid}·{e['uid']} 不在卡池")
+
+    def test_pool_uids_unique(self):
+        pr = reallib.printings()
+        self.assertEqual(len(pr), len(reallib._catalog_items()))  # noqa: SLF001
+
+
 class TestEveryCardExecutes(unittest.TestCase):
     """逐卡穷举：每张卡的每个招式 / 每个特性都必须能被 step 成功"""
 

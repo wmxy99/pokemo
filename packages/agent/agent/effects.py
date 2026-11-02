@@ -663,6 +663,35 @@ _RECON_TOP_PATTERNS: tuple = (
         r"^look at the top (?P<n>\d+) cards? of your deck and put (?P<k>\d+) of "
         r"them into your hand[.] discard the other cards[.]?$"),
      {"sel": "any", "dest": "hand", "rest": "discard", "k": 1}),
+    # 「看牌库**顶 1 张**，你可以弃掉它」（2026-11-02 第三十五批）
+    #   Morpeko TWM 72（特性）/ Rockruff JTG 84 / Litwick WHT 16
+    # ⚠ 「may discard」是**可选**：引擎无交互层，缺省取「弃」（带这张卡就是为了弃），
+    #   属确定性默认，不是随机；不弃的收益在引擎里无从表达。
+    (re.compile(
+        r"^(?:once during your turn, you may )?look at the top card of your "
+        r"deck[.] you may discard that card[.]?$"),
+     # ⚠ 卡面**没有**洗牌句 → `rest:none`（没被弃掉的牌原序留顶）。
+     # 用 `shuffle` 会顺手重洗整副牌库，卡面不符。
+     {"n": 1, "k": 1, "sel": "any", "dest": "discard", "rest": "none"}),
+    # 「取顶 N 张里**全部**符合条件的能量，**自由分配**附着」（第三十五批）
+    #   Lapras ex SCR 32（招式）/ Metang TEF 114（特性）/ Grumpig MEG 63（进化特性）
+    # 两种余牌结尾：`back into your deck`（洗回整库）与
+    # `and put them on the bottom of your deck`（**只洗余牌**再放底）。
+    (re.compile(
+        r"^(?:once during your turn, you may )?"
+        r"look at the top (?P<n>\d+) cards? of your deck and attach any number "
+        r"of (?:(?P<basic>basic) )?(?:\{(?P<c1>[a-z])\} )?energy cards? you find "
+        r"there to your pok[eé]mon in any way you like[.] "
+        r"(?P<tail>shuffle the other cards back into your deck"
+        r"|shuffle the other cards and put them on the bottom of your deck)"
+        r"[.]?$"),
+     {"k": "all", "sel": "energy", "dest": "attach_spread", "rest": "shuffle"}),
+    # 「取顶 N 张里**全部**宝可梦铺后备」（Tatsugiri ex SSP 142）
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck[.] you may put any "
+        r"number of pok[eé]mon you find there onto your bench[.] "
+        + _RECON_TAIL + r"$"),
+     {"k": "all", "sel": "pokemon", "dest": "bench", "rest": "shuffle"}),
 )
 
 
@@ -691,21 +720,39 @@ def _detect_recon_top(t: str) -> Optional[dict]:
             if _pt is None or _bt is None:
                 return None             # 属性符号不认识 → 不猜
             sel = f"pokemon-{_pt}+energy-{_bt}"
+        elif sel == "energy" and (gd.get("basic") or gd.get("c1")):
+            # 「attach any number of [Basic] [{X}] Energy cards」：
+            # 卡面限定「Basic」时必须带 `basic_` 前缀，否则特殊能量也会被附上
+            # （把「基本能量」放宽成「任意能量」= 静默加强）。
+            sel = "basic_energy" if gd.get("basic") else "energy"
+            if gd.get("c1"):
+                _pt = _EN_ENERGY_LETTER.get(str(gd["c1"]).upper())
+                if _pt is None:
+                    return None         # 属性符号不认识 → 不猜
+                sel = f"{sel}-{_pt}"
         elif sel == "pokemon" and gd.get("c1"):
             _pt = _EN_ENERGY_LETTER.get(str(gd["c1"]).upper())
             if _pt is None:
                 return None
             sel = f"pokemon-{_pt}"
-        _n = int(gd["n"])
-        _k = int(gd["k"]) if gd.get("k") else int(meta["k"])
-        if _k < 1 or _k > _n:
-            return None
+        _n = int(gd["n"]) if gd.get("n") else int(meta["n"])
+        _k_raw = gd["k"] if gd.get("k") else meta["k"]
+        if str(_k_raw) == "all":
+            _k = "all"                  # 「any number of … you find there」
+        else:
+            _k = int(_k_raw)
+            if _k < 1 or _k > _n:
+                return None
         gate = meta.get("gate")
         _grp = meta.get("gate_grp")
         if _grp and not gd.get(_grp):
             gate = None                 # 卡面没写这句前置条件 → 不得凭空加上
+        _rest = meta["rest"]
+        if "on the bottom" in str(gd.get("tail") or ""):
+            # 「Shuffle the other cards **and put them on the bottom**」≠ 洗回整库
+            _rest = "shuffle_bottom"
         return {"look_top": _n, "max": _k, "sel": sel, "dest": meta["dest"],
-                "rest": meta["rest"], "gate": gate}
+                "rest": _rest, "gate": gate}
     return None
 
 
@@ -2680,7 +2727,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 「a Supporter card」当成任意 1 张取走 = 静默拿错牌）。
     # 只对**训练家**卡生效：招式/特性侧的 tag 白名单（`ATTACK_TAG_PREFIXES` /
     # `_supported_ability_tags`）不含 `recon:`，认领了反而会被池准入**静默丢弃**。
-    if kind in ("item", "supporter", "stadium", "tool"):
+    # 2026-11-02 第三十五批：放开到**特性/招式** —— 这一族里 Morpeko TWM 72 /
+    # Rockruff JTG 84 / Litwick WHT 16 是「Once during your turn, look at the top
+    # card … may discard it」的特性形态，Metang TEF 114 同理，Lapras ex SCR 32
+    # 是招式。只在 `_detect_recon_top` **整句精确匹配**时才认领，所以不会把
+    # 特性侧既有的 `recon:<N>` 旧口径卡卷进来（那些走下面的通用分支）。
+    if kind in ("item", "supporter", "stadium", "tool", "ability", "attack"):
         _rc = _detect_recon_top(t)
         if _rc:
             return {"kind": kind, "name": name, "trigger": "on_use",
@@ -6277,8 +6329,8 @@ def to_engine_tags(specs: list) -> dict:
                         _tag += f":target:{_scope}"
                     tags.append(_tag)
             elif t == "recon":
-                # 检视牌库顶（2026-10-30 第二十批）：
-                # `recon:<N>:<K>:<sel>[:dest:<d>][:rest:bottom][:gate:<g>]`
+                # 检视牌库顶（2026-10-30 第二十批；2026-11-02 第三十五批扩展）：
+                # `recon:<N>:<K>:<sel>[:dest:<d>][:rest:<r>][:gate:<g>]`
                 # 与旧 `recon:<N>`（随机取 1 入手）**不是**同一条语义路径 ——
                 # 旧形态无第三段，引擎按老行为（随机 1 张、其余放底）处理。
                 _lo = extra.get("look_top")
@@ -6288,7 +6340,10 @@ def to_engine_tags(specs: list) -> dict:
                                         "reason": "检视牌库顶缺少张数/筛选项"})
                 else:
                     _sel = str(extra.get("sel") or "any")
-                    _tag = f"recon:{int(_lo)}:{int(_mx)}:{_sel}"
+                    # `max == "all"` = 「any number of … you find there」：
+                    # 备选集合被「牌库顶 N 张」封死，不需要交互层。
+                    _k = "all" if _mx == "all" else str(int(_mx))
+                    _tag = f"recon:{int(_lo)}:{_k}:{_sel}"
                     _dest = str(extra.get("dest") or "hand")
                     if _dest != "hand":
                         _tag += f":dest:{_dest}"

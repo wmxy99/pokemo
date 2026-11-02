@@ -1519,12 +1519,34 @@ class Battle:
 
         sel, dest, k = spec["sel"], spec["dest"], spec["max"]
         fp = None
+        _plan: list = []
+        _targets: list = []
         if dest == "attach":
             tpos = action.get("target")
             fp = (_field_at(p, int(tpos)) if tpos is not None else None) \
                 or p.active
             if fp is None:
                 raise ValueError("没有可附着的宝可梦")
+        elif dest == "attach_spread":
+            # 「attach any number of Energy cards you find there to your Pokémon
+            # **in any way you like**」（2026-11-02 第三十五批：Lapras ex /
+            # Metang）。分配口径与 `attach_spread:` **完全一致**：显式
+            # `attach_plan` 或 round-robin，绝不把全部能量堆在 active 上 ——
+            # 那等于把「自由分配」塌缩成一个特定选择。
+            _targets = _spread_targets(p, "any")
+            if not _targets:
+                raise ValueError("没有可附着的宝可梦")
+            _p = action.get("attach_plan") if isinstance(action, dict) else None
+            if _p is not None:
+                if not isinstance(_p, (list, tuple)):
+                    raise ValueError(f"attach_plan 必须是位置码列表：{_p!r}")
+                for pos in _p:
+                    if not isinstance(pos, int) or isinstance(pos, bool):
+                        raise ValueError(f"attach_plan 含非整数位置码：{pos!r}")
+                    _fp = _field_at(p, pos)
+                    if _fp is None:
+                        raise ValueError(f"attach_plan 位置码无效：{pos}")
+                    _plan.append(_fp)
 
         picked: list = []
         seen: set = set()
@@ -1572,13 +1594,37 @@ class Battle:
                 self._on_bench_placed(self.current, fnew)
                 applied.add(idx)
                 got += 1
+            elif dest == "discard":
+                # 「You may discard that card」（Morpeko / Rockruff / Litwick）：
+                # 取到的那张直接进弃牌堆 —— 与余牌去向 `rest:discard`
+                # （Explorer's Guidance「discard the other cards」）**不是一回事**：
+                # 这里弃的是**被选中的**那张，不是剩下的。
+                self._to_discard(p, c)
+                applied.add(idx)
+                got += 1
             else:                                   # attach（仅基本能量）
-                fp.add_energy(str(c.edef.type).lower(), 1)
+                if dest == "attach_spread":
+                    if _plan:
+                        if got >= len(_plan):
+                            continue                 # 计划用尽 → 余牌回 rest
+                        _dst = _plan[got]
+                    else:
+                        _dst = _targets[got % len(_targets)]
+                    _dst.add_energy(str(c.edef.type).lower(), 1)
+                else:
+                    fp.add_energy(str(c.edef.type).lower(), 1)
                 applied.add(idx)
                 got += 1
 
         rest = [c for idx, c in enumerate(top) if idx not in applied]
         if spec["rest"] == "bottom":
+            for c in reversed(rest):
+                p.deck.insert(0, c)
+        elif spec["rest"] == "shuffle_bottom":
+            # 「Shuffle the other cards and put them on the bottom of your deck」
+            # （Metang TEF 114）：**只洗余牌**再整叠放底 —— 用 `shuffle` 会把
+            # 余牌混进整副牌库（卡面不符），用 `bottom` 又完全不洗。
+            self.rng.shuffle(rest)
             for c in reversed(rest):
                 p.deck.insert(0, c)
         elif spec["rest"] == "discard":
@@ -1587,8 +1633,18 @@ class Battle:
             for c in rest:
                 self._to_discard(p, c)
         elif spec["rest"] == "shuffle":
-            p.deck.extend(rest)
-            self.rng.shuffle(p.deck)
+            if rest:
+                # 卡面只要求「shuffle **the other** cards」：没有余牌就不该动牌库。
+                # 早期实现无条件 `shuffle(p.deck)`，会让「看顶 1 张、弃掉它」这类
+                # 卡顺手把整副牌重洗一遍（卡面根本没有洗牌句）。
+                p.deck.extend(rest)
+                self.rng.shuffle(p.deck)
+        elif spec["rest"] == "none":
+            # 「Look at the top card. You may discard that card.」—— 卡面**没有**
+            # 洗牌句，没被取走的牌必须**原序回到牌库顶**（Morpeko / Rockruff /
+            # Litwick 三张）。
+            for c in reversed(rest):
+                p.deck.append(c)
         else:
             raise ValueError(f"未知 recon 余牌去向：{spec['rest']}")
         return f"top{n} {dest} {got}/{sel}"
@@ -6179,9 +6235,15 @@ def _parse_recon_tag(tag: str) -> dict:
            "dest": "hand", "rest": "shuffle", "gate": None,
            "legacy": len(parts) == 2}
     if not out["legacy"]:
-        if not parts[2].isdigit():
+        # `all` = 「any number of … you find there」（2026-11-02 第三十五批）：
+        # 取牌库顶 N 张里**所有**符合筛选的牌。它不是「任意 K 张」的开放式选择 ——
+        # 备选集合被 N 张上限封死，所以不需要交互层，用 `max` 取满即可。
+        if parts[2] == "all":
+            out["max"] = 999
+        elif not parts[2].isdigit():
             raise ValueError(f"recon tag 缺少筛选张数：{tag}")
-        out["max"] = int(parts[2])
+        else:
+            out["max"] = int(parts[2])
     i = 3
     while i < len(parts):
         if parts[i] in ("dest", "rest", "gate") and i + 1 < len(parts):

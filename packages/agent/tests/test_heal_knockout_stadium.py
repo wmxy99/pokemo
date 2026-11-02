@@ -111,12 +111,18 @@ class TestShuffleTopParse(unittest.TestCase):
                   "any order.")
         self.assertEqual(r["tags"], ["shuffle_top:3:own"])
 
-    def test_discard_destination_still_unmodeled(self):
-        """「look at the top card. You may discard that card.」仍拒绝（玩家选择）"""
+    def test_discard_destination_now_modeled(self):
+        """「look at the top card. You may discard that card.」
+
+        2026-11-02 第三十五批：`dest:discard` 已实现（同 `test_recon_top`）。
+        此前的拒绝理由是「玩家选择」，但引擎的既有口径是「choose 类取确定性
+        默认」——弃掉是自己带的卡想要的效果，默认弃即可；`rest:none` 保证
+        不顺手重洗牌库（卡面没有洗牌句）。
+        """
         r = _tags("Once during your turn, you may look at the top card of your "
                   "deck. You may discard that card.", kind="ability")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["recon:1:1:any:dest:discard:rest:none"])
+        self.assertFalse(r["unsupported"])
 
 
 class TestStadiumFormsParse(unittest.TestCase):

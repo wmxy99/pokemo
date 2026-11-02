@@ -367,28 +367,35 @@ def audit_coin_forms(card_name: str, item_name: str, desc: str,
 
 def audit_look_top(card_name: str, item_name: str, desc: str,
                    effects: list) -> list:
-    """「look at the top N cards」→ 去向必须是**入手**才可用 `recon:N`
+    """**旧口径** `recon:N`（顶 N 张取 1 入手）的方向守卫
 
-    引擎 `recon:N` = 顶部 N 张取 1 入手。若卡面去向是「弃置 / 附着 / 放回牌库」
-    却映射成 recon，引擎会**白送一张手牌**（凭空手牌优势）。实测抓出 5 张
-    （Morpeko / Metang / Deduction Kit / Grimsley's Move / Waitress）。
+    引擎 `recon:N` 只表示「取 1 张**入手**」。若卡面去向是「弃置 / 附着 / 放回
+    牌库」却映射成 `recon:N`，引擎会**白送一张手牌**（凭空手牌优势）。实测抓出
+    5 张（Morpeko / Metang / Deduction Kit / Grimsley's Move / Waitress）。
+
+    ⚠ 2026-11-02 收窄：扩展口径 ``recon:<N>:<K>:<sel>[:dest:][:rest:]`` 已能
+    表达 bench / attach / attach_spread / discard 四种去向，它们的正确性由
+    `audit_recon_top`（第二十八类）逐项核对。本函数**只看 2 段形态**
+    （``recon:<N>``），否则会把所有合法的扩展口径卡误判成「白送手牌」。
     """
     errs = []
     m = LOOK_TOP.search(desc or "")
     if not m:
         return errs
-    tail = _norm((desc or "")[m.end():])
     recon = [str(t) for t in effects if str(t).startswith("recon:")]
-    if not recon:
+    # 只保留旧口径（`recon:<N>`，恰好 2 段）
+    legacy = [t for t in recon if len(t.split(":")) == 2]
+    if not legacy:
         return errs
+    tail = _norm((desc or "")[m.end():])
     if not re.search(r"(?:into|to)\s+your\s+hand", tail):
         errs.append(f"{card_name} · {item_name}：`{m.group(0)}` 去向非「入手」"
-                    f"（{tail.strip()[:40]}），不该映射成 {recon}")
+                    f"（{tail.strip()[:40]}），不该映射成 {legacy}")
         return errs
     want = f"recon:{int(m.group(1))}"
-    if want not in recon:
+    if want not in legacy:
         errs.append(f"{card_name} · {item_name}：`{m.group(0)}` 应为 `{want}`，"
-                    f"实际 {recon}")
+                    f"实际 {legacy}")
     return errs
 
 
@@ -451,7 +458,10 @@ def audit_attack_lock(card_name: str, item_name: str, desc: str,
 
 
 # 「Look at the top N cards of your deck …」（2026-10-30 第二十批）
-_RECON_TOP = re.compile(r"look at the top\s+(\d+)\s+cards? of your deck", re.I)
+# 「look at the top N cards of your deck」——也认「the top **card**」（单数无数字，
+# Morpeko / Rockruff / Litwick 的「看顶 1 张、可弃」形态）。
+_RECON_TOP = re.compile(
+    r"look at the top\s+(?:(\d+)\s+cards?|card)\s+of your deck", re.I)
 
 
 def audit_recon_top(card_name: str, item_name: str, desc: str,
@@ -474,7 +484,7 @@ def audit_recon_top(card_name: str, item_name: str, desc: str,
     m = _RECON_TOP.search(d)
     if not m:
         return errs
-    n = int(m.group(1))
+    n = int(m.group(1)) if m.group(1) else 1      # 「the top card」= 1 张
     recon_tags = [str(t) for t in (effects or [])
                   if str(t).startswith("recon:")]
     search_tags = [str(t) for t in (effects or [])
@@ -494,10 +504,16 @@ def audit_recon_top(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面是「top {n}」却落成 "
                         f"`{t}`（张数不符）")
         want_dest = "hand"
+        # ⚠ 判定顺序：`attach_spread`（多只、自由分配）必须在 `attach`（单只）之前，
+        # 否则「attach any number … to your Pokémon in any way you like」会被当成单目标。
         if re.search(r"onto your bench", d, re.I):
             want_dest = "bench"
+        elif re.search(r"attach any number of .{0,60}?in any way you like", d, re.I):
+            want_dest = "attach_spread"
         elif re.search(r"attach .{0,40}?to 1 of your pok[eé]mon", d, re.I):
             want_dest = "attach"
+        elif re.search(r"you may discard that card", d, re.I):
+            want_dest = "discard"
         got_dest = "hand"
         for i, x in enumerate(parts):
             if x == "dest" and i + 1 < len(parts):
@@ -506,17 +522,38 @@ def audit_recon_top(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面去向是 `{want_dest}`，"
                         f"`{t}` 却是 `{got_dest}`")
         want_rest = "shuffle"
-        if re.search(r"put them on the bottom of your deck", d, re.I):
+        # 同理：`shuffle_bottom`（只洗余牌再放底）必须在 `bottom` 之前判。
+        if re.search(r"shuffle the other cards and put them on the bottom", d, re.I):
+            want_rest = "shuffle_bottom"
+        elif re.search(r"put them on the bottom of your deck", d, re.I):
             want_rest = "bottom"
         elif re.search(r"discard the other cards", d, re.I):
             want_rest = "discard"
+        elif not re.search(r"shuffle", d, re.I):
+            # 卡面**完全没有**洗牌句（Morpeko / Rockruff / Litwick 的「看顶 1 张、
+            # 可弃」）→ 不得洗牌。写成 `shuffle` 会顺手重洗整副牌库。
+            want_rest = "none"
         got_rest = "shuffle"
         for i, x in enumerate(parts):
             if x == "rest" and i + 1 < len(parts):
                 got_rest = parts[i + 1]
-        if got_rest != want_rest:
+        # 「shuffle the other cards and put them on the bottom」用 `bottom`（不洗余牌、
+        # 保持原序放底）是**已知的精度差异**，不是方向性错误：两者都把余牌放到
+        # 牌库底部，区别只在余牌之间的相对顺序 → 不报错（避免把已验收的卡打回）。
+        _rest_ok = got_rest == want_rest or (
+            want_rest == "shuffle_bottom" and got_rest == "bottom")
+        if not _rest_ok:
             errs.append(f"{card_name} · {item_name}：余牌去向应是 `{want_rest}`，"
                         f"`{t}` 却是 `{got_rest}`")
+        # K：卡面「any number of … you find there」= 取全部匹配（tag 里是 `all`）；
+        # 写成固定张数会**凭空限制**取牌数量（少拿 = 静默削弱）。
+        if re.search(r"any number of", d, re.I):
+            if len(parts) > 2 and parts[2] != "all":
+                errs.append(f"{card_name} · {item_name}：卡面是「any number of」，"
+                            f"`{t}` 却写成固定张数 `{parts[2]}`")
+        elif len(parts) > 2 and parts[2] == "all":
+            errs.append(f"{card_name} · {item_name}：卡面无「any number of」，"
+                        f"`{t}` 却取全部（`all`）")
     return errs
 
 

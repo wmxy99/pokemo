@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 09:37:51",
+  "reparsed_at": "2026-11-02 09:55:41",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 999,
+  "engine_ready": 1005,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 999,
-   "engine_approximated": 984,
-   "engine_unmatched": 268,
-   "engine_namekey_mismatch": 40
+   "zh_backfill": 1005,
+   "engine_approximated": 990,
+   "engine_unmatched": 262,
+   "engine_namekey_mismatch": 38
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 108,
-   "engine_tags": 1343,
-   "unsupported": 254,
+   "errors": 119,
+   "engine_tags": 1349,
+   "unsupported": 248,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 984,
+  "engine_approximated": 990,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -3971,14 +3971,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Morpeko@TWM 72",
    "parse": {
     "items": [
      {
@@ -4020,35 +4022,34 @@
        {
         "kind": "ability",
         "name": "Snack Seek",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": 1,
+          "target": "discard",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 1,
+           "max": 1,
+           "sel": "any",
+           "dest": "discard",
+           "rest": "none",
+           "gate": null
           }
          }
         ],
-        "source_text": "Once during your turn, you may look at the top card of your deck. You may discard that card."
+        "source_text": "Once during your turn, you may look at the top card of your deck. You may discard that card.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:1:1:any:dest:discard:rest:none"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -4076,37 +4077,35 @@
      {
       "kind": "ability",
       "name": "Snack Seek",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": 1,
+        "target": "discard",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 1,
+         "max": 1,
+         "sel": "any",
+         "dest": "discard",
+         "rest": "none",
+         "gate": null
         }
        }
       ],
-      "source_text": "Once during your turn, you may look at the top card of your deck. You may discard that card."
+      "source_text": "Once during your turn, you may look at the top card of your deck. You may discard that card.",
+      "citations": []
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：recon"
+    ],
     "engine_tags": [
-     "attach_spread:2:any:discard"
+     "attach_spread:2:any:discard",
+     "recon:1:1:any:dest:discard:rest:none"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -11389,14 +11388,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Metang@TEF 114",
    "parse": {
     "items": [
      {
@@ -11406,70 +11407,72 @@
        {
         "kind": "ability",
         "name": "Metal Maker",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": "all",
+          "target": "attach_spread",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 4,
+           "max": "all",
+           "sel": "basic_energy-metal",
+           "dest": "attach_spread",
+           "rest": "shuffle_bottom",
+           "gate": null
           }
          }
         ],
-        "source_text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of your deck."
+        "source_text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon",
+       "[0] action.target 非法：attach_spread",
+       "[0] action.amount 应为整数（HP 计）：'all'"
+      ],
+      "engine_tags": [
+       "recon:4:all:basic_energy-metal:dest:attach_spread:rest:shuffle_bottom"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Metal Maker",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": "all",
+        "target": "attach_spread",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 4,
+         "max": "all",
+         "sel": "basic_energy-metal",
+         "dest": "attach_spread",
+         "rest": "shuffle_bottom",
+         "gate": null
         }
        }
       ],
-      "source_text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of your deck."
+      "source_text": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon",
+     "[0] action.target 非法：attach_spread",
+     "[0] action.amount 应为整数（HP 计）：'all'"
     ],
+    "engine_tags": [
+     "recon:4:all:basic_energy-metal:dest:attach_spread:rest:shuffle_bottom"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -21856,14 +21859,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Lapras ex@SCR 32",
    "parse": {
     "items": [
      {
@@ -21912,25 +21917,32 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": "all",
+          "target": "attach_spread",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 20,
+           "max": "all",
+           "sel": "energy",
+           "dest": "attach_spread",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon",
+       "[0] action.target 非法：attach_spread",
+       "[0] action.amount 应为整数（HP 计）：'all'"
+      ],
+      "engine_tags": [
+       "recon:20:all:energy:dest:attach_spread"
+      ],
+      "unsupported": []
      },
      {
       "target": "card",
@@ -21993,15 +22005,21 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": "all",
+        "target": "attach_spread",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 20,
+         "max": "all",
+         "sel": "energy",
+         "dest": "attach_spread",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 20 cards of your deck and attach any number of Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.",
+      "citations": []
      },
      {
       "kind": "rule",
@@ -22021,17 +22039,17 @@
       "source_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：recon",
+     "[0] action.target 非法：attach_spread",
+     "[0] action.amount 应为整数（HP 计）：'all'"
+    ],
     "engine_tags": [
      "dmg_set:40:per:own_active_energy",
+     "recon:20:all:energy:dest:attach_spread",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -33351,14 +33369,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Tatsugiri ex@SSP 142",
    "parse": {
     "items": [
      {
@@ -33400,25 +33420,31 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": "all",
+          "target": "bench",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 10,
+           "max": "all",
+           "sel": "pokemon",
+           "dest": "bench",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 10 cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 10 cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon",
+       "[0] action.amount 应为整数（HP 计）：'all'"
+      ],
+      "engine_tags": [
+       "recon:10:all:pokemon:dest:bench"
+      ],
+      "unsupported": []
      },
      {
       "target": "card",
@@ -33474,15 +33500,21 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": "all",
+        "target": "bench",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 10,
+         "max": "all",
+         "sel": "pokemon",
+         "dest": "bench",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 10 cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 10 cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck.",
+      "citations": []
      },
      {
       "kind": "rule",
@@ -33502,17 +33534,16 @@
       "source_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：recon",
+     "[0] action.amount 应为整数（HP 计）：'all'"
+    ],
     "engine_tags": [
      "ignore_effects",
+     "recon:10:all:pokemon:dest:bench",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -41252,14 +41283,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Rockruff@JTG 84",
    "parse": {
     "items": [
      {
@@ -41273,25 +41306,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": 1,
+          "target": "discard",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 1,
+           "max": 1,
+           "sel": "any",
+           "dest": "discard",
+           "rest": "none",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top card of your deck. You may discard that card."
+        "source_text": "Look at the top card of your deck. You may discard that card.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:1:1:any:dest:discard:rest:none"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -41302,25 +41340,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": 1,
+        "target": "discard",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 1,
+         "max": 1,
+         "sel": "any",
+         "dest": "discard",
+         "rest": "none",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top card of your deck. You may discard that card."
+      "source_text": "Look at the top card of your deck. You may discard that card.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:1:1:any:dest:discard:rest:none"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -67954,14 +67997,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Litwick@WHT 16",
    "parse": {
     "items": [
      {
@@ -67975,25 +68020,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "recon",
+          "amount": 1,
+          "target": "discard",
           "extra": {
-           "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+           "look_top": 1,
+           "max": 1,
+           "sel": "any",
+           "dest": "discard",
+           "rest": "none",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top card of your deck. You may discard that card."
+        "source_text": "Look at the top card of your deck. You may discard that card.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：recon"
+      ],
+      "engine_tags": [
+       "recon:1:1:any:dest:discard:rest:none"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -68004,25 +68054,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "recon",
+        "amount": 1,
+        "target": "discard",
         "extra": {
-         "note": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
+         "look_top": 1,
+         "max": 1,
+         "sel": "any",
+         "dest": "discard",
+         "rest": "none",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top card of your deck. You may discard that card."
+      "source_text": "Look at the top card of your deck. You may discard that card.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon"
     ],
+    "engine_tags": [
+     "recon:1:1:any:dest:discard:rest:none"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

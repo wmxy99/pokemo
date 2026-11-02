@@ -143,12 +143,18 @@ class TestReconTopNegative(unittest.TestCase):
         self.assertEqual([t for t in got["tags"] if t.startswith("recon:")], [])
         self.assertTrue(got["unsupported"])
 
-    def test_discard_destination_still_unmodeled(self):
-        # 「You may discard that card」（Morpeko / Rockruff / Litwick）未经本批实现
+    def test_discard_destination_now_modeled(self):
+        """「You may discard that card」（Morpeko / Rockruff / Litwick）
+
+        2026-11-02 第三十五批：`dest:discard` 已实现（取中那张进弃牌堆）。
+        ⚠ `rest:none` 是**必须**的：卡面没有洗牌句，用 `shuffle` 会顺手重洗
+          整副牌库。「may discard」在无交互引擎里取确定性默认（弃）。
+        """
         got = _tags("Once during your turn, you may look at the top card of "
                     "your deck. You may discard that card.", kind="ability")
-        self.assertEqual(got["tags"], [])
-        self.assertTrue(got["unsupported"])
+        self.assertEqual(got["tags"],
+                         ["recon:1:1:any:dest:discard:rest:none"])
+        self.assertFalse(got["unsupported"])
 
     def test_k_greater_than_n_rejected(self):
         bad = HASSEL.replace("up to 3 of them", "up to 9 of them")

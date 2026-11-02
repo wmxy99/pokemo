@@ -97,8 +97,13 @@ ATTACK_TAG_PREFIXES = (
     # 跨回合锁定（2026-10-27）：攻击封锁 / 撤退封锁 / 手牌禁打
     "attack_lock:", "retreat_lock:", "play_lock:",
     # 招式侧全牌库检索（2026-10-27）——语义与特性侧一致（检索入手）。
-    # ⚠ 不等于 `recon:`（检视牌库顶 N 取 1）也不等于「检索后铺场/附着」。
+    # ⚠ 不等于「检索后铺场/附着」。
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",
+    # 第二十五批之二（2026-11-02）：招式侧「检视牌库顶」（Lapras ex SCR 32 的
+    # `recon:20:all:energy:dest:attach_spread`）。**只放通扩展口径**：旧口径
+    # `recon:<N>` 是「随机取 1 入手」，招式侧不适用 —— 解析侧已有守卫
+    # （非特性侧的 `look_top` 未精确识别一律 unsupported），不会漏进来。
+    "recon:",
     # 检索**铺场**（2026-10-27）
     "search_bench:",
     # B3（2026-10-28）：双方同抽 / 对手洗回手牌后抽 / 带类型手牌弃能（含失败门）

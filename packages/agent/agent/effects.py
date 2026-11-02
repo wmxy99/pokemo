@@ -53,7 +53,11 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # 附着能量收回手牌（2026-10-29 第二十三批）：引擎 `bounce:energy:`
                 "bounce",
                 # fx 效果族（2026-10-27 起）：解析侧产出、引擎 engine/families/fx_*.py 执行
-                "fx")
+                "fx",
+                # 检索能量自由分配附着（2026-10-30 第三十三批）：引擎
+                # `attach_spread:...` 已执行；漏登记会让解析数据一直带着
+                # 「action.type 非法」的假错误（同 counters 那次）
+                "attach_spread")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -692,6 +696,89 @@ def _detect_recon_top(t: str) -> Optional[dict]:
             gate = None                 # 卡面没写这句前置条件 → 不得凭空加上
         return {"look_top": _n, "max": _k, "sel": sel, "dest": meta["dest"],
                 "rest": meta["rest"], "gate": gate}
+    return None
+
+
+# ---------------- 检索能量并自由分配附着（2026-10-30 第三十三批） ----------------
+# 卡面原型：「Search your deck for up to 3 Basic Energy cards and attach them to
+# your Pokémon **in any way you like**. Then, shuffle your deck.」
+# 引擎原有的 `attach` 只能附给**单一**目标，而这一族允许把多张分给多只，
+# 此前整族落到「检索附能需自行分配目标（B4）」被拒。
+_ATTACH_SPREAD_TAIL = r"[.]?\s*then,?\s*shuffle your deck[.]?$"
+_ATTACH_SPREAD_SIMPLE = re.compile(
+    r"search your deck for up to (\d+) basic (?:[{]([a-z])[}] )?energy cards? "
+    r"and attach them to your (.+?) in any way you like" + _ATTACH_SPREAD_TAIL)
+# 双属性双限额（Joltik SCR 50：up to 2 Basic {G} + up to 2 Basic {L}）
+_ATTACH_SPREAD_DUAL = re.compile(
+    r"search your deck for up to (\d+) basic [{]([a-z])[}] energy cards? and "
+    r"up to (\d+) basic [{]([a-z])[}] energy cards? and attach them to your "
+    r"pok[eé]mon in any way you like" + _ATTACH_SPREAD_TAIL)
+# 「从手牌 / 弃牌堆」形态（Mesprit SSP 79）：以 Attach 起首、无「then shuffle」
+_ATTACH_SPREAD_FROM_ZONE = re.compile(
+    r"attach up to (\d+) basic (?:[{]([a-z])[}] )?energy cards from your "
+    r"(hand|discard pile) to your (.+?) in any way you like[.]?$")
+# 「your Marnie's Pokémon」这类**训练家专属**限定：category 形如
+# 「Trainer's Pokémon(Marnie)」，故按专属名做子串匹配
+_ATTACH_SPREAD_OWNED = re.compile(r"^([a-z\u2019']+)['\u2019]s pok[eé]mon$")
+
+
+def _spread_scope_of(phrase: str) -> Optional[str]:
+    """目标短语 → ``attach_spread`` 的 scope（认不出返回 None，绝不猜）"""
+    ph = str(phrase or "").strip().lower()
+    if ph in ("pok\u00e9mon", "pokemon"):
+        return "any"
+    if ph in ("benched pok\u00e9mon", "benched pokemon"):
+        return "bench"
+    if ph in ("future pok\u00e9mon", "future pokemon"):
+        return "cat-future"
+    m = _ATTACH_SPREAD_OWNED.match(ph)
+    if m:
+        return f"cat-{m.group(1)}"
+    return None                   # 未知限定（Tera 等）→ 不认领
+
+
+def _detect_attach_spread(t: str) -> Optional[list]:
+    """整句识别「检索 N 张基本能量并自由分配附着」→ spec 列表；认不出返回 None
+
+    返回 ``[{"n": int, "etype": str|None, "zone": "deck", "scope": str}, ...]``
+    ——Joltik 这种双属性双限额会返回**两条**（各自独立取）。
+    """
+    t = _norm_prose(t)
+    m = _ATTACH_SPREAD_DUAL.match(t)
+    if m:
+        # 卡面只写「to your Pokémon」，双色形态没有其它限定
+        out = []
+        for n, c in ((int(m.group(1)), m.group(2)), (int(m.group(3)), m.group(4))):
+            et = _EN_ENERGY_LETTER.get(str(c).upper())
+            if et is None:
+                return None           # 属性符号不认识 → 不猜
+            out.append({"n": n, "etype": et, "zone": "deck", "scope": "any"})
+        return out
+    m = _ATTACH_SPREAD_SIMPLE.match(t)
+    if m:
+        scope = _spread_scope_of(m.group(3))
+        if scope is None:
+            return None
+        et = None
+        if m.group(2):
+            et = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+            if et is None:
+                return None
+        return [{"n": int(m.group(1)), "etype": et, "zone": "deck",
+                 "scope": scope}]
+    m = _ATTACH_SPREAD_FROM_ZONE.match(t)
+    if m:
+        scope = _spread_scope_of(m.group(4))
+        if scope is None:
+            return None
+        et = None
+        if m.group(2):
+            et = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+            if et is None:
+                return None
+        zone = "discard" if "discard" in m.group(3).lower() else "hand"
+        return [{"n": int(m.group(1)), "etype": et, "zone": zone,
+                 "scope": scope}]
     return None
 
 
@@ -2562,6 +2649,21 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                     "actions": [act("opp_hand", None, "opponent_hand", _oh)],
                     "source_text": str(text or ""), "citations": []}
 
+    # 检索能量并**自由分配**附着（2026-10-30 第三十三批）：整段认领。
+    # 必须排在通用检索分支之前 —— 那一支会把「attach them to …」当成检索**入手**，
+    # 少执行一步附着（手牌凭空多 N 张能量，场上一个都没加速）。
+    # ⚠ 本批**只对招式开放**：同族还有特性形态（Marnie's Grimmsnarl ex 的
+    # on_evolve 触发），那条路要先包成 `evolve_act:attach_spread:…` 才能被引擎
+    # 的进化触发链执行；直接产出本 tag 会「进池但特性不生效」，故先不认领。
+    if kind == "attack":
+        _as = _detect_attach_spread(t)
+        if _as:
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("attach_spread", _s["n"], "self", _s)
+                                for _s in _as],
+                    "source_text": str(text or ""), "citations": []}
+
     # 检视牌库顶 → 筛选 → 入手/铺场/附着（2026-10-30 第二十批）：整段认领。
     # 必须排在通用 `_EN_SEARCH_TOP_RE` 分支之前 —— 那一支只认「入手」去向，
     # 其它去向会落成 `rule` 拒绝；而「入手」那一支又完全不看筛选词（会把
@@ -2642,7 +2744,16 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             # 必须把「后备」写进 tag（Leafeon「Leaflet Blessings」）。
             if re.search(r"to 1 of your benched", lower):
                 extra["target_scope"] = "bench"
-            actions.append(act("attach", amt, "self", extra or None))
+            if re.search(r"in any way you like", _norm_prose(t)):
+                # 「in any way you like」= **自由分配**，语义是「多张分给多只」。
+                # 没被上面的 `attach_spread` 精确认领就说明句式不在本批覆盖范围内
+                # （典型：Magneton SSP 59 还带「If you use this Ability, this
+                # Pokémon is Knocked Out」代价）——此时若落成单手 `attach`，
+                # 会变成「全给一只 + 不付代价」，比未建模更糟。故如实拒绝。
+                actions.append(act("rule", None, "any",
+                                   {"note": "自由分配附着（句式未精确识别，B4）"}))
+            else:
+                actions.append(act("attach", amt, "self", extra or None))
 
     for word, tag in _EN_STATUS:
         if word in lower:
@@ -6124,6 +6235,24 @@ def to_engine_tags(specs: list) -> dict:
                         _tag += ":all"
                     elif int(_n) != 1:
                         _tag += f":{int(_n)}"
+                    tags.append(_tag)
+            elif t == "attach_spread":
+                # 检索能量并自由分配附着（2026-10-30 第三十三批）：
+                # `attach_spread:<n>:<etype>:<zone>[:target:<scope>]`
+                _n = extra.get("n")
+                _zone = str(extra.get("zone") or "deck")
+                _scope = str(extra.get("scope") or "any")
+                if not isinstance(_n, int) or _n < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"附能张数未识别：{_n}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    _et = str(extra.get("etype") or "any")
+                    _tag = f"attach_spread:{_n}:{_et}:{_zone}"
+                    if _scope != "any":
+                        _tag += f":target:{_scope}"
                     tags.append(_tag)
             elif t == "recon":
                 # 检视牌库顶（2026-10-30 第二十批）：

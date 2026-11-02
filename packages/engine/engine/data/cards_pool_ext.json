@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 964,
+      "kept": 967,
       "by_Energy": 19,
-      "by_Pokemon": 830,
+      "by_Pokemon": 833,
       "by_Trainer": 115,
       "skipped": {
-        "存在未建模项（整卡不收）": 244,
+        "存在未建模项（整卡不收）": 241,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 35,
         "Trainer 不可执行": 9
@@ -2858,6 +2858,60 @@
       "uid": "Beldum@TEF 113"
     },
     {
+      "name": "Miraidon",
+      "name_zh": "密勒顿",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Future",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Peak Acceleration",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 40,
+          "effects": [
+            "attach_spread:2:any:deck:target:cat-future"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "极限加速",
+          "desc_zh": "从牌库中检索至多 2 张基本能量卡，并以你喜欢的方式将它们附着于你的未来宝可梦。然后洗牌。"
+        },
+        {
+          "name": "Sparking Strike",
+          "cost": {
+            "lightning": 2,
+            "psychic": 1
+          },
+          "damage": 160,
+          "effects": [],
+          "desc": "",
+          "name_zh": "电光打击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "121"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 87,
+      "name_key": "miraidon",
+      "uid": "Miraidon@TEF 121"
+    },
+    {
       "name": "Volbeat",
       "name_zh": "电萤虫",
       "supertype": "Pokemon",
@@ -4960,6 +5014,49 @@
       "uid": "Drednaw@SCR 44"
     },
     {
+      "name": "Joltik",
+      "name_zh": "电电虫",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 30,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Jolting Charge",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_spread:2:grass:deck",
+            "attach_spread:2:lightning:deck"
+          ],
+          "desc": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "电击充能",
+          "desc_zh": "从牌库中检索最多 2 张基本 {G} 能量卡和最多 2 张基本 {L} 能量卡，以任意方式附着于自己的宝可梦。然后洗牌。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SCR",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 160,
+      "name_key": "joltik",
+      "uid": "Joltik@SCR 50"
+    },
+    {
       "name": "Slowpoke",
       "name_zh": "呆呆兽",
       "supertype": "Pokemon",
@@ -6070,6 +6167,62 @@
       "uid": "Iron Crown@SSP 132"
     },
     {
+      "name": "Altaria",
+      "name_zh": "七夕青鸟",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Swablu",
+      "attacks": [
+        {
+          "name": "Humming Charge",
+          "cost": {
+            "water": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_spread:2:any:deck"
+          ],
+          "desc": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "哼唱充能",
+          "desc_zh": "从牌库中检索最多 2 张基本能量卡，以任意方式附着于自己的宝可梦。然后洗牌。"
+        },
+        {
+          "name": "Cotton Wings",
+          "cost": {
+            "water": 1,
+            "metal": 1
+          },
+          "damage": 100,
+          "effects": [
+            "coin:heads:shield:prevent_all"
+          ],
+          "desc": "Flip a coin. If heads, during your opponent’s next turn, prevent all damage done to this Pokémon by attacks.",
+          "name_zh": "棉花之翼",
+          "desc_zh": "抛硬币。若为正面，在对手的下个回合中，防止招式对此宝可梦造成的所有伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "134"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 194,
+      "name_key": "altaria",
+      "uid": "Altaria@SSP 134"
+    },
+    {
       "name": "Turtonator",
       "name_zh": "爆焰龟兽",
       "supertype": "Pokemon",
@@ -6660,56 +6813,6 @@
       "uid": "Chien-Pao@SSP 56"
     },
     {
-      "name": "Magneton",
-      "name_zh": "三合一磁怪",
-      "supertype": "Pokemon",
-      "stage": 1,
-      "hp": 100,
-      "types": [
-        "lightning"
-      ],
-      "weakness": "fighting",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "is_mega": false,
-      "category": "",
-      "evolves_from": "Magnemite",
-      "attacks": [
-        {
-          "name": "Electric Ball",
-          "cost": {
-            "lightning": 1,
-            "colorless": 1
-          },
-          "damage": 40,
-          "effects": [],
-          "desc": "",
-          "name_zh": "电球",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Overvolt Discharge",
-          "name_zh": "过载放电",
-          "tag": "attach_energy:3:discard",
-          "location": "field",
-          "desc": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中以任意方式把最多 3 张基本能量卡附着于自己的 {L} 宝可梦。若你使用此特性，则此宝可梦被击倒。"
-        }
-      ],
-      "real": {
-        "set": "SSP",
-        "number": "59"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 211,
-      "name_key": "magneton",
-      "uid": "Magneton@SSP 59"
-    },
-    {
       "name": "Rotom",
       "name_zh": "洛托姆",
       "supertype": "Pokemon",
@@ -6935,7 +7038,7 @@
           },
           "damage": 0,
           "effects": [
-            "attach:2:psychic:hand"
+            "attach_spread:2:psychic:hand"
           ],
           "desc": "Attach up to 2 Basic {P} Energy cards from your hand to your Pokémon in any way you like.",
           "name_zh": "全心",
@@ -20626,6 +20729,61 @@
       "source_card_id": 560,
       "name_key": "cottonee",
       "uid": "Cottonee@WHT 4"
+    },
+    {
+      "name": "Whimsicott ex",
+      "name_zh": "风妖精 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 230,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Cottonee",
+      "attacks": [
+        {
+          "name": "Energy Gift",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_spread:3:any:deck"
+          ],
+          "desc": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "能量礼物",
+          "desc_zh": "从牌库中检索最多 3 张基本能量卡，并按自己的意愿附着于你的宝可梦。然后洗牌。"
+        },
+        {
+          "name": "Wondrous Cotton",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_set:50:per:opp_hand_kind:trainer"
+          ],
+          "desc": "Your opponent reveals their hand. This attack does 50 damage for each Trainer card you find there.",
+          "name_zh": "奇妙棉花",
+          "desc_zh": "对手展示其手牌。其中每有 1 张训练家卡，此招式造成 50 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "WHT",
+        "number": "5"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 561,
+      "name_key": "whimsicottex",
+      "uid": "Whimsicott ex@WHT 5"
     },
     {
       "name": "Deerling",

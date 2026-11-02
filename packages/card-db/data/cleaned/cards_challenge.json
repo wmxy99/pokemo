@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-10-30 17:26:03",
+  "reparsed_at": "2026-11-02 09:23:36",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 979,
+  "engine_ready": 982,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 979,
-   "engine_approximated": 964,
-   "engine_unmatched": 288,
+   "zh_backfill": 982,
+   "engine_approximated": 967,
+   "engine_unmatched": 285,
    "engine_namekey_mismatch": 40
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 108,
-   "engine_tags": 1340,
-   "unsupported": 253,
+   "engine_tags": 1343,
+   "unsupported": 251,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 964,
+  "engine_approximated": 967,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -3992,20 +3992,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
+          "type": "attach_spread",
           "amount": 2,
           "target": "self",
           "extra": {
-           "zone": "discard"
+           "n": 2,
+           "etype": null,
+           "zone": "discard",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Attach up to 2 Basic Energy cards from your discard pile to your Pokémon in any way you like."
+        "source_text": "Attach up to 2 Basic Energy cards from your discard pile to your Pokémon in any way you like.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach:2:discard"
+       "attach_spread:2:any:discard"
       ],
       "unsupported": []
      },
@@ -4055,15 +4059,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
+        "type": "attach_spread",
         "amount": 2,
         "target": "self",
         "extra": {
-         "zone": "discard"
+         "n": 2,
+         "etype": null,
+         "zone": "discard",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Attach up to 2 Basic Energy cards from your discard pile to your Pokémon in any way you like."
+      "source_text": "Attach up to 2 Basic Energy cards from your discard pile to your Pokémon in any way you like.",
+      "citations": []
      },
      {
       "kind": "ability",
@@ -4091,7 +4099,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "attach:2:discard"
+     "attach_spread:2:any:discard"
     ],
     "unsupported": [
      {
@@ -11522,14 +11530,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Miraidon@TEF 121",
    "parse": {
     "items": [
      {
@@ -11543,25 +11553,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 2,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 2,
+           "etype": null,
+           "zone": "deck",
+           "scope": "cat-future"
           }
          }
         ],
-        "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:2:any:deck:target:cat-future"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -11572,25 +11583,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 2,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 2,
+         "etype": null,
+         "zone": "deck",
+         "scope": "cat-future"
         }
        }
       ],
-      "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
+    "engine_tags": [
+     "attach_spread:2:any:deck:target:cat-future"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -22756,14 +22768,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Joltik@SCR 50",
    "parse": {
     "items": [
      {
@@ -22777,25 +22791,38 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 2,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 2,
+           "etype": "grass",
+           "zone": "deck",
+           "scope": "any"
+          }
+         },
+         {
+          "type": "attach_spread",
+          "amount": 2,
+          "target": "self",
+          "extra": {
+           "n": 2,
+           "etype": "lightning",
+           "zone": "deck",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:2:grass:deck",
+       "attach_spread:2:lightning:deck"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -22806,25 +22833,38 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 2,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 2,
+         "etype": "grass",
+         "zone": "deck",
+         "scope": "any"
+        }
+       },
+       {
+        "type": "attach_spread",
+        "amount": 2,
+        "target": "self",
+        "extra": {
+         "n": 2,
+         "etype": "lightning",
+         "zone": "deck",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
+    "engine_tags": [
+     "attach_spread:2:grass:deck",
+     "attach_spread:2:lightning:deck"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -27292,12 +27332,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
-          "amount": 2,
-          "target": "self",
+          "type": "rule",
+          "amount": null,
+          "target": "any",
           "extra": {
-           "energy_type": "metal",
-           "zone": "hand"
+           "note": "自由分配附着（句式未精确识别，B4）"
           }
          }
         ],
@@ -27305,10 +27344,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "evolve_attach:2:metal:hand"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "自由分配附着（句式未精确识别，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -27336,12 +27378,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
-        "amount": 2,
-        "target": "self",
+        "type": "rule",
+        "amount": null,
+        "target": "any",
         "extra": {
-         "energy_type": "metal",
-         "zone": "hand"
+         "note": "自由分配附着（句式未精确识别，B4）"
         }
        }
       ],
@@ -27349,13 +27390,15 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "evolve_attach:2:metal:hand"
-    ],
+    "engine_tags": [],
     "unsupported": [
      {
       "type": "rule",
       "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
+     },
+     {
+      "type": "rule",
+      "reason": "自由分配附着（句式未精确识别，B4）"
      }
     ],
     "generated_by": "rule",
@@ -27967,14 +28010,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Altaria@SSP 134",
    "parse": {
     "items": [
      {
@@ -27988,25 +28033,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 2,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 2,
+           "etype": null,
+           "zone": "deck",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:2:any:deck"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -28047,15 +28093,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 2,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 2,
+         "etype": null,
+         "zone": "deck",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -28079,14 +28129,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "attach_spread:2:any:deck",
      "coin:heads:shield:prevent_all"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -30372,16 +30418,14 @@
     }
    ],
    "other_text": null,
-   "engine_ready": true,
+   "engine_ready": false,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "approximated",
-   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_status": "unmatched",
+   "engine_note": "引擎卡池未收录",
    "other_text_zh": "",
    "rule_zh": "",
-   "engine_match": "set:number",
-   "engine_uid": "Magneton@SSP 59",
    "parse": {
     "items": [
      {
@@ -30401,11 +30445,11 @@
         ],
         "actions": [
          {
-          "type": "attach",
-          "amount": 3,
-          "target": "self",
+          "type": "rule",
+          "amount": null,
+          "target": "any",
           "extra": {
-           "zone": "discard"
+           "note": "自由分配附着（句式未精确识别，B4）"
           }
          }
         ],
@@ -30413,10 +30457,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "attach_energy:3:discard"
-      ],
-      "unsupported": []
+      "engine_tags": [],
+      "unsupported": [
+       {
+        "type": "rule",
+        "reason": "自由分配附着（句式未精确识别，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -30433,11 +30480,11 @@
       ],
       "actions": [
        {
-        "type": "attach",
-        "amount": 3,
-        "target": "self",
+        "type": "rule",
+        "amount": null,
+        "target": "any",
         "extra": {
-         "zone": "discard"
+         "note": "自由分配附着（句式未精确识别，B4）"
         }
        }
       ],
@@ -30445,10 +30492,13 @@
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "attach_energy:3:discard"
+    "engine_tags": [],
+    "unsupported": [
+     {
+      "type": "rule",
+      "reason": "自由分配附着（句式未精确识别，B4）"
+     }
     ],
-    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -31130,21 +31180,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
+          "type": "attach_spread",
           "amount": 2,
           "target": "self",
           "extra": {
-           "energy_type": "psychic",
-           "zone": "hand"
+           "n": 2,
+           "etype": "psychic",
+           "zone": "hand",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Attach up to 2 Basic {P} Energy cards from your hand to your Pokémon in any way you like."
+        "source_text": "Attach up to 2 Basic {P} Energy cards from your hand to your Pokémon in any way you like.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach:2:psychic:hand"
+       "attach_spread:2:psychic:hand"
       ],
       "unsupported": []
      },
@@ -31185,16 +31238,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
+        "type": "attach_spread",
         "amount": 2,
         "target": "self",
         "extra": {
-         "energy_type": "psychic",
-         "zone": "hand"
+         "n": 2,
+         "etype": "psychic",
+         "zone": "hand",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Attach up to 2 Basic {P} Energy cards from your hand to your Pokémon in any way you like."
+      "source_text": "Attach up to 2 Basic {P} Energy cards from your hand to your Pokémon in any way you like.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -31216,7 +31272,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "attach:2:psychic:hand",
+     "attach_spread:2:psychic:hand",
      "nullify_if:not:own_bench_named_all:uxie+azelf"
     ],
     "unsupported": [],
@@ -76945,14 +77001,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Whimsicott ex@WHT 5",
    "parse": {
     "items": [
      {
@@ -76966,25 +77024,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 3,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 3,
+           "etype": null,
+           "zone": "deck",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:3:any:deck"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -77030,15 +77089,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 3,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 3,
+         "etype": null,
+         "zone": "deck",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -77067,14 +77130,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "attach_spread:3:any:deck",
      "dmg_set:50:per:opp_hand_kind:trainer"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -89894,20 +89953,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 3,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 3,
+           "etype": null,
+           "zone": "deck",
+           "scope": "bench"
           }
          }
         ],
-        "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach:3:deck:target:bench"
+       "attach_spread:3:any:deck:target:bench"
       ],
       "unsupported": []
      },
@@ -89951,15 +90014,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 3,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 3,
+         "etype": null,
+         "zone": "deck",
+         "scope": "bench"
         }
        }
       ],
-      "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "ability",
@@ -89981,7 +90048,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "attach:3:deck:target:bench"
+     "attach_spread:3:any:deck:target:bench"
     ],
     "unsupported": [
      {
@@ -91290,21 +91357,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
+          "type": "attach_spread",
           "amount": 3,
           "target": "self",
           "extra": {
-           "energy_type": "fighting",
-           "zone": "discard"
+           "n": 3,
+           "etype": "fighting",
+           "zone": "discard",
+           "scope": "bench"
           }
          }
         ],
-        "source_text": "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like."
+        "source_text": "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach:3:fighting:discard"
+       "attach_spread:3:fighting:discard:target:bench"
       ],
       "unsupported": []
      },
@@ -91349,16 +91419,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
+        "type": "attach_spread",
         "amount": 3,
         "target": "self",
         "extra": {
-         "energy_type": "fighting",
-         "zone": "discard"
+         "n": 3,
+         "etype": "fighting",
+         "zone": "discard",
+         "scope": "bench"
         }
        }
       ],
-      "source_text": "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like."
+      "source_text": "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -91384,7 +91457,7 @@
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attach:3:fighting:discard",
+     "attach_spread:3:fighting:discard:target:bench",
      "attack_lock:name:turn:Mega Brave"
     ],
     "unsupported": [],

@@ -318,6 +318,36 @@ class TestPoolTagVocabulary(unittest.TestCase):
                     bad.append(f"{name} · {item}：{tag}（{e}）")
         self.assertEqual(bad, [], "opp_hand: tag 形态非法：\n" + "\n".join(bad))
 
+    def test_attach_spread_tag_shapes(self):
+        """`attach_spread:` 的 n / etype / zone / scope 必须都能被引擎解析（第三十三批）
+
+        这条守卫专门防**前缀吞噬**造成的静默失效：`attach_spread:3:any:deck`
+        若被 `startswith("attach")` 分支接走，`_parse_attach_tag` 会把 `spread`
+        当能量属性名 → 一张都取不到。参数本身也会错（`zone:trash`、
+        `target:nonsense`），故逐个走真实解析入口。
+        """
+        from engine.battle import (_parse_attach_spread_tag, _spread_targets)
+        from engine.cards import PokemonDef, make_pokemon
+        from engine.state import GameConfig, PlayerState
+
+        cfg = GameConfig()
+        p = PlayerState(name="A", prizes_left=cfg.prizes)
+        p.active = make_pokemon(PokemonDef("a", hp=10, ptype="colorless"))
+        bad = []
+        for name, item, tag in self._iter_tags():
+            if not tag.startswith("attach_spread:"):
+                continue
+            try:
+                _n, _et, _zone, scope = _parse_attach_spread_tag(tag)
+            except ValueError as e:
+                bad.append(f"{name} · {item}：{tag}（{e}）")
+                continue
+            try:
+                _spread_targets(p, scope)
+            except ValueError as e:
+                bad.append(f"{name} · {item}：{tag}（{e}）")
+        self.assertEqual(bad, [], "attach_spread: tag 形态非法：\n" + "\n".join(bad))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -66,11 +66,21 @@ class TestAttachTargetParse(unittest.TestCase):
             ["attach:1:deck:target:bench_type:grass:anyenergy"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_distribution_still_unmodeled(self):
-        """「in any way you like」要玩家分配 → 必须保持未建模"""
+    def test_distribution_now_mapped(self):
+        """「in any way you like」—— **2026-10-30 第三十三批起改为映射**
+
+        此前这里断言「要玩家分配 → 必须保持未建模」。现在引擎侧提供两条通道：
+        动作可带 ``attach_plan`` 显式指定落点，缺省按 **round-robin**
+        （active → bench 顺序）确定分配 —— 与 `snipe` / `opp_hand` 同一口径
+        （「choose 类缺省取确定性默认，绝不静默不生效」）。
+
+        ⚠ 近似性质要披露：确定性默认**不等于**最优分配。所以同族里句式只要
+        多一个未建模的修饰（如 Terapagos 的「of different types」、Magneton 的
+        自爆代价）就仍然如实拒绝，绝不因为「能分配了」就放行。
+        """
         r = _tags(ALTARIA, kind="attack")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["attach_spread:2:any:deck"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestEnergyToHandParse(unittest.TestCase):

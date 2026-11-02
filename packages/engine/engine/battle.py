@@ -1323,6 +1323,13 @@ class Battle:
                 if dst.is_ko:
                     self._resolve_ko(1 - self.current, dst)
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("attach_spread:"):
+                # 多张自由分配附着（2026-10-30 第三十三批）：排在
+                # `attach_energy:` 之前，避免被同前缀分支吞掉
+                detail = self._do_attach_spread(p, tag, action)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("attach_energy:"):
                 # 附能（如「碧绿之舞」从手牌 / 「火焰之舞」从弃牌堆附 n 个指定色能量）
                 n, etype, zone = _parse_attach_tag(tag)
@@ -1691,6 +1698,9 @@ class Battle:
             placed = self._trainer_heal(p, tag, action)
         elif tag.startswith("gust"):
             placed = self._trainer_boss(opp, int(action.get("target", 0)))
+        elif tag.startswith("attach_spread:"):
+            # 多张自由分配附着（2026-10-30 第三十三批）：排在 `attach` 之前
+            placed = self._do_attach_spread(p, tag, action)
         elif tag.startswith("attach"):
             placed = self._trainer_attach_energy(p, tag, action)
         elif tag.startswith("discard_opp_random:"):
@@ -2306,6 +2316,66 @@ class Battle:
         self._log("opp_hand", {"player": 1 - self.current, "op": op,
                                "sel": sel, "n": moved})
         return f"opp {op} {moved}"
+
+    def _do_attach_spread(self, p: PlayerState, tag: str,
+                          action: dict) -> str:
+        """多张能量**自由分配**附着（``attach_spread:...``）
+
+        卡面原型：「Search your deck for up to 3 Basic Energy cards and attach
+        them to your Pokémon **in any way you like**. Then, shuffle your deck.」
+
+        分配口径（引擎无交互选择系统，沿用项目既有 choose 类做法）：
+          · ``action['attach_plan']`` 给位置码列表（0 = active，1..n = 后备）；
+          · 缺省按**轮转**依次落到「active → bench[0] → bench[1] → …」，
+            保证可复现，且不会把 n 张全堆在 active 上（那等于把「自由分配」
+            塌缩成一个特定选择）。
+
+        取不到符合条件的基本能量、或目标集合为空 → 返回空串（规则上效果不
+        执行，不是错误）。卡面写「Then, shuffle your deck」→ 动过牌库就洗。
+        """
+        from .cards import EnergyRef          # noqa: F401（zone 校验用）
+        n, etype, zone, scope = _parse_attach_spread_tag(tag)
+        targets = _spread_targets(p, scope)
+        if not targets:
+            return ""
+
+        plan = action.get("attach_plan") if isinstance(action, dict) else None
+        seq: list = []
+        if plan is not None:
+            if not isinstance(plan, (list, tuple)):
+                raise ValueError(f"attach_plan 必须是位置码列表：{plan!r}")
+            for pos in plan:
+                if not isinstance(pos, int) or isinstance(pos, bool):
+                    raise ValueError(f"attach_plan 含非整数位置码：{pos!r}")
+                fp = _field_at(p, pos)
+                if fp is None:
+                    raise ValueError(f"attach_plan 位置码无效：{pos}")
+                if fp not in targets:
+                    # 显式指定了不符合卡面限定的宝可梦 → 抛错，不得悄悄改附别人
+                    raise ValueError(
+                        f"attach_plan 位置 {pos} 不符合目标限定 {scope}")
+                seq.append(fp)
+
+        moved = 0
+        for k in range(n):
+            if seq:
+                if k >= len(seq):
+                    break
+                fp = seq[k]
+            else:
+                fp = targets[k % len(targets)]
+            if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
+                break
+            moved += 1
+        if not moved:
+            return ""
+        if zone in ("deck", "any"):
+            # 卡面固定后缀「Then, shuffle your deck.」——动过牌库就必须洗
+            self.rng.shuffle(p.deck)
+        self._log("attach_spread", {"player": self.current, "n": moved,
+                                    "etype": etype, "zone": zone,
+                                    "scope": scope})
+        return f"attach {moved} {etype or 'any'} spread over {len(targets)}"
 
     def _trainer_mill(self, tag: str) -> str:
         """磨牌（``mill:N[:opp]``）——默认磨自己（已存在于招式侧的同一语义）"""
@@ -4622,6 +4692,12 @@ class Battle:
                     opp.active = new_act
                     self._log("gust", {"player": self.current,
                                        "target": new_act.name, "pos": bi})
+            elif tag.startswith("attach_spread:"):
+                # 多张自由分配附着（2026-10-30 第三十三批）：必须排在
+                # `attach` 之前 —— 否则被 `startswith("attach")` 吞掉
+                detail = self._do_attach_spread(p, tag, action)
+                self._log("attach_spread", {"player": self.current,
+                                            "detail": detail})
             elif tag.startswith("attach"):
                 n, etype, zone = _parse_attach_tag(tag)
                 # 目标：`:target:bench|any|bench_type:<c>`（2026-10-28 第十五批）；
@@ -6200,6 +6276,60 @@ def _opp_hand_one(ref, alt: str) -> bool:
 def _opp_hand_matches(ref, sel: str) -> bool:
     base = str(sel or "any").split("@")[0]
     return any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt)
+
+
+def _parse_attach_spread_tag(tag: str) -> tuple:
+    """解析 ``attach_spread:<n>:<etype>:<zone>[:target:<scope>]`` → 四元组
+
+    「Search your deck for up to N Basic Energy cards and attach them to your
+    Pokémon **in any way you like**」——与 ``attach`` 的区别是**多张分给多只**：
+    ``attach`` 只能附给单一目标，本族卡面允许自由分配。
+
+    ``etype``：``any`` 或小写属性名（``grass`` / ``fire`` …）；
+    ``zone``：``hand`` / ``discard`` / ``deck`` / ``any``；
+    ``scope``：``any``（任意己方）| ``bench``（后备）| ``cat-<子串>``
+    （按 ``pdef.category`` **包含**判定，如 ``cat-future`` / ``cat-marnie``）。
+
+    ⚠ 调用方必须把 ``attach_spread:`` 分支排在既有的 ``attach`` /
+    ``attach_energy:`` 分支**之前** —— ``tag.startswith("attach")`` 会把它一并
+    吞掉，随后 ``_parse_attach_tag`` 会把 ``spread`` 当成能量属性名（静默失效）。
+    """
+    parts = str(tag).split(":")
+    if len(parts) < 4:
+        raise ValueError(f"attach_spread tag 字段不足：{tag}")
+    raw_n, etype, zone = parts[1], parts[2], parts[3]
+    if not raw_n.isdigit() or int(raw_n) < 1:
+        raise ValueError(f"attach_spread 张数非法：{raw_n}")
+    if zone not in ("hand", "discard", "deck", "any"):
+        raise ValueError(f"attach_spread 区域非法：{zone}")
+    scope = "any"
+    if "target" in parts:
+        i = parts.index("target")
+        scope = parts[i + 1] if i + 1 < len(parts) else ""
+    if not scope:
+        raise ValueError(f"attach_spread 缺少目标限定：{tag}")
+    return (int(raw_n), (None if etype in ("any", "") else etype), zone, scope)
+
+
+def _spread_targets(p: PlayerState, scope: str) -> list:
+    """「in any way you like」的目标集合，顺序固定为 **active → bench**
+
+    顺序必须确定：默认分配按 round-robin 依次落位，顺序一变同一局面就会
+    出现两种结果（不可复现）。
+    """
+    all_fp = ([p.active] if p.active is not None else []) + list(p.bench)
+    if scope == "any":
+        return all_fp
+    if scope == "bench":
+        return list(p.bench)
+    if scope.startswith("cat-"):
+        # `cat-team-rocket` → 子串 "team rocket"（category 原文含空格）
+        key = scope[4:].replace("-", " ").lower()
+        if not key:
+            raise ValueError("attach_spread 的 cat- 限定为空")
+        return [fp for fp in all_fp
+                if key in str(getattr(fp.pdef, "category", "") or "").lower()]
+    raise ValueError(f"未知 attach_spread 目标限定：{scope}")
 
 
 def _parse_attach_tag(tag: str) -> tuple:

@@ -134,12 +134,19 @@ ATTACK_TAG_PREFIXES = (
     "retaliate_next:",
     # 第三十二批（2026-10-30）：对手手牌操作（**我方选**）
     # Rotom / Luxray ex / N's Purrloin / Energy Swatter / Eri
-    "opp_hand:"
+    "opp_hand:",
+    # 第三十三批（2026-10-30）：检索能量并**自由分配**附着
+    # ⚠ 必须显式列出：虽然 `attach` 前缀也能匹配到它，但引擎侧两分支语义不同
+    # （单目标 vs 多目标轮转），白名单写清楚才不会被后人误删。
+    "attach_spread:"
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
 ABILITY_TAG_PREFIXES = (
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
+    # 特性侧自由分配附着（2026-10-30 第三十三批）：引擎已接线（`_do_ability`
+    # 里排在 `attach_energy:` 之前），但**解析侧暂不产出**（需 evolve_act 包装）
+    "attach_spread:",
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:", "status_self:",
     # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",

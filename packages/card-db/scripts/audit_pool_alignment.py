@@ -601,6 +601,83 @@ def audit_opp_hand(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_attach_spread(card_name: str, item_name: str, desc: str,
+                        effects: list) -> list:
+    """检索能量**自由分配附着**对账（2026-10-30 · 第三十类）
+
+    「Search your deck for up to N Basic Energy cards and attach them to your
+    Pokémon in any way you like」——引擎 `attach_spread:` 已能执行，但这一族
+    最容易被写成下面四种**看起来正常**的错：
+
+    1. **落成整库检索/单手**：卡面是「检索后**附着**」，却产出 `search_*`
+       （进手牌）或普通 `attach`（只附 1 只）—— 少执行一步分配，手牌凭空
+       多 N 张能量；
+    2. **张数不符**：卡面「up to 2」落成 3（凭空变强）/ 落成 1（变弱）；
+    3. **属性不符**：卡面限定 `{G}` 却落成 `any`（拿错颜色，等于任意配能）；
+    4. **目标不符**：卡面「Benched Pokémon」落成 `any`（把能量附给战斗位）。
+
+    另加**反向**守卫：卡面没有「in any way you like」却出现 `attach_spread:`
+    （多半是句首锚定失效，把普通附能句式吃进来了）。
+    """
+    errs = []
+    d = _norm(desc or "")
+    has_spread = bool(re.search(r"in any way you like", d, re.I))
+    tags = [str(t) for t in (effects or []) if str(t).startswith("attach_spread:")]
+    if not has_spread:
+        if tags:
+            errs.append(f"{card_name} · {item_name}：卡面没有「in any way you "
+                        f"like」，却出现 {tags} —— 认领越界")
+        return errs
+    if not tags:
+        # 「in any way you like」却没有多目标 tag → 要么落成单手 attach，要么
+        # 落成检索入手，两者都是少执行一步分配
+        wrong = [str(t) for t in (effects or [])
+                 if str(t).startswith(("search_", "attach:", "attach_energy:"))]
+        if wrong:
+            errs.append(f"{card_name} · {item_name}：卡面要求**自由分配**附着，"
+                        f"却落成 {wrong} —— 少执行一步分配（能量进手牌或只附一只）")
+        return errs
+
+    # 卡面期望值（Joltik 这类双限额会有两条 tag，逐条比对同一套期望）
+    want_target = "bench" if re.search(r"to your benched", d, re.I) else None
+    if want_target is None:
+        m_own = re.search(r"to your ([a-z\u2019']+)['\u2019]s pok[eé]mon", d, re.I)
+        if m_own:
+            want_target = f"cat-{m_own.group(1).lower()}"
+        elif re.search(r"to your future pok[eé]mon", d, re.I):
+            want_target = "cat-future"
+    # 张数：单一形态取第二组；双形态按出现顺序各取一次
+    counts = [int(x) for x in re.findall(r"search your deck for up to (\d+)", d, re.I)]
+    letters = [x.lower() for x in
+               re.findall(r"basic\s*\{([a-z])\}\s*energy", d, re.I)]
+    for idx, t in enumerate(tags):
+        parts = t.split(":")
+        got_n = parts[1] if len(parts) > 1 else ""
+        got_et = parts[2] if len(parts) > 2 else ""
+        got_scope = "any"
+        if "target" in parts:
+            i = parts.index("target")
+            got_scope = parts[i + 1] if i + 1 < len(parts) else ""
+        if idx < len(counts) and got_n != str(counts[idx]):
+            errs.append(f"{card_name} · {item_name}：卡面第 {idx + 1} 段是 up to "
+                        f"{counts[idx]}，`{t}` 却是 {got_n}（张数不符）")
+        if letters:
+            if idx < len(letters):
+                want_et = _TYPE_COLOR.get(letters[idx].upper(), letters[idx])
+            else:
+                want_et = "any"
+        else:
+            want_et = "any"
+        if got_et != want_et:
+            errs.append(f"{card_name} · {item_name}：卡面能量限定是 `{want_et}`，"
+                        f"`{t}` 却是 `{got_et}`（属性不符）")
+        if (want_target or "any") != got_scope:
+            errs.append(f"{card_name} · {item_name}：卡面目标限定是 "
+                        f"`{want_target or 'any'}`，`{t}` 却是 `{got_scope}`"
+                        f"（目标不符）")
+    return errs
+
+
 def audit_search_kind(card_name: str, item_name: str, desc: str,
                       effects: list) -> list:
     """检索的**去向**与**类别**两级对账（2026-10-27 扩展）
@@ -1509,6 +1586,7 @@ def main() -> int:
                 errs += audit_attack_lock(c["name"], it.get("name"), desc, eff)
                 errs += audit_recon_top(c["name"], it.get("name"), desc, eff)
                 errs += audit_opp_hand(c["name"], it.get("name"), desc, eff)
+                errs += audit_attach_spread(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
                 errs += audit_coin_forms(c["name"], it.get("name"), desc, eff)
@@ -1557,8 +1635,8 @@ def main() -> int:
           "特殊能量种类 · 静态免伤来源 · 招式击倒范围 · 场地静态规则 · 跨回合伤害修正 · "
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
-          "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 "
-          "二十九类对账全部一致")
+          "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
+          "检索能量自由分配 三十类对账全部一致")
     return 0
 
 

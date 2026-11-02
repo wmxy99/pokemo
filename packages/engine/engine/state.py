@@ -11,6 +11,7 @@ class GameConfig:
     """规则配置（简化子集的开关，便于未来与 oracle 校准差异）"""
     prizes: int = 6                # 奖赏卡总数
     ex_prizes: int = 2             # ex 被击倒对手拿取数
+    mega_prizes: int = 3           # Mega ex 被击倒对手拿取数（2026-11-02）
     max_bench: int = 5
     opening_hand: int = 7
     first_turn_no_attack: bool = False   # 官方现行规则先手第一回合不可攻击；v1 默认关（简化）

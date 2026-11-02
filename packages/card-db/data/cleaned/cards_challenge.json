@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 09:23:36",
+  "reparsed_at": "2026-11-02 09:37:51",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 982,
+  "engine_ready": 999,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 982,
-   "engine_approximated": 967,
-   "engine_unmatched": 285,
+   "zh_backfill": 999,
+   "engine_approximated": 984,
+   "engine_unmatched": 268,
    "engine_namekey_mismatch": 40
   },
   "parse": {
@@ -129,12 +129,12 @@
    "specs": 1481,
    "errors": 108,
    "engine_tags": 1343,
-   "unsupported": 251,
+   "unsupported": 254,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 967,
+  "engine_approximated": 984,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -6579,7 +6579,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:3",
+       "discard_hand_energy:3",
        "snipe:opp:60:1:per:own_discarded_energy_this_turn"
       ],
       "unsupported": []
@@ -6712,7 +6712,7 @@
      "[0] action.type 非法：retreat_lock"
     ],
     "engine_tags": [
-     "discard_energy:3",
+     "discard_hand_energy:3",
      "snipe:opp:60:1:per:own_discarded_energy_this_turn",
      "retreat_lock:opp:turn",
      "passive:bench_immune_dmg"
@@ -88120,14 +88120,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Venusaur ex@MEG 3",
    "parse": {
     "items": [
      {
@@ -89365,14 +89367,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Camerupt ex@MEG 22",
    "parse": {
     "items": [
      {
@@ -91336,14 +91340,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Lucario ex@MEG 77",
    "parse": {
     "items": [
      {
@@ -98497,14 +98503,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Manectric ex@MEG 50",
    "parse": {
     "items": [
      {
@@ -100811,14 +100819,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Latias ex@MEG 100",
    "parse": {
     "items": [
      {
@@ -101103,14 +101113,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Kangaskhan ex@MEG 104",
    "parse": {
     "items": [
      {
@@ -102282,14 +102294,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Diancie ex@PFL 41",
    "parse": {
     "items": [
      {
@@ -105157,7 +105171,12 @@
       "engine_tags": [
        "dmg_set:90:per:own_discarded_this_turn"
       ],
-      "unsupported": []
+      "unsupported": [
+       {
+        "type": "cost",
+        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -105190,7 +105209,12 @@
     "engine_tags": [
      "dmg_set:90:per:own_discarded_this_turn"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "cost",
+      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -109668,14 +109692,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Sharpedo ex@PFL 61",
    "parse": {
     "items": [
      {
@@ -112273,14 +112299,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Lopunny ex@PFL 84",
    "parse": {
     "items": [
      {
@@ -113827,14 +113855,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Froslass ex@ASC 47",
    "parse": {
     "items": [
      {
@@ -114931,7 +114961,12 @@
       "engine_tags": [
        "paralyze"
       ],
-      "unsupported": []
+      "unsupported": [
+       {
+        "type": "cost",
+        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -114979,7 +115014,12 @@
      "snipe:opp:60:2",
      "paralyze"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "cost",
+      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -118564,14 +118604,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Scrafty ex@ASC 135",
    "parse": {
     "items": [
      {
@@ -119598,14 +119640,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Dragonite ex@ASC 152",
    "parse": {
     "items": [
      {
@@ -121569,14 +121613,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Meganium ex@ASC 10",
    "parse": {
     "items": [
      {
@@ -122482,14 +122528,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Charizard Y ex@ASC 22",
    "parse": {
     "items": [
      {
@@ -122892,14 +122940,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Emboar ex@ASC 31",
    "parse": {
     "items": [
      {
@@ -123655,14 +123705,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Feraligatr ex@ASC 43",
    "parse": {
     "items": [
      {
@@ -136719,14 +136771,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Clefable ex@POR 31",
    "parse": {
     "items": [
      {
@@ -136763,7 +136817,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:4",
+       "discard_hand_energy:4",
        "dmg_plus:40:per:own_discarded_this_turn"
       ],
       "unsupported": []
@@ -136849,7 +136903,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:4",
+     "discard_hand_energy:4",
      "dmg_plus:40:per:own_discarded_this_turn",
      "fx:effect_immune:ability:self"
     ],
@@ -136950,7 +137004,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:2",
+       "discard_hand_energy:2",
        "dmg_set:60:per:own_discarded_this_turn"
       ],
       "unsupported": []
@@ -136992,7 +137046,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:2",
+     "discard_hand_energy:2",
      "dmg_set:60:per:own_discarded_this_turn"
     ],
     "unsupported": [],
@@ -140104,7 +140158,12 @@
       "engine_tags": [
        "snipe:opp:220:1"
       ],
-      "unsupported": []
+      "unsupported": [
+       {
+        "type": "cost",
+        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -140134,7 +140193,12 @@
     "engine_tags": [
      "snipe:opp:220:1"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "cost",
+      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

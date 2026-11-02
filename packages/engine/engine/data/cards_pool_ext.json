@@ -11,14 +11,14 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 967,
+      "kept": 984,
       "by_Energy": 19,
-      "by_Pokemon": 833,
+      "by_Pokemon": 850,
       "by_Trainer": 115,
       "skipped": {
-        "存在未建模项（整卡不收）": 241,
+        "存在未建模项（整卡不收）": 244,
         "人工卡池已有同一印刷（人工优先）": 15,
-        "Pokemon 不可执行": 35,
+        "Pokemon 不可执行": 15,
         "Trainer 不可执行": 9
       }
     }
@@ -1564,7 +1564,7 @@
           },
           "damage": 0,
           "effects": [
-            "discard_energy:3",
+            "discard_hand_energy:3",
             "snipe:opp:60:1:per:own_discarded_energy_this_turn"
           ],
           "desc": "Discard up to 3 Energy cards from your hand. This attack does 60 damage to 1 of your opponent’s Pokémon for each Energy card you discarded in this way. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
@@ -24695,6 +24695,57 @@
       "uid": "Ivysaur@MEG 2"
     },
     {
+      "name": "Mega Venusaur ex",
+      "name_zh": "超级妙蛙花 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 380,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Ivysaur",
+      "attacks": [
+        {
+          "name": "Jungle Dump",
+          "cost": {
+            "grass": 4
+          },
+          "damage": 240,
+          "effects": [
+            "heal:30"
+          ],
+          "desc": "Heal 30 damage from this Pokémon.",
+          "name_zh": "丛林倾泻",
+          "desc_zh": "回复此宝可梦的 30 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Solar Transfer",
+          "name_zh": "日光转移",
+          "tag": "energy_move:1:type:grass:from:any:to:any",
+          "location": "field",
+          "desc": "As often as you like during your turn, you may use this Ability. Move a Basic {G} Energy from 1 of your Pokémon to another of your Pokémon.",
+          "desc_zh": "在你的回合中，你可以任意次数使用此特性。将 1 个基本 {G} 能量从你的 1 只宝可梦移动到你的另 1 只宝可梦身上。"
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "3"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 652,
+      "name_key": "megavenusaurex",
+      "uid": "Mega Venusaur ex@MEG 3"
+    },
+    {
       "name": "Exeggcute",
       "name_zh": "蛋蛋",
       "supertype": "Pokemon",
@@ -25109,6 +25160,62 @@
       "source_card_id": 661,
       "name_key": "numel",
       "uid": "Numel@MEG 21"
+    },
+    {
+      "name": "Mega Camerupt ex",
+      "name_zh": "超级喷火驼 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 340,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Numel",
+      "attacks": [
+        {
+          "name": "Roasting Heat",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 80,
+          "effects": [
+            "dmg_plus:160:if:opp_active_status:burn"
+          ],
+          "desc": "If your opponent’s Active Pokémon is Burned, this attack does 160 more damage.",
+          "name_zh": "烘焙酷热",
+          "desc_zh": "若对手的战斗宝可梦处于灼伤状态，此招式的伤害 +160。"
+        },
+        {
+          "name": "Volcanic Meteor",
+          "cost": {
+            "fire": 1,
+            "colorless": 3
+          },
+          "damage": 280,
+          "effects": [
+            "discard_energy:2"
+          ],
+          "desc": "Discard 2 Energy from this Pokémon.",
+          "name_zh": "火山陨石",
+          "desc_zh": "从此宝可梦身上弃置 2 个能量。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "22"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 662,
+      "name_key": "megacameruptex",
+      "uid": "Mega Camerupt ex@MEG 22"
     },
     {
       "name": "Volcanion",
@@ -25778,6 +25885,61 @@
       "source_card_id": 677,
       "name_key": "riolu",
       "uid": "Riolu@MEG 76"
+    },
+    {
+      "name": "Mega Lucario ex",
+      "name_zh": "超级路卡利欧 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 340,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Riolu",
+      "attacks": [
+        {
+          "name": "Aura Jab",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 130,
+          "effects": [
+            "attach_spread:3:fighting:discard:target:bench"
+          ],
+          "desc": "Attach up to 3 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like.",
+          "name_zh": "波导刺拳",
+          "desc_zh": "从你的弃牌堆中选取最多 3 张基本 {F} 能量卡，以任意方式附着于你的后备宝可梦。"
+        },
+        {
+          "name": "Mega Brave",
+          "cost": {
+            "fighting": 2
+          },
+          "damage": 270,
+          "effects": [
+            "attack_lock:name:turn:Mega Brave"
+          ],
+          "desc": "During your next turn, this Pokémon can’t use Mega Brave.",
+          "name_zh": "超级勇猛",
+          "desc_zh": "在你的下个回合中，此宝可梦无法使用「超级勇猛」。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "77"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 678,
+      "name_key": "megalucarioex",
+      "uid": "Mega Lucario ex@MEG 77"
     },
     {
       "name": "Croagunk",
@@ -27985,6 +28147,61 @@
       "uid": "Electrike@MEG 49"
     },
     {
+      "name": "Mega Manectric ex",
+      "name_zh": "超级雷电兽 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 330,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Electrike",
+      "attacks": [
+        {
+          "name": "Flash Ray",
+          "cost": {
+            "lightning": 2
+          },
+          "damage": 120,
+          "effects": [
+            "shield:prevent_all:from:basic"
+          ],
+          "desc": "During your opponent’s next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon.",
+          "name_zh": "闪光射线",
+          "desc_zh": "在对手的下个回合中，防止基础宝可梦的招式对此宝可梦造成的所有伤害。"
+        },
+        {
+          "name": "Riotous Blasting",
+          "cost": {
+            "lightning": 3
+          },
+          "damage": 200,
+          "effects": [
+            "discard_energy:all"
+          ],
+          "desc": "You may discard all Energy from this Pokémon and have this attack do 130 more damage.",
+          "name_zh": "狂暴爆破",
+          "desc_zh": "你可以弃置此宝可梦身上的所有能量，使此招式的伤害 +130。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 737,
+      "name_key": "megamanectricex",
+      "uid": "Mega Manectric ex@MEG 50"
+    },
+    {
       "name": "Helioptile",
       "name_zh": "伞电蜥",
       "supertype": "Pokemon",
@@ -28523,6 +28740,114 @@
       "uid": "Greavard@MEG 65"
     },
     {
+      "name": "Mega Latias ex",
+      "name_zh": "超级拉帝亚斯 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 280,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Strafe",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 40,
+          "effects": [
+            "switch_self"
+          ],
+          "desc": "You may switch this Pokémon with 1 of your Benched Pokémon.",
+          "name_zh": "扫射",
+          "desc_zh": "你可以将此宝可梦与自己的 1 只后备宝可梦互换。"
+        },
+        {
+          "name": "Illusory Impulse",
+          "cost": {
+            "fire": 1,
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 300,
+          "effects": [
+            "discard_energy:all"
+          ],
+          "desc": "Discard all Energy from this Pokémon.",
+          "name_zh": "幻影冲动",
+          "desc_zh": "弃置此宝可梦身上的所有能量。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "100"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 754,
+      "name_key": "megalatiasex",
+      "uid": "Mega Latias ex@MEG 100"
+    },
+    {
+      "name": "Mega Kangaskhan ex",
+      "name_zh": "超级袋兽 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 300,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Rapid-Fire Combo",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 200,
+          "effects": [
+            "coin_until_tails:dmg_plus:50"
+          ],
+          "desc": "Flip a coin until you get tails. This attack does 50 more damage for each heads.",
+          "name_zh": "连发组合拳",
+          "desc_zh": "反复抛硬币，直到出现反面。每出现 1 次正面，此招式的伤害 +50。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Run Errand",
+          "name_zh": "跑腿",
+          "tag": "draw:2",
+          "location": "field",
+          "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw 2 cards. You can’t use more than 1 Run Errand Ability each turn.",
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次此特性。抽 2 张牌。每回合只能使用 1 次「跑腿」特性。"
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "104"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 756,
+      "name_key": "megakangaskhanex",
+      "uid": "Mega Kangaskhan ex@MEG 104"
+    },
+    {
       "name": "Delibird",
       "name_zh": "信使鸟",
       "supertype": "Pokemon",
@@ -28988,6 +29313,58 @@
       "source_card_id": 765,
       "name_key": "meloetta",
       "uid": "Meloetta@PFL 40"
+    },
+    {
+      "name": "Mega Diancie ex",
+      "name_zh": "超级蒂安希 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 270,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Garland Ray",
+          "cost": {
+            "psychic": 2
+          },
+          "damage": 120,
+          "effects": [
+            "discard_energy:2",
+            "dmg_set:120:per:own_discarded_this_turn"
+          ],
+          "desc": "Discard up to 2 Energy cards from this Pokémon, and this attack does 120 damage for each card you discarded in this way.",
+          "name_zh": "花环射线",
+          "desc_zh": "从此宝可梦身上弃置最多 2 张能量卡。以此方式弃置的卡每有 1 张，此招式造成 120 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Diamond Coat",
+          "name_zh": "钻石外衣",
+          "tag": "passive:dmg_reduce:30",
+          "location": "field",
+          "desc": "This Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
+          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。"
+        }
+      ],
+      "real": {
+        "set": "PFL",
+        "number": "41"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 766,
+      "name_key": "megadiancieex",
+      "uid": "Mega Diancie ex@PFL 41"
     },
     {
       "name": "Mimikyu",
@@ -31555,6 +31932,61 @@
       "uid": "Carvanha@PFL 60"
     },
     {
+      "name": "Mega Sharpedo ex",
+      "name_zh": "超级巨牙鲨 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 330,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Carvanha",
+      "attacks": [
+        {
+          "name": "Greedy Fang",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 70,
+          "effects": [
+            "draw:2"
+          ],
+          "desc": "Draw 2 cards.",
+          "name_zh": "贪婪之牙",
+          "desc_zh": "抽 2 张牌。"
+        },
+        {
+          "name": "Hungry Jaws",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 120,
+          "effects": [
+            "dmg_plus:150:if:own_active_has_damage"
+          ],
+          "desc": "If this Pokémon has any damage counters on it, this attack does 150 more damage.",
+          "name_zh": "饥饿之颚",
+          "desc_zh": "若此宝可梦上放置有伤害指示物，此招式的伤害 +150。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "61"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 828,
+      "name_key": "megasharpedoex",
+      "uid": "Mega Sharpedo ex@PFL 61"
+    },
+    {
       "name": "Seviper",
       "name_zh": "饭匙蛇",
       "supertype": "Pokemon",
@@ -32401,6 +32833,61 @@
       "uid": "Buneary@PFL 83"
     },
     {
+      "name": "Mega Lopunny ex",
+      "name_zh": "超级长耳兔 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 330,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Buneary",
+      "attacks": [
+        {
+          "name": "Gale Thrust",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_plus:170:if:moved_to_active"
+          ],
+          "desc": "If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 170 more damage.",
+          "name_zh": "疾风突刺",
+          "desc_zh": "若此宝可梦在本回合中从你的后备移动到战斗区，此招式的伤害 +170。"
+        },
+        {
+          "name": "Spiky Hopper",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 160,
+          "effects": [
+            "ignore_effects"
+          ],
+          "desc": "This attack’s damage isn’t affected by any effects on your opponent’s Active Pokémon.",
+          "name_zh": "尖刺跳跃者",
+          "desc_zh": "此招式的伤害不受对手的战斗宝可梦身上任何效果的影响。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "84"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 849,
+      "name_key": "megalopunnyex",
+      "uid": "Mega Lopunny ex@PFL 84"
+    },
+    {
       "name": "Wurmple",
       "name_zh": "刺尾虫",
       "supertype": "Pokemon",
@@ -32773,6 +33260,62 @@
       "source_card_id": 860,
       "name_key": "snorunt",
       "uid": "Snorunt@ASC 46"
+    },
+    {
+      "name": "Mega Froslass ex",
+      "name_zh": "超级雪妖女 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 310,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Snorunt",
+      "attacks": [
+        {
+          "name": "Resentful Refrain",
+          "cost": {
+            "water": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_set:50:per:opp_hand"
+          ],
+          "desc": "This attack does 50 damage for each card in your opponent’s hand.",
+          "name_zh": "怨恨叠唱",
+          "desc_zh": "对手手牌中每有 1 张卡，此招式造成 50 点伤害。"
+        },
+        {
+          "name": "Absolute Snow",
+          "cost": {
+            "water": 1,
+            "colorless": 2
+          },
+          "damage": 150,
+          "effects": [
+            "sleep"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Asleep.",
+          "name_zh": "绝对之雪",
+          "desc_zh": "对手的战斗宝可梦现在处于睡眠状态。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "47"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 861,
+      "name_key": "megafroslassex",
+      "uid": "Mega Froslass ex@ASC 47"
     },
     {
       "name": "N's Vanillite",
@@ -34039,6 +34582,59 @@
       "uid": "Scraggy@ASC 134"
     },
     {
+      "name": "Mega Scrafty ex",
+      "name_zh": "超级头巾混混 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 330,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Scraggy",
+      "attacks": [
+        {
+          "name": "Outlaw Leg",
+          "cost": {
+            "darkness": 2,
+            "colorless": 1
+          },
+          "damage": 160,
+          "effects": [
+            "mill:1:opp",
+            "discard_opp_random:1"
+          ],
+          "desc": "Discard a random card from your opponent’s hand. Discard the top card of your opponent’s deck.",
+          "name_zh": "亡命之腿",
+          "desc_zh": "随机弃置对手手牌中的 1 张卡。弃置对手牌库顶部的 1 张卡。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Counterattacking Crest",
+          "name_zh": "反击之冠",
+          "tag": "on_damaged:counter:50",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on the Attacking Pokémon.",
+          "desc_zh": "若此宝可梦位于战斗区，且受到对手的宝可梦的招式伤害（即使此宝可梦被击倒），就在攻击的宝可梦上放置 5 个伤害指示物。"
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "135"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 896,
+      "name_key": "megascraftyex",
+      "uid": "Mega Scrafty ex@ASC 135"
+    },
+    {
       "name": "Pecharunt",
       "name_zh": "桃歹郎",
       "supertype": "Pokemon",
@@ -34314,6 +34910,58 @@
       "source_card_id": 903,
       "name_key": "dragonair",
       "uid": "Dragonair@ASC 151"
+    },
+    {
+      "name": "Mega Dragonite ex",
+      "name_zh": "超级快龙 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 370,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Dragonair",
+      "attacks": [
+        {
+          "name": "Ryuno Glide",
+          "cost": {
+            "water": 1,
+            "lightning": 2
+          },
+          "damage": 330,
+          "effects": [
+            "discard_energy:2"
+          ],
+          "desc": "Discard 2 Energy from this Pokémon.",
+          "name_zh": "龙之滑翔",
+          "desc_zh": "从此宝可梦身上弃置 2 个能量。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Sky Transport",
+          "name_zh": "天空运输",
+          "tag": "switch_self",
+          "location": "field",
+          "desc": "Once during your turn, you may use this Ability. Switch your Active Pokémon with 1 of your Benched Pokémon.",
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。将你的战斗宝可梦与你的 1 只后备宝可梦互换。"
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "152"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 904,
+      "name_key": "megadragoniteex",
+      "uid": "Mega Dragonite ex@ASC 152"
     },
     {
       "name": "Rayquaza",
@@ -35023,6 +35671,48 @@
       "uid": "Bayleef@ASC 9"
     },
     {
+      "name": "Mega Meganium ex",
+      "name_zh": "超级大竺葵 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 360,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Bayleef",
+      "attacks": [
+        {
+          "name": "Giant Bouquet",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 70,
+          "effects": [
+            "dmg_plus:50:per:own_active_energy_grass"
+          ],
+          "desc": "This attack does 50 more damage for each {G} Energy attached to this Pokémon.",
+          "name_zh": "巨大花束",
+          "desc_zh": "附着于此宝可梦的每 1 个 {G} 能量，此招式的伤害 +50。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "10"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 919,
+      "name_key": "megameganiumex",
+      "uid": "Mega Meganium ex@ASC 10"
+    },
+    {
       "name": "Tapu Bulu",
       "name_zh": "卡璞哞哞",
       "supertype": "Pokemon",
@@ -35365,6 +36055,50 @@
       "uid": "Charmeleon@ASC 21"
     },
     {
+      "name": "Mega Charizard Y ex",
+      "name_zh": "超级喷火龙Y ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 360,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Charmeleon",
+      "attacks": [
+        {
+          "name": "Explosion Y",
+          "cost": {
+            "fire": 2,
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "discard_energy:3",
+            "snipe:opp:280:1"
+          ],
+          "desc": "Discard 3 Energy from this Pokémon, and this attack does 280 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
+          "name_zh": "爆炸Y",
+          "desc_zh": "从此宝可梦身上弃置 3 个能量，此招式对对手的 1 只宝可梦造成 280 点伤害。（后备宝可梦不计算弱点和抗性。）"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "22"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 928,
+      "name_key": "megacharizardyex",
+      "uid": "Mega Charizard Y ex@ASC 22"
+    },
+    {
       "name": "Magmar",
       "name_zh": "鸭嘴火兽",
       "supertype": "Pokemon",
@@ -35489,6 +36223,49 @@
       "source_card_id": 931,
       "name_key": "pignite",
       "uid": "Pignite@ASC 30"
+    },
+    {
+      "name": "Mega Emboar ex",
+      "name_zh": "超级炎武王 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 380,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Pignite",
+      "attacks": [
+        {
+          "name": "Crimson Blast",
+          "cost": {
+            "fire": 2,
+            "colorless": 1
+          },
+          "damage": 320,
+          "effects": [
+            "self:60"
+          ],
+          "desc": "This Pokémon also does 60 damage to itself.",
+          "name_zh": "绯红爆破",
+          "desc_zh": "此宝可梦还会对自己造成 60 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "31"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 932,
+      "name_key": "megaemboarex",
+      "uid": "Mega Emboar ex@ASC 31"
     },
     {
       "name": "Larvesta",
@@ -35764,6 +36541,49 @@
       "source_card_id": 938,
       "name_key": "croconaw",
       "uid": "Croconaw@ASC 42"
+    },
+    {
+      "name": "Mega Feraligatr ex",
+      "name_zh": "超级大力鳄 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 370,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Croconaw",
+      "attacks": [
+        {
+          "name": "Mortal Crunch",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 200,
+          "effects": [
+            "dmg_plus:200:if:opp_active_has_damage"
+          ],
+          "desc": "If your opponent’s Active Pokémon already has any damage counters on it, this attack does 200 more damage.",
+          "name_zh": "致命咬碎",
+          "desc_zh": "若对手的战斗宝可梦上已放置有伤害指示物，此招式的伤害 +200。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "43"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 939,
+      "name_key": "megaferaligatrex",
+      "uid": "Mega Feraligatr ex@ASC 43"
     },
     {
       "name": "Glalie",
@@ -39776,6 +40596,58 @@
       "uid": "Clefairy@POR 30"
     },
     {
+      "name": "Mega Clefable ex",
+      "name_zh": "超级皮可西 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 320,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Clefairy",
+      "attacks": [
+        {
+          "name": "Shooting Moons",
+          "cost": {
+            "psychic": 2
+          },
+          "damage": 120,
+          "effects": [
+            "discard_hand_energy:4",
+            "dmg_plus:40:per:own_discarded_this_turn"
+          ],
+          "desc": "You may discard up to 4 Energy cards from your hand, and this attack does 40 more damage for each card you discarded in this way.",
+          "name_zh": "射击月亮",
+          "desc_zh": "你可以从手牌中弃置最多 4 张能量卡，你以此方式每弃置 1 张卡，此招式的伤害 +40。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Luminous Wing",
+          "name_zh": "光辉之翼",
+          "tag": "fx:effect_immune:ability:self",
+          "location": "field",
+          "desc": "Prevent all effects of your opponent’s Pokémon’s Abilities done to this Pokémon.",
+          "desc_zh": "防止对手宝可梦的特性对此宝可梦造成的所有效果。"
+        }
+      ],
+      "real": {
+        "set": "POR",
+        "number": "31"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1040,
+      "name_key": "megaclefableex",
+      "uid": "Mega Clefable ex@POR 31"
+    },
+    {
       "name": "Mawile",
       "name_zh": "大嘴娃",
       "supertype": "Pokemon",
@@ -39800,7 +40672,7 @@
           },
           "damage": 60,
           "effects": [
-            "discard_energy:2",
+            "discard_hand_energy:2",
             "dmg_set:60:per:own_discarded_this_turn"
           ],
           "desc": "Discard up to 2 Energy cards from your hand, and this attack does 60 damage for each card you discarded in this way.",

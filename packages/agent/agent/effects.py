@@ -600,6 +600,16 @@ def _norm_prose(t: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+# 「代价子句 + 绑定后续效果」的通用形状（2026-11-02）。
+# 只认「同一句里 代价 → and（立刻）+ 效果」这一种：代价自成一句的
+# （`Discard up to 3 Energy cards from your hand. This attack does …`）不在内，
+# 那类由 `discard_hand_energy:` 正常映射，不能当成「代价丢失」误杀。
+_ENERGY_COST_CLAUSE = re.compile(
+    r"(?:you may )?(?:discard|shuffle)[^.,]*?\benergy\b[^.,]*?"
+    r"(?:,\s*and this attack does|and this attack does|and make your opponent)",
+    re.I)
+
+
 # ⚠ 这一组是**可选**的：卡面没有这句前置条件时绝不能凭空加上条件（否则一张
 # 「随时可用」的卡会变成「只在被击倒过的回合可用」= 静默削弱），因此组要具名，
 # 由 `_detect_recon_top` 按**是否命中**决定 gate 有无。
@@ -6167,6 +6177,18 @@ def to_engine_tags(specs: list) -> dict:
                         if extra.get("required"):
                             tail += ":required"
                         tags.append(f"discard_hand_energy:{n}{tail}")
+                    elif is_energy and str(tgt or "") == "hand":
+                        # 「Discard (up to) N Energy cards from **your hand**」
+                        # （2026-11-02）：`discard_energy:N` 的语义是「先弃战斗位
+                        # 宝可梦身上的能量、不足再从手牌补」——用在「从手牌弃」上
+                        # 会把代价落到**错误的宝可梦**身上（Wugtrio ex / Mawile /
+                        # Mega Clefable ex 三张真实卡曾因此静默弃错对象）。
+                        # `discard_hand_energy:N` 只动**手牌**、不足则弃现有的，
+                        # 与卡面「up to N from your hand」完全一致。
+                        # 必须排在 `all` 之前：「discard all Energy from your hand」
+                        # 走 `discard_energy:all` 会去弃场上的能量。
+                        tags.append(f"discard_hand_energy:"
+                                    f"{99 if extra.get('all') else n}")
                     elif extra.get("all"):
                         if is_energy:
                             # 「discard all Energy from that/those Pokémon」：
@@ -7044,6 +7066,29 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(tag)
             else:
                 unsupported.append({"type": t, "reason": "引擎未建模该动作类型"})
+        # 能量代价子句守卫（2026-11-02）：卡面「Discard / Shuffle … Energy …,
+        # and this attack does …（或 and make your opponent …）」里的**代价**若
+        # 没有被映射成任何动作，招式就退化成「不付代价白拿附加效果」——属于
+        # 静默加强，比未建模危险。实测三例：
+        #   · Mega Eelektross ex「You may discard 2 {L} Energy … and make … Paralyzed」
+        #     → 只产出 `paralyze`，代价整句被吞；
+        #   · Mega Skarmory ex「Shuffle all Energy attached to this Pokémon into
+        #     your deck, and this attack does 220 damage …」→ 只剩 `snipe`；
+        #   · Mega Charizard X ex「Discard any amount of {R} Energy from among your
+        #     Pokémon, and this attack does 90 damage for each …」→ 只有计数源
+        #     `own_discarded_this_turn`，却从不真的弃能量（伤害恒 0，反向削弱）。
+        # 三种都无法用现有 tag 精确表达（「any amount」需交互层；「shuffle 回牌库」
+        # 引擎只有 `energy_to_deck`（限弃牌堆基本能量）语义不符）→ 如实拒绝。
+        if kind == "attack":
+            _csrc = _norm_prose(s.get("source_text") or "")
+            if _ENERGY_COST_CLAUSE.search(_csrc):
+                _newt = [str(x) for x in tags[_tag_start:]]
+                if not any(x.startswith(("discard_energy", "discard_hand_energy",
+                                         "energy_to_deck", "self:"))
+                           for x in _newt):
+                    unsupported.append({
+                        "type": "cost",
+                        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"})
         # 进化触发特性（2026-10-28 第十批）：把本 spec 产出的 tag 合并成
         # **一条** `evolve_act:<tag1>|<tag2>`，由引擎在**进化那一刻**按序执行。
         # 为什么必须包裹：引擎的 field 特性是「每回合一次」，而这些特性卡面是

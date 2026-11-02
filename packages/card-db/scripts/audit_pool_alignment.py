@@ -73,6 +73,13 @@ _EXTRA_ENERGY_RE = re.compile(
 _TYPE_COLOR = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
                "P": "psychic", "F": "fighting", "D": "darkness",
                "M": "metal", "C": "colorless", "N": "dragon"}
+# 能量代价子句（2026-11-02 · 第三十一类）：**独立实现**，不 import 解析包的
+# 同名正则 —— 对账的意义就是「用另一套写法重算一遍」，共用同一个正则等于自己
+# 给自己盖章（解析写错时会一起错，对账永远通过）。
+_ENERGY_COST_CLAUSE = re.compile(
+    r"(?:you may )?(?:discard|shuffle)[^.,]*?\benergy\b[^.,]*?"
+    r"(?:,\s*and this attack does|and this attack does|and make your opponent)",
+    re.I)
 # 限定后的指示物计数源（2026-10-29 第二十六批 · 第二十四类）
 _BENCH_CNT_TYPE_RE = re.compile(
     r"damage\s+counters?\s+on\s+all\s+of\s+your\s+benched\s+\{([a-z])\}\s+"
@@ -675,6 +682,72 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面目标限定是 "
                         f"`{want_target or 'any'}`，`{t}` 却是 `{got_scope}`"
                         f"（目标不符）")
+    return errs
+
+
+def audit_energy_cost(card_name: str, item_name: str, desc: str,
+                      effects: list) -> list:
+    """能量代价**去向**对账（2026-11-02 · 第三十一类）
+
+    招式里「弃能量」的代价有四种去向，引擎用不同 tag 表达，混用即静默算错：
+
+      · ``discard_energy:N``        → 先弃**战斗位宝可梦身上**的能量，不足再
+                                      从手牌补（对应「from this Pokémon」）
+      · ``discard_energy:N:opp``    → 弃**对手**战斗位
+      · ``discard_hand_energy:N``   → **只**动手牌（对应「from your hand」）
+
+    最危险的错法是**去向反转**：卡面写「from your hand」，却落成
+    ``discard_energy:N`` —— 对局里会去拔自家场上宝可梦的能量、手牌纹丝不动
+    （Wugtrio ex / Mawile / Mega Clefable ex 三张真实卡曾如此）。
+
+    另查**代价缺失**：卡面「Discard/Shuffle … Energy …, and this attack does …」
+    里代价若没被映射，招式就白拿附加效果（Mega Eelektross ex 只产出 paralyze、
+    Mega Skarmory ex 只剩 snipe）。这类必须如实未建模，不能进池。
+    """
+    errs = []
+    d = _norm(desc or "")
+    tags = [str(t) for t in (effects or [])]
+    hand_tags = [t for t in tags if t.startswith("discard_hand_energy:")]
+    field_tags = [t for t in tags if t.startswith("discard_energy:")]
+
+    has_hand = bool(re.search(
+        r"discard[^.]{0,50}?\benergy\b[^.]{0,24}?from your hand", d, re.I))
+    has_self = bool(re.search(
+        r"discard[^.]{0,50}?\benergy\b[^.]{0,26}?from (?:this|that) pok", d, re.I))
+
+    # ① 卡面「从手牌弃」却落成「从场上弃」（方向反转，损失最大）
+    if has_hand and field_tags:
+        errs.append(f"{card_name} · {item_name}：卡面是从**手牌**弃能量，却落成 "
+                    f"{field_tags} —— 对局会拔自家场上能量、手牌不动")
+    # ② 卡面「从自身弃」却落成「只动手牌」
+    if has_self and hand_tags and not re.search(r"from your hand", d, re.I):
+        errs.append(f"{card_name} · {item_name}：卡面是从**该宝可梦**弃能量，却落成 "
+                    f"{hand_tags} —— 代价落到手牌上")
+
+    # ③ 代价子句被吞（`and` 绑定式）
+    if _ENERGY_COST_CLAUSE.search(d):
+        cost_tags = [t for t in tags if t.startswith(
+            ("discard_energy", "discard_hand_energy", "energy_to_deck", "self:"))]
+        if not cost_tags:
+            errs.append(f"{card_name} · {item_name}：卡面有能量代价子句（and 绑定），"
+                        f"却没有任何代价 tag —— 招式会白拿附加效果")
+
+    # ④ 张数不符（只比对单一 up to N 形态）
+    m = re.search(r"discard up to (\d+) energy", d, re.I)
+    if m and (hand_tags or field_tags):
+        want = int(m.group(1))
+        for t in (hand_tags or field_tags):
+            parts = t.split(":")
+            got = 99 if parts[1] == "all" else (int(parts[1])
+                                               if parts[1].isdigit() else -1)
+            if got != want:
+                errs.append(f"{card_name} · {item_name}：卡面「up to {want}」"
+                            f"却落成 {t}")
+
+    # ⑤ 反向守卫：卡面完全没有弃能量文本，却出现手牌弃能 tag
+    if hand_tags and not re.search(r"\benergy\b", d, re.I):
+        errs.append(f"{card_name} · {item_name}：卡面无能量文本，却出现 "
+                    f"{hand_tags} —— 认领越界")
     return errs
 
 
@@ -1587,6 +1660,7 @@ def main() -> int:
                 errs += audit_recon_top(c["name"], it.get("name"), desc, eff)
                 errs += audit_opp_hand(c["name"], it.get("name"), desc, eff)
                 errs += audit_attach_spread(c["name"], it.get("name"), desc, eff)
+                errs += audit_energy_cost(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
                 errs += audit_coin_forms(c["name"], it.get("name"), desc, eff)
@@ -1636,7 +1710,7 @@ def main() -> int:
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
           "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
-          "检索能量自由分配 三十类对账全部一致")
+          "检索能量自由分配 · 能量代价去向 三十一类对账全部一致")
     return 0
 
 

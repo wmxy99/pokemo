@@ -5303,7 +5303,15 @@ class Battle:
         # （dmg_plus:N:if:opp_ko_last_turn）使用；在受害者回合开始清零。
         if self._ko_from_attack:
             self._ko_flags()[owner] += 1
-        give = self.cfg.ex_prizes if fp.pdef.is_ex else 1
+        # 2026-11-02：Mega ex 被击倒时对手取 **3** 张（此前一律按 ex 的 2 张，
+        # 导致卡池准入直接把整个 Mega 族拒收）。判定顺序必须先 mega 再 ex ——
+        # Mega ex 的 `is_ex` 同样为 True（它确实是 ex 的一种，条件 tag 仍要算 ex）。
+        if fp.pdef.is_mega:
+            give = self.cfg.mega_prizes
+        elif fp.pdef.is_ex:
+            give = self.cfg.ex_prizes
+        else:
+            give = 1
         # 效果族奖赏卡修正（「你的对手少拿 1 张奖赏卡」/「多拿 1 张」）
         give = max(0, give + families.prize_delta(self, opp, fp))
         # 特殊能量修正（Legacy Energy）：仅限「被对手招式伤害击倒」，每局一次

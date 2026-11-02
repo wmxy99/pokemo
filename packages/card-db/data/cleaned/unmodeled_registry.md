@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-02 09:23:48
+- 生成时间：2026-11-02 09:40:54
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **251** 条 · 已映射 tag 1343 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：982 张**
-- 解析层面「无未建模动作」卡：877 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **254** 条 · 已映射 tag 1343 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：999 张**
+- 解析层面「无未建模动作」卡：874 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -21,6 +21,7 @@
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
 | B4 | coin_flip | `rule` | 6 | 6 | 静态/未建模（英文） |
+| B4 | type:cost | `cost` | 3 | 3 | 能量代价子句未被映射（可选/任意数量代价，B4） |
 | B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（itself） |
 | B4 | static_lock | `rule` | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（damage counter you placed in t） |
@@ -84,6 +85,12 @@
 - `Sylveon`（仙子伊布）：Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.
 - `Ethan's Sudowoodo`（阿响的树才怪）：Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.
 - `Shiftry`（狡猾天狗）：Flip a coin. If heads, choose 1 of your opponent’s Pokémon. Shuffle that Pokémon and all attached cards into their deck.
+
+**B4 · type:cost**（3 条）
+
+- `Mega Charizard X ex`（超级喷火龙X ex）：Discard any amount of {R} Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way.
+- `Mega Eelektross ex`（超级麻麻鳗鱼王 ex）：You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed.
+- `Mega Skarmory ex`（超级盔甲鸟 ex）：Shuffle all Energy attached to this Pokémon into your deck, and this attack does 220 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistanc
 
 **B4 · extra_damage_target**（2 条）
 

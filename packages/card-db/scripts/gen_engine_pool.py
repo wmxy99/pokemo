@@ -266,9 +266,8 @@ def build_pokemon(card: dict, items: dict, name_key: str) -> Optional[dict]:
     if not attacks and not abilities:
         return None
     rule = str(card.get("rule") or "").lower()
-    if "mega" in rule:
-        # Mega ex 被击倒对手取 **3** 张奖赏卡，引擎只建模 1/2 → 不收（避免奖赏记账错误）
-        return None
+    # 2026-11-02：Mega ex 的「被击倒取 3 张」已由引擎建模（GameConfig.mega_prizes），
+    # 此处不再整族拒收。`is_ex` 对 Mega 仍为 True（它确实是 ex），靠 `is_mega` 区分取卡数。
     is_ex = "ex" in rule or str(card.get("name") or "").rstrip().endswith(" ex")
     return {
         "name": card["name"],

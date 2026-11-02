@@ -321,11 +321,21 @@ class TestSystemPromptInjection(unittest.TestCase):
         后端切到 LLM 时，同句卡面的 `actions[].type` 只能从这份枚举里取，
         少一个就会产出「action.type 非法」的整条作废。
         模板正文未改 → 与历次「引擎加能力 → 提示词同步」同性质。
+
+        ── 2026-11-02 上调至 9330（**仍是引擎能力驱动，正文逐字节未改**）──
+        第三十九批新增四个附着变体，进入 `enum_action_type` 槽位：
+          · `attach_spread_multi`（Steven's Metagross ex 双色 or-1-of-each）
+          · `attach_each_pick`（Janine's Secret Art 选至多 N 只各附）
+          · `attach_flip_until`（Snorlax 抛到反面为止）
+          · `coin_gate_attach`（Energy Coin 训练家抛币门）
+        实测：**9326** 字符（上一版 9246）。同上：这些名字 LLM 侧也必须知道，
+        后端切到 LLM 时 `actions[].type` 只能从这份枚举里取。
+        模板正文未改 → 与历次同性质。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9250,
-            f"提示词已 {len(sp)} 字符，超过 9250 预算；"
+            len(sp), 9330,
+            f"提示词已 {len(sp)} 字符，超过 9330 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 

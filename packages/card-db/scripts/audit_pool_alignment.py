@@ -717,6 +717,9 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             want_target = f"cat-{m_own.group(1).lower()}"
         elif re.search(r"to your future pok[eé]mon", d, re.I):
             want_target = "cat-future"
+        elif re.search(r"to your tera pok[eé]mon", d, re.I):
+            # Terapagos SSP 161「your **Tera** Pokémon」= 卡牌子类（category）
+            want_target = "cat-tera"
         else:
             # 「your {L} Pokémon」= **属性**限定（Magneton SSP 59）。
             # 与 `cat-*` 是两套依据：属性看 `pdef.ptype`，category 看卡牌子类。
@@ -765,6 +768,15 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面"
                         f"{'有' if want_selfko else '没有'}「用掉自爆」句，"
                         f"`{t}` 却{'带' if got_selfko else '不带'} `:selfko`")
+        # 「of different types」核对（第三十九批）：这是**检索约束**，双向都危险。
+        # 漏标 → 允许拿 N 张同色（静默加强，Eevee SFA 50 实际如此）；多标 →
+        # 把普通加速削成「不能同色」（静默削弱）。
+        want_dist = bool(re.search(r"basic energy cards? of different types", d, re.I))
+        got_dist = "distinct" in parts
+        if got_dist != want_dist:
+            errs.append(f"{card_name} · {item_name}：卡面"
+                        f"{'有' if want_dist else '没有'}「of different types」，"
+                        f"`{t}` 却{'带' if got_dist else '不带'} `:distinct`")
     return errs
 
 
@@ -882,6 +894,108 @@ def audit_attach_variants(card_name: str, item_name: str, desc: str,
         errs.append(f"{card_name} · {item_name}：卡面没有「For each of your "
                     f"Benched Pokémon … attach it to that Pokémon」，却出现 "
                     f"{eachb} —— 认领越界")
+
+    # ---------------- ③ 双色「or 1 of each」 ----------------
+    multi = [t for t in tags if t.startswith("attach_spread_multi:")]
+    m_m = re.search(
+        r"a basic \{([a-z])\} energy card,? a basic \{([a-z])\} energy card,? "
+        r"or 1 of each", d, re.I)
+    if m_m:
+        want = [_TYPE_COLOR.get(m_m.group(1).upper(), m_m.group(1).lower()),
+                _TYPE_COLOR.get(m_m.group(2).upper(), m_m.group(2).lower())]
+        if not multi:
+            errs.append(f"{card_name} · {item_name}：卡面是「{want[0]} / {want[1]} "
+                        f"**or 1 of each**」三选一，却没有 `attach_spread_multi:`"
+                        f" —— 拆成两条 `attach_spread:` 会强制每类各拿 1 张")
+        else:
+            for t in multi:
+                part = t.split(":")
+                if len(part) < 6:
+                    errs.append(f"{card_name} · {item_name}：`{t}` 字段不足")
+                    continue
+                got = [part[2], part[4]]
+                if got != want:
+                    errs.append(f"{card_name} · {item_name}：卡面两类是 {want}，"
+                                f"`{t}` 却是 {got}（属性次序/内容不符）")
+                if part[1] != "1" or part[3] != "1":
+                    errs.append(f"{card_name} · {item_name}：卡面每类「or 1 of "
+                                f"each」= 至多 1 张，`{t}` 写的是 "
+                                f"{part[1]}/{part[3]}")
+    elif multi:
+        errs.append(f"{card_name} · {item_name}：卡面没有「a Basic {{X}} Energy "
+                    f"card, a Basic {{Y}} Energy card, or 1 of each」，却出现 "
+                    f"{multi} —— 认领越界")
+
+    # ---------------- ④ 「Choose up to N of your {X} Pokémon」逐只各附 ----------------
+    pick = [t for t in tags if t.startswith("attach_each_pick:")]
+    m_p = re.search(r"choose up to (\d+) of your \{([a-z])\} pok[eé]mon[.] "
+                    r"for each of those pok[eé]mon", d, re.I)
+    if m_p:
+        want_mx = m_p.group(1)
+        want_et = _TYPE_COLOR.get(m_p.group(2).upper(), m_p.group(2).lower())
+        if not pick:
+            errs.append(f"{card_name} · {item_name}：卡面「Choose up to {want_mx} "
+                        f"of your {{{m_p.group(2)}}} Pokémon … each」应产出 "
+                        f"`attach_each_pick:`，实际无 —— 选取范围丢失")
+        else:
+            for t in pick:
+                part = t.split(":")
+                if len(part) < 7 or part[1] != want_mx:
+                    errs.append(f"{card_name} · {item_name}：卡面「up to "
+                                f"{want_mx} 只」，`{t}` 的选取上限不符")
+                    continue
+                if part[3] != want_et:
+                    errs.append(f"{card_name} · {item_name}：卡面能量限定是 "
+                                f"`{want_et}`，`{t}` 却是 `{part[3]}`")
+                if part[6] != f"type-{want_et}":
+                    errs.append(f"{card_name} · {item_name}：卡面目标限定是 "
+                                f"`type-{want_et}`，`{t}` 却是 `{part[6]}`")
+                # 条件性自我中毒：只有「If you attached Energy to your Active
+                # Pokémon in this way」这一句才允许（缺 = 条件被吞成无条件）
+                want_poison = bool(re.search(
+                    r"if you attached energy to your active pok[eé]mon in this "
+                    r"way,? it is now poisoned", d, re.I))
+                got_poison = "poison_if_active" in part
+                if got_poison != want_poison:
+                    errs.append(f"{card_name} · {item_name}：卡面"
+                                f"{'有' if want_poison else '没有'}条件自我中毒句，"
+                                f"`{t}` 却{'带' if got_poison else '不带'}"
+                                f" `:poison_if_active`")
+    elif pick:
+        errs.append(f"{card_name} · {item_name}：卡面没有「Choose up to N of "
+                    f"your {{X}} Pokémon … each」，却出现 {pick} —— 认领越界")
+
+    # ---------------- ⑤ 「Flip a coin until you get tails」按正面数附能 ----------------
+    fu = [t for t in tags if t.startswith("attach_flip_until:")]
+    m_fu = re.search(r"flip a coin until you get tails[.] search your deck for an "
+                     r"amount of basic", d, re.I)
+    if m_fu and not fu:
+        errs.append(f"{card_name} · {item_name}：卡面「up to the number of heads and "
+                    f"attach it to this Pokémon」应产出 `attach_flip_until:`，"
+                    f"实际无 —— 张数口径丢失")
+    elif fu and not m_fu:
+        errs.append(f"{card_name} · {item_name}：卡面没有「Flip a coin until you "
+                    f"get tails … attach it to this Pokémon」，却出现 {fu}"
+                    f" —— 认领越界")
+
+    # ---------------- ⑥ 训练家抛币门 + 检索附能（Energy Coin） ----------------
+    gate = [t for t in tags if t.startswith("coin_gate_attach:")]
+    m_g = re.search(r"flip (\d+) coins[.] if both of them are heads, search your "
+                    r"deck for", d, re.I)
+    if m_g:
+        if not gate:
+            errs.append(f"{card_name} · {item_name}：卡面「Flip {m_g.group(1)} "
+                        f"coins. If both of them are heads, … attach」应产出 "
+                        f"`coin_gate_attach:`，实际无 —— 抛币门被吞")
+        else:
+            for t in gate:
+                part = t.split(":")
+                if len(part) < 5 or part[1] != m_g.group(1):
+                    errs.append(f"{card_name} · {item_name}：卡面抛 {m_g.group(1)} "
+                                f"枚，`{t}` 的抛币数不符")
+    elif gate:
+        errs.append(f"{card_name} · {item_name}：卡面没有「Flip N coins. If both "
+                    f"of them are heads … attach」，却出现 {gate} —— 认领越界")
     return errs
 
 
@@ -929,6 +1043,43 @@ def audit_discard_tool_or_senergy(card_name: str, item_name: str, desc: str,
                 if len(parts) > 2 and parts[2] != "opp":
                     errs.append(f"{card_name} · {item_name}：卡面目标是**对手**"
                                 f"宝可梦，`{t}` 的范围却是 `{parts[2]}`")
+    return errs
+
+
+def audit_search_energy_distinct(card_name: str, item_name: str, desc: str,
+                                 effects: list) -> list:
+    """检索**入手**侧的「of different types」对账（2026-11-02 · 第三十五类）
+
+    卡面：「Search your deck for up to 3 Basic Energy cards **of different
+    types**, reveal them, and put them into your hand.」（Eevee SFA 50 /
+    Energy Search Pro SSP 176）
+
+    ⚠ 这条限制**此前完全没有建模**：解析链忽略 `of different types`，产出
+    `search_energy:3` → 允许拿 3 张**同色**能量（静默加强），而卡一直躺在池里。
+    这正是「未建模能看见、静默加强看不见」的典型：卡能打、不报错、测试全绿。
+    所以本类必须**双向**核对。
+    """
+    errs = []
+    d = _norm(desc or "")
+    tags = [str(t) for t in (effects or []) if str(t).startswith("search_energy:")]
+    want = bool(re.search(r"basic energy cards? of different types", d, re.I)) \
+        and bool(re.search(r"put (?:them|those cards) into your hand", d, re.I))
+    if not want:
+        for t in tags:
+            if "distinct" in t.split(":"):
+                errs.append(f"{card_name} · {item_name}：卡面没有「Basic Energy "
+                            f"cards of different types（入手）」却出现 `{t}`"
+                            f" —— 认领越界（凭空虚削）")
+        return errs
+    if not tags:
+        errs.append(f"{card_name} · {item_name}：卡面要求「different types」的检索"
+                    f"入手，却没有 `search_energy:` —— 整句未建模")
+        return errs
+    for t in tags:
+        if "distinct" not in t.split(":"):
+            errs.append(f"{card_name} · {item_name}：卡面限定「of different "
+                        f"types」，`{t}` 却没带 `:distinct` —— 允许拿同色能量"
+                        f"（静默加强）")
     return errs
 
 
@@ -1962,6 +2113,8 @@ def main() -> int:
                 errs += audit_opp_hand(c["name"], it.get("name"), desc, eff)
                 errs += audit_attach_spread(c["name"], it.get("name"), desc, eff)
                 errs += audit_attach_variants(c["name"], it.get("name"), desc, eff)
+                errs += audit_search_energy_distinct(c["name"], it.get("name"),
+                                                     desc, eff)
                 errs += audit_energy_cost(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
@@ -2027,7 +2180,8 @@ def main() -> int:
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
           "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
           "检索能量自由分配 · 自由分配两变体（抛币/每只后备） · 能量代价去向 · "
-          "打出代价 · 弃对手道具或场地 三十四类对账全部一致")
+          "打出代价 · 弃对手道具或场地 · 附着四形态（双色/选N只/抛到反面/抛币门） · "
+          "检索不同属性 三十五类对账全部一致")
     return 0
 
 

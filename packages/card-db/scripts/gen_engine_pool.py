@@ -87,7 +87,10 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 2026-11-02 第三十八批：弃对手道具/特殊能量 **或** 弃竞技场
                 # （Blowtorch）。前缀**不**被 `discard_tool:` 覆盖（第 13 位
                 # 是 `_` 不是 `:`），必须显式列出。
-                "discard_tool_or_senergy:")
+                "discard_tool_or_senergy:",
+                # 2026-11-02 第三十九批：选 N 只各附（Janine's Secret Art）
+                # 与训练家抛币门（Energy Coin）
+                "attach_each_pick:", "coin_gate_attach:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -151,7 +154,10 @@ ATTACK_TAG_PREFIXES = (
     # 第三十八批（2026-11-02）：自由分配的两个变体
     #   · `attach_spread_flip:` 抛 N 币 × per 张（Mega Audino ex）
     #   · `attach_each_bench:` 每只后备**各** per 张、绑定给那一只（Mega Gardevoir ex）
-    "attach_spread_flip:", "attach_each_bench:"
+    "attach_spread_flip:", "attach_each_bench:",
+    # 第三十九批（2026-11-02）：双色 or-1-of-each / 选 N 只各附 / 抛到反面为止
+    # （Steven's Metagross ex · Janine's Secret Art · Snorlax）
+    "attach_spread_multi:", "attach_each_pick:", "attach_flip_until:"
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
@@ -164,6 +170,8 @@ ABILITY_TAG_PREFIXES = (
     # 第三十八批（2026-11-02）：自由分配的两个变体 —— Magneton 时代只放了
     # `attach_spread:`，这两个前缀更长（第 13 位是 `_`），**不会**被它覆盖。
     "attach_spread_flip:", "attach_each_bench:",
+    # 第三十九批：Steven's Metagross ex 的「X-Boot」是 field 特性
+    "attach_spread_multi:",
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:", "status_self:",
     # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",

@@ -62,7 +62,11 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # 抛 N 币 × per 张）与「每只后备各 per 张」（`attach_each_bench:`）
                 "attach_spread_flip", "attach_each_bench",
                 # 2026-11-02 第三十八批：弃对手道具/特殊能量 **或** 弃竞技场（二选一）
-                "discard_tool_or_senergy")
+                "discard_tool_or_senergy",
+                # 2026-11-02 第三十九批：双色 or-1-of-each / 选 N 只各附 /
+                # 抛到反面为止 / 训练家抛币门
+                "attach_spread_multi", "attach_each_pick",
+                "attach_flip_until", "coin_gate_attach")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -827,9 +831,13 @@ def _detect_recon_top(t: str) -> Optional[dict]:
 # 引擎原有的 `attach` 只能附给**单一**目标，而这一族允许把多张分给多只，
 # 此前整族落到「检索附能需自行分配目标（B4）」被拒。
 _ATTACH_SPREAD_TAIL = r"[.]?\s*then,?\s*shuffle your deck[.]?$"
+# 「of different types」是**检索约束**（2026-11-02 第三十九批）：拿到的 N 张能量
+# 属性必须**两两不同**。写成可选**具名**组，只有命中时才产出 `:distinct`
+# —— 否则会给所有普通形态凭空加上「不能同色」的限制（静默削弱）。
 _ATTACH_SPREAD_SIMPLE = re.compile(
-    r"search your deck for up to (\d+) basic (?:[{]([a-z])[}] )?energy cards? "
-    r"and attach them to your (.+?) in any way you like" + _ATTACH_SPREAD_TAIL)
+    r"search your deck for up to (\d+) basic (?:[{]([a-z])[}] )?energy cards?"
+    r"(?P<distinct> of different types)?"
+    r" and attach them to your (.+?) in any way you like" + _ATTACH_SPREAD_TAIL)
 # 双属性双限额（Joltik SCR 50：up to 2 Basic {G} + up to 2 Basic {L}）
 _ATTACH_SPREAD_DUAL = re.compile(
     r"search your deck for up to (\d+) basic [{]([a-z])[}] energy cards? and "
@@ -894,7 +902,10 @@ _ATTACH_SPREAD_OWNED = re.compile(r"^([a-z\u2019']+)['\u2019]s pok[eé]mon$")
 # 「your {L} Pokémon」这类**属性**限定（Magneton SSP 59）：按 pdef.ptype 判定。
 # ⚠ 与 `cat-` 是两套不同的判定依据：属性写在卡面 `{X}` 符号里，category 写的是
 # 「Future / Tera / Trainer's Pokémon(Marnie)」这类**卡牌子类**。混用会漏附或错附。
-_ATTACH_SPREAD_TYPED = re.compile(r"^\{([a-z])\} pok[eé]mon$")
+# 2026-11-02 第三十九批：可选组接**并集**（Steven's Metagross ex 的
+# 「your {P} Pokémon **and** {M} Pokémon」）—— 两组都能当目标，不是「各附一份」。
+_ATTACH_SPREAD_TYPED = re.compile(
+    r"^\{([a-z])\} pok[eé]mon(?: and \{(?P<c2>[a-z])\} pok[eé]mon)?$")
 
 
 def _spread_scope_of(phrase: str) -> Optional[str]:
@@ -906,14 +917,24 @@ def _spread_scope_of(phrase: str) -> Optional[str]:
         return "bench"
     if ph in ("future pok\u00e9mon", "future pokemon"):
         return "cat-future"
+    # Terapagos SSP 161「your **Tera** Pokémon」：卡牌子类（category = "Tera"）。
+    if ph in ("tera pok\u00e9mon", "tera pokemon"):
+        return "cat-tera"
     m = _ATTACH_SPREAD_TYPED.match(ph)
     if m:
         et = _EN_ENERGY_LETTER.get(m.group(1).upper())
-        return f"type-{et}" if et else None      # 属性符号不认识 → 不猜
+        if et is None:
+            return None
+        if m.group("c2"):
+            et2 = _EN_ENERGY_LETTER.get(m.group("c2").upper())
+            if et2 is None:
+                return None
+            return f"type-{et}+type-{et2}"     # 并集：两类都能当目标
+        return f"type-{et}"
     m = _ATTACH_SPREAD_OWNED.match(ph)
     if m:
         return f"cat-{m.group(1)}"
-    return None                   # 未知限定（Tera 等）→ 不认领
+    return None                   # 未知限定（Tera 以外的子类）→ 不认领
 
 
 def _detect_attach_spread(t: str) -> Optional[list]:
@@ -979,7 +1000,10 @@ def _detect_attach_spread(t: str) -> Optional[list]:
         return out
     m = _ATTACH_SPREAD_SIMPLE.match(t)
     if m:
-        scope = _spread_scope_of(m.group(3))
+        # 组号说明：1=张数 2=属性符号 3(**具名** distinct) 4=目标短语。
+        # `distinct` 用**具名**组，按是否命中决定语义 —— 没这句的卡绝不能
+        # 被加上「不能同色」的限制（静默削弱）。
+        scope = _spread_scope_of(m.group(4))
         if scope is None:
             return None
         et = None
@@ -988,7 +1012,7 @@ def _detect_attach_spread(t: str) -> Optional[list]:
             if et is None:
                 return None
         return [{"n": int(m.group(1)), "etype": et, "zone": "deck",
-                 "scope": scope}]
+                 "scope": scope, "distinct": bool(m.group("distinct"))}]
     m = _ATTACH_SPREAD_FROM_ZONE.match(t)
     if m:
         scope = _spread_scope_of(m.group(4))
@@ -1020,6 +1044,117 @@ def _detect_attach_each_bench(t: str) -> Optional[dict]:
         if et is None:
             return None                             # 属性符号不认识 → 不猜
     return {"per": per, "etype": et, "zone": "deck"}
+
+
+# 双色「**or 1 of each**」（Steven's Metagross ex DRI 145「X-Boot」，2026-11-02
+# 第三十九批）：
+#   「Once during your turn, you may search your deck for a Basic {P} Energy card,
+#    a Basic {M} Energy card, **or 1 of each** and attach them to your {P} Pokémon
+#    and {M} Pokémon in any way you like.」
+# ⚠ 与 Joltik 的「up to 2 {G} **and** up to 2 {L}」不是一回事：那是「两类各取各的、
+# 都能拿满」，本条是**三选一**（只 P / 只 M / 各 1）—— 每类**至多 1 张、总量可少**。
+# 落成两条独立 `attach_spread:` 会**强制每类各拿 1 张**（比卡面强），所以新开 tag。
+_ATTACH_SPREAD_MULTI = re.compile(
+    r"^(?:once during your turn, you may )?search your deck for "
+    r"(?:a|an|up to (\d+)) basic [{]([a-z])[}] energy card, "
+    r"(?:a|an|up to (\d+)) basic [{]([a-z])[}] energy card,? or 1 of each "
+    r"and attach them to your (.+?) in any way you like" + _ATTACH_SPREAD_TAIL)
+
+# 「Choose up to N of your {X} Pokémon. **For each of those** Pokémon, …」
+# （Janine's Secret Art SFA 59，2026-11-02 第三十九批）：
+# 「Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your
+#  deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle
+#  your deck. If you attached Energy to your **Active** Pokémon in this way, it
+#  is now Poisoned.」
+# ⚠ 两处都与 `attach_each_bench` 不同：(a) 目标集合是「**选出**的至多 N 只」
+# 而不是「全部后备」；(b) 末尾的**条件性自我中毒** —— 只有附到战斗位才中毒，
+# 无条件 `status_self:poison` 是错的（会白给自家战斗位挂状态）。
+_ATTACH_EACH_PICK = re.compile(
+    r"^choose up to (\d+) of your (.+?)[.] for each of those pok[eé]mon, "
+    r"search your deck for (?:a|an|up to (\d+)) basic (?:[{]([a-z])[}] )?energy "
+    r"cards? and attach (?:it|them) to that pok[eé]mon[.]?\s*"
+    r"then,?\s*shuffle your deck[.]?"
+    r"(?P<poison>\s*if you attached energy to your active pok[eé]mon in this way, "
+    r"it is now poisoned[.])?$")
+
+# 「Flip a coin until you get tails. … up to the number of heads and attach it to
+# **this Pokémon**」（Snorlax POR 63「Gormandizer」，2026-11-02 第三十九批）：
+# 张数 = 正面枚数（**抛到反面为止**，几何分布），全部附给**自己**（不是自由分配）。
+_ATTACH_FLIP_UNTIL = re.compile(
+    r"^flip a coin until you get tails[.] search your deck for an amount of "
+    r"basic (?:[{]([a-z])[}] )?energy up to the number of heads and attach it "
+    r"to this pok[eé]mon" + _ATTACH_SPREAD_TAIL)
+
+# 「Flip N coins. If **both of them** are heads, search your deck for a Basic
+# Energy card and attach it to 1 of your Pokémon.」（Energy Coin BLK 81）
+# 训练家卡：抛币门（全部正面才生效）+ 检索单张附能。子效果复用 `attach:`，
+# 由 `_trainer_coin_all` 在门通过后派发。
+_COIN_GATE_ATTACH = re.compile(
+    r"^flip (\d+) coins?[.] if both of them are heads, search your deck for "
+    r"(?:a|an|up to (\d+)) basic (?:[{]([a-z])[}] )?energy cards? and attach "
+    r"(?:it|them) to 1 of your pok[eé]mon" + _ATTACH_SPREAD_TAIL)
+
+
+def _detect_attach_multi(t: str) -> Optional[dict]:
+    """整句识别「双色 **or 1 of each** 检索并自由分配」；认不出返回 None"""
+    m = _ATTACH_SPREAD_MULTI.match(_norm_prose(t))
+    if not m:
+        return None
+    t1 = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+    t2 = _EN_ENERGY_LETTER.get(str(m.group(4)).upper())
+    scope = _spread_scope_of(m.group(5))
+    if t1 is None or t2 is None or scope is None:
+        return None
+    return {"kinds": [(t1, int(m.group(1)) if m.group(1) else 1),
+                      (t2, int(m.group(3)) if m.group(3) else 1)],
+            "zone": "deck", "scope": scope}
+
+
+def _detect_attach_each_pick(t: str) -> Optional[dict]:
+    """整句识别「选至多 N 只、每只各取 per 张」；认不出返回 None"""
+    m = _ATTACH_EACH_PICK.match(_norm_prose(t))
+    if not m:
+        return None
+    scope = _spread_scope_of(m.group(2))
+    if scope is None:
+        return None
+    et = None
+    if m.group(4):
+        et = _EN_ENERGY_LETTER.get(str(m.group(4)).upper())
+        if et is None:
+            return None
+    return {"max": int(m.group(1)),
+            "per": int(m.group(3)) if m.group(3) else 1,
+            "etype": et, "zone": "deck", "scope": scope,
+            "poison_if_active": bool(m.group("poison"))}
+
+
+def _detect_attach_flip_until(t: str) -> Optional[dict]:
+    """整句识别「抛到反面为止、按正面数检索附给自己」；认不出返回 None"""
+    m = _ATTACH_FLIP_UNTIL.match(_norm_prose(t))
+    if not m:
+        return None
+    et = None
+    if m.group(1):
+        et = _EN_ENERGY_LETTER.get(str(m.group(1)).upper())
+        if et is None:
+            return None
+    return {"etype": et, "zone": "deck"}
+
+
+def _detect_coin_gate_attach(t: str) -> Optional[dict]:
+    """整句识别「抛 N 币全正面 → 检索单张附能」；认不出返回 None"""
+    m = _COIN_GATE_ATTACH.match(_norm_prose(t))
+    if not m:
+        return None
+    et = None
+    if m.group(3):
+        et = _EN_ENERGY_LETTER.get(str(m.group(3)).upper())
+        if et is None:
+            return None
+    return {"coins": int(m.group(1)),
+            "n": int(m.group(2)) if m.group(2) else 1,
+            "etype": et, "zone": "deck"}
 
 
 # 「弃对手 1 只宝可梦身上的**道具或特殊能量**，**或**弃场上竞技场」
@@ -2961,6 +3096,42 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                     "actions": [act("attach_each_bench", int(_ab["per"]),
                                     "self", _ab)],
                     "source_text": str(text or ""), "citations": []}
+        # 双色「or 1 of each」（Steven's Metagross ex）：每类至多 1 张、总量可少。
+        # 绝不拆成两条 `attach_spread:` —— 那会强制每类各拿 1 张（比卡面强）。
+        _am = _detect_attach_multi(t)
+        if _am:
+            return {"kind": kind, "name": name, "trigger": _atrig,
+                    "conditions": conditions,
+                    "actions": [act("attach_spread_multi", None, "self", _am)],
+                    "source_text": str(text or ""), "citations": []}
+        # 「抛到反面为止、按正面数附给自己」（Snorlax）：张数是**随机变量**，
+        # 只能结算时抛；不能折算成固定值。
+        _fu = _detect_attach_flip_until(t)
+        if _fu:
+            return {"kind": kind, "name": name, "trigger": _atrig,
+                    "conditions": conditions,
+                    "actions": [act("attach_flip_until", 1, "self", _fu)],
+                    "source_text": str(text or ""), "citations": []}
+
+    # 「Choose up to N of your {X} Pokémon. For each of those Pokémon, …」
+    # （Janine's Secret Art，supporter）：目标集合是**选出**的至多 N 只，
+    # 与 `attach_each_bench`（全部后备）不同；末尾条件性自我中毒另行标注。
+    _ap = _detect_attach_each_pick(t)
+    if _ap:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions,
+                "actions": [act("attach_each_pick", int(_ap["per"]), "self", _ap)],
+                "source_text": str(text or ""), "citations": []}
+
+    # 「Flip N coins. If both of them are heads, … attach …」（Energy Coin，item）：
+    # 训练家侧抛币门，门通过后把子效果（`attach:`）交给派发链。
+    if kind in ("item", "supporter", "stadium", "tool"):
+        _cg = _detect_coin_gate_attach(t)
+        if _cg:
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("coin_gate_attach", int(_cg["n"]), "self", _cg)],
+                    "source_text": str(text or ""), "citations": []}
 
     # 「弃对手道具/特殊能量 或 弃竞技场」二选一（Blowtorch）：整段认领。
     # 必须排在 S6 的 `_EN_DISCARD_STADIUM_RE` 内联分支**之前** —— 那一支只产出
@@ -3025,8 +3196,13 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     elif _EN_SEARCH_RE.search(t):
         g = _EN_SEARCH_RE.search(t).group(1)
         tgt = "discard" if "discard pile" in lower else "deck"
-        actions.append(act("search", int(g) if g else 1, tgt,
-                           {"what": _en_search_what(lower)}))
+        _sex = {"what": _en_search_what(lower)}
+        if re.search(r"\bof different types\b", t, re.I):
+            # 「up to 3 Basic Energy cards **of different types**」（Eevee SFA 50 /
+            # Energy Search Pro SSP 176）：这是**检索约束**，不是修饰语。
+            # 早期完全忽略它 → 允许拿 3 张**同色**能量（静默加强；第三十九批修正）。
+            _sex["distinct"] = True
+        actions.append(act("search", int(g) if g else 1, tgt, _sex))
 
     m = _EN_ATTACH_RE.search(t)
     if m and "energ" in lower:
@@ -6600,6 +6776,10 @@ def to_engine_tags(specs: list) -> dict:
                     _tag = f"attach_spread:{_n}:{_et}:{_zone}"
                     if _scope != "any":
                         _tag += f":target:{_scope}"
+                    if extra.get("distinct"):
+                        # 「of different types」= 检索约束（2026-11-02 第三十九批）：
+                        # 拿到的 N 张必须**属性两两不同**。尾段，引擎先剥再解析 scope。
+                        _tag += ":distinct"
                     if extra.get("selfko"):
                         # 「If you use this Ability, this Pokémon is Knocked Out.」
                         # 必须是**尾段**（引擎先剥 `:selfko` 再解析 scope）
@@ -6641,6 +6821,78 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     _et = str(extra.get("etype") or "any")
                     tags.append(f"attach_each_bench:{_per}:{_et}:{_zone}")
+            elif t == "attach_spread_multi":
+                # 双色「or 1 of each」（Steven's Metagross ex）：
+                # `attach_spread_multi:<per1>:<t1>:<per2>:<t2>:<zone>[:target:<scope>]`
+                _kinds = extra.get("kinds") or []
+                _zone = str(extra.get("zone") or "deck")
+                _scope = str(extra.get("scope") or "any")
+                if len(_kinds) != 2 or not all(
+                        isinstance(k, (list, tuple)) and len(k) == 2
+                        and k[0] and isinstance(k[1], int) and k[1] >= 1
+                        for k in _kinds):
+                    unsupported.append({"type": t,
+                                        "reason": f"双色限额未识别：{_kinds}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    _tag = (f"attach_spread_multi:{_kinds[0][1]}:{_kinds[0][0]}:"
+                            f"{_kinds[1][1]}:{_kinds[1][0]}:{_zone}")
+                    if _scope != "any":
+                        _tag += f":target:{_scope}"
+                    tags.append(_tag)
+            elif t == "attach_each_pick":
+                # 「选至多 N 只、每只各 per 张」（Janine's Secret Art）：
+                # `attach_each_pick:<max>:<per>:<etype>:<zone>:target:<scope>`
+                _mx = extra.get("max")
+                _per = extra.get("per")
+                _zone = str(extra.get("zone") or "deck")
+                _scope = str(extra.get("scope") or "")
+                if not isinstance(_mx, int) or _mx < 1 \
+                        or not isinstance(_per, int) or _per < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"选取上限未识别：{_mx}x{_per}"})
+                elif not _scope or _scope == "any":
+                    # 卡面限定「of your {X} Pokémon」；目标集合为「任意己方」时
+                    # 无法区分「选中哪几只」，如实拒绝而不是随便挑。
+                    unsupported.append({"type": t,
+                                        "reason": f"选取目标限定未识别：{_scope}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    _et = str(extra.get("etype") or "any")
+                    _tag = (f"attach_each_pick:{_mx}:{_per}:{_et}:{_zone}"
+                            f":target:{_scope}")
+                    if extra.get("poison_if_active"):
+                        _tag += ":poison_if_active"
+                    tags.append(_tag)
+            elif t == "attach_flip_until":
+                # 「抛到反面为止、按正面数附给自己」（Snorlax）：
+                # `attach_flip_until:<etype>:<zone>`
+                _zone = str(extra.get("zone") or "deck")
+                if _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    tags.append(f"attach_flip_until:{extra.get('etype') or 'any'}"
+                                f":{_zone}")
+            elif t == "coin_gate_attach":
+                # 训练家抛币门（Energy Coin）：`coin_gate_attach:<coins>:<n>:<etype>:<zone>`
+                _coins = extra.get("coins")
+                _n = extra.get("n")
+                _zone = str(extra.get("zone") or "deck")
+                if not isinstance(_coins, int) or _coins < 1 \
+                        or not isinstance(_n, int) or _n < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"抛币门参数未识别：{_coins}x{_n}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    tags.append(f"coin_gate_attach:{_coins}:{_n}:"
+                                f"{extra.get('etype') or 'any'}:{_zone}")
             elif t == "discard_tool_or_senergy":
                 # 「弃对手道具/特殊能量 **或** 弃竞技场」二选一（Blowtorch）：
                 # `discard_tool_or_senergy:<n>:<scope>` —— 两支都在引擎侧实现，
@@ -6802,7 +7054,9 @@ def to_engine_tags(specs: list) -> dict:
                                     {"type": t, "reason": "检索属性符号未识别（B4）"})
                             else:
                                 tags.append(f"search_energy:{n}"
-                                            + (f":type:{pt}" if pt else ""))
+                                            + (f":type:{pt}" if pt else "")
+                                            + (":distinct" if extra.get("distinct")
+                                               else ""))
                         elif has_type or has_stage:
                             unsupported.append(
                                 {"type": t,

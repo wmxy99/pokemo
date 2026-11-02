@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 10:42:19",
+  "reparsed_at": "2026-11-02 11:18:05",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1013,
+  "engine_ready": 1018,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1013,
-   "engine_approximated": 998,
-   "engine_unmatched": 254,
+   "zh_backfill": 1018,
+   "engine_approximated": 1003,
+   "engine_unmatched": 249,
    "engine_namekey_mismatch": 37
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 119,
-   "engine_tags": 1352,
-   "unsupported": 239,
+   "engine_tags": 1356,
+   "unsupported": 234,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 998,
+  "engine_approximated": 1003,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -11579,7 +11579,8 @@
            "n": 2,
            "etype": null,
            "zone": "deck",
-           "scope": "cat-future"
+           "scope": "cat-future",
+           "distinct": false
           }
          }
         ],
@@ -11609,7 +11610,8 @@
          "n": 2,
          "etype": null,
          "zone": "deck",
-         "scope": "cat-future"
+         "scope": "cat-future",
+         "distinct": false
         }
        }
       ],
@@ -20667,7 +20669,8 @@
           "amount": 3,
           "target": "deck",
           "extra": {
-           "what": "energy"
+           "what": "energy",
+           "distinct": true
           }
          }
         ],
@@ -20676,7 +20679,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "search_energy:3"
+       "search_energy:3:distinct"
       ],
       "unsupported": []
      }
@@ -20693,7 +20696,8 @@
         "amount": 3,
         "target": "deck",
         "extra": {
-         "what": "energy"
+         "what": "energy",
+         "distinct": true
         }
        }
       ],
@@ -20702,7 +20706,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "search_energy:3"
+     "search_energy:3:distinct"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -28086,7 +28090,8 @@
            "n": 2,
            "etype": null,
            "zone": "deck",
-           "scope": "any"
+           "scope": "any",
+           "distinct": false
           }
          }
         ],
@@ -28146,7 +28151,8 @@
          "n": 2,
          "etype": null,
          "zone": "deck",
-         "scope": "any"
+         "scope": "any",
+         "distinct": false
         }
        }
       ],
@@ -33972,14 +33978,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Terapagos@SSP 161",
    "parse": {
     "items": [
      {
@@ -33993,25 +34001,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 3,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 3,
+           "etype": null,
+           "zone": "deck",
+           "scope": "cat-tera",
+           "distinct": true
           }
          }
         ],
-        "source_text": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:3:any:deck:target:cat-tera:distinct"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -34022,25 +34032,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 3,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 3,
+         "etype": null,
+         "zone": "deck",
+         "scope": "cat-tera",
+         "distinct": true
         }
        }
       ],
-      "source_text": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
+    "engine_tags": [
+     "attach_spread:3:any:deck:target:cat-tera:distinct"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -77121,7 +77133,8 @@
            "n": 3,
            "etype": null,
            "zone": "deck",
-           "scope": "any"
+           "scope": "any",
+           "distinct": false
           }
          }
         ],
@@ -77186,7 +77199,8 @@
          "n": 3,
          "etype": null,
          "zone": "deck",
-         "scope": "any"
+         "scope": "any",
+         "distinct": false
         }
        }
       ],
@@ -86991,14 +87005,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Steven's Metagross ex@DRI 145",
    "parse": {
     "items": [
      {
@@ -87008,70 +87024,76 @@
        {
         "kind": "ability",
         "name": "X-Boot",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "attach_spread_multi",
+          "amount": null,
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "kinds": [
+            [
+             "psychic",
+             1
+            ],
+            [
+             "metal",
+             1
+            ]
+           ],
+           "zone": "deck",
+           "scope": "type-psychic+type-metal"
           }
          }
         ],
-        "source_text": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread_multi:1:psychic:1:metal:deck:target:type-psychic+type-metal"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "X-Boot",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "attach_spread_multi",
+        "amount": null,
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "kinds": [
+          [
+           "psychic",
+           1
+          ],
+          [
+           "metal",
+           1
+          ]
+         ],
+         "zone": "deck",
+         "scope": "type-psychic+type-metal"
         }
        }
       ],
-      "source_text": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
-     }
+    "engine_tags": [
+     "attach_spread_multi:1:psychic:1:metal:deck:target:type-psychic+type-metal"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -90057,7 +90079,8 @@
            "n": 3,
            "etype": null,
            "zone": "deck",
-           "scope": "bench"
+           "scope": "bench",
+           "distinct": false
           }
          }
         ],
@@ -90118,7 +90141,8 @@
          "n": 3,
          "etype": null,
          "zone": "deck",
-         "scope": "bench"
+         "scope": "bench",
+         "distinct": false
         }
        }
       ],
@@ -141282,14 +141306,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Snorlax@POR 63",
    "parse": {
     "items": [
      {
@@ -141303,25 +141329,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_flip_until",
           "amount": 1,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "etype": null,
+           "zone": "deck"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. Search your deck for an amount of Basic Energy up to the number of heads and attach it to this Pokémon. Then, shuffle your deck."
+        "source_text": "Flip a coin until you get tails. Search your deck for an amount of Basic Energy up to the number of heads and attach it to this Pokémon. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_flip_until:any:deck"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -141360,15 +141385,17 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_flip_until",
         "amount": 1,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "etype": null,
+         "zone": "deck"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. Search your deck for an amount of Basic Energy up to the number of heads and attach it to this Pokémon. Then, shuffle your deck."
+      "source_text": "Flip a coin until you get tails. Search your deck for an amount of Basic Energy up to the number of heads and attach it to this Pokémon. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -141390,14 +141417,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "attach_flip_until:any:deck",
      "status_self:sleep"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -144156,7 +144179,8 @@
           "amount": 1,
           "target": "deck",
           "extra": {
-           "what": "energy"
+           "what": "energy",
+           "distinct": true
           }
          }
         ],
@@ -144186,7 +144210,8 @@
         "amount": 1,
         "target": "deck",
         "extra": {
-         "what": "energy"
+         "what": "energy",
+         "distinct": true
         }
        }
       ],
@@ -147540,14 +147565,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抛 2 次硬币。若 2 次都是正面，从牌库中检索 1 张基本能量卡，附着于你的 1 只宝可梦身上。然后洗牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Energy Coin@BLK 81",
    "parse": {
     "items": [
      {
@@ -147561,26 +147588,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "coin_gate_attach",
           "amount": 1,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "coins": 2,
+           "n": 1,
+           "etype": null,
+           "zone": "deck"
           }
          }
         ],
-        "source_text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck."
+        "source_text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_gate_attach:2:1:any:deck"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "抛币分支内的检索（需 coin 嵌套，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147591,25 +147619,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "coin_gate_attach",
         "amount": 1,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "coins": 2,
+         "n": 1,
+         "etype": null,
+         "zone": "deck"
         }
        }
       ],
-      "source_text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck."
+      "source_text": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "抛币分支内的检索（需 coin 嵌套，B4）"
-     }
+    "engine_tags": [
+     "coin_gate_attach:2:1:any:deck"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -153640,14 +153669,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "选择你的最多 2 只 {D} 宝可梦。对每只该宝可梦，从牌库中检索 1 张基本 {D} 能量卡并附着于该宝可梦。然后洗牌。若你以此方式将能量附着于你的战斗宝可梦，则它现在处于中毒状态。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Janine’s Secret Art@SFA 59",
    "parse": {
     "items": [
      {
@@ -153661,36 +153692,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_each_pick",
           "amount": 1,
-          "target": "deck",
-          "extra": {
-           "what": "energy"
-          }
-         },
-         {
-          "type": "status",
-          "amount": null,
           "target": "self",
           "extra": {
-           "status": "poison"
+           "max": 2,
+           "per": 1,
+           "etype": "darkness",
+           "zone": "deck",
+           "scope": "type-darkness",
+           "poison_if_active": true
           }
          }
         ],
-        "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned."
+        "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "status_self:poison"
+       "attach_each_pick:2:1:darkness:deck:target:type-darkness:poison_if_active"
       ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -153701,35 +153725,28 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_each_pick",
         "amount": 1,
-        "target": "deck",
-        "extra": {
-         "what": "energy"
-        }
-       },
-       {
-        "type": "status",
-        "amount": null,
         "target": "self",
         "extra": {
-         "status": "poison"
+         "max": 2,
+         "per": 1,
+         "etype": "darkness",
+         "zone": "deck",
+         "scope": "type-darkness",
+         "poison_if_active": true
         }
        }
       ],
-      "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned."
+      "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "status_self:poison"
+     "attach_each_pick:2:1:darkness:deck:target:type-darkness:poison_if_active"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -153970,7 +153987,8 @@
           "amount": 2,
           "target": "deck",
           "extra": {
-           "what": "energy"
+           "what": "energy",
+           "distinct": true
           }
          }
         ],
@@ -153979,7 +153997,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "search_energy:2"
+       "search_energy:2:distinct"
       ],
       "play_cost": "",
       "unsupported": []
@@ -153997,7 +154015,8 @@
         "amount": 2,
         "target": "deck",
         "extra": {
-         "what": "energy"
+         "what": "energy",
+         "distinct": true
         }
        }
       ],
@@ -154006,7 +154025,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "search_energy:2"
+     "search_energy:2:distinct"
     ],
     "unsupported": [],
     "generated_by": "rule",

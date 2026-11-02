@@ -135,13 +135,22 @@ class TestAudinoFlip(unittest.TestCase):
 class TestGuards(unittest.TestCase):
     """不得认领的形态（认了就是静默错映射）"""
 
-    def test_different_types_not_claimed(self):
-        """「of different types」是引擎未建模的限定（Terapagos）"""
-        self.assertIsNone(E._detect_attach_spread(TERAPAGOS))
+    def test_different_types_mapped_with_distinct(self):
+        """「of different types」**已建模**（第三十九批）：走 `:distinct` 尾段
+
+        第三十八批时这里断言「不认领」（当时引擎没有「属性两两不同」的约束）。
+        本批补上后，卡面必须**带着** `:distinct` 进 tag —— 认领却不带约束等于
+        允许拿同色能量（静默加强）。
+        """
+        got = E._detect_attach_spread(TERAPAGOS)
+        self.assertIsNotNone(got)
+        self.assertTrue(got[0]["distinct"])
+        # each-bench 形态仍不该认领它（卡面是「to your Tera Pokémon」，不是每只后备）
         self.assertIsNone(E._detect_attach_each_bench(TERAPAGOS))
 
-    def test_tera_scope_not_claimed(self):
-        self.assertIsNone(E._spread_scope_of("Tera Pokémon"))
+    def test_tera_scope_is_category(self):
+        """Tera 是**卡牌子类**（category），不是属性 `type-*`"""
+        self.assertEqual(E._spread_scope_of("Tera Pokémon"), "cat-tera")
 
     def test_each_bench_requires_that_pokemon(self):
         """「attach them to your Pokémon」不是 each-bench 形态"""

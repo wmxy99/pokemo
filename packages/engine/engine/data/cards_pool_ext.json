@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 998,
+      "kept": 1003,
       "by_Energy": 19,
-      "by_Pokemon": 860,
-      "by_Trainer": 119,
+      "by_Pokemon": 863,
+      "by_Trainer": 121,
       "skipped": {
-        "存在未建模项（整卡不收）": 230,
+        "存在未建模项（整卡不收）": 225,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 15,
         "Trainer 不可执行": 9
@@ -4668,7 +4668,7 @@
           },
           "damage": 0,
           "effects": [
-            "search_energy:3"
+            "search_energy:3:distinct"
           ],
           "desc": "Search your deck for up to 3 Basic Energy cards of different types, reveal them, and put them into your hand. Then, shuffle your deck.",
           "name_zh": "缤纷捕捉",
@@ -7971,6 +7971,59 @@
       "source_card_id": 233,
       "name_key": "bouffalant",
       "uid": "Bouffalant@SSP 151"
+    },
+    {
+      "name": "Terapagos",
+      "name_zh": "太乐巴戈斯",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Prism Charge",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_spread:3:any:deck:target:cat-tera:distinct"
+          ],
+          "desc": "Search your deck for up to 3 Basic Energy cards of different types and attach them to your Tera Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "棱镜充能",
+          "desc_zh": "从牌库中检索最多 3 张属性不同的基本能量卡，并以你喜欢的方式附着于你的太晶宝可梦。然后洗牌。"
+        },
+        {
+          "name": "Hard Tackle",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "强硬撞击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "161"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 234,
+      "name_key": "terapagos",
+      "uid": "Terapagos@SSP 161"
     },
     {
       "name": "Budew",
@@ -24656,6 +24709,56 @@
       "source_card_id": 639,
       "name_key": "stevensbeldum",
       "uid": "Steven's Beldum@DRI 143"
+    },
+    {
+      "name": "Steven's Metagross ex",
+      "name_zh": "大吾的巨金怪 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 340,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Steven)",
+      "evolves_from": "Steven's Metang",
+      "attacks": [
+        {
+          "name": "Metal Stomp",
+          "cost": {
+            "metal": 1,
+            "colorless": 2
+          },
+          "damage": 200,
+          "effects": [],
+          "desc": "",
+          "name_zh": "金属踩踏",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "X-Boot",
+          "name_zh": "交叉踢",
+          "tag": "attach_spread_multi:1:psychic:1:metal:deck:target:type-psychic+type-metal",
+          "location": "field",
+          "desc": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 张基本 {P} 能量卡、1 张基本 {M} 能量卡，或各 1 张，并以任意方式附着于你的 {P} 宝可梦与 {M} 宝可梦。然后洗牌。"
+        }
+      ],
+      "real": {
+        "set": "DRI",
+        "number": "145"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 641,
+      "name_key": "stevensmetagrossex",
+      "uid": "Steven's Metagross ex@DRI 145"
     },
     {
       "name": "Marnie's Purrloin",
@@ -42394,6 +42497,61 @@
       "uid": "Meowth ex@POR 62"
     },
     {
+      "name": "Snorlax",
+      "name_zh": "卡比兽",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 160,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Gormandizer",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_flip_until:any:deck"
+          ],
+          "desc": "Flip a coin until you get tails. Search your deck for an amount of Basic Energy up to the number of heads and attach it to this Pokémon. Then, shuffle your deck.",
+          "name_zh": "狼吞虎咽",
+          "desc_zh": "反复抛硬币，直到出现反面。从牌库中检索最多等于正面数量的基本能量卡，附着于此宝可梦身上。然后洗牌。"
+        },
+        {
+          "name": "Collapse",
+          "cost": {
+            "colorless": 4
+          },
+          "damage": 160,
+          "effects": [
+            "status_self:sleep"
+          ],
+          "desc": "This Pokémon is now Asleep.",
+          "name_zh": "倒下",
+          "desc_zh": "此宝可梦现在处于睡眠状态。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "63"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1072,
+      "name_key": "snorlax",
+      "uid": "Snorlax@POR 63"
+    },
+    {
       "name": "Bunnelby",
       "name_zh": "掘掘兔",
       "supertype": "Pokemon",
@@ -43064,6 +43222,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1134,
       "uid": "Team Rocket's Transceiver@DRI 178"
+    },
+    {
+      "name": "Energy Coin",
+      "name_zh": "能量硬币",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "coin_gate_attach:2:1:any:deck",
+      "desc": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+      "desc_zh": "抛 2 次硬币。若 2 次都是正面，从牌库中检索 1 张基本能量卡，附着于你的 1 只宝可梦身上。然后洗牌。",
+      "real": {
+        "set": "BLK",
+        "number": "81"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1135,
+      "uid": "Energy Coin@BLK 81"
     },
     {
       "name": "Antique Cover Fossil",
@@ -43777,6 +43952,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1194,
       "uid": "Colress’s Tenacity@SFA 57"
+    },
+    {
+      "name": "Janine’s Secret Art",
+      "name_zh": "阿杏的秘术",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "attach_each_pick:2:1:darkness:deck:target:type-darkness:poison_if_active",
+      "desc": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a Basic {D} Energy card and attach it to that Pokémon. Then, shuffle your deck. If you attached Energy to your Active Pokémon in this way, it is now Poisoned.",
+      "desc_zh": "选择你的最多 2 只 {D} 宝可梦。对每只该宝可梦，从牌库中检索 1 张基本 {D} 能量卡并附着于该宝可梦。然后洗牌。若你以此方式将能量附着于你的战斗宝可梦，则它现在处于中毒状态。",
+      "real": {
+        "set": "SFA",
+        "number": "59"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1195,
+      "uid": "Janine’s Secret Art@SFA 59"
     },
     {
       "name": "Cassiopeia",

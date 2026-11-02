@@ -94,10 +94,17 @@ class TestRealCards(unittest.TestCase):
 
 
 class TestNegativeGuards(unittest.TestCase):
-    def test_different_types_not_mapped(self):
-        """「of different types」是数量约束（每种至多 1 张），引擎尚未建模 → 不认领"""
-        self.assertEqual(_spread(TERAPAGOS), [])
-        self.assertTrue(_tags(TERAPAGOS)["unsupported"])
+    def test_different_types_mapped_with_distinct(self):
+        """「of different types」（第三十九批起已建模）
+
+        与「数量约束」无关：它是**属性两两不同**的检索约束，用 `:distinct`
+        尾段表达。第三十三批当时不认领（引擎无此约束），本批补上；
+        ⚠ 若哪天又退回「不认领」，Terapagos 会重新变成未建模 —— 但同样危险的
+        反面是**认领却不带 `:distinct`**（允许拿同色），由对账第 30 类双向守。
+        """
+        self.assertEqual(_spread(TERAPAGOS),
+                         ["attach_spread:3:any:deck:target:cat-tera:distinct"])
+        self.assertFalse(_tags(TERAPAGOS)["unsupported"])
 
     def test_single_target_forms_not_hijacked(self):
         """单目标形态必须继续走既有 attach，不得被本族抢走"""

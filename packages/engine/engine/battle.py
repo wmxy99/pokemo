@@ -518,6 +518,29 @@ class Battle:
                         continue
                 if ab.tag == "discard_stadium" and not self.stadium:
                     continue
+                if ab.tag.startswith("attach_each_bench:"):
+                    # 每只后备各 per 张（第三十八批）：无后备 / 无能量 → 不列动作
+                    try:
+                        _bn, _bet, _bz = _parse_attach_each_bench_tag(ab.tag)
+                        if not p.bench or not _zone_energy_available(p, _bet, _bz):
+                            continue
+                    except ValueError:
+                        continue
+                if ab.tag.startswith("attach_spread_multi:"):
+                    # 双色 or 1 of each（第三十九批）：两类都无能量 → 空转，不列
+                    try:
+                        _mp = str(ab.tag).split(":")
+                        _msc = "any"
+                        if "target" in _mp:
+                            _mi = _mp.index("target")
+                            _msc = _mp[_mi + 1] if _mi + 1 < len(_mp) else ""
+                        if not _spread_targets(p, _msc):
+                            continue
+                        if not (_zone_energy_available(p, _mp[2], _mp[5])
+                                or _zone_energy_available(p, _mp[4], _mp[5])):
+                            continue
+                    except ValueError:
+                        continue
                 if ab.tag.startswith("attach_spread:"):
                     # 多张自由分配附着（2026-11-02 第三十七批补合法动作表）：
                     # 无可附能量 / 无合法目标 → 不列动作。带 `:selfko` 时这一步
@@ -739,6 +762,18 @@ class Battle:
             elif tag.startswith("gust"):
                 for bi in range(len(opp.bench)):
                     out.append({**base, "target": bi})
+            elif tag.startswith(("attach_spread:", "attach_spread_flip:",
+                                 "attach_each_bench:", "attach_spread_multi:",
+                                 "attach_each_pick:", "attach_flip_until:",
+                                 "coin_gate_attach:")):
+                # 附着族（2026-11-02 第三十八/三十九批）：**必须**排在下面
+                # `elif tag.startswith("attach")` **之前** —— 那一支会拿
+                # "spread" / "each" / "gate" 当能量属性名去查牌库，恒判「无能量」，
+                # 卡于是永远不进合法动作表（打不出、AI 也测不到，机制白做）。
+                # 可用性只要求「牌库里至少还有 1 张能量」：具体颜色/张数/目标
+                # 是否符合卡面，由结算时的 `_do_*` 兜底（取不满不算错）。
+                if _zone_energy_available(p, None, "any"):
+                    out.append(dict(base))
             elif tag.startswith("attach"):
                 _n, _et, _zn = _parse_attach_tag(tag)
                 if _zone_energy_available(p, _et, _zn or "any"):
@@ -1390,6 +1425,12 @@ class Battle:
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("attach_spread_multi:"):
+                # 双色 or 1 of each（第三十九批，Steven's Metagross ex「X-Boot」）
+                detail = self._do_attach_spread_multi(p, tag, action)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("attach_energy:"):
                 # 附能（如「碧绿之舞」从手牌 / 「火焰之舞」从弃牌堆附 n 个指定色能量）
                 n, etype, zone = _parse_attach_tag(tag)
@@ -1836,6 +1877,18 @@ class Battle:
         elif tag.startswith("attach_each_bench:"):
             # 每只后备各 per 张（2026-11-02 第三十八批）
             placed = self._do_attach_each_bench(p, tag, action)
+        elif tag.startswith("attach_spread_multi:"):
+            # 双色 or 1 of each（第三十九批）
+            placed = self._do_attach_spread_multi(p, tag, action)
+        elif tag.startswith("attach_each_pick:"):
+            # 选至多 N 只、每只各 per 张（第三十九批，Janine's Secret Art）
+            placed = self._do_attach_each_pick(p, tag, action)
+        elif tag.startswith("attach_flip_until:"):
+            # 抛到反面为止（第三十九批）
+            placed = self._do_attach_flip_until(p, tag, action)
+        elif tag.startswith("coin_gate_attach:"):
+            # 训练家抛币门（第三十九批，Energy Coin）
+            placed = self._trainer_coin_gate_attach(p, tag, action)
         elif tag.startswith("attach"):
             placed = self._trainer_attach_energy(p, tag, action)
         elif tag.startswith("discard_opp_random:"):
@@ -2537,6 +2590,10 @@ class Battle:
         n, etype, zone, scope, selfko = _parse_attach_spread_tag(tag)
         targets = _spread_targets(p, scope)
         moved = 0
+        # 「of different types」（第三十九批，Terapagos SSP 161）：每张必须换一个
+        # 颜色。`avoid` 是跨张累积的集合，由本次调用独占 —— 不能做成实例字段，
+        # 否则会泄漏到下一次结算。
+        avoid: Optional[set] = set() if "distinct" in str(tag).split(":") else None
         # 缺省分配池（`attach_plan` 未指定时用）：
         # 带 `:selfko` 时**排除持有者自己** —— 它马上要被击倒，附给它的能量会
         # 随它进弃牌堆，等于这一张白附（净效果为零、还白丢 1 张奖赏）。
@@ -2572,7 +2629,8 @@ class Battle:
                     fp = seq[k]
                 else:
                     fp = default_pool[k % len(default_pool)]
-                if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
+                if _attach_energy_from_zones(self, p, fp, 1, etype, zone,
+                                             avoid=avoid) <= 0:
                     break
                 moved += 1
             if moved:
@@ -2651,6 +2709,196 @@ class Battle:
         if not moved:
             return ""
         return f"attach {moved} {etype or 'any'} to {len(p.bench)} bench"
+
+    def _do_attach_spread_multi(self, p: PlayerState, tag: str,
+                                action: dict) -> str:
+        """双色「**or 1 of each**」检索并自由分配（``attach_spread_multi:...``）
+
+        卡面原型（Steven's Metagross ex「X-Boot」）：
+        「search your deck for a Basic {P} Energy card, a Basic {M} Energy card,
+         **or 1 of each** and attach them to your {P} Pokémon and {M} Pokémon in
+         any way you like.」
+
+        语义是**三选一**：只 P / 只 M / 各 1。⇔「每类**至多** per 张、总量可少」。
+        ⚠ 与 Joltik 的「up to 2 {G} **and** up to 2 {L}」不同：那里两条独立
+        `attach_spread:` 是「各取各的」，本形态若也拆成两条就会**强制每类各拿 1 张**
+        （比卡面强）。所以这里由**一个**循环按 `(颜色, 上限)` 逐类取，取不满不算错。
+
+        分配口径与 `attach_spread` 完全一致（`attach_plan` 优先，否则轮转）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 6:
+            raise ValueError(f"attach_spread_multi tag 字段不足：{tag}")
+        if not parts[1].isdigit() or int(parts[1]) < 1 \
+                or not parts[3].isdigit() or int(parts[3]) < 1:
+            raise ValueError(f"attach_spread_multi 张数非法：{tag}")
+        order = [(parts[2], int(parts[1])), (parts[4], int(parts[3]))]
+        if any(not et or et == "any" for et, _ in order):
+            raise ValueError(f"attach_spread_multi 必须指定两种属性：{tag}")
+        zone = parts[5]
+        if zone not in ("hand", "discard", "deck", "any"):
+            raise ValueError(f"attach_spread_multi 区域非法：{zone}")
+        scope = "any"
+        if "target" in parts:
+            i = parts.index("target")
+            scope = parts[i + 1] if i + 1 < len(parts) else ""
+            if not scope:
+                raise ValueError(f"attach_spread_multi 缺少目标限定：{tag}")
+        targets = _spread_targets(p, scope)
+        if not targets:
+            return ""
+        plan = action.get("attach_plan") if isinstance(action, dict) else None
+        seq: list = []
+        if plan is not None:
+            if not isinstance(plan, (list, tuple)):
+                raise ValueError(f"attach_plan 必须是位置码列表：{plan!r}")
+            for pos in plan:
+                if not isinstance(pos, int) or isinstance(pos, bool):
+                    raise ValueError(f"attach_plan 含非整数位置码：{pos!r}")
+                fp = _field_at(p, pos)
+                if fp is None:
+                    raise ValueError(f"attach_plan 位置码无效：{pos}")
+                if fp not in targets:
+                    raise ValueError(
+                        f"attach_plan 位置 {pos} 不符合目标限定 {scope}")
+                seq.append(fp)
+        moved, pos = 0, 0
+        for et, want in order:
+            for _ in range(want):
+                if seq and pos >= len(seq):
+                    break                  # 计划用尽 → 后续张数不再落位
+                fp = seq[pos] if seq else targets[pos % len(targets)]
+                if _attach_energy_from_zones(self, p, fp, 1, et, zone) <= 0:
+                    break                  # 该色取不满 → 只影响这一类
+                moved += 1
+                pos += 1
+        if moved and zone in ("deck", "any"):
+            self.rng.shuffle(p.deck)
+        if not moved:
+            return ""
+        return f"attach {moved} ({order[0][0]}+{order[1][0]}) over {len(targets)}"
+
+    def _do_attach_each_pick(self, p: PlayerState, tag: str,
+                             action: dict) -> str:
+        """「**选**至多 N 只自家宝可梦，每只各 per 张」（``attach_each_pick:...``）
+
+        卡面原型（Janine's Secret Art SFA 59）：
+        「Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search
+         your deck for a Basic {D} Energy card and attach it to that Pokémon.
+         Then, shuffle your deck. If you attached Energy to your **Active**
+         Pokémon in this way, it is now Poisoned.」
+
+        与 `attach_each_bench` 的两处差别：
+          · 目标是**选出**的至多 N 只（不是全部后备）→ 确定性默认按
+            active→bench 顺序取前 N 只；
+          · 末尾**条件性**自我中毒：只有真的附到了战斗位才中毒。无条件
+            `status_self:poison` 是错的（会白给自家战斗位挂状态）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 7:
+            raise ValueError(f"attach_each_pick tag 字段不足：{tag}")
+        if not parts[1].isdigit() or int(parts[1]) < 1 \
+                or not parts[2].isdigit() or int(parts[2]) < 1:
+            raise ValueError(f"attach_each_pick 张数非法：{tag}")
+        mx, per = int(parts[1]), int(parts[2])
+        etype = None if parts[3] in ("any", "") else parts[3]
+        zone = parts[4]
+        if zone not in ("hand", "discard", "deck", "any"):
+            raise ValueError(f"attach_each_pick 区域非法：{zone}")
+        scope = parts[6]
+        want_poison = "poison_if_active" in parts[7:]
+        picked = _spread_targets(p, scope)[:mx]      # 至多 N 只，顺序确定
+        moved, hit_active = 0, False
+        for fp in picked:
+            for _ in range(per):
+                if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
+                    break                            # 该只取不满，继续下一只
+                moved += 1
+                if p.active is fp:
+                    hit_active = True
+        if moved and zone in ("deck", "any"):
+            self.rng.shuffle(p.deck)
+        detail = (f"attach {moved} {etype or 'any'} to {len(picked)} picked"
+                  if moved else "")
+        if want_poison and hit_active:
+            # 「If you attached Energy to your Active Pokémon in this way, it is
+            # now Poisoned.」—— 前提是**真的附上了**，不是无条件挂状态。
+            assert p.active is not None
+            p.active.status.add("poison")
+            self._log("status", {"player": self.current,
+                                 "target": p.active.name, "status": "poison",
+                                 "side": "self"})
+            detail = (detail + " + poison") if detail else "poison"
+        return detail
+
+    def _do_attach_flip_until(self, p: PlayerState, tag: str,
+                              action: dict) -> str:
+        """抛币到反面为止、按正面数检索附能（``attach_flip_until:<etype>:<zone>``）
+
+        卡面原型（Snorlax POR 63「Gormandizer」）：
+        「Flip a coin until you get tails. Search your deck for an amount of Basic
+         Energy up to the number of heads and attach it to **this Pokémon**.」
+
+        全部附给**战斗位**（卡面写 this Pokémon，不是自由分配）；张数 = 正面枚数
+        （几何分布，期望 1）。上限 100 次抛币防死循环（概率 2^-100 可忽略）。
+        """
+        parts = str(tag).split(":")
+        etype = None if len(parts) < 2 or parts[1] in ("any", "") else parts[1]
+        zone = parts[2] if len(parts) > 2 else "deck"
+        if zone not in ("hand", "discard", "deck", "any"):
+            raise ValueError(f"attach_flip_until 区域非法：{zone}")
+        target = p.active
+        if target is None:
+            return ""
+        heads = 0
+        for _ in range(100):
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": self.current, "result": res, "tag": tag})
+            if res == "tails":
+                break
+            heads += 1
+        if heads < 1:
+            return ""
+        got = _attach_energy_from_zones(self, p, target, heads, etype, zone)
+        if got and zone in ("deck", "any"):
+            self.rng.shuffle(p.deck)
+        return f"flip until tails -> {heads} heads, attach {got}"
+
+    def _trainer_coin_gate_attach(self, p: PlayerState, tag: str,
+                                  action: dict) -> str:
+        """训练家抛币门（``coin_gate_attach:<coins>:<n>:<etype>:<zone>``）
+
+        卡面原型（Energy Coin BLK 81）：
+        「Flip 2 coins. If **both of them** are heads, search your deck for a Basic
+         Energy card and attach it to 1 of your Pokémon.」
+
+        ⚠ 招式侧的同名语义走 `_attack_mods` / `_apply_coin_non_damage`（那条链
+        负责「不重复抛币」）；训练家没有那条链，这里**自己抛一次**并直接派发。
+        门不通过 = 合法但无效果（卡已打出，进弃牌堆）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 5 or not parts[1].isdigit() or not parts[2].isdigit():
+            raise ValueError(f"coin_gate_attach tag 非法：{tag}")
+        coins, n = int(parts[1]), int(parts[2])
+        etype = None if parts[3] in ("any", "") else parts[3]
+        zone = parts[4]
+        if zone not in ("hand", "discard", "deck", "any"):
+            raise ValueError(f"coin_gate_attach 区域非法：{zone}")
+        results = [("heads" if self.rng.random() < 0.5 else "tails")
+                   for _ in range(max(0, coins))]
+        ok = bool(results) and all(r == "heads" for r in results)
+        self._log("coin", {"player": self.current,
+                           "result": f"{results.count('heads')}/{coins} heads",
+                           "tag": tag})
+        if not ok:
+            return "no effect (coin gate failed)"
+        fp = _field_at(p, int((action or {}).get("target", 0)))
+        if fp is None:
+            raise ValueError("附能目标无效")
+        got = _attach_energy_from_zones(self, p, fp, n, etype, zone)
+        if got and zone in ("deck", "any"):
+            self.rng.shuffle(p.deck)
+        return f"coin gate passed, attach {got} {etype or 'any'} to {fp.name}"
 
     def _trainer_discard_tool_or_senergy(self, p: PlayerState, tag: str,
                                          action: dict) -> str:
@@ -3002,7 +3250,9 @@ class Battle:
         n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 2
         etype = (parts[3].lower()
                  if len(parts) > 3 and parts[2] == "type" else None)
-        found = _take_energy_from_deck(p, n, etype)
+        # 「of different types」：属性两两不同（Eevee SFA 50，第三十九批）
+        distinct = "distinct" in parts[2:]
+        found = _take_energy_from_deck(p, n, etype, distinct=distinct)
         if not found:
             # 官方规则：「Search your deck for **up to** N …」——找不到也**合法**，
             # 只是没拿到卡。此前直接抛错会让「可支付但牌库无能量」的招式在
@@ -5034,6 +5284,21 @@ class Battle:
                 detail = self._do_attach_each_bench(p, tag, action)
                 self._log("attach_each_bench", {"player": self.current,
                                                 "detail": detail})
+            elif tag.startswith("attach_spread_multi:"):
+                # 双色「or 1 of each」（第三十九批，Steven's Metagross ex）
+                detail = self._do_attach_spread_multi(p, tag, action)
+                self._log("attach_spread_multi", {"player": self.current,
+                                                  "detail": detail})
+            elif tag.startswith("attach_each_pick:"):
+                # 选至多 N 只、每只各 per 张（第三十九批，Janine's Secret Art）
+                detail = self._do_attach_each_pick(p, tag, action)
+                self._log("attach_each_pick", {"player": self.current,
+                                               "detail": detail})
+            elif tag.startswith("attach_flip_until:"):
+                # 抛到反面为止、按正面数附给自己（第三十九批，Snorlax）
+                detail = self._do_attach_flip_until(p, tag, action)
+                self._log("attach_flip_until", {"player": self.current,
+                                                "detail": detail})
             elif tag.startswith("attach"):
                 n, etype, zone = _parse_attach_tag(tag)
                 # 目标：`:target:bench|any|bench_type:<c>`（2026-10-28 第十五批）；
@@ -6253,12 +6518,18 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
 def _attach_energy_from_zones(battle, p: PlayerState, target: FieldPokemon,
                               n: int, etype: Optional[str],
                               zone: str = "any",
-                              allow_special: bool = False) -> int:
+                              allow_special: bool = False,
+                              avoid: Optional[set] = None) -> int:
     """从指定区域检索 n 张能量附着到 target（招式/特性加速用）
 
     ``zone``：``hand`` | ``discard`` | ``deck`` | ``any``（= hand→discard→deck）。
     与「手牌附能」不同：效果加速不受 `attached_energy_this_turn` 限制。
     etype 为 None 时接受任意能量；指定类型时只取该色。
+
+    ``avoid``（2026-11-02 第三十九批）：**已用过的属性集合**，命中则跳过，并在
+    成功附着后把该色加入。用于卡面「of different types」（Terapagos SSP 161）
+    —— 拿到的 N 张必须**两两不同色**。传可变 set 由调用方持有即可跨次累积；
+    不传 = 无此约束（**绝不能默认开启**，否则所有普通加速都会被削成「不能同色」）。
     """
     from .cards import EnergyRef
     order = {"hand": ("hand",),
@@ -6283,15 +6554,23 @@ def _attach_energy_from_zones(battle, p: PlayerState, target: FieldPokemon,
             if getattr(c.edef, "is_special", False):
                 if not allow_special:
                     continue
+                if avoid is not None and getattr(c.edef, "type", None) in avoid:
+                    continue
                 lst.pop(i)
                 target.senergy.append(c)
                 got += 1
+                if avoid is not None:
+                    avoid.add(getattr(c.edef, "type", "colorless"))
                 continue
             if etype and getattr(c.edef, "type", None) != etype:
+                continue
+            if avoid is not None and getattr(c.edef, "type", None) in avoid:
                 continue
             lst.pop(i)
             target.add_energy(getattr(c.edef, "type", "colorless"), 1)
             got += 1
+            if avoid is not None:
+                avoid.add(getattr(c.edef, "type", "colorless"))
             if zn == "discard_refs":
                 # 文本层同步移除（保持两层次序一致）
                 for k in range(len(p.discard) - 1, -1, -1):
@@ -6804,6 +7083,18 @@ def _spread_targets(p: PlayerState, scope: str) -> list:
         return all_fp
     if scope == "bench":
         return list(p.bench)
+    if "+" in scope:
+        # 并集（Steven's Metagross ex 的「your {P} Pokémon **and** {M} Pokémon」）：
+        # 两类都能当目标，不是「各附一份」。顺序 = 各段内 active→bench 拼接后去重，
+        # 必须确定（默认分配按 round-robin，顺序一变同局面就有两种结果）。
+        out: list = []
+        seen: set = set()
+        for one in scope.split("+"):
+            for fp in _spread_targets(p, one):
+                if id(fp) not in seen:
+                    seen.add(id(fp))
+                    out.append(fp)
+        return out
     if scope.startswith("type-"):
         # `type-lightning` → 「your {L} Pokémon」（Magneton SSP 59）。
         # 按 `pdef.ptype` 判定；属性名认不出时**抛错**（空集合会被当成
@@ -6850,13 +7141,21 @@ def _parse_attach_tag(tag: str) -> tuple:
 
 
 def _take_energy_from_deck(p: PlayerState, n: int,
-                           etype: Optional[str]) -> int:
+                           etype: Optional[str],
+                           distinct: bool = False) -> int:
     """从牌库检索 n 张（指定色的）能量入手 → 实际入手数
 
     洗牌由调用方用 ``battle.rng`` 执行（保持全局可复现性，勿在 helper 内自造 RNG）。
+
+    ``distinct``（2026-11-02 第三十九批）：卡面「Basic Energy cards **of different
+    types**」（Eevee SFA 50 / Energy Search Pro SSP 176 / Terapagos SSP 161）——
+    拿到的每张**属性必须两两不同**。不加这个约束会允许拿 3 张同色能量
+    （静默加强，实测这两张已进池的卡一直如此）。默认 **False**：多数检索没有
+    这个限制，默认开启等于凭空虚削。
     """
     from .cards import EnergyRef
     got = 0
+    used: set = set()
     for i in range(len(p.deck) - 1, -1, -1):
         if got >= n:
             break
@@ -6865,6 +7164,9 @@ def _take_energy_from_deck(p: PlayerState, n: int,
             continue
         if etype and getattr(c.edef, "type", None) != etype:
             continue
+        if distinct and getattr(c.edef, "type", None) in used:
+            continue
+        used.add(getattr(c.edef, "type", None))
         p.hand.append(p.deck.pop(i))
         got += 1
     return got

@@ -815,9 +815,25 @@ _ATTACH_SPREAD_DUAL = re.compile(
 _ATTACH_SPREAD_FROM_ZONE = re.compile(
     r"attach up to (\d+) basic (?:[{]([a-z])[}] )?energy cards from your "
     r"(hand|discard pile) to your (.+?) in any way you like[.]?$")
+# 带「用完自爆」的形态（Magneton SSP 59，2026-11-02 第三十七批）：
+#   「Once during your turn, you may attach up to 3 Basic Energy cards from your
+#    discard pile to your {L} Pokémon in any way you like. **If you use this
+#    Ability, this Pokémon is Knocked Out.**」
+# 与 `_ATTACH_SPREAD_FROM_ZONE` 的区别只有三处：可选前缀、`{X}` 属性目标、
+# 末尾自爆句。做**独立正则**而不是给它加可选组 —— 那条已有多张卡依赖，
+# 改动它的匹配范围属于「行为漂移」，代价不可控。
+_ATTACH_SPREAD_SELFKO = re.compile(
+    r"^(?:once during your turn, you may )?attach up to (\d+) basic "
+    r"(?:[{]([a-z])[}] )?energy cards? from your (hand|discard pile) to your "
+    r"(.+?) in any way you like[.]? if you use this ability, this pok[eé]mon "
+    r"is knocked out[.]?$")
 # 「your Marnie's Pokémon」这类**训练家专属**限定：category 形如
 # 「Trainer's Pokémon(Marnie)」，故按专属名做子串匹配
 _ATTACH_SPREAD_OWNED = re.compile(r"^([a-z\u2019']+)['\u2019]s pok[eé]mon$")
+# 「your {L} Pokémon」这类**属性**限定（Magneton SSP 59）：按 pdef.ptype 判定。
+# ⚠ 与 `cat-` 是两套不同的判定依据：属性写在卡面 `{X}` 符号里，category 写的是
+# 「Future / Tera / Trainer's Pokémon(Marnie)」这类**卡牌子类**。混用会漏附或错附。
+_ATTACH_SPREAD_TYPED = re.compile(r"^\{([a-z])\} pok[eé]mon$")
 
 
 def _spread_scope_of(phrase: str) -> Optional[str]:
@@ -829,6 +845,10 @@ def _spread_scope_of(phrase: str) -> Optional[str]:
         return "bench"
     if ph in ("future pok\u00e9mon", "future pokemon"):
         return "cat-future"
+    m = _ATTACH_SPREAD_TYPED.match(ph)
+    if m:
+        et = _EN_ENERGY_LETTER.get(m.group(1).upper())
+        return f"type-{et}" if et else None      # 属性符号不认识 → 不猜
     m = _ATTACH_SPREAD_OWNED.match(ph)
     if m:
         return f"cat-{m.group(1)}"
@@ -842,6 +862,22 @@ def _detect_attach_spread(t: str) -> Optional[list]:
     ——Joltik 这种双属性双限额会返回**两条**（各自独立取）。
     """
     t = _norm_prose(t)
+    # 先匹**最长最具体**的形态（带自爆句），再退回通用形态 —— 通用形态的
+    # `$` 收尾本来就匹配不到自爆句，但顺序写反时一旦某天给通用形态放宽收尾，
+    # 就会静默把自爆句吞掉（代价消失）。
+    m = _ATTACH_SPREAD_SELFKO.match(t)
+    if m:
+        scope = _spread_scope_of(m.group(4))
+        if scope is None:
+            return None
+        et = None
+        if m.group(2):
+            et = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+            if et is None:
+                return None
+        zone = "discard" if "discard" in m.group(3).lower() else "hand"
+        return [{"n": int(m.group(1)), "etype": et, "zone": zone,
+                 "scope": scope, "selfko": True}]
     m = _ATTACH_SPREAD_DUAL.match(t)
     if m:
         # 卡面只写「to your Pokémon」，双色形态没有其它限定
@@ -2762,10 +2798,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 检索能量并**自由分配**附着（2026-10-30 第三十三批）：整段认领。
     # 必须排在通用检索分支之前 —— 那一支会把「attach them to …」当成检索**入手**，
     # 少执行一步附着（手牌凭空多 N 张能量，场上一个都没加速）。
-    # ⚠ 本批**只对招式开放**：同族还有特性形态（Marnie's Grimmsnarl ex 的
-    # on_evolve 触发），那条路要先包成 `evolve_act:attach_spread:…` 才能被引擎
-    # 的进化触发链执行；直接产出本 tag 会「进池但特性不生效」，故先不认领。
-    if kind == "attack":
+    #
+    # 2026-11-02 第三十七批起**开放特性侧**：Magneton SSP 59「Overvolt Discharge」
+    # 是场上主动特性（`Once during your turn, you may …`），不需要 `evolve_act:`
+    # 包装。进化触发形态（Marnie's Grimmsnarl ex）因此**仍不会被认领** ——
+    # 三条正则全部以 `^` 锚定，而它的句首是 `when you play this Pokémon from your
+    # hand to evolve …`，匹配不上（这是结构上的保证，不是靠额外判断）。
+    # ⚠ 以后若给某条正则加「可选前缀」，必须先确认它不会把进化触发形态放进来：
+    # 那样会「进池但特性不生效」（引擎的 field 特性是**每回合一次**，不是进化时）。
+    if kind in ("attack", "ability"):
         _as = _detect_attach_spread(t)
         if _as:
             return {"kind": kind, "name": name, "trigger": "on_use",
@@ -6387,6 +6428,10 @@ def to_engine_tags(specs: list) -> dict:
                     _tag = f"attach_spread:{_n}:{_et}:{_zone}"
                     if _scope != "any":
                         _tag += f":target:{_scope}"
+                    if extra.get("selfko"):
+                        # 「If you use this Ability, this Pokémon is Knocked Out.」
+                        # 必须是**尾段**（引擎先剥 `:selfko` 再解析 scope）
+                        _tag += ":selfko"
                     tags.append(_tag)
             elif t == "recon":
                 # 检视牌库顶（2026-10-30 第二十批；2026-11-02 第三十五批扩展）：

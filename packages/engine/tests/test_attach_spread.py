@@ -73,14 +73,15 @@ def _with_attack(b, effects, damage: int = 0):
 
 
 class TestParse(unittest.TestCase):
+    # 2026-11-02 第三十七批：返回值多一项 `selfko`（`:selfko` 尾段）
     def test_minimal(self):
         self.assertEqual(_parse_attach_spread_tag("attach_spread:3:any:deck"),
-                         (3, None, "deck", "any"))
+                         (3, None, "deck", "any", False))
 
     def test_full(self):
         self.assertEqual(
             _parse_attach_spread_tag("attach_spread:2:grass:deck:target:bench"),
-            (2, "grass", "deck", "bench"))
+            (2, "grass", "deck", "bench", False))
 
     def test_bad_count(self):
         for bad in ("0", "x", "-1"):

@@ -699,6 +699,18 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             want_target = f"cat-{m_own.group(1).lower()}"
         elif re.search(r"to your future pok[eé]mon", d, re.I):
             want_target = "cat-future"
+        else:
+            # 「your {L} Pokémon」= **属性**限定（Magneton SSP 59）。
+            # 与 `cat-*` 是两套依据：属性看 `pdef.ptype`，category 看卡牌子类。
+            m_ty = re.search(r"to your \{([a-z])\} pok[eé]mon", d, re.I)
+            if m_ty:
+                want_target = "type-" + _TYPE_COLOR.get(
+                    m_ty.group(1).upper(), m_ty.group(1).lower())
+    # 自爆（第三十七批）：「If you use this Ability, this Pokémon is Knocked Out.」
+    # ⚠ 只认**这一句**；全库另有 19 处「even if this Pokémon is Knocked Out」
+    # （受击反制），那是完全不同的语义，正则必须以 `if you use this ability` 起头。
+    want_selfko = bool(re.search(
+        r"if you use this ability,? this pok[eé]mon is knocked out", d, re.I))
     # 张数：单一形态取第二组；双形态按出现顺序各取一次
     counts = [int(x) for x in re.findall(r"search your deck for up to (\d+)", d, re.I)]
     letters = [x.lower() for x in
@@ -728,6 +740,13 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面目标限定是 "
                         f"`{want_target or 'any'}`，`{t}` 却是 `{got_scope}`"
                         f"（目标不符）")
+        # 自爆核对：两个方向都危险 —— 漏标 = 免费使用（凭空加强）；多标 =
+        # 把普通加速变成自杀技（静默削弱）
+        got_selfko = str(t).endswith(":selfko")
+        if got_selfko != want_selfko:
+            errs.append(f"{card_name} · {item_name}：卡面"
+                        f"{'有' if want_selfko else '没有'}「用掉自爆」句，"
+                        f"`{t}` 却{'带' if got_selfko else '不带'} `:selfko`")
     return errs
 
 

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 10:07:54",
+  "reparsed_at": "2026-11-02 10:22:16",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1008,
+  "engine_ready": 1009,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1008,
-   "engine_approximated": 993,
-   "engine_unmatched": 259,
-   "engine_namekey_mismatch": 38
+   "zh_backfill": 1009,
+   "engine_approximated": 994,
+   "engine_unmatched": 258,
+   "engine_namekey_mismatch": 37
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 119,
-   "engine_tags": 1348,
-   "unsupported": 244,
+   "engine_tags": 1349,
+   "unsupported": 243,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 993,
+  "engine_approximated": 994,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -30465,14 +30465,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Magneton@SSP 59",
    "parse": {
     "items": [
      {
@@ -30482,70 +30484,62 @@
        {
         "kind": "ability",
         "name": "Overvolt Discharge",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "attach_spread",
+          "amount": 3,
+          "target": "self",
           "extra": {
-           "note": "自由分配附着（句式未精确识别，B4）"
+           "n": 3,
+           "etype": null,
+           "zone": "discard",
+           "scope": "type-lightning",
+           "selfko": true
           }
          }
         ],
-        "source_text": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out."
+        "source_text": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "自由分配附着（句式未精确识别，B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread:3:any:discard:target:type-lightning:selfko"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Overvolt Discharge",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "attach_spread",
+        "amount": 3,
+        "target": "self",
         "extra": {
-         "note": "自由分配附着（句式未精确识别，B4）"
+         "n": 3,
+         "etype": null,
+         "zone": "discard",
+         "scope": "type-lightning",
+         "selfko": true
         }
        }
       ],
-      "source_text": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out."
+      "source_text": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "自由分配附着（句式未精确识别，B4）"
-     }
+    "engine_tags": [
+     "attach_spread:3:any:discard:target:type-lightning:selfko"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

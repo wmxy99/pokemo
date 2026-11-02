@@ -338,7 +338,9 @@ class TestPoolTagVocabulary(unittest.TestCase):
             if not tag.startswith("attach_spread:"):
                 continue
             try:
-                _n, _et, _zone, scope = _parse_attach_spread_tag(tag)
+                # 2026-11-02 第三十七批：多返回 `selfko`（`:selfko` 尾段）
+                _n, _et, _zone, scope, _sko = \
+                    _parse_attach_spread_tag(tag)
             except ValueError as e:
                 bad.append(f"{name} · {item}：{tag}（{e}）")
                 continue

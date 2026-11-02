@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 993,
+      "kept": 994,
       "by_Energy": 19,
-      "by_Pokemon": 856,
+      "by_Pokemon": 857,
       "by_Trainer": 118,
       "skipped": {
-        "存在未建模项（整卡不收）": 235,
+        "存在未建模项（整卡不收）": 234,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 15,
         "Trainer 不可执行": 9
@@ -6969,6 +6969,56 @@
       "source_card_id": 209,
       "name_key": "chienpao",
       "uid": "Chien-Pao@SSP 56"
+    },
+    {
+      "name": "Magneton",
+      "name_zh": "三合一磁怪",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Magnemite",
+      "attacks": [
+        {
+          "name": "Electric Ball",
+          "cost": {
+            "lightning": 1,
+            "colorless": 1
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "电球",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Overvolt Discharge",
+          "name_zh": "过载放电",
+          "tag": "attach_spread:3:any:discard:target:type-lightning:selfko",
+          "location": "field",
+          "desc": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
+          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中以任意方式把最多 3 张基本能量卡附着于自己的 {L} 宝可梦。若你使用此特性，则此宝可梦被击倒。"
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "59"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 211,
+      "name_key": "magneton",
+      "uid": "Magneton@SSP 59"
     },
     {
       "name": "Rotom",

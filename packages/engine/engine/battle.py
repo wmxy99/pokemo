@@ -518,6 +518,25 @@ class Battle:
                         continue
                 if ab.tag == "discard_stadium" and not self.stadium:
                     continue
+                if ab.tag.startswith("attach_spread:"):
+                    # 多张自由分配附着（2026-11-02 第三十七批补合法动作表）：
+                    # 无可附能量 / 无合法目标 → 不列动作。带 `:selfko` 时这一步
+                    # 尤其重要 —— 否则 AI 会挑一个「附 0 张还把自己爆掉」的动作。
+                    try:
+                        _sn, _set, _szn, _ssc, _sko = \
+                            _parse_attach_spread_tag(ab.tag)
+                        _sp_tgts = _spread_targets(p, _ssc)
+                        if not _sp_tgts:
+                            continue
+                        if _sko and not [x for x in _sp_tgts if x is not fp]:
+                            # 自爆且**只有自己**是合法目标 → 能量附给自己后立刻
+                            # 随自爆进弃牌堆，净效果为零还白丢 1 张奖赏 → 不列
+                            continue
+                        if not _zone_energy_available(p, _set, _szn):
+                            continue
+                    except ValueError:
+                        # 形态非法 → 不列（宁可不可用，也不静默走错路径）
+                        continue
                 if ab.tag.startswith("attach_energy:"):
                     _n, _et, _zn = _parse_attach_tag(ab.tag)
                     if not _zone_energy_available(
@@ -1347,8 +1366,9 @@ class Battle:
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("attach_spread:"):
                 # 多张自由分配附着（2026-10-30 第三十三批）：排在
-                # `attach_energy:` 之前，避免被同前缀分支吞掉
-                detail = self._do_attach_spread(p, tag, action)
+                # `attach_energy:` 之前，避免被同前缀分支吞掉。
+                # 传 `fp` 是为了 `:selfko`（Magneton SSP 59「用掉就自爆」）
+                detail = self._do_attach_spread(p, tag, action, holder=fp)
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
@@ -2451,7 +2471,8 @@ class Battle:
         return f"opp {op} {moved}"
 
     def _do_attach_spread(self, p: PlayerState, tag: str,
-                          action: dict) -> str:
+                          action: dict,
+                          holder: Optional[FieldPokemon] = None) -> str:
         """多张能量**自由分配**附着（``attach_spread:...``）
 
         卡面原型：「Search your deck for up to 3 Basic Energy cards and attach
@@ -2463,52 +2484,74 @@ class Battle:
             保证可复现，且不会把 n 张全堆在 active 上（那等于把「自由分配」
             塌缩成一个特定选择）。
 
-        取不到符合条件的基本能量、或目标集合为空 → 返回空串（规则上效果不
-        执行，不是错误）。卡面写「Then, shuffle your deck」→ 动过牌库就洗。
+        取不到符合条件的基本能量、或目标集合为空 → 效果不执行（规则上不是
+        错误）。卡面写「Then, shuffle your deck」→ 动过牌库就洗。
+
+        ``holder`` + 末尾 ``:selfko``（Magneton SSP 59，2026-11-02 第三十七批）：
+        卡面「If you use this Ability, this Pokémon is Knocked Out.」——
+        **用掉就付**，与效果是否真的附着成功无关（玩家明知没能量就不会用；
+        合法动作表已把「无能量/无目标」的情况排除，见 `_ability_legal`）。
+        写成「moved > 0 才自爆」等于给了一次免费试探，是静默削弱代价。
         """
         from .cards import EnergyRef          # noqa: F401（zone 校验用）
-        n, etype, zone, scope = _parse_attach_spread_tag(tag)
+        n, etype, zone, scope, selfko = _parse_attach_spread_tag(tag)
         targets = _spread_targets(p, scope)
-        if not targets:
-            return ""
-
-        plan = action.get("attach_plan") if isinstance(action, dict) else None
-        seq: list = []
-        if plan is not None:
-            if not isinstance(plan, (list, tuple)):
-                raise ValueError(f"attach_plan 必须是位置码列表：{plan!r}")
-            for pos in plan:
-                if not isinstance(pos, int) or isinstance(pos, bool):
-                    raise ValueError(f"attach_plan 含非整数位置码：{pos!r}")
-                fp = _field_at(p, pos)
-                if fp is None:
-                    raise ValueError(f"attach_plan 位置码无效：{pos}")
-                if fp not in targets:
-                    # 显式指定了不符合卡面限定的宝可梦 → 抛错，不得悄悄改附别人
-                    raise ValueError(
-                        f"attach_plan 位置 {pos} 不符合目标限定 {scope}")
-                seq.append(fp)
-
         moved = 0
-        for k in range(n):
-            if seq:
-                if k >= len(seq):
+        # 缺省分配池（`attach_plan` 未指定时用）：
+        # 带 `:selfko` 时**排除持有者自己** —— 它马上要被击倒，附给它的能量会
+        # 随它进弃牌堆，等于这一张白附（净效果为零、还白丢 1 张奖赏）。
+        # 显式 `attach_plan` 仍允许指定持有者（规则上合法），但缺省不该替他做
+        # 这个明显亏本的选择。排除后为空时退回全体（否则整条效果无法分配）。
+        default_pool = targets
+        if selfko and holder is not None:
+            _rest = [fp for fp in targets if fp is not holder]
+            if _rest:
+                default_pool = _rest
+        if targets:
+            plan = action.get("attach_plan") if isinstance(action, dict) else None
+            seq: list = []
+            if plan is not None:
+                if not isinstance(plan, (list, tuple)):
+                    raise ValueError(f"attach_plan 必须是位置码列表：{plan!r}")
+                for pos in plan:
+                    if not isinstance(pos, int) or isinstance(pos, bool):
+                        raise ValueError(f"attach_plan 含非整数位置码：{pos!r}")
+                    fp = _field_at(p, pos)
+                    if fp is None:
+                        raise ValueError(f"attach_plan 位置码无效：{pos}")
+                    if fp not in targets:
+                        # 显式指定了不符合卡面限定的宝可梦 → 抛错，不得悄悄改附别人
+                        raise ValueError(
+                            f"attach_plan 位置 {pos} 不符合目标限定 {scope}")
+                    seq.append(fp)
+
+            for k in range(n):
+                if seq:
+                    if k >= len(seq):
+                        break
+                    fp = seq[k]
+                else:
+                    fp = default_pool[k % len(default_pool)]
+                if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
                     break
-                fp = seq[k]
-            else:
-                fp = targets[k % len(targets)]
-            if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
-                break
-            moved += 1
-        if not moved:
-            return ""
-        if zone in ("deck", "any"):
-            # 卡面固定后缀「Then, shuffle your deck.」——动过牌库就必须洗
-            self.rng.shuffle(p.deck)
-        self._log("attach_spread", {"player": self.current, "n": moved,
-                                    "etype": etype, "zone": zone,
-                                    "scope": scope})
-        return f"attach {moved} {etype or 'any'} spread over {len(targets)}"
+                moved += 1
+            if moved:
+                if zone in ("deck", "any"):
+                    # 卡面固定后缀「Then, shuffle your deck.」——动过牌库就必须洗
+                    self.rng.shuffle(p.deck)
+                self._log("attach_spread", {"player": self.current, "n": moved,
+                                            "etype": etype, "zone": zone,
+                                            "scope": scope})
+        detail = (f"attach {moved} {etype or 'any'} spread over {len(targets)}"
+                  if moved else "")
+        if selfko:
+            if holder is None:
+                # tag 说「用完自爆」却没人可爆 → 内部接线错误，绝不静默跳过
+                raise ValueError(f"attach_spread 带 :selfko 但缺少持有者：{tag}")
+            if not holder.is_ko:
+                self._resolve_self_ko(holder)
+                detail = (detail + " + self KO") if detail else "self KO"
+        return detail
 
     def _trainer_mill(self, tag: str) -> str:
         """磨牌（``mill:N[:opp]``）——默认磨自己（已存在于招式侧的同一语义）"""
@@ -5206,6 +5249,33 @@ class Battle:
                 return True
         return False
 
+    def _resolve_self_ko(self, holder: Optional[FieldPokemon]) -> bool:
+        """「If you use this Ability, this Pokémon is Knocked Out.」—— 特性自爆
+
+        卡面原型（全库仅 3 张，措辞完全相同）：
+          · Dusclops SFA 19 / Dusknoir SFA 20「Cursed Blast」（放伤害指示物）
+          · Magneton SSP 59「Overvolt Discharge」（弃牌堆附能）
+
+        与「被攻击击倒」的**三处区别**（每一处弄错都会静默改数值）：
+          ① 不进 `_ko_flags` —— 那不是「对手击倒了你」，不该喂
+             `dmg_plus:*:if:opp_ko_last_turn` 一类条件；
+          ② 不触发 `special_energy.prize_delta`（Legacy Energy 限「被对手
+             **招式伤害**击倒」）；
+          ③ 走 `_resolve_ko` 的**统一路径**：奖赏照给对手（这就是代价）、
+             触发被击倒特性、补位、判负 —— 都与其他击倒也一致。
+
+        返回 ``True`` 表示对局已结束。
+        """
+        if holder is None or holder.is_ko:
+            return False
+        # ⚠ 用「填满伤害」表达「直接击倒」——与 `_apply_knockout` 的 `_ko_one`
+        # 一致（全仓口径）。`_ko_from_attack` 此时为 False，故不会污染击倒标记。
+        holder.damage = holder.max_hp
+        self._log("knockout_effect", {"player": self.current,
+                                      "target": holder.name, "scope": "selfko"})
+        self._resolve_ko(self.current, holder)
+        return self.finished
+
     def _apply_counters(self, tag: str, action: Optional[dict] = None,
                         holder: Optional[FieldPokemon] = None) -> bool:
         """``counters:<n>[:per:<counter>][:scope:opp[:<count>]][:selfko]``
@@ -5298,12 +5368,7 @@ class Battle:
         if not placed:
             self._log("no_effect", {"tag": tag, "reason": "无可放置目标"})
         if selfko and holder is not None and not holder.is_ko:
-            holder.damage = holder.max_hp
-            self._log("knockout_effect", {"player": self.current,
-                                          "target": holder.name,
-                                          "scope": "selfko"})
-            self._resolve_ko(self.current, holder)
-            return self.finished
+            return self._resolve_self_ko(holder)
         return False
 
     def _apply_knockout(self, tag: str, action: Optional[dict], blocked) -> bool:
@@ -6466,14 +6531,21 @@ def _parse_attach_spread_tag(tag: str) -> tuple:
 
     ``etype``：``any`` 或小写属性名（``grass`` / ``fire`` …）；
     ``zone``：``hand`` / ``discard`` / ``deck`` / ``any``；
-    ``scope``：``any``（任意己方）| ``bench``（后备）| ``cat-<子串>``
-    （按 ``pdef.category`` **包含**判定，如 ``cat-future`` / ``cat-marnie``）。
+    ``scope``：``any``（任意己方）| ``bench``（后备）| ``type-<属性>``
+    （按 ``pdef.ptype`` 判定，如 Magneton 的「your {L} Pokémon」）|
+    ``cat-<子串>``（按 ``pdef.category`` **包含**判定，如 ``cat-future``）；
+    ``selfko``：末尾 `:selfko` → 结算后持有者自身被击倒（Magneton SSP 59）。
 
     ⚠ 调用方必须把 ``attach_spread:`` 分支排在既有的 ``attach`` /
     ``attach_energy:`` 分支**之前** —— ``tag.startswith("attach")`` 会把它一并
     吞掉，随后 ``_parse_attach_tag`` 会把 ``spread`` 当成能量属性名（静默失效）。
     """
     parts = str(tag).split(":")
+    # `:selfko` 是**尾段**，必须先剥掉再解析 scope —— 否则 `target:` 后面
+    # 那一格会被读成 `type-lightning:selfko`（属性名认不出 → 抛错）。
+    selfko = bool(parts) and parts[-1] == "selfko"
+    if selfko:
+        parts = parts[:-1]
     if len(parts) < 4:
         raise ValueError(f"attach_spread tag 字段不足：{tag}")
     raw_n, etype, zone = parts[1], parts[2], parts[3]
@@ -6487,7 +6559,8 @@ def _parse_attach_spread_tag(tag: str) -> tuple:
         scope = parts[i + 1] if i + 1 < len(parts) else ""
     if not scope:
         raise ValueError(f"attach_spread 缺少目标限定：{tag}")
-    return (int(raw_n), (None if etype in ("any", "") else etype), zone, scope)
+    return (int(raw_n), (None if etype in ("any", "") else etype), zone,
+            scope, selfko)
 
 
 def _spread_targets(p: PlayerState, scope: str) -> list:
@@ -6501,6 +6574,17 @@ def _spread_targets(p: PlayerState, scope: str) -> list:
         return all_fp
     if scope == "bench":
         return list(p.bench)
+    if scope.startswith("type-"):
+        # `type-lightning` → 「your {L} Pokémon」（Magneton SSP 59）。
+        # 按 `pdef.ptype` 判定；属性名认不出时**抛错**（空集合会被当成
+        # 「没有合法目标 ⇒ 效果不执行」，那就是静默不生效）。
+        key = scope[5:].lower()
+        if not key:
+            raise ValueError("attach_spread 的 type- 限定为空")
+        if key not in TYPES:
+            raise ValueError(f"未识别的宝可梦属性：{scope}")
+        return [fp for fp in all_fp
+                if str(fp.pdef.ptype or "").lower() == key]
     if scope.startswith("cat-"):
         # `cat-team-rocket` → 子串 "team rocket"（category 原文含空格）
         key = scope[4:].replace("-", " ").lower()

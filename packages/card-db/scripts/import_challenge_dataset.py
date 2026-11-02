@@ -390,6 +390,11 @@ def parse_effects_pass(cards: list[dict], backend: str = "rule") -> dict:
             items.append({"target": "card", "name": c["name"],
                           "specs": r["specs"], "errors": r["errors"],
                           "engine_tags": m["tags"],
+                          # 打出代价（2026-11-02 第三十六批）：
+                          # 「only if you discard N other cards from your hand」。
+                          # 它**不是** tag（不是效果动作），是卡的属性，由
+                          # `TrainerDef.play_cost` 承载、引擎在派发前执行。
+                          "play_cost": m.get("play_cost") or "",
                           "unsupported": m["unsupported"]})
             specs += r["specs"]; errs += r["errors"]
             tags += m["tags"]; unsup += m["unsupported"]

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 09:55:41",
+  "reparsed_at": "2026-11-02 10:07:54",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1005,
+  "engine_ready": 1008,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1005,
-   "engine_approximated": 990,
-   "engine_unmatched": 262,
+   "zh_backfill": 1008,
+   "engine_approximated": 993,
+   "engine_unmatched": 259,
    "engine_namekey_mismatch": 38
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 119,
-   "engine_tags": 1349,
-   "unsupported": 248,
+   "engine_tags": 1348,
+   "unsupported": 244,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 990,
+  "engine_approximated": 993,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -531,6 +531,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -636,6 +637,7 @@
       "engine_tags": [
        "senergy:neo_upper"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -734,6 +736,7 @@
       "engine_tags": [
        "senergy:mist"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -832,6 +835,7 @@
       "engine_tags": [
        "senergy:legacy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -930,6 +934,7 @@
       "engine_tags": [
        "senergy:enriching"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1028,6 +1033,7 @@
       "engine_tags": [
        "senergy:spiky"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1127,6 +1133,7 @@
       "engine_tags": [
        "senergy:team_rocket"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1225,6 +1232,7 @@
       "engine_tags": [
        "senergy:prism"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1325,6 +1333,7 @@
       "engine_tags": [
        "senergy:ignition"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1423,6 +1432,7 @@
       "engine_tags": [
        "senergy:grow_grass"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1521,6 +1531,7 @@
       "engine_tags": [
        "senergy:telepath"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -1619,6 +1630,7 @@
       "engine_tags": [
        "senergy:rock_fighting"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -3127,6 +3139,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -4686,6 +4699,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -6639,6 +6653,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -10954,6 +10969,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -12968,6 +12984,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -13532,6 +13549,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -14882,6 +14900,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -16200,6 +16219,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -16769,6 +16789,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -18218,6 +18239,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -21728,6 +21750,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -21970,6 +21993,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -23052,6 +23076,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -25296,6 +25321,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -27162,6 +27188,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -27889,6 +27916,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -30317,6 +30345,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -33047,6 +33076,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -33472,6 +33502,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -34291,6 +34322,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -34788,6 +34820,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -35194,6 +35227,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -35565,6 +35599,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -35801,6 +35836,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -36232,6 +36268,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -36625,6 +36662,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -36809,6 +36847,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -45489,6 +45528,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -46060,6 +46100,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -86999,7 +87040,7 @@
       "unsupported": [
        {
         "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
+        "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
        }
       ]
      }
@@ -87034,7 +87075,7 @@
     "unsupported": [
      {
       "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
+      "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
      }
     ],
     "generated_by": "rule",
@@ -141849,6 +141890,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -141950,6 +141992,7 @@
       "engine_tags": [
        "mill:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142040,6 +142083,7 @@
       "engine_tags": [
        "candy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142133,6 +142177,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -142245,6 +142290,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -142345,6 +142391,7 @@
       "engine_tags": [
        "search_pokemon:3:stage:stage1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142437,6 +142484,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142529,6 +142577,7 @@
       "engine_tags": [
        "search_any:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142621,6 +142670,7 @@
       "engine_tags": [
        "draw:1:per:own_ancient"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142713,6 +142763,7 @@
       "engine_tags": [
        "search_bench:2:basic"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142801,6 +142852,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -142898,6 +142950,7 @@
       "engine_tags": [
        "gust"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -142987,6 +143040,7 @@
       "engine_tags": [
        "attach:1:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143076,6 +143130,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143161,6 +143216,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -143250,27 +143306,19 @@
           "extra": {
            "what": "trainer"
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you discard 3 other cards from your hand.\n\nSearch your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck.",
+        "play_cost": "discard:3"
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "search_trainer:1"
-      ],
+      "engine_tags": [],
+      "play_cost": "discard:3",
       "unsupported": [
        {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+        "type": "search",
+        "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
        }
       ]
      }
@@ -143289,27 +143337,18 @@
         "extra": {
          "what": "trainer"
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you discard 3 other cards from your hand.\n\nSearch your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "play_cost": "discard:3"
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "search_trainer:1"
-    ],
+    "engine_tags": [],
     "unsupported": [
      {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+      "type": "search",
+      "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
      }
     ],
     "generated_by": "rule",
@@ -143377,6 +143416,7 @@
       "engine_tags": [
        "bounce:to_hand:choose"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143477,6 +143517,7 @@
       "engine_tags": [
        "recon:7:2:pokemon-grass+energy-grass"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143575,6 +143616,7 @@
       "engine_tags": [
        "burn"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143667,6 +143709,7 @@
       "engine_tags": [
        "heal:150:choose"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143759,6 +143802,7 @@
       "engine_tags": [
        "recover:1:any"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -143857,6 +143901,7 @@
       "engine_tags": [
        "attach:1:discard"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -144006,6 +144051,7 @@
       "engine_tags": [
        "fossil:60:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -144116,6 +144162,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -144222,6 +144269,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -144328,6 +144376,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -144428,6 +144477,7 @@
       "engine_tags": [
        "opp_shuffle_draw:same"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -144526,6 +144576,7 @@
       "engine_tags": [
        "discard_stadium"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -144637,6 +144688,7 @@
       "engine_tags": [
        "heal:60:active:type:dragon"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -144729,6 +144781,7 @@
       "engine_tags": [
        "shuffle_top:3:own"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -144819,6 +144872,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -144904,6 +144958,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -145004,6 +145059,7 @@
       "engine_tags": [
        "recover:2:supporter"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145096,6 +145152,7 @@
       "engine_tags": [
        "recover:5:combo:pokemon+basic_energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145188,6 +145245,7 @@
       "engine_tags": [
        "search_pokemon:5"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145281,6 +145339,7 @@
       "engine_tags": [
        "heal:60:choose:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145375,6 +145434,7 @@
       "engine_tags": [
        "attach:1:discard:target:bench"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145464,6 +145524,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -145564,6 +145625,7 @@
       "engine_tags": [
        "search_bench:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145656,6 +145718,7 @@
       "engine_tags": [
        "energy_move:1:from:any:to:any"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145748,6 +145811,7 @@
       "engine_tags": [
        "heal:30:choose"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145840,6 +145904,7 @@
       "engine_tags": [
        "recover:2:energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -145932,6 +145997,7 @@
       "engine_tags": [
        "search_energy:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146027,6 +146093,7 @@
       "engine_tags": [
        "coin:heads:discard_energy:1:opp"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146113,29 +146180,18 @@
           "extra": {
            "what": "pokemon"
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you discard 2 other cards from your hand.\n\nSearch your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+        "play_cost": "discard:2"
        }
       ],
       "errors": [],
       "engine_tags": [
        "search_pokemon:1"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_cost": "discard:2",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -146152,29 +146208,17 @@
         "extra": {
          "what": "pokemon"
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you discard 2 other cards from your hand.\n\nSearch your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "play_cost": "discard:2"
      }
     ],
     "errors": [],
     "engine_tags": [
      "search_pokemon:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -146248,6 +146292,7 @@
       "engine_tags": [
        "recon:7:1:supporter"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146345,6 +146390,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146431,6 +146477,7 @@
       "engine_tags": [
        "gust"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146520,6 +146567,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146608,6 +146656,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -146708,6 +146757,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -146796,6 +146846,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -146892,6 +146943,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -146988,6 +147040,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -147084,6 +147137,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -147180,6 +147234,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -147301,6 +147356,7 @@
        "coin:heads:spread_free:20",
        "coin:tails:self:20"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -147426,6 +147482,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -147514,6 +147571,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -147653,6 +147711,7 @@
       "engine_tags": [
        "fossil:60:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -147770,6 +147829,7 @@
       "engine_tags": [
        "discard_tool:2:both"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -147902,6 +147962,7 @@
       "engine_tags": [
        "fossil:60:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -148010,6 +148071,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148106,6 +148168,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148202,6 +148265,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148302,6 +148366,7 @@
       "engine_tags": [
        "search_pokemon:1:type:fighting:stage:basic"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -148391,6 +148456,7 @@
       "engine_tags": [
        "gust"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -148483,6 +148549,7 @@
       "engine_tags": [
        "candy"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148590,6 +148657,7 @@
       "engine_tags": [
        "search_pokemon:1:stage:evolution"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -148684,6 +148752,7 @@
       "engine_tags": [
        "attach:1:psychic:discard:target:bench"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -148774,6 +148843,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148880,6 +148950,7 @@
       "engine_tags": [
        "discard_stadium"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148995,6 +149066,7 @@
       "engine_tags": [
        "opp_hand:bottom:energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149131,6 +149203,7 @@
       "engine_tags": [
        "fossil:60:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149283,6 +149356,7 @@
       "engine_tags": [
        "fossil:60:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149399,6 +149473,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149491,6 +149566,7 @@
       "engine_tags": [
        "heal:20:active"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149579,6 +149655,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -149679,6 +149756,7 @@
       "engine_tags": [
        "tool:survive:10"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149771,6 +149849,7 @@
       "engine_tags": [
        "tool:on_damaged:draw:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149864,6 +149943,7 @@
       "engine_tags": [
        "tool:retreat_less:1:lowhp:30"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -149958,6 +150038,7 @@
       "engine_tags": [
        "tool:dmg_plus:50:target:ex"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150051,6 +150132,7 @@
       "engine_tags": [
        "tool:hp_plus:100"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150139,6 +150221,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -150239,6 +150322,7 @@
       "engine_tags": [
        "tool:on_damaged:move_energy:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150332,6 +150416,7 @@
       "engine_tags": [
        "tool:dmg_plus:40:holder:status:poison"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150423,6 +150508,7 @@
       "engine_tags": [
        "attach:1:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150517,6 +150603,7 @@
       "engine_tags": [
        "tool:dmg_reduce:60:from:type:psychic:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150612,6 +150699,7 @@
       "engine_tags": [
        "tool:cost_less:1:tera"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150706,6 +150794,7 @@
       "engine_tags": [
        "tool:retreat_plus:1:both"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150801,6 +150890,7 @@
       "engine_tags": [
        "tool:on_damaged:counter:120:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150896,6 +150986,7 @@
       "engine_tags": [
        "tool:cost_less:1:behind"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -150987,6 +151078,7 @@
       "engine_tags": [
        "search_any:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151081,6 +151173,7 @@
       "engine_tags": [
        "tool:dmg_reduce:60:from:type:dragon:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151171,6 +151264,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151267,6 +151361,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151363,6 +151458,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151463,6 +151559,7 @@
       "engine_tags": [
        "tool:retreat_less:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151556,6 +151653,7 @@
       "engine_tags": [
        "tool:dmg_plus:30:holder:no_rule_box:target:ex"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151650,6 +151748,7 @@
       "engine_tags": [
        "tool:on_damaged:counter:40:holder:type:darkness"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151744,6 +151843,7 @@
       "engine_tags": [
        "tool:dmg_reduce:30:from:ability"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151838,6 +151938,7 @@
       "engine_tags": [
        "tool:dmg_plus:50:holder:name:pikachu:target:ex"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -151938,6 +152039,7 @@
       "engine_tags": [
        "tool:dmg_reduce:50:from:type:grass,fire,water,lightning:holder:type:dragon"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152080,6 +152182,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -152196,6 +152299,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -152293,6 +152397,7 @@
       "engine_tags": [
        "gust"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152382,6 +152487,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152474,6 +152580,7 @@
       "engine_tags": [
        "recover:3:combo:no_rule_pokemon+basic_energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152574,6 +152681,7 @@
       "engine_tags": [
        "recon:6:2:any:rest:discard"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152679,6 +152787,7 @@
       "engine_tags": [
        "opp_hand:discard:item:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -152738,14 +152847,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you discard another card from your hand.\n\nDraw a card for each of your opponent’s Benched Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n对手每有 1 只后备宝可梦，抽 1 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Morty’s Conviction@TEF 155",
    "parse": {
     "items": [
      {
@@ -152765,29 +152876,18 @@
           "extra": {
            "per_counter": "opp_bench"
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you discard another card from your hand.\n\nDraw a card for each of your opponent’s Benched Pokémon."
+        "source_text": "Draw a card for each of your opponent’s Benched Pokémon.",
+        "play_cost": "discard:1"
        }
       ],
       "errors": [],
       "engine_tags": [
        "draw:1:per:opp_bench"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_cost": "discard:1",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -152804,29 +152904,17 @@
         "extra": {
          "per_counter": "opp_bench"
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you discard another card from your hand.\n\nDraw a card for each of your opponent’s Benched Pokémon."
+      "source_text": "Draw a card for each of your opponent’s Benched Pokémon.",
+      "play_cost": "discard:1"
      }
     ],
     "errors": [],
     "engine_tags": [
      "draw:1:per:opp_bench"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -152888,6 +152976,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -152992,6 +153081,7 @@
        "evolve_from_deck",
        "candy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153086,6 +153176,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -153189,6 +153280,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -153300,6 +153392,7 @@
        "discard:all",
        "draw:5"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153406,6 +153499,7 @@
       "engine_tags": [
        "recon:8:3:any:gate:ko_last_turn"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153506,6 +153600,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153604,6 +153699,7 @@
       "engine_tags": [
        "status_self:poison"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -153714,6 +153810,7 @@
       "engine_tags": [
        "search_any:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153806,6 +153903,7 @@
       "engine_tags": [
        "discard_opp_to:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153898,6 +153996,7 @@
       "engine_tags": [
        "search_energy:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -153986,6 +154085,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -154083,6 +154183,7 @@
       "engine_tags": [
        "draw:4"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154168,6 +154269,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -154276,6 +154378,7 @@
       "engine_tags": [
        "recon:7:2:pokemon+trainer@each"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154380,6 +154483,7 @@
        "switch_self",
        "draw_to:5"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154482,6 +154586,7 @@
        "gust",
        "confuse"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154580,6 +154685,7 @@
       "engine_tags": [
        "search_pokemon:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154679,6 +154785,7 @@
        "discard:all",
        "search_pokemon:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -154783,6 +154890,7 @@
       "engine_tags": [
        "draw:4"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -154852,14 +154960,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you discard another card from your hand.\n\nDraw cards until you have 6 cards in your hand.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n抽牌直到你的手牌为 6 张。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Iris’s Fighting Spirit@JTG 149",
    "parse": {
     "items": [
      {
@@ -154879,29 +154989,18 @@
           "extra": {
            "to_hand_size": 6
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you discard another card from your hand.\n\nDraw cards until you have 6 cards in your hand."
+        "source_text": "Draw cards until you have 6 cards in your hand.",
+        "play_cost": "discard:1"
        }
       ],
       "errors": [],
       "engine_tags": [
        "draw_to:6"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_cost": "discard:1",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -154918,29 +155017,17 @@
         "extra": {
          "to_hand_size": 6
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you discard another card from your hand.\n\nDraw cards until you have 6 cards in your hand."
+      "source_text": "Draw cards until you have 6 cards in your hand.",
+      "play_cost": "discard:1"
      }
     ],
     "errors": [],
     "engine_tags": [
      "draw_to:6"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -155002,6 +155089,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155102,6 +155190,7 @@
       "engine_tags": [
        "search_pokemon:2:stage:basic"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -155190,6 +155279,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155290,6 +155380,7 @@
       "engine_tags": [
        "heal:70:active"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -155378,6 +155469,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155474,6 +155566,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155574,6 +155667,7 @@
       "engine_tags": [
        "search_pokemon:3:type:fire"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -155662,6 +155756,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155766,6 +155861,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155879,6 +155975,7 @@
       "engine_tags": [
        "gust"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -155968,6 +156065,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156060,6 +156158,7 @@
       "engine_tags": [
        "search_pokemon:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156152,6 +156251,7 @@
       "engine_tags": [
        "energy_move:2:from:bench:to:active"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156244,6 +156344,7 @@
       "engine_tags": [
        "heal:40:all"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156332,6 +156433,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -156429,6 +156531,7 @@
       "engine_tags": [
        "draw:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156518,6 +156621,7 @@
       "engine_tags": [
        "search_pokemon:1:stage:evolution"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156607,6 +156711,7 @@
       "engine_tags": [
        "draw:4"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -156692,6 +156797,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -156796,6 +156902,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -156914,6 +157021,7 @@
       "engine_tags": [
        "heal:all:mega:energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157016,6 +157124,7 @@
       "engine_tags": [
        "recon:7:1:pokemon-darkness:dest:bench:rest:bottom:gate:not_first_turn"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157116,6 +157225,7 @@
       "engine_tags": [
        "search_pokemon:1:stage:basic"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157208,6 +157318,7 @@
       "engine_tags": [
        "search_energy:7:type:fire"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157262,14 +157373,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n从牌库中检索最多 4 只 {L} 宝可梦，展示它们并加入手牌。然后洗牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Canari@ASC 185",
    "parse": {
     "items": [
      {
@@ -157289,29 +157402,18 @@
           "extra": {
            "what": "pokemon"
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+        "play_cost": "discard:1"
        }
       ],
       "errors": [],
       "engine_tags": [
        "search_pokemon:4:type:lightning"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_cost": "discard:1",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -157328,29 +157430,17 @@
         "extra": {
          "what": "pokemon"
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "play_cost": "discard:1"
      }
     ],
     "errors": [],
     "engine_tags": [
      "search_pokemon:4:type:lightning"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -157412,6 +157502,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -157521,6 +157612,7 @@
       "engine_tags": [
        "recon:6:1:basic_energy:dest:attach"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157619,6 +157711,7 @@
       "engine_tags": [
        "draw:3"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157704,6 +157797,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -157804,6 +157898,7 @@
       "engine_tags": [
        "recover:4:combo:pokemon+basic_energy:type:fighting"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -157902,6 +157997,7 @@
       "engine_tags": [
        "draw_to:5"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -158018,6 +158114,7 @@
       "engine_tags": [
        "attach:2:discard"
       ],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -158129,6 +158226,7 @@
       "engine_tags": [
        "heal:150:choose:type:psychic"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158224,6 +158322,7 @@
       "engine_tags": [
        "stadium:use:heal_all:10:require:supporter"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158319,6 +158418,7 @@
       "engine_tags": [
        "stadium:poison_extra:20:type:darkness"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158413,6 +158513,7 @@
       "engine_tags": [
        "stadium:dmg_reduce:30:type:metal"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158507,6 +158608,7 @@
       "engine_tags": [
        "stadium:status_immune:require:energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158600,6 +158702,7 @@
       "engine_tags": [
        "stadium:no_tool_effect"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158694,6 +158797,7 @@
       "engine_tags": [
        "stadium:dmg_immune:box:none:from:rulebox"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158789,6 +158893,7 @@
       "engine_tags": [
        "stadium:use:top_deck"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158884,6 +158989,7 @@
       "engine_tags": [
        "stadium:use:evolve_from_deck:chain:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -158981,6 +159087,7 @@
       "engine_tags": [
        "stadium:bench_limit:8:require:tera"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159077,6 +159184,7 @@
       "engine_tags": [
        "stadium:hp_plus:30:stage:0"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159171,6 +159279,7 @@
       "engine_tags": [
        "stadium:hp_plus:-30:stage:2"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159265,6 +159374,7 @@
       "engine_tags": [
        "stadium:no_retreat:faction:ns"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159360,6 +159470,7 @@
       "engine_tags": [
        "stadium:use:recover_energy:2:type:lightning"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159455,6 +159566,7 @@
       "engine_tags": [
        "stadium:attack_plus:30:faction:hops"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159550,6 +159662,7 @@
       "engine_tags": [
        "stadium:ability_block:colorless"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159647,6 +159760,7 @@
       "engine_tags": [
        "stadium:use:draw:2:require:supporter_name:name:teamrocket"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159743,6 +159857,7 @@
       "engine_tags": [
        "stadium:dmg_reduce:30:faction:stevens"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159838,6 +159953,7 @@
       "engine_tags": [
        "stadium:use:search_name:1:name:marnie"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -159933,6 +160049,7 @@
       "engine_tags": [
        "stadium:on_bench_basic:20:type:darkness"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -160027,6 +160144,7 @@
       "engine_tags": [
        "stadium:evolve_same_turn:type:grass"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -160122,6 +160240,7 @@
       "engine_tags": [
        "stadium:use:switch_typed:type:water"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -160219,6 +160338,7 @@
       "engine_tags": [
        "stadium:use:draw_to_count:1:type:psychic:cost:discard_energy"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -160314,6 +160434,7 @@
       "engine_tags": [
        "stadium:no_bench_counters"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],
@@ -160402,6 +160523,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -160498,6 +160620,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "play_cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -160600,6 +160723,7 @@
       "engine_tags": [
        "stadium:use:search_basic_bench:1:end:1"
       ],
+      "play_cost": "",
       "unsupported": []
      }
     ],

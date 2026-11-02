@@ -368,6 +368,13 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     }
     if fossil is not None:
         entry["fossil"] = fossil
+    # 打出代价（2026-11-02 第三十六批）：「You can use this card only if you
+    # discard N other cards from your hand.」→ `TrainerDef.play_cost`。
+    # ⚠ 必须在这里**显式**搬运：它不是 tag，`TRAINER_TAGS` 白名单管不到它；
+    # 漏搬的后果是「要付账的卡变成免费」（静默加强），且对局里完全看不出来。
+    _pc = str((it or {}).get("play_cost") or "")
+    if _pc:
+        entry["play_cost"] = _pc
     return entry
 
 

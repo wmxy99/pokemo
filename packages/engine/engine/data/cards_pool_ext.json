@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 990,
+      "kept": 993,
       "by_Energy": 19,
       "by_Pokemon": 856,
-      "by_Trainer": 115,
+      "by_Trainer": 118,
       "skipped": {
-        "存在未建模项（整卡不收）": 238,
+        "存在未建模项（整卡不收）": 235,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 15,
         "Trainer 不可执行": 9
@@ -43498,6 +43498,24 @@
       "uid": "Eri@TEF 146"
     },
     {
+      "name": "Morty’s Conviction",
+      "name_zh": "松叶的信念",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw:1:per:opp_bench",
+      "desc": "You can use this card only if you discard another card from your hand.\n\nDraw a card for each of your opponent’s Benched Pokémon.",
+      "desc_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n对手每有 1 只后备宝可梦，抽 1 张牌。",
+      "real": {
+        "set": "TEF",
+        "number": "155"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1187,
+      "play_cost": "discard:1",
+      "uid": "Morty’s Conviction@TEF 155"
+    },
+    {
       "name": "Hassel",
       "name_zh": "哈塞尔",
       "supertype": "Trainer",
@@ -43615,6 +43633,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1205,
       "uid": "Cyrano@SSP 170"
+    },
+    {
+      "name": "Iris’s Fighting Spirit",
+      "name_zh": "艾莉丝的斗志",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_to:6",
+      "desc": "You can use this card only if you discard another card from your hand.\n\nDraw cards until you have 6 cards in your hand.",
+      "desc_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n抽牌直到你的手牌为 6 张。",
+      "real": {
+        "set": "JTG",
+        "number": "149"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1208,
+      "play_cost": "discard:1",
+      "uid": "Iris’s Fighting Spirit@JTG 149"
     },
     {
       "name": "Brock’s Scouting",
@@ -43870,6 +43906,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1232,
       "uid": "Firebreather@PFL 89"
+    },
+    {
+      "name": "Canari",
+      "name_zh": "卡娜莉",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "search_pokemon:4:type:lightning",
+      "desc": "You can use this card only if you discard another card from your hand.\n\nSearch your deck for up to 4 {L} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "desc_zh": "仅当你从手牌中弃置另 1 张卡时，才能使用此卡。\n\n从牌库中检索最多 4 只 {L} 宝可梦，展示它们并加入手牌。然后洗牌。",
+      "real": {
+        "set": "ASC",
+        "number": "185"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1233,
+      "play_cost": "discard:1",
+      "uid": "Canari@ASC 185"
     },
     {
       "name": "Waitress",

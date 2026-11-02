@@ -610,6 +610,47 @@ _ENERGY_COST_CLAUSE = re.compile(
     re.I)
 
 
+# ---------------- 打出代价（2026-11-02 第三十六批） ----------------
+# 「You can use this card only if you discard N other cards from your hand.」
+#
+# ⚠ 这与 `recon:` 的 `gate:` **不是同一类**，不能合并：
+#   · `gate:ko_last_turn` 是**纯条件检查** —— 不满足不能打，满足时**没有状态变化**；
+#   · 本句式是**代价** —— 不满足不能打，且打出时手牌**真的少 N 张**。
+# 把代价当 gate 实现 → 卡照打、手牌一张不少（凭空手牌优势）；
+# 当普通效果实现 → 先做效果再弃牌（顺序反了，且条件不足时已经白拿效果）。
+#
+# 只认**句首**的整句（三张真实卡都是这个形态）。`discard a Basic {R} Energy
+# card from your hand`（Blowtorch）**故意不认领** —— 它的限定是「基本火能量」
+# 而非「任意 N 张」，落成 `discard:1` 会允许弃掉任意牌（静默放宽代价）。
+_PLAY_COST_DISCARD = re.compile(
+    r"^you can use this card only if you discard "
+    r"(?:(?P<n>\d+)|another|an?)\s+(?:other\s+)?cards?\s+from\s+your\s+hand"
+    r"[.]\s*", re.I)
+
+
+def _split_play_cost(text: str, kind: str) -> tuple:
+    """剥出「打出代价」句，返回 ``(剩余文本, play_cost)``
+
+    ``play_cost`` 形如 ``"discard:1"``；无代价句时返回 ``("", None)`` 的第二项为 None。
+
+    为什么**剥掉**而不是「识别后继续跑原解析」：代价句留在文本里会被通用分支读成
+    一个真正的 `discard:` 动作，混进主效果 tag 里 —— 后果有两个，都是错的：
+      · 训练家只认**一个**卡级 tag（`build_trainer`），多出来的 `discard:` 会让
+        整卡被判「多 tag」而不收；
+      · 即便收下，`discard:` 也会在效果**之后**执行，而卡面要求**先付代价**。
+    """
+    t = str(text or "")
+    if kind not in ("item", "supporter", "stadium", "tool"):
+        return t, None
+    m = _PLAY_COST_DISCARD.match(t)
+    if not m:
+        return t, None
+    n = int(m.group("n")) if m.group("n") else 1
+    if n < 1:
+        return t, None
+    return t[m.end():].strip(), f"discard:{n}"
+
+
 # ⚠ 这一组是**可选**的：卡面没有这句前置条件时绝不能凭空加上条件（否则一张
 # 「随时可用」的卡会变成「只在被击倒过的回合可用」= 静默削弱），因此组要具名，
 # 由 `_detect_recon_top` 按**是否命中**决定 gate 有无。
@@ -1597,6 +1638,18 @@ def _en_search_what(lower: str) -> str:
     if "energy" in seg:
         return "energy"
     return "any"
+
+
+# 「多类别并列检索」（2026-11-02 第三十六批）：
+#   Search your deck for **an Item card, a Pokémon Tool card, a Supporter card,
+#   and a Stadium card** …
+# 卡面要求**逐类别各取 1 张**（合计 4 张、类别互不相同）。通用分支只看第一个
+# 类别短语，产出 `search_trainer:1` —— **张数（4→1）与类别（逐类各一→任一训练家）
+# 双错**，是静默削弱。引擎没有「多类别各取 1」的检索形态 → 如实拒绝。
+# 只认「an? … card, an? … card」这一种并列（同一类别写两次的卡不存在，
+# 而 `search your deck for a Pokémon, reveal it` 之类不含第二个 `card`，不受影响）。
+_MULTI_KIND_SEARCH = re.compile(
+    r"search your deck for an? [^.,]*?card,\s*an? [^.,]*?card", re.I)
 
 
 def _search_destination(text: str, pos: int) -> str:
@@ -3152,9 +3205,16 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     单独做后置识别的好处：**不改动**既有抽取顺序（既有 555 条已映射 tag 的行为
     保持逐字节可复现），只在末尾追加新动作。
     """
+    # 打出代价（2026-11-02 第三十六批）：**先剥离**再解析。
+    # 代价不是「效果」，不进 actions；它挂在 spec 的 `play_cost` 上，由
+    # `to_engine_tags` 汇总到卡级、`TrainerDef.play_cost` 承载、引擎在派发
+    # **之前**执行（顺序：付账 → 效果）。
+    text, _pcost = _split_play_cost(str(text or ""), kind)
     spec = (_parse_rule_en(text, kind=kind, name=name)
             if text and not _CJK_RE.search(str(text))
             else _parse_rule_zh(text, kind=kind, name=name))
+    if _pcost:
+        spec["play_cost"] = _pcost
     actions = spec.get("actions") or []
     # 被击倒 / 进化触发的整段认领（2026-10-28 第十批）：不得再走修正器后置识别，
     # 否则「in this way」后续会被重复识别成无条件动作。
@@ -6382,7 +6442,13 @@ def to_engine_tags(specs: list) -> dict:
                     dynamic_n = re.search(
                         r"\ba number of\b|\bany number of\b|"
                         r"up to the number of|for each", src, re.I)
-                    if _mp and _in_coin_branch(src, _mp.start()):
+                    if _MULTI_KIND_SEARCH.search(_norm_prose(src)):
+                        # 多类别并列检索（Secret Box）：逐类别各取 1 张，
+                        # 通用分支只取到第一个类别 → 张数与类别双错（静默削弱）。
+                        unsupported.append(
+                            {"type": t, "reason": "多类别并列检索"
+                                                  "（逐类别各取 1 张）未建模（B4）"})
+                    elif _mp and _in_coin_branch(src, _mp.start()):
                         # 抛币分支内的检索：应由 coin 层产出（coin:heads:<sub>），
                         # 不能退化成「必定检索」（否则强度翻倍）
                         unsupported.append(
@@ -7183,7 +7249,19 @@ def to_engine_tags(specs: list) -> dict:
         if x not in seen:
             seen.add(x)
             uniq.append(x)
-    return {"tags": uniq, "unsupported": unsupported, "notes": notes}
+    # 打出代价汇总（2026-11-02 第三十六批）：多 spec 出现**互相矛盾**的代价时
+    # 如实拒绝 —— 取其一（无论取哪个）都是静默改变卡的强度。
+    _pcs = [str(s0.get("play_cost") or "") for s0 in (specs or [])]
+    _pcs = [x for x in _pcs if x]
+    play_cost = ""
+    if _pcs:
+        if len(set(_pcs)) > 1:
+            unsupported.append({"type": "play_cost",
+                                "reason": f"同一张卡出现多种打出代价：{sorted(set(_pcs))}"})
+        else:
+            play_cost = _pcs[0]
+    return {"tags": uniq, "unsupported": unsupported, "notes": notes,
+            "play_cost": play_cost}
 
 
 # ---------------- 黄金集与评测 ----------------

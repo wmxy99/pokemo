@@ -29,6 +29,18 @@ WIN_REASONS = ("prizes", "no_pokemon", "deckout", "max_turns_draw")
 
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 
+# 代价**已内建在自身 helper 里**的训练家 tag（2026-11-02 第三十六批）。
+#
+# `cards_real.json` 是**人工维护**的卡池，其条目没有 `play_cost` 字段：
+# Ultra Ball 的「弃 2 张手牌」写死在 `_trainer_ultra_ball` 内部。而解析链会为
+# 同一张卡（`other_text` 含「only if you discard 2 other cards」）产出
+# `play_cost="discard:2"` —— 若 `_do_trainer` 再统一执行一次，就会**弃 4 张**
+# （双重扣牌，玩家侧是净损失、AI 侧是错误强度）。这里显式排除。
+#
+# ⚠ 新增「内建代价」的 tag 必须登记到这里；反过来，若把某张卡的代价从 helper
+# 迁移到 `play_cost`，也要同时把它从本表删除。
+_BUILTIN_COST_TAGS = ("ultra_ball",)
+
 # 属于「伤害修正层」的 tag 前缀（由 _attack_mods 结算，不得在效果层重复执行）
 _DAMAGE_MOD_PREFIXES = ("dmg_plus:", "dmg_set:", "dmg_minus:", "dmg_zero",
                         "ignore_weakness", "ignore_resistance")
@@ -553,6 +565,16 @@ class Battle:
                 continue
             # 静态禁令（「对手不能从手牌打出物品卡」等）
             if families.blocked_play(self, p, c):
+                continue
+            # 打出代价（2026-11-02 第三十六批）：付不出就**不进**合法动作表。
+            # 卡面写的是「You can use this card **only if** you discard …」——
+            # 这是**打出条件**，不是「打了以后才发现付不出」。若放进候选表，
+            # AI 会反复尝试一张必然失败的卡，且「打得出」本身已是规则错误。
+            try:
+                if not _play_cost_ok(p, getattr(c.tdef, "play_cost", "")):
+                    continue
+            except ValueError:
+                # 代价形态不认识 → 不收（宁可这张卡不可用，也不免费放行）
                 continue
             # 统一带上标识（英文键 name / 中文 name_zh / 展示名 display / tag），
             # 供前端、AI 与「按名称下达指令」（engine.commands.find_action）使用。
@@ -1671,6 +1693,19 @@ class Battle:
             if p.supporter_used:
                 raise ValueError("本回合已使用支援者")
         opp = self.players[1 - self.current]
+        # 打出代价（2026-11-02 第三十六批）：**先付账、后效果**。
+        #
+        # 顺序必须与卡面一致：先做效果再弃牌，会让「手牌其实不够付账」的情形
+        # 也把效果先拿到手（`_pay_play_cost` 随后才失败，但效果已经发生）。
+        # 付账会改动手牌 → 之后各 helper 用到的 `hi` 必须**按身份重算**，
+        # 不能沿用旧索引（`p.hand.pop` 会让它指向别的牌）。
+        cost_log = ""
+        if tag not in _BUILTIN_COST_TAGS:
+            cost_log = self._pay_play_cost(p, c, hi, action)
+            if cost_log:
+                hi = next((i for i, x in enumerate(p.hand) if x is c), None)
+                if hi is None:      # 代价搬家把本卡弄丢了 → 绝不继续派发
+                    raise ValueError("打出代价后找不到本卡（内部状态异常）")
         # 执行（tag 派发）
         if tag == "poffin":
             placed = self._trainer_poffin(p)
@@ -1795,10 +1830,52 @@ class Battle:
             p.supporter_used = 1
             p.supporter_name = c.tdef.name
         self._log("trainer", {"player": self.current, "tag": tag,
-                              "kind": kind, "detail": placed})
+                              "kind": kind, "detail": placed,
+                              **({"cost": cost_log} if cost_log else {})})
         return {"ok": True, "event": self.events[-1]}
 
     # --- E4 训练家行为 ---
+    def _pay_play_cost(self, p: PlayerState, c, self_hi: int,
+                       action: dict) -> str:
+        """付出「打出代价」（``TrainerDef.play_cost``），返回日志串
+
+        卡面「You can use this card only if you discard N other cards from your
+        hand.」—— 本卡自己**不能**当代价（`other`）。
+
+        选哪几张：动作可带 ``discard_pick``（手牌索引，int 或 list）；
+        缺省从**末尾**往前取 —— 与既有的 `_trainer_ultra_ball` /
+        `_trainer_discard_search_energy` 口径一致（那两张卡同样「弃 N 张手牌
+        换检索」）。选牌口径必须与既有实现一致，否则同类卡在同一个 AI 下会
+        表现出不同强度。
+        """
+        spec = _parse_play_cost(getattr(c.tdef, "play_cost", ""))
+        if spec is None:
+            return ""
+        op, n = spec
+        if op != "discard":
+            raise ValueError(f"未知打出代价操作：{op}")
+        cands = [i for i in range(len(p.hand)) if i != self_hi]
+        if len(cands) < n:
+            raise ValueError(f"打出代价付不出（需弃 {n} 张，手牌只有 {len(cands)} 张可选）")
+        raw = action.get("discard_pick")
+        if raw is None:
+            picks = cands[::-1][:n]              # 缺省：从末尾往前
+        else:
+            picks = [raw] if isinstance(raw, int) else list(raw)
+            for i in picks:
+                if not isinstance(i, int) or i not in cands:
+                    # 指到本卡 / 越界 / 重复 → 一律抛错，绝不悄悄换成别的牌
+                    raise ValueError(f"打出代价的 discard_pick 非法：{raw}")
+            if len(set(picks)) != len(picks):
+                raise ValueError(f"打出代价的 discard_pick 有重复：{raw}")
+            if len(picks) != n:
+                raise ValueError(f"打出代价需弃 {n} 张，discard_pick 给了 {len(picks)} 张")
+        dropped = []
+        for i in sorted(picks, reverse=True):
+            dropped.append(_card_label(p.hand[i]))
+            self._to_discard(p, p.hand.pop(i))
+        return f"cost discard {len(dropped)} ({', '.join(dropped)})"
+
     def _trainer_draw(self, p: PlayerState, tag: str) -> str:
         """训练家/整卡级抽牌（``draw:N[:per:<counter>][:if:<cond>]``）"""
         n, cond = _draw_spec(self, tag)
@@ -6346,6 +6423,38 @@ def _opp_hand_one(ref, alt: str) -> bool:
 def _opp_hand_matches(ref, sel: str) -> bool:
     base = str(sel or "any").split("@")[0]
     return any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt)
+
+
+def _parse_play_cost(pc: str):
+    """解析 ``TrainerDef.play_cost``（``"discard:<n>"``）→ ``("discard", n)`` | None
+
+    卡面「You can use this card only if you discard N other cards from your
+    hand.」—— ``other`` 意味着**本卡自己不能当代价**，所以「付得出」的判据是
+    ``手牌数 - 1 >= n``（见 ``_play_cost_ok``）。
+
+    未知形态**抛错**，不静默当作「无代价」—— 那会让一张要付账的卡变成免费
+    （静默加强，正是本机制要防的那类错误）。
+    """
+    s = str(pc or "").strip()
+    if not s:
+        return None
+    parts = s.split(":")
+    if parts[0] != "discard" or len(parts) < 2 or not parts[1].isdigit():
+        raise ValueError(f"未知打出代价形态：{pc}")
+    n = int(parts[1])
+    if n < 1:
+        raise ValueError(f"打出代价张数非法：{pc}")
+    return ("discard", n)
+
+
+def _play_cost_ok(p, pc: str, self_in_hand: bool = True) -> bool:
+    """代价付得出吗（``self_in_hand``：本卡此刻是否占着一张手牌）"""
+    spec = _parse_play_cost(pc)
+    if spec is None:
+        return True
+    _, n = spec
+    avail = len(p.hand) - (1 if self_in_hand else 0)
+    return avail >= n
 
 
 def _parse_attach_spread_tag(tag: str) -> tuple:

@@ -80,6 +80,15 @@ _ENERGY_COST_CLAUSE = re.compile(
     r"(?:you may )?(?:discard|shuffle)[^.,]*?\benergy\b[^.,]*?"
     r"(?:,\s*and this attack does|and this attack does|and make your opponent)",
     re.I)
+# 打出代价（2026-11-02 · 第三十二类）：同样是**独立实现**。
+# 只认三种精确形态（数字 other cards / another card / a card）——
+# 「discard a Basic {R} Energy card from your hand」（Blowtorch）**故意不匹配**：
+# 它是「限定基本火能量」，落成 `discard:1` 就是放宽成任意牌（静默放宽代价）。
+_PLAY_COST_SHAPE = re.compile(
+    r"you can use this card only if you discard\s+"
+    r"(?:(?P<n>\d+)\s+other\s+cards?|another\s+card|an?\s+card)\s+from your hand",
+    re.I)
+_PLAY_COST_VALUE = re.compile(r"discard:[1-9]\d*")
 # 限定后的指示物计数源（2026-10-29 第二十六批 · 第二十四类）
 _BENCH_CNT_TYPE_RE = re.compile(
     r"damage\s+counters?\s+on\s+all\s+of\s+your\s+benched\s+\{([a-z])\}\s+"
@@ -719,6 +728,54 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：卡面目标限定是 "
                         f"`{want_target or 'any'}`，`{t}` 却是 `{got_scope}`"
                         f"（目标不符）")
+    return errs
+
+
+def audit_play_cost(card_name: str, desc: str, play_cost: str) -> list:
+    """打出代价对账（2026-11-02 · 第三十二类）
+
+    卡面：``You can use this card only if you discard N other cards from your
+    hand.`` → 池条目 ``play_cost="discard:N"``（``TrainerDef.play_cost``）。
+
+    三类错法，后果不同但都**看不出来**：
+
+      ① 卡面有代价句、条目**没有** ``play_cost`` → 这张卡**免费**使用
+         （静默加强，最危险：手牌一张不少就把效果拿了）；
+      ② 张数不符（卡面 3、条目 2）→ 强度错，同样不报错；
+      ③ 条目有 ``play_cost``、卡面**没有**该句 → 凭空加代价（静默削弱）。
+
+    另守**限定类别的代价**：``discard a Basic {R} Energy card from your hand``
+    （Blowtorch）不是「任意 N 张」，本对账**不认**它为 ``discard:N`` ——
+    否则解析侧把限定放宽成「任意牌」时，这里会跟着一起"通过"（自己给自己盖章）。
+
+    ⚠ 正则必须在本脚本内**独立实现**，不 import 解析包的同名正则：共用同一个
+    正则时，解析写错 → 对账一起错 → 永远通过。对账的全部价值就在「换一套写法
+    重算一遍」。
+
+    为什么单独一条而不是塞进 ``audit_energy_cost``：那个查的是**招式效果里**的
+    能量代价（副作用），本类查的是**打出这张卡的门槛**，字段层级都不同
+    （``play_cost`` 在卡上，不在 effects 里）。
+    """
+    errs = []
+    d = _norm(desc or "")
+    m = _PLAY_COST_SHAPE.search(d)
+    want = ""
+    if m:
+        want = f"discard:{int(m.group('n')) if m.group('n') else 1}"
+    got = str(play_cost or "").strip()
+    if got and not _PLAY_COST_VALUE.fullmatch(got):
+        # 形态先说：形态非法时下面「张数不符 / 凭空加代价」的判断都是噪音
+        errs.append(f"{card_name}：`play_cost={got}` 形态非法（应为 "
+                    f"`discard:<n>`，n ≥ 1）")
+    elif want and not got:
+        errs.append(f"{card_name}：卡面要求打出代价 `{want}`，条目却没有 "
+                    f"`play_cost` —— 这张卡会**免费**使用（静默加强）")
+    elif want and got != want:
+        errs.append(f"{card_name}：卡面打出代价是 `{want}`，条目写的是 "
+                    f"`{got}`（张数不符）")
+    elif got and not want:
+        errs.append(f"{card_name}：条目有 `play_cost={got}`，但卡面"
+                    f"没有「only if you discard …」句（凭空加代价）")
     return errs
 
 
@@ -1713,6 +1770,16 @@ def main() -> int:
                 errs += audit_set_per(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
+        # 训练家卡级（2026-11-02 第三十六批）：
+        # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
+        #   条目**自身**的 `desc` 上 → 训练家侧的卡级 tag 与卡面**从来没被对账**过
+        #   （盲区）。本节补齐，载入本批新增的「打出代价」。
+        _ctag = str(c.get("tag") or "")
+        if str(c.get("supertype")) == "Trainer" \
+                and not _ctag.startswith(("fossil:", "senergy:", "stadium:")):
+            n_items += 1
+            _cdesc = c.get("desc") or ""
+            errs += audit_play_cost(c["name"], _cdesc, c.get("play_cost") or "")
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:
@@ -1747,7 +1814,7 @@ def main() -> int:
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
           "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
-          "检索能量自由分配 · 能量代价去向 三十一类对账全部一致")
+          "检索能量自由分配 · 能量代价去向 · 打出代价 三十二类对账全部一致")
     return 0
 
 

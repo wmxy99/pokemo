@@ -178,6 +178,15 @@ class TrainerDef:
     # Pokémon」。上场时按这份**宝可梦定义**实例化（含卡面特性），卡本身仍是
     # 训练家卡（从场上弃置/被击倒时按 TrainerRef 进弃牌堆）。
     fossil_pdef: Optional["PokemonDef"] = None
+    # 打出代价（2026-11-02 第三十六批）：卡面
+    #   「You can use this card only if you discard N other cards from your hand.」
+    # 形态 `"discard:<n>"`，空串 = 无代价。
+    #
+    # ⚠ 与 tag 里的 `:gate:` **不是一回事**：gate 是纯条件检查（不满足不能打，
+    # 满足时无状态变化）；代价是**打出前必须先付的账** —— 手牌真的少 N 张。
+    # 引擎在 `_do_trainer` 派发**之前**执行，顺序与卡面一致（先付账、后效果）；
+    # 付不出时该卡不进合法动作表（`_trainer_legals`），而不是打了才发现。
+    play_cost: str = ""
 
     @property
     def display(self) -> str:

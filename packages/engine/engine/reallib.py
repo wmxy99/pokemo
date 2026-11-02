@@ -199,7 +199,8 @@ def _build_card(entry: dict):
                               name_zh=entry.get("name_zh", ""),
                               fossil_pdef=_fossil_def(entry))
         return TrainerDef(entry["tag"], kind=entry.get("kind", "item"),
-                          name=entry["name"], name_zh=entry.get("name_zh", ""))
+                          name=entry["name"], name_zh=entry.get("name_zh", ""),
+                          play_cost=entry.get("play_cost", ""))
     if st == "Energy":
         return EnergyDef(entry.get("type", "colorless"), name=entry["name"],
                          name_zh=entry.get("name_zh", ""),

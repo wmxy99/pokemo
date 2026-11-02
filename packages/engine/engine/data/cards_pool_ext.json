@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 994,
+      "kept": 998,
       "by_Energy": 19,
-      "by_Pokemon": 857,
-      "by_Trainer": 118,
+      "by_Pokemon": 860,
+      "by_Trainer": 119,
       "skipped": {
-        "存在未建模项（整卡不收）": 234,
+        "存在未建模项（整卡不收）": 230,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 15,
         "Trainer 不可执行": 9
@@ -24932,6 +24932,57 @@
       "uid": "Marnie's Morgrem@DRI 135"
     },
     {
+      "name": "Marnie's Grimmsnarl ex",
+      "name_zh": "玛俐的长毛巨魔 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 320,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Marnie)",
+      "evolves_from": "Marnie's Morgrem",
+      "attacks": [
+        {
+          "name": "Shadow Bullet",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 180,
+          "effects": [
+            "snipe:opp_bench:30:1"
+          ],
+          "desc": "This attack also does 30 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
+          "name_zh": "暗影弹",
+          "desc_zh": "此招式还对对手的 1 只后备宝可梦造成 30 点伤害。（后备宝可梦不计算弱点和抗性。）"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Punk Up",
+          "name_zh": "朋克升级",
+          "tag": "evolve_act:attach_spread:5:darkness:deck:target:cat-marnie",
+          "location": "field",
+          "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以从牌库中检索最多 5 张基本 {D} 能量卡，并以任意方式附着于你的玛俐的宝可梦。然后洗牌。"
+        }
+      ],
+      "real": {
+        "set": "DRI",
+        "number": "136"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 648,
+      "name_key": "marniesgrimmsnarlex",
+      "uid": "Marnie's Grimmsnarl ex@DRI 136"
+    },
+    {
       "name": "Marnie's Morpeko",
       "name_zh": "玛俐的莫鲁贝可",
       "supertype": "Pokemon",
@@ -28947,6 +28998,61 @@
       "source_card_id": 746,
       "name_key": "kirlia",
       "uid": "Kirlia@MEG 59"
+    },
+    {
+      "name": "Mega Gardevoir ex",
+      "name_zh": "超级沙奈朵 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 360,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Kirlia",
+      "attacks": [
+        {
+          "name": "Overflowing Wishes",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_each_bench:1:psychic:deck"
+          ],
+          "desc": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck.",
+          "name_zh": "满溢的愿望",
+          "desc_zh": "你的后备宝可梦每有 1 只，就从牌库中检索 1 张基本 {P} 能量卡并附着于该宝可梦。然后洗牌。"
+        },
+        {
+          "name": "Mega Symphonia",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_set:50:per:own_all_energy_psychic"
+          ],
+          "desc": "This attack does 50 damage for each {P} Energy attached to all of your Pokémon.",
+          "name_zh": "超级交响曲",
+          "desc_zh": "附着于你所有宝可梦的 {P} 能量每有 1 个，此招式造成 50 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "60"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 747,
+      "name_key": "megagardevoirex",
+      "uid": "Mega Gardevoir ex@MEG 60"
     },
     {
       "name": "Spoink",
@@ -39668,6 +39774,61 @@
       "uid": "Larry's Staraptor@ASC 170"
     },
     {
+      "name": "Mega Audino ex",
+      "name_zh": "超级差不多娃娃 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 270,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Kaleidowaltz",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "attach_spread_flip:3:2:any:deck"
+          ],
+          "desc": "Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "万花筒华尔兹",
+          "desc_zh": "抛 3 次硬币。每出现 1 个正面，从牌库中检索最多 2 张基本能量卡，并以任意方式附着于你的宝可梦身上。然后洗牌。"
+        },
+        {
+          "name": "Ear Force",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:80:per:opp_active_energy"
+          ],
+          "desc": "This attack does 80 more damage for each Energy attached to your opponent’s Active Pokémon.",
+          "name_zh": "耳力",
+          "desc_zh": "对手的战斗宝可梦身上每附着 1 个能量，此招式的伤害 +80。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "172"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1006,
+      "name_key": "megaaudinoex",
+      "uid": "Mega Audino ex@ASC 172"
+    },
+    {
       "name": "Larry's Rufflet",
       "name_zh": "青木的毛头小鹰",
       "supertype": "Pokemon",
@@ -43054,6 +43215,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1146,
       "uid": "Wondrous Patch@PFL 94"
+    },
+    {
+      "name": "Blowtorch",
+      "name_zh": "喷灯",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "discard_tool_or_senergy:1:opp",
+      "desc": "You can use this card only if you discard a Basic {R} Energy card from your hand.\n\nDiscard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
+      "desc_zh": "只有从手牌中弃置 1 张基本 {R} 能量卡，你才可以使用此卡。\n\n从对手的 1 只宝可梦身上弃置 1 张宝可梦道具或特殊能量卡，或弃置场上的 1 张竞技场卡。",
+      "real": {
+        "set": "PFL",
+        "number": "86"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1148,
+      "play_cost": "discard_energy:1:fire",
+      "uid": "Blowtorch@PFL 86"
     },
     {
       "name": "Energy Swatter",

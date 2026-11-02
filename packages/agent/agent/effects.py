@@ -57,7 +57,12 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # 检索能量自由分配附着（2026-10-30 第三十三批）：引擎
                 # `attach_spread:...` 已执行；漏登记会让解析数据一直带着
                 # 「action.type 非法」的假错误（同 counters 那次）
-                "attach_spread")
+                "attach_spread",
+                # 2026-11-02 第三十八批：抛币计数分配（`attach_spread_flip:`
+                # 抛 N 币 × per 张）与「每只后备各 per 张」（`attach_each_bench:`）
+                "attach_spread_flip", "attach_each_bench",
+                # 2026-11-02 第三十八批：弃对手道具/特殊能量 **或** 弃竞技场（二选一）
+                "discard_tool_or_senergy")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -626,6 +631,15 @@ _PLAY_COST_DISCARD = re.compile(
     r"^you can use this card only if you discard "
     r"(?:(?P<n>\d+)|another|an?)\s+(?:other\s+)?cards?\s+from\s+your\s+hand"
     r"[.]\s*", re.I)
+# 限定属性的**基本能量**代价（Blowtorch PFL 86，2026-11-02 第三十八批）：
+# 「You can use this card only if you discard a Basic {R} Energy card from your
+#  hand.」
+# ⚠ 必须单独一条、并把属性写进 tag：落成 `discard:1` 会允许弃掉**任意**一张
+# 手牌（静默放宽代价），而卡面只认「基本火能量」。
+_PLAY_COST_ENERGY = re.compile(
+    r"^you can use this card only if you discard "
+    r"(?:(?P<n>\d+)|another|an?)\s+(?:other\s+)?basic\s+\{(?P<c>[a-z])\}\s+"
+    r"energy cards?\s+from\s+your\s+hand[.]\s*", re.I)
 
 
 def _split_play_cost(text: str, kind: str) -> tuple:
@@ -642,6 +656,16 @@ def _split_play_cost(text: str, kind: str) -> tuple:
     t = str(text or "")
     if kind not in ("item", "supporter", "stadium", "tool"):
         return t, None
+    # 限定属性的基本能量代价**先判**：`a Basic {R} Energy card` 里没有
+    # 「cards from your hand」这个连续片段以外的重合，但两条正则的语义不同
+    # （任意牌 vs 指定属性基本能量），顺序写反会让代价静默放宽。
+    m = _PLAY_COST_ENERGY.match(t)
+    if m:
+        n = int(m.group("n")) if m.group("n") else 1
+        et = _EN_ENERGY_LETTER.get(str(m.group("c")).upper())
+        if n < 1 or et is None:
+            return t, None            # 认不出属性 → 不猜，留给 unsupported
+        return t[m.end():].strip(), f"discard_energy:{n}:{et}"
     m = _PLAY_COST_DISCARD.match(t)
     if not m:
         return t, None
@@ -827,6 +851,43 @@ _ATTACH_SPREAD_SELFKO = re.compile(
     r"(?:[{]([a-z])[}] )?energy cards? from your (hand|discard pile) to your "
     r"(.+?) in any way you like[.]? if you use this ability, this pok[eé]mon "
     r"is knocked out[.]?$")
+# 进化触发形态（Marnie's Grimmsnarl ex DRI 136，2026-11-02 第三十八批）：
+#   「When you play this Pokémon from your hand to evolve 1 of your Pokémon during
+#    your turn, you may search your deck for up to 5 Basic {D} Energy cards and
+#    attach them to your Marnie's Pokémon in any way you like. Then, shuffle your
+#    deck.」
+# 后半句与 `_ATTACH_SPREAD_SIMPLE` **逐字相同**，唯一差异是句首多了一句进化
+# 触发从句；而 `_detect_attach_spread` 全部用 `.match`（隐式 `^`），SIMPLE 因此
+# 匹配不上（这是结构上的保证，不是靠额外 if 判断）。
+# **不给 SIMPLE 加可选前缀**：那会把认领范围扩到所有带从句的卡 = 行为漂移，
+# 代价不可控。新开一条把前缀写成**必选**组，只认领进化触发形态。
+# 认领后由 `to_engine_tags` 的 `trigger == "on_evolve"` 分支包成
+# `evolve_act:attach_spread:...`（引擎在**进化那一刻**执行一次）。
+_ATTACH_SPREAD_EVOLVE = re.compile(
+    r"^when you play this pok[eé]mon from your hand to evolve 1 of your "
+    r"pok[eé]mon during your turn, you may search your deck for up to (\d+) basic "
+    r"(?:[{]([a-z])[}] )?energy cards? and attach them to your (.+?) "
+    r"in any way you like" + _ATTACH_SPREAD_TAIL)
+# 抛币计数形态（Mega Audino ex ASC 172，2026-11-02 第三十八批）：
+#   「Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards
+#    and attach them to your Pokémon in any way you like. Then, shuffle your deck.」
+# 张数要到**结算时**才知道（正面枚数 × 每正面上限），解析期只能记下「抛几枚、
+# 每正面几张」→ 单独一个 tag `attach_spread_flip:`，**不复用** `attach_spread:`
+# 的 `n` 段：把它写成任何固定值（6 / 2 / …）都是静默改变强度。
+_ATTACH_SPREAD_FLIP = re.compile(
+    r"^flip (\d+) coins?[.]? for each heads,? search your deck for up to (\d+) "
+    r"basic (?:[{]([a-z])[}] )?energy cards? and attach them to your (.+?) "
+    r"in any way you like" + _ATTACH_SPREAD_TAIL)
+# 「每只后备各取 per 张、**绑定给那一只**」（Mega Gardevoir ex MEG 60）：
+#   「For each of your Benched Pokémon, search your deck for a Basic {P} Energy card
+#    and attach it to that Pokémon. Then, shuffle your deck.」
+# ⚠ 与 `attach_spread` 是**两种语义**，不可代用：spread 是「n 张任意分配」，
+# 本条是「每只后备各 per 张、只能附给它自己」。用 spread 建模会既可漏掉某只、
+# 也可把多张堆在同一只上 —— 卡面均不允许。
+_ATTACH_EACH_BENCH = re.compile(
+    r"^for each of your benched pok[eé]mon, search your deck for (?:a|an|up to (\d+)) "
+    r"basic (?:[{]([a-z])[}] )?energy cards? and attach (?:it|them) to that "
+    r"pok[eé]mon" + _ATTACH_SPREAD_TAIL)
 # 「your Marnie's Pokémon」这类**训练家专属**限定：category 形如
 # 「Trainer's Pokémon(Marnie)」，故按专属名做子串匹配
 _ATTACH_SPREAD_OWNED = re.compile(r"^([a-z\u2019']+)['\u2019]s pok[eé]mon$")
@@ -878,6 +939,34 @@ def _detect_attach_spread(t: str) -> Optional[list]:
         zone = "discard" if "discard" in m.group(3).lower() else "hand"
         return [{"n": int(m.group(1)), "etype": et, "zone": zone,
                  "scope": scope, "selfko": True}]
+    # 抛币计数形态（Mega Audino ex）：`coins`/`per` 是**解析期常量**，
+    # 实际张数由引擎抛币决定 —— 这里绝不预先折算成一个整数。
+    m = _ATTACH_SPREAD_FLIP.match(t)
+    if m:
+        scope = _spread_scope_of(m.group(4))
+        if scope is None:
+            return None
+        et = None
+        if m.group(3):
+            et = _EN_ENERGY_LETTER.get(str(m.group(3)).upper())
+            if et is None:
+                return None
+        return [{"coins": int(m.group(1)), "per": int(m.group(2)),
+                 "etype": et, "zone": "deck", "scope": scope}]
+    # 进化触发形态（Marnie's Grimmsnarl ex）：语义与 SIMPLE 完全一致，
+    # 只是多了一层 `evolve_act:` 包装（由 `to_engine_tags` 按 trigger 加）。
+    m = _ATTACH_SPREAD_EVOLVE.match(t)
+    if m:
+        scope = _spread_scope_of(m.group(3))
+        if scope is None:
+            return None
+        et = None
+        if m.group(2):
+            et = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+            if et is None:
+                return None
+        return [{"n": int(m.group(1)), "etype": et, "zone": "deck",
+                 "scope": scope}]
     m = _ATTACH_SPREAD_DUAL.match(t)
     if m:
         # 卡面只写「to your Pokémon」，双色形态没有其它限定
@@ -914,6 +1003,40 @@ def _detect_attach_spread(t: str) -> Optional[list]:
         return [{"n": int(m.group(1)), "etype": et, "zone": zone,
                  "scope": scope}]
     return None
+
+
+def _detect_attach_each_bench(t: str) -> Optional[dict]:
+    """整句识别「**每只后备各**检索 per 张基本能量并附给它自己」；认不出返回 None
+
+    返回 ``{"per": int, "etype": str|None, "zone": "deck"}``。
+    """
+    m = _ATTACH_EACH_BENCH.match(_norm_prose(t))
+    if not m:
+        return None
+    per = int(m.group(1)) if m.group(1) else 1      # 卡面「a Basic … card」= 1
+    et = None
+    if m.group(2):
+        et = _EN_ENERGY_LETTER.get(str(m.group(2)).upper())
+        if et is None:
+            return None                             # 属性符号不认识 → 不猜
+    return {"per": per, "etype": et, "zone": "deck"}
+
+
+# 「弃对手 1 只宝可梦身上的**道具或特殊能量**，**或**弃场上竞技场」
+# （Blowtorch PFL 86，2026-11-02 第三十八批）：
+#   「Discard a Pokémon Tool or Special Energy card from 1 of your opponent's
+#    Pokémon, or discard a Stadium in play.」
+# ⚠ 这是**二选一**，两支都必须建模。此前解析链只认出后半句（`discard_stadium`），
+# 前半句被**静默吞掉** —— 卡一旦被收进池，玩家就少了一整条可用路径（静默削弱），
+# 而且对账脚本也看不出来（它只核对已产出的 tag 与卡面是否一致）。
+_DISCARD_TOOL_OR_SENERGY = re.compile(
+    r"^discard a pok[eé]mon tool or special energy card from 1 of your "
+    r"opponent's pok[eé]mon,? or discard a stadium in play[.]?$")
+
+
+def _detect_discard_tool_or_senergy(t: str) -> bool:
+    """整句识别「弃对手道具/特殊能量 **或** 弃竞技场」；认不出返回 False"""
+    return bool(_DISCARD_TOOL_OR_SENERGY.match(_norm_prose(t)))
 
 
 # ---------------- 对手手牌操作（2026-10-30 第三十二批） ----------------
@@ -2808,11 +2931,46 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 那样会「进池但特性不生效」（引擎的 field 特性是**每回合一次**，不是进化时）。
     if kind in ("attack", "ability"):
         _as = _detect_attach_spread(t)
+        # 触发时机与 `_parse_rule_en` **同源**（`_early_trigger_of`）：
+        # 认出「被击倒时」就不认领 —— 那一形态需要 `on_ko:` 包装，本族还没有
+        # （写成 `on_use` 会把一次性效果变成每回合一次 = 静默加强）。进化触发
+        # 则是本批要的正解：`trigger == "on_evolve"` → 包 `evolve_act:`。
+        _atrig = _early_trigger_of(_norm_prose(t)) or "on_use"
+        if _as and _atrig == "on_knockout":
+            _as = None
         if _as:
-            return {"kind": kind, "name": name, "trigger": "on_use",
+            # 抛币计数形态（Mega Audino ex）：张数在结算时才知道 → 走独立动作
+            # 类型，绝不预折成一个整数（那会静默改变期望值与上限）。
+            if _as[0].get("coins"):
+                return {"kind": kind, "name": name, "trigger": _atrig,
+                        "conditions": conditions,
+                        "actions": [act("attach_spread_flip",
+                                        int(_as[0]["per"]), "self", _as[0])],
+                        "source_text": str(text or ""), "citations": []}
+            return {"kind": kind, "name": name, "trigger": _atrig,
                     "conditions": conditions,
                     "actions": [act("attach_spread", _s["n"], "self", _s)
                                 for _s in _as],
+                    "source_text": str(text or ""), "citations": []}
+        # 「每只后备各 per 张、绑定给那一只」（Mega Gardevoir ex）：与
+        # `attach_spread` 的「n 张任意分配」是两种语义，必须分开认领。
+        _ab = _detect_attach_each_bench(t)
+        if _ab:
+            return {"kind": kind, "name": name, "trigger": _atrig,
+                    "conditions": conditions,
+                    "actions": [act("attach_each_bench", int(_ab["per"]),
+                                    "self", _ab)],
+                    "source_text": str(text or ""), "citations": []}
+
+    # 「弃对手道具/特殊能量 或 弃竞技场」二选一（Blowtorch）：整段认领。
+    # 必须排在 S6 的 `_EN_DISCARD_STADIUM_RE` 内联分支**之前** —— 那一支只产出
+    # `discard_stadium`，会把前半句静默吞掉（半张卡丢失）。
+    if kind in ("item", "supporter", "stadium", "tool"):
+        if _detect_discard_tool_or_senergy(t):
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("discard_tool_or_senergy", 1, "any",
+                                    {"n": 1, "scope": "opp"})],
                     "source_text": str(text or ""), "citations": []}
 
     # 检视牌库顶 → 筛选 → 入手/铺场/附着（2026-10-30 第二十批）：整段认领。
@@ -3084,12 +3242,9 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                            {"note": "附带动作「弃置该场地」需引擎弃场地动作（B4）"}))
 
     # 触发时机（英文）
-    if re.search(r"if .{0,30}(?:is|are) knocked out", lower) or \
-            re.search(r"when .{0,30}knocked out", lower):
-        trigger = "on_knockout"
-    elif re.search(r"when you play .{0,40}to evolve", lower) or \
-            re.search(r"when you evolve", lower):
-        trigger = "on_evolve"
+    _early = _early_trigger_of(lower)
+    if _early:
+        trigger = _early
     elif re.search(r"once during your turn|once per turn", lower):
         trigger = "static"
     elif kind in ("attack", "item", "supporter", "energy"):
@@ -3127,6 +3282,23 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             # 2026-10-28：200 → 400 —— 进化触发特性常把「第二个触发时机」写在
             # 第一句之后（Flygon），截断会让双触发判定失效。
             "source_text": t_raw.strip()[:400]}
+
+
+def _early_trigger_of(lower: str) -> Optional[str]:
+    """英文卡面的**早触发**时机（被击倒 / 进化时）；都不是返回 None
+
+    抽成独立函数是因为有**两个**调用方要判：`_parse_rule_en` 的 if/elif 链，
+    以及 parse_rule 里「整段认领」的分支（`attach_spread` 等会提前 return，
+    根本走不到链上）。两份实现必然漂移 —— 认领分支一旦把进化触发写成
+    `on_use`，特性就从「进化那一刻一次」变成「每回合一次」（静默加强）。
+    """
+    if re.search(r"if .{0,30}(?:is|are) knocked out", lower) or \
+            re.search(r"when .{0,30}knocked out", lower):
+        return "on_knockout"
+    if re.search(r"when you play .{0,40}to evolve", lower) or \
+            re.search(r"when you evolve", lower):
+        return "on_evolve"
+    return None
 
 
 def _trigger_of(text: str, kind: str) -> str:
@@ -6433,6 +6605,57 @@ def to_engine_tags(specs: list) -> dict:
                         # 必须是**尾段**（引擎先剥 `:selfko` 再解析 scope）
                         _tag += ":selfko"
                     tags.append(_tag)
+            elif t == "attach_spread_flip":
+                # 抛币计数版自由分配附着（Mega Audino ex，2026-11-02 第三十八批）：
+                # `attach_spread_flip:<coins>:<per>:<etype>:<zone>[:target:<scope>]`
+                # ⚠ 与 `attach_spread:` 分开：前者的张数段是**常量**，本 tag 的
+                # 张数由引擎抛 `coins` 枚币、按正面枚数 × `per` 现算。
+                _coins = extra.get("coins")
+                _per = extra.get("per")
+                _zone = str(extra.get("zone") or "deck")
+                _scope = str(extra.get("scope") or "any")
+                if not isinstance(_coins, int) or _coins < 1 \
+                        or not isinstance(_per, int) or _per < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"抛币张数未识别：{_coins}x{_per}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    _et = str(extra.get("etype") or "any")
+                    _tag = f"attach_spread_flip:{_coins}:{_per}:{_et}:{_zone}"
+                    if _scope != "any":
+                        _tag += f":target:{_scope}"
+                    tags.append(_tag)
+            elif t == "attach_each_bench":
+                # 「每只后备各 per 张、绑定给那一只」（Mega Gardevoir ex）：
+                # `attach_each_bench:<per>:<etype>:<zone>`
+                _per = extra.get("per")
+                _zone = str(extra.get("zone") or "deck")
+                if not isinstance(_per, int) or _per < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"每只后备附能张数未识别：{_per}"})
+                elif _zone not in ("hand", "discard", "deck", "any"):
+                    unsupported.append({"type": t,
+                                        "reason": f"附能来源未识别：{_zone}"})
+                else:
+                    _et = str(extra.get("etype") or "any")
+                    tags.append(f"attach_each_bench:{_per}:{_et}:{_zone}")
+            elif t == "discard_tool_or_senergy":
+                # 「弃对手道具/特殊能量 **或** 弃竞技场」二选一（Blowtorch）：
+                # `discard_tool_or_senergy:<n>:<scope>` —— 两支都在引擎侧实现，
+                # 因此**不能**拆成 `discard_tool:` + `discard_stadium` 两条
+                # （训练家只认一个卡级 tag，多一条整卡就不收）。
+                _n = extra.get("n")
+                _sc = str(extra.get("scope") or "opp")
+                if not isinstance(_n, int) or _n < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"弃置张数未识别：{_n}"})
+                elif _sc != "opp":
+                    unsupported.append({"type": t,
+                                        "reason": f"弃置范围未建模：{_sc}"})
+                else:
+                    tags.append(f"discard_tool_or_senergy:{_n}:{_sc}")
             elif t == "recon":
                 # 检视牌库顶（2026-10-30 第二十批；2026-11-02 第三十五批扩展）：
                 # `recon:<N>:<K>:<sel>[:dest:<d>][:rest:<r>][:gate:<g>]`

@@ -13,8 +13,10 @@ Spirit JTG 149 / Canari ASC 185，措辞都是 ``another card`` = 1 张）。
    即便收下，弃牌也会在效果**之后**发生（卡面要求先付账）。
 2. **先剥离再解析** —— 剥掉后主效果才能正常识别（否则 `^` 锚定的整句正则失配）。
 3. 限定能量属性的代价（``discard a Basic {R} Energy card``，Blowtorch）
-   **不得**认领成 ``discard:1`` —— 那会把「只能弃基本火能量」放宽成「弃任意牌」
-   （静默放宽代价）。
+   在第三十六批**故意不认领**（落成 ``discard:1`` 会把「只能弃基本火能量」
+   放宽成「弃任意牌」= 静默放宽代价）；第三十八批补上
+   ``discard_energy:<n>:<etype>`` 形态后才认领，见 ``TestSplit`` 与
+   ``TestModeled*``。
 
 运行：cd packages/agent && python -m unittest tests.test_play_cost -v
 """
@@ -61,11 +63,16 @@ class TestSplit(unittest.TestCase):
         _, pc = _split_play_cost(ULTRA, "item")
         self.assertEqual(pc, "discard:2")
 
-    def test_energy_limited_not_claimed(self):
-        """`discard a Basic {R} Energy card` 不是「任意 N 张」→ 不认领"""
+    def test_energy_limited_cost_claimed_with_type(self):
+        """`discard a Basic {R} Energy card` → 认领成**带属性**的代价
+
+        第三十六批**故意不认领**它：当时只有 `discard:<n>` 一种形态，落下去
+        会把「只能弃基本火能量」放宽成「弃任意一张手牌」（静默放宽代价）。
+        第三十八批新增 `discard_energy:<n>:<etype>` 后才有正确的表达方式。
+        """
         rest, pc = _split_play_cost(BLOWTORCH, "item")
-        self.assertIsNone(pc)
-        self.assertEqual(rest, BLOWTORCH)      # 原样返回，不吞文本
+        self.assertEqual(pc, "discard_energy:1:fire")
+        self.assertTrue(rest.startswith("Discard a Pokémon Tool"), rest[:40])
 
     def test_not_at_sentence_start_not_claimed(self):
         """只认**句首**的整句 —— 句中出现的不能认领（否则会吞掉前半句）"""
@@ -123,12 +130,18 @@ class TestRealCards(unittest.TestCase):
         self.assertTrue(any("多类别并列检索" in u["reason"]
                             for u in m["unsupported"]))
 
-    def test_blowtorch_still_unmodeled(self):
-        """限定能量的代价不认领 → 仍然卡在「打出前置条件」（如实未建模）"""
+    def test_blowtorch_energy_cost_modeled(self):
+        """Blowtorch（第三十八批）：带属性的代价 + 主效果「二选一」都已建模
+
+        主效果 ``Discard a Pokémon Tool or Special Energy card from 1 of your
+        opponent's Pokémon, **or** discard a Stadium in play.`` 是**两支** ——
+        此前只认出后半句（`discard_stadium`），前半句被静默吞掉，所以这张卡
+        一直停在「打出前置条件未建模」。本批两支都进 `discard_tool_or_senergy`。
+        """
         m = _m(BLOWTORCH, kind="item")
-        self.assertEqual(m["play_cost"], "")
-        self.assertTrue(any("打出前置条件" in u["reason"]
-                            for u in m["unsupported"]))
+        self.assertEqual(m["play_cost"], "discard_energy:1:fire")
+        self.assertEqual(m["tags"], ["discard_tool_or_senergy:1:opp"])
+        self.assertEqual(m["unsupported"], [])
 
 
 class TestNoCost(unittest.TestCase):

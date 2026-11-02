@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 10:22:16",
+  "reparsed_at": "2026-11-02 10:42:19",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1009,
+  "engine_ready": 1013,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1009,
-   "engine_approximated": 994,
-   "engine_unmatched": 258,
+   "zh_backfill": 1013,
+   "engine_approximated": 998,
+   "engine_unmatched": 254,
    "engine_namekey_mismatch": 37
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 119,
-   "engine_tags": 1349,
-   "unsupported": 243,
+   "engine_tags": 1352,
+   "unsupported": 239,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 994,
+  "engine_approximated": 998,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -87753,14 +87753,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Marnie's Grimmsnarl ex@DRI 136",
    "parse": {
     "items": [
      {
@@ -87806,25 +87808,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread",
           "amount": 5,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "n": 5,
+           "etype": "darkness",
+           "zone": "deck",
+           "scope": "cat-marnie"
           }
          }
         ],
-        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索附能需自行分配目标（B4）"
-       }
-      ]
+      "engine_tags": [
+       "evolve_act:attach_spread:5:darkness:deck:target:cat-marnie"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -87856,27 +87859,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread",
         "amount": 5,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "n": 5,
+         "etype": "darkness",
+         "zone": "deck",
+         "scope": "cat-marnie"
         }
        }
       ],
-      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "snipe:opp_bench:30:1"
+     "snipe:opp_bench:30:1",
+     "evolve_act:attach_spread:5:darkness:deck:target:cat-marnie"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索附能需自行分配目标（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -99855,14 +99858,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Gardevoir ex@MEG 60",
    "parse": {
     "items": [
      {
@@ -99876,25 +99881,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_each_bench",
           "amount": 1,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "per": 1,
+           "etype": "psychic",
+           "zone": "deck"
           }
          }
         ],
-        "source_text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck."
+        "source_text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_each_bench:1:psychic:deck"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -99940,15 +99945,18 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_each_bench",
         "amount": 1,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "per": 1,
+         "etype": "psychic",
+         "zone": "deck"
         }
        }
       ],
-      "source_text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck."
+      "source_text": "For each of your Benched Pokémon, search your deck for a Basic {P} Energy card and attach it to that Pokémon. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -99977,14 +99985,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "attach_each_bench:1:psychic:deck",
      "dmg_set:50:per:own_all_energy_psychic"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -132447,14 +132451,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Audino ex@ASC 172",
    "parse": {
     "items": [
      {
@@ -132468,25 +132474,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
+          "type": "attach_spread_flip",
           "amount": 2,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "what": "energy"
+           "coins": 3,
+           "per": 2,
+           "etype": null,
+           "zone": "deck",
+           "scope": "any"
           }
          }
         ],
-        "source_text": "Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+        "source_text": "Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "attach_spread_flip:3:2:any:deck"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -132527,15 +132535,20 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
+        "type": "attach_spread_flip",
         "amount": 2,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "what": "energy"
+         "coins": 3,
+         "per": 2,
+         "etype": null,
+         "zone": "deck",
+         "scope": "any"
         }
        }
       ],
-      "source_text": "Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+      "source_text": "Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -132559,14 +132572,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "attach_spread_flip:3:2:any:deck",
      "dmg_plus:80:per:opp_active_energy"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -148900,14 +148909,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you discard a Basic {R} Energy card from your hand.\n\nDiscard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有从手牌中弃置 1 张基本 {R} 能量卡，你才可以使用此卡。\n\n从对手的 1 只宝可梦身上弃置 1 张宝可梦道具或特殊能量卡，或弃置场上的 1 张竞技场卡。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Blowtorch@PFL 86",
    "parse": {
     "items": [
      {
@@ -148921,36 +148932,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "discard_tool_or_senergy",
+          "amount": 1,
           "target": "any",
           "extra": {
-           "discard_stadium": true
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "n": 1,
+           "scope": "opp"
           }
          }
         ],
-        "source_text": "You can use this card only if you discard a Basic {R} Energy card from your hand.\n\nDiscard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play."
+        "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
+        "citations": [],
+        "play_cost": "discard_energy:1:fire"
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard_stadium"
+       "discard_tool_or_senergy:1:opp"
       ],
-      "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_cost": "discard_energy:1:fire",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -148961,35 +148962,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "discard_tool_or_senergy",
+        "amount": 1,
         "target": "any",
         "extra": {
-         "discard_stadium": true
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "n": 1,
+         "scope": "opp"
         }
        }
       ],
-      "source_text": "You can use this card only if you discard a Basic {R} Energy card from your hand.\n\nDiscard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play."
+      "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
+      "citations": [],
+      "play_cost": "discard_energy:1:fire"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_stadium"
+     "discard_tool_or_senergy:1:opp"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

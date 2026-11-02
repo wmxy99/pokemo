@@ -83,7 +83,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # ⚠ 与上面的 `discard_opp_random:` / `discard_opp_to:` /
                 # `shuffle_opp_hand:` 相反：那三个是「对手自选 ⇒ 引擎随机」，
                 # 本族卡面写的是 «you discard a card you find there»（使用者选）。
-                "opp_hand:")
+                "opp_hand:",
+                # 2026-11-02 第三十八批：弃对手道具/特殊能量 **或** 弃竞技场
+                # （Blowtorch）。前缀**不**被 `discard_tool:` 覆盖（第 13 位
+                # 是 `_` 不是 `:`），必须显式列出。
+                "discard_tool_or_senergy:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -143,7 +147,11 @@ ATTACK_TAG_PREFIXES = (
     # 第三十三批（2026-10-30）：检索能量并**自由分配**附着
     # ⚠ 必须显式列出：虽然 `attach` 前缀也能匹配到它，但引擎侧两分支语义不同
     # （单目标 vs 多目标轮转），白名单写清楚才不会被后人误删。
-    "attach_spread:"
+    "attach_spread:",
+    # 第三十八批（2026-11-02）：自由分配的两个变体
+    #   · `attach_spread_flip:` 抛 N 币 × per 张（Mega Audino ex）
+    #   · `attach_each_bench:` 每只后备**各** per 张、绑定给那一只（Mega Gardevoir ex）
+    "attach_spread_flip:", "attach_each_bench:"
 )
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
@@ -153,6 +161,9 @@ ABILITY_TAG_PREFIXES = (
     # 引擎在 `_do_ability` 里排在 `attach_energy:` 之前。当前来源是 Magneton SSP 59
     # （场上主动特性 + `:selfko`）；进化触发形态仍需 `evolve_act:` 包装，未产出。
     "attach_spread:",
+    # 第三十八批（2026-11-02）：自由分配的两个变体 —— Magneton 时代只放了
+    # `attach_spread:`，这两个前缀更长（第 13 位是 `_`），**不会**被它覆盖。
+    "attach_spread_flip:", "attach_each_bench:",
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:", "status_self:",
     # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",

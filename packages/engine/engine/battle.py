@@ -819,6 +819,12 @@ class Battle:
             elif tag.startswith("discard_opp_to:"):
                 if len(opp.hand) > int(tag.split(":")[1]):
                     out.append(dict(base))
+            elif tag.startswith("discard_tool_or_senergy:"):
+                # 「弃对手道具/特殊能量 或 弃竞技场」（Blowtorch）：两支都不可用
+                # 时这张卡打出去只会空转 → 不进合法动作表（同 `discard_tool:`）。
+                if self.stadium or any(
+                        fp.tool or fp.senergy for fp in opp.all_field()):
+                    out.append(dict(base))
             elif tag.startswith("discard_tool:"):
                 _sc = tag.split(":")[2] if len(tag.split(":")) > 2 else "both"
                 if _sc == "opp_active":
@@ -1372,6 +1378,18 @@ class Battle:
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("attach_spread_flip:"):
+                # 抛币计数版自由分配（2026-11-02 第三十八批，Mega Audino ex）
+                detail = self._do_attach_spread_flip(p, tag, action, holder=fp)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("attach_each_bench:"):
+                # 每只后备各 per 张（2026-11-02 第三十八批，Mega Gardevoir ex）
+                detail = self._do_attach_each_bench(p, tag, action)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("attach_energy:"):
                 # 附能（如「碧绿之舞」从手牌 / 「火焰之舞」从弃牌堆附 n 个指定色能量）
                 n, etype, zone = _parse_attach_tag(tag)
@@ -1812,6 +1830,12 @@ class Battle:
         elif tag.startswith("attach_spread:"):
             # 多张自由分配附着（2026-10-30 第三十三批）：排在 `attach` 之前
             placed = self._do_attach_spread(p, tag, action)
+        elif tag.startswith("attach_spread_flip:"):
+            # 抛币计数版（2026-11-02 第三十八批）
+            placed = self._do_attach_spread_flip(p, tag, action)
+        elif tag.startswith("attach_each_bench:"):
+            # 每只后备各 per 张（2026-11-02 第三十八批）
+            placed = self._do_attach_each_bench(p, tag, action)
         elif tag.startswith("attach"):
             placed = self._trainer_attach_energy(p, tag, action)
         elif tag.startswith("discard_opp_random:"):
@@ -1824,6 +1848,11 @@ class Battle:
             placed = self._apply_energy_move(tag, None, action)
         elif tag.startswith("bounce:"):
             placed = self._apply_bounce(tag, None, action)
+        elif tag.startswith("discard_tool_or_senergy:"):
+            # 「弃对手道具/特殊能量 或 弃竞技场」二选一（2026-11-02 第三十八批）：
+            # 必须排在 `discard_tool:` 之前 —— 前缀相近，将来若有一方放宽成
+            # `startswith("discard_tool")` 就会互相吞掉（同类事故已发生过一次）。
+            placed = self._trainer_discard_tool_or_senergy(p, tag, action)
         elif tag.startswith("discard_tool:"):
             placed = f"discard tool {self._apply_discard_tool(tag)}"
         elif tag == "discard_stadium":
@@ -1871,12 +1900,23 @@ class Battle:
         spec = _parse_play_cost(getattr(c.tdef, "play_cost", ""))
         if spec is None:
             return ""
-        op, n = spec
-        if op != "discard":
+        op, n, etype = spec
+        if op == "discard_energy":
+            # 卡面限定「Basic {X} Energy card」→ 候选**只有**手牌里同属性的
+            # 基本能量。用「任意 N 张手牌」的候选集会允许弃掉别的牌（代价被
+            # 静默放宽），而 AI 也会挑到与卡面不符的那张。
+            cands = [i for i in range(len(p.hand))
+                     if isinstance(p.hand[i], EnergyRef)
+                     and not getattr(p.hand[i].edef, "is_special", False)
+                     and str(p.hand[i].edef.type) == etype]
+        elif op == "discard":
+            cands = [i for i in range(len(p.hand)) if i != self_hi]
+        else:
             raise ValueError(f"未知打出代价操作：{op}")
-        cands = [i for i in range(len(p.hand)) if i != self_hi]
         if len(cands) < n:
-            raise ValueError(f"打出代价付不出（需弃 {n} 张，手牌只有 {len(cands)} 张可选）")
+            _what = (f"基本 {etype} 能量" if op == "discard_energy" else "手牌")
+            raise ValueError(f"打出代价付不出（需弃 {n} 张{_what}，"
+                             f"可选 {len(cands)} 张）")
         raw = action.get("discard_pick")
         if raw is None:
             picks = cands[::-1][:n]              # 缺省：从末尾往前
@@ -2552,6 +2592,116 @@ class Battle:
                 self._resolve_self_ko(holder)
                 detail = (detail + " + self KO") if detail else "self KO"
         return detail
+
+    def _do_attach_spread_flip(self, p: PlayerState, tag: str,
+                               action: dict,
+                               holder: Optional[FieldPokemon] = None) -> str:
+        """抛币计数版多张自由分配（``attach_spread_flip:<coins>:<per>:...``）
+
+        卡面原型（Mega Audino ex「Kaleidowaltz」）：
+        「Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy
+         cards and attach them to your Pokémon in any way you like. Then, shuffle
+         your deck.」
+
+        张数 = 正面枚数 × ``per``，在**结算时**现算；抛完之后把结果交给
+        `_do_attach_spread` 的统一分配逻辑（`attach_plan` / 轮转缺省），
+        保证与固定张数的 `attach_spread:` 分配口径**完全一致** —— 两套分配
+        实现迟早会漂（同一张卡换个形态就换一种强度）。
+        """
+        coins, per, etype, zone, scope = _parse_attach_spread_flip_tag(tag)
+        heads = 0
+        for _ in range(coins):
+            if self.rng.random() < 0.5:
+                heads += 1
+        self._log("coin", {"player": self.current,
+                           "result": f"{heads}/{coins} heads", "tag": tag})
+        n = heads * per
+        if n < 1:
+            # 全反面 → 没有能量可检索。不是错误（卡面允许），也不必洗牌。
+            return ""
+        sub = f"attach_spread:{n}:{etype or 'any'}:{zone}"
+        if scope != "any":
+            sub += f":target:{scope}"
+        return self._do_attach_spread(p, sub, action, holder=holder)
+
+    def _do_attach_each_bench(self, p: PlayerState, tag: str,
+                              action: dict) -> str:
+        """「每只后备**各** per 张、绑定给那一只」（``attach_each_bench:...``）
+
+        卡面原型（Mega Gardevoir ex「Overflowing Wishes」）：
+        「For each of your Benched Pokémon, search your deck for a Basic {P} Energy
+         card and attach it to that Pokémon. Then, shuffle your deck.」
+
+        ⚠ 与 `attach_spread` 的差别是**分配不可选**：每只后备各取 ``per`` 张、
+        附给**它自己**。不能漏掉某只，也不能把多张堆在同一只上 —— 所以本形态
+        **不读** `attach_plan`（显式给了就抛错，免得调用方以为能选，实际被忽略）。
+        """
+        per, etype, zone = _parse_attach_each_bench_tag(tag)
+        if isinstance(action, dict) and action.get("attach_plan") is not None:
+            raise ValueError("attach_each_bench 的分配不可选，不接受 attach_plan")
+        moved = 0
+        for fp in p.bench:                 # 后备顺序固定 → 同局面必得同结果
+            for _ in range(per):
+                if _attach_energy_from_zones(self, p, fp, 1, etype, zone) <= 0:
+                    break                  # 该只取不满 → 只影响这一只，继续下一只
+                moved += 1
+        if moved and zone in ("deck", "any"):
+            # 卡面固定后缀「Then, shuffle your deck.」（动过牌库才洗，同 spread）
+            self.rng.shuffle(p.deck)
+        if not moved:
+            return ""
+        return f"attach {moved} {etype or 'any'} to {len(p.bench)} bench"
+
+    def _trainer_discard_tool_or_senergy(self, p: PlayerState, tag: str,
+                                         action: dict) -> str:
+        """「弃对手 1 只宝可梦身上的道具**或**特殊能量，**或**弃场上竞技场」
+
+        卡面（Blowtorch PFL 86）是**二选一**。引擎没有交互选择层 → 缺省取
+        「对手身上的道具 / 特殊能量」（对使用者总是不劣：拿掉对手的减伤或加速），
+        只有在它不存在、或动作显式给了 ``mode="stadium"`` 时才弃竞技场。
+
+        ⚠ 两支都必须实现。只做竞技场那一支，这张卡在「对手没有场地」的一半
+        局面上打出去**什么都不发生**（静默削弱），而且对账脚本查不出来 ——
+        它只核对已产出的 tag 与卡面是否一致，不核对「卡面有几句、产出了几条」。
+
+        选择口径（确定性）：先战斗位后后备；同一只身上**先道具、再特殊能量**
+        （道具是常驻修正、特殊能量是资源，先拿常驻修正对进攻方更有利）。
+        """
+        parts = str(tag).split(":")
+        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+        opp = self.players[1 - self.current]
+        want_stadium = str((action or {}).get("mode") or "") == "stadium"
+        done: list = []
+        if not want_stadium:
+            field = ([opp.active] if opp.active is not None else []) + list(opp.bench)
+            for fp in field:
+                if len(done) >= n:
+                    break
+                if fp.tool:
+                    name = fp.tool_name or fp.tool
+                    ref = fp.tool_ref
+                    _drop_tool(fp)
+                    if ref is not None:
+                        self._to_discard(opp, ref)
+                    else:
+                        # 手工装配 / 旧回放没有卡对象 → 至少保持文本层同步
+                        opp.discard.append(str(name or "Pokémon Tool"))
+                    self._log("discard_tool", {"player": self.current,
+                                              "owner": opp.name,
+                                              "target": fp.name, "tool": name})
+                    done.append(f"tool:{name}")
+                    continue
+                if fp.senergy and _discard_special_energy(self, opp, fp, 1):
+                    self._log("discard_energy", {"player": self.current,
+                                                "target": fp.name,
+                                                "kind": "special"})
+                    done.append(f"senergy:{fp.name}")
+        if not done:
+            name = self._apply_discard_stadium()
+            if name is None:
+                raise ValueError("对手场上既无可弃道具/特殊能量，也无场地可弃")
+            done.append(f"stadium:{name}")
+        return "discard " + ", ".join(done)
 
     def _trainer_mill(self, tag: str) -> str:
         """磨牌（``mill:N[:opp]``）——默认磨自己（已存在于招式侧的同一语义）"""
@@ -4874,6 +5024,16 @@ class Battle:
                 detail = self._do_attach_spread(p, tag, action)
                 self._log("attach_spread", {"player": self.current,
                                             "detail": detail})
+            elif tag.startswith("attach_spread_flip:"):
+                # 抛币计数版（2026-11-02 第三十八批，Mega Audino ex）
+                detail = self._do_attach_spread_flip(p, tag, action)
+                self._log("attach_spread_flip", {"player": self.current,
+                                                 "detail": detail})
+            elif tag.startswith("attach_each_bench:"):
+                # 每只后备各 per 张（2026-11-02 第三十八批，Mega Gardevoir ex）
+                detail = self._do_attach_each_bench(p, tag, action)
+                self._log("attach_each_bench", {"player": self.current,
+                                                "detail": detail})
             elif tag.startswith("attach"):
                 n, etype, zone = _parse_attach_tag(tag)
                 # 目标：`:target:bench|any|bench_type:<c>`（2026-10-28 第十五批）；
@@ -6491,11 +6651,16 @@ def _opp_hand_matches(ref, sel: str) -> bool:
 
 
 def _parse_play_cost(pc: str):
-    """解析 ``TrainerDef.play_cost``（``"discard:<n>"``）→ ``("discard", n)`` | None
+    """解析 ``TrainerDef.play_cost`` → ``(op, n, etype)`` | None
 
-    卡面「You can use this card only if you discard N other cards from your
-    hand.」—— ``other`` 意味着**本卡自己不能当代价**，所以「付得出」的判据是
-    ``手牌数 - 1 >= n``（见 ``_play_cost_ok``）。
+    形态：
+      · ``"discard:<n>"`` —— 卡面「You can use this card only if you discard N
+        **other cards** from your hand.」—— ``other`` 意味着**本卡自己不能当代价**
+        （见 ``_play_cost_ok`` 的 ``self_in_hand``）。
+      · ``"discard_energy:<n>:<etype>"`` —— 卡面「You can use this card only if you
+        discard a **Basic {R} Energy** card from your hand.」（Blowtorch PFL 86，
+        2026-11-02 第三十八批）。代价**限定属性**且必须是**基本**能量 ——
+        落成 ``discard:<n>`` 会允许弃掉任意一张手牌（静默放宽代价）。
 
     未知形态**抛错**，不静默当作「无代价」—— 那会让一张要付账的卡变成免费
     （静默加强，正是本机制要防的那类错误）。
@@ -6504,12 +6669,18 @@ def _parse_play_cost(pc: str):
     if not s:
         return None
     parts = s.split(":")
-    if parts[0] != "discard" or len(parts) < 2 or not parts[1].isdigit():
-        raise ValueError(f"未知打出代价形态：{pc}")
-    n = int(parts[1])
-    if n < 1:
-        raise ValueError(f"打出代价张数非法：{pc}")
-    return ("discard", n)
+    if parts[0] == "discard" and len(parts) >= 2 and parts[1].isdigit():
+        n = int(parts[1])
+        if n < 1:
+            raise ValueError(f"打出代价张数非法：{pc}")
+        return ("discard", n, None)
+    if parts[0] == "discard_energy" and len(parts) >= 3 and parts[1].isdigit():
+        n = int(parts[1])
+        et = str(parts[2] or "")
+        if n < 1 or not et:
+            raise ValueError(f"打出代价形态非法：{pc}")
+        return ("discard_energy", n, et)
+    raise ValueError(f"未知打出代价形态：{pc}")
 
 
 def _play_cost_ok(p, pc: str, self_in_hand: bool = True) -> bool:
@@ -6517,7 +6688,14 @@ def _play_cost_ok(p, pc: str, self_in_hand: bool = True) -> bool:
     spec = _parse_play_cost(pc)
     if spec is None:
         return True
-    _, n = spec
+    op, n, et = spec
+    if op == "discard_energy":
+        # 只数**基本**、且属性相符的能量卡：卡面写的是 Basic {X} Energy。
+        # `self_in_hand` 在这里无意义 —— 本卡是训练家，不可能是能量卡。
+        return sum(1 for c in p.hand
+                   if isinstance(c, EnergyRef)
+                   and not getattr(c.edef, "is_special", False)
+                   and str(c.edef.type) == et) >= n
     avail = len(p.hand) - (1 if self_in_hand else 0)
     return avail >= n
 
@@ -6561,6 +6739,58 @@ def _parse_attach_spread_tag(tag: str) -> tuple:
         raise ValueError(f"attach_spread 缺少目标限定：{tag}")
     return (int(raw_n), (None if etype in ("any", "") else etype), zone,
             scope, selfko)
+
+
+def _parse_attach_spread_flip_tag(tag: str) -> tuple:
+    """解析 ``attach_spread_flip:<coins>:<per>:<etype>:<zone>[:target:<scope>]``
+    → ``(coins, per, etype, zone, scope)``
+
+    卡面原型（Mega Audino ex「Kaleidowaltz」）：
+    「Flip 3 coins. For each heads, search your deck for up to 2 Basic Energy cards
+     and attach them to your Pokémon in any way you like. Then, shuffle your deck.」
+
+    ``coins``/``per`` 是**常量**，实际张数 ``heads * per`` 在结算时现算 ——
+    解析期折算成任何固定值都是静默改变强度（期望 3 张，上限 6 张）。
+    """
+    parts = str(tag).split(":")
+    if len(parts) < 5:
+        raise ValueError(f"attach_spread_flip tag 字段不足：{tag}")
+    raw_c, raw_p, etype, zone = parts[1], parts[2], parts[3], parts[4]
+    if not raw_c.isdigit() or int(raw_c) < 1:
+        raise ValueError(f"attach_spread_flip 抛币数非法：{raw_c}")
+    if not raw_p.isdigit() or int(raw_p) < 1:
+        raise ValueError(f"attach_spread_flip 每正面张数非法：{raw_p}")
+    if zone not in ("hand", "discard", "deck", "any"):
+        raise ValueError(f"attach_spread_flip 区域非法：{zone}")
+    scope = "any"
+    if "target" in parts:
+        i = parts.index("target")
+        scope = parts[i + 1] if i + 1 < len(parts) else ""
+    if not scope:
+        raise ValueError(f"attach_spread_flip 缺少目标限定：{tag}")
+    return (int(raw_c), int(raw_p),
+            (None if etype in ("any", "") else etype), zone, scope)
+
+
+def _parse_attach_each_bench_tag(tag: str) -> tuple:
+    """解析 ``attach_each_bench:<per>:<etype>:<zone>`` → ``(per, etype, zone)``
+
+    卡面原型（Mega Gardevoir ex「Overflowing Wishes」）：
+    「For each of your Benched Pokémon, search your deck for a Basic {P} Energy
+     card and attach it to that Pokémon. Then, shuffle your deck.」
+
+    与 ``attach_spread`` 的区别是**没有 scope 段**：目标恒为「每只后备各一份」，
+    不存在「任意分配」的可选空间（见 `_do_attach_each_bench`）。
+    """
+    parts = str(tag).split(":")
+    if len(parts) != 4:
+        raise ValueError(f"attach_each_bench tag 字段数不对：{tag}")
+    raw_per, etype, zone = parts[1], parts[2], parts[3]
+    if not raw_per.isdigit() or int(raw_per) < 1:
+        raise ValueError(f"attach_each_bench 张数非法：{raw_per}")
+    if zone not in ("hand", "discard", "deck", "any"):
+        raise ValueError(f"attach_each_bench 区域非法：{zone}")
+    return (int(raw_per), (None if etype in ("any", "") else etype), zone)
 
 
 def _spread_targets(p: PlayerState, scope: str) -> list:

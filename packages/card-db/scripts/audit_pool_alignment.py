@@ -88,7 +88,18 @@ _PLAY_COST_SHAPE = re.compile(
     r"you can use this card only if you discard\s+"
     r"(?:(?P<n>\d+)\s+other\s+cards?|another\s+card|an?\s+card)\s+from your hand",
     re.I)
-_PLAY_COST_VALUE = re.compile(r"discard:[1-9]\d*")
+# 限定属性的**基本能量**代价（2026-11-02 第三十八批 · Blowtorch）：
+# 「You can use this card only if you discard a Basic {R} Energy card from your
+#  hand.」→ `play_cost="discard_energy:1:fire"`。
+# ⚠ 独立正则：与 `_PLAY_COST_SHAPE`（任意 N 张牌）是**两种代价**，共用一条会
+# 让「限定放宽成任意牌」这种错法一起通过。
+_PLAY_COST_ENERGY_SHAPE = re.compile(
+    r"you can use this card only if you discard\s+"
+    r"(?:(?P<n>\d+)\s+other\s+|another\s+|an?\s+)?basic\s+\{(?P<c>[a-z])\}\s+"
+    r"energy cards?\s+from your hand",
+    re.I)
+_PLAY_COST_VALUE = re.compile(
+    r"(?:discard:[1-9]\d*|discard_energy:[1-9]\d*:[a-z]+)")
 # 限定后的指示物计数源（2026-10-29 第二十六批 · 第二十四类）
 _BENCH_CNT_TYPE_RE = re.compile(
     r"damage\s+counters?\s+on\s+all\s+of\s+your\s+benched\s+\{([a-z])\}\s+"
@@ -674,6 +685,13 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
     """
     errs = []
     d = _norm(desc or "")
+    # 抛币计数（flip）与「每只后备各一份」（each bench）由
+    # `audit_attach_variants` 单独核对 —— 它们的张数口径与本族不同
+    # （heads×per / 每只各 per），两套期望同时作用会互相打架。
+    # 这里直接跳过；反向守卫也在那边。
+    if re.search(r"\bflip \d+ coins?\b", d, re.I) \
+            or re.search(r"for each of your benched pok[eé]mon", d, re.I):
+        return errs
     has_spread = bool(re.search(r"in any way you like", d, re.I))
     tags = [str(t) for t in (effects or []) if str(t).startswith("attach_spread:")]
     if not has_spread:
@@ -750,6 +768,170 @@ def audit_attach_spread(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_attach_variants(card_name: str, item_name: str, desc: str,
+                          effects: list) -> list:
+    """自由分配附着的**两个变体**对账（2026-11-02 · 第三十三类）
+
+    与 `audit_attach_spread` 的分工：那个查「n 张任意分配」，本类查两个
+    **张数口径不同**的近亲（卡面都含「in any way you like」，但语义不同）。
+
+    ① ``attach_spread_flip:<coins>:<per>:<etype>:<zone>[:target:<scope>]``
+       「Flip N coins. For each heads, search your deck for up to K Basic Energy
+        cards and attach them to your Pokémon in any way you like.」
+       → 必须核对 **N（抛币枚数）与 K（每正面上限）两个常量**。
+       把 N×K 折算成一个固定整数是最典型也最难发现的错：上限与方差全变，
+       而「看起来能附 6 张」的表面行为还在。
+
+    ② ``attach_each_bench:<per>:<etype>:<zone>``
+       「For each of your Benched Pokémon, search your deck for a Basic {P}
+        Energy card and attach it to **that** Pokémon.」
+       → 每只后备各一份、**绑定给那一只**。落成 `attach_spread:` 会静默放宽
+       分配（允许漏掉某只、或把多张堆在同一只上），卡面都不允许。
+
+    反向守卫：出现这两类 tag 但卡面无对应句式 → 认领越界（多半是句首锚定失效）。
+    """
+    errs = []
+    d = _norm(desc or "")
+    tags = [str(t) for t in (effects or [])]
+    flips = [t for t in tags if t.startswith("attach_spread_flip:")]
+    eachb = [t for t in tags if t.startswith("attach_each_bench:")]
+
+    def _scope_of(parts: list) -> str:
+        if "target" in parts:
+            i = parts.index("target")
+            return parts[i + 1] if i + 1 < len(parts) else ""
+        return "any"
+
+    # ---------------- ① 抛币计数 ----------------
+    m_f = re.search(r"\bflip (\d+) coins?\b", d, re.I)
+    wants_flip = bool(m_f) and bool(re.search(r"in any way you like", d, re.I))
+    if wants_flip:
+        m_k = re.search(r"for each heads,?\s*search your deck for up to (\d+)",
+                        d, re.I)
+        if not m_k:
+            errs.append(f"{card_name} · {item_name}：抛币形态但「每正面 up to N」"
+                        f"未识别 —— 对账正则需同步，否则本类空转")
+        if not flips:
+            wrong = [t for t in tags
+                     if t.startswith(("attach_spread:", "attach:", "attach_energy:",
+                                      "search_"))]
+            errs.append(f"{card_name} · {item_name}：卡面「Flip N coins. For each "
+                        f"heads …」应产出 `attach_spread_flip:`，实际 "
+                        f"{wrong or '无附能 tag'} —— 张数口径丢失")
+        else:
+            coins = int(m_f.group(1))
+            per = int(m_k.group(1)) if m_k else -1
+            m_c = re.search(r"basic\s*\{([a-z])\}\s*energy", d, re.I)
+            want_et = (_TYPE_COLOR.get(m_c.group(1).upper(), m_c.group(1).lower())
+                       if m_c else "any")
+            for t in flips:
+                parts = t.split(":")
+                got_c = parts[1] if len(parts) > 1 else ""
+                got_p = parts[2] if len(parts) > 2 else ""
+                got_et = parts[3] if len(parts) > 3 else ""
+                got_zone = parts[4] if len(parts) > 4 else ""
+                if got_c != str(coins):
+                    errs.append(f"{card_name} · {item_name}：卡面抛 {coins} 枚币，"
+                                f"`{t}` 写的是 {got_c}（抛币枚数不符）")
+                if per > 0 and got_p != str(per):
+                    errs.append(f"{card_name} · {item_name}：卡面每正面 up to "
+                                f"{per} 张，`{t}` 写的是 {got_p}"
+                                f"（每正面上限不符）")
+                if got_et != want_et:
+                    errs.append(f"{card_name} · {item_name}：卡面能量限定是 "
+                                f"`{want_et}`，`{t}` 却是 `{got_et}`")
+                if got_zone != "deck":
+                    errs.append(f"{card_name} · {item_name}：卡面从**牌库**检索，"
+                                f"`{t}` 的来源是 `{got_zone}`")
+    elif flips:
+        errs.append(f"{card_name} · {item_name}：卡面没有「Flip N coins. For each "
+                    f"heads … in any way you like」，却出现 {flips} —— 认领越界")
+
+    # ---------------- ② 每只后备各一份 ----------------
+    m_e = re.search(r"for each of your benched pok[eé]mon,?\s*search your deck "
+                    r"for (?:a|an|up to (\d+)) basic", d, re.I)
+    if m_e:
+        want_per = int(m_e.group(1)) if m_e.group(1) else 1
+        m_c = re.search(r"basic\s*\{([a-z])\}\s*energy", d, re.I)
+        want_et = (_TYPE_COLOR.get(m_c.group(1).upper(), m_c.group(1).lower())
+                   if m_c else "any")
+        if not eachb:
+            wrong = [t for t in tags
+                     if t.startswith(("attach_spread:", "attach:", "attach_energy:",
+                                      "search_"))]
+            errs.append(f"{card_name} · {item_name}：卡面「For each of your "
+                        f"Benched Pokémon … attach it to **that** Pokémon」应产出 "
+                        f"`attach_each_bench:`，实际 {wrong or '无附能 tag'}"
+                        f" —— 每只各一份的绑定关系丢失")
+        else:
+            for t in eachb:
+                parts = t.split(":")
+                got_per = parts[1] if len(parts) > 1 else ""
+                got_et = parts[2] if len(parts) > 2 else ""
+                got_zone = parts[3] if len(parts) > 3 else ""
+                if got_per != str(want_per):
+                    errs.append(f"{card_name} · {item_name}：卡面每只后备 "
+                                f"{want_per} 张，`{t}` 写的是 {got_per}")
+                if got_et != want_et:
+                    errs.append(f"{card_name} · {item_name}：卡面能量限定是 "
+                                f"`{want_et}`，`{t}` 却是 `{got_et}`")
+                if got_zone != "deck":
+                    errs.append(f"{card_name} · {item_name}：卡面从**牌库**检索，"
+                                f"`{t}` 的来源是 `{got_zone}`")
+    elif eachb:
+        errs.append(f"{card_name} · {item_name}：卡面没有「For each of your "
+                    f"Benched Pokémon … attach it to that Pokémon」，却出现 "
+                    f"{eachb} —— 认领越界")
+    return errs
+
+
+def audit_discard_tool_or_senergy(card_name: str, item_name: str, desc: str,
+                                  effects: list) -> list:
+    """「弃对手道具/特殊能量 **或** 弃竞技场」二选一对账（2026-11-02 · 第三十四类）
+
+    卡面（Blowtorch PFL 86）：
+        Discard a Pokémon Tool or Special Energy card from 1 of your opponent's
+        Pokémon, **or** discard a Stadium in play.
+
+    这条最危险的错法是「只做后半句」—— 而它**不报错**：`discard_stadium` 是
+    既有能力，产出它看起来就像「已经实现了」。实际后果是这张卡在「对手没有
+    场地」的一半局面上打出去**什么都不发生**（静默削弱）。
+
+    所以本类必须做**双向**核对：
+      · 卡面有这句 → 必须有 `discard_tool_or_senergy:` tag；只出现
+        `discard_stadium` / `discard_tool:` 之一 → 报「只做了一支」；
+      · 卡面没有这句 → 不得出现该 tag（认领越界）。
+    """
+    errs = []
+    d = _norm(desc or "")
+    tags = [str(t) for t in (effects or [])]
+    got = [t for t in tags if t.startswith("discard_tool_or_senergy:")]
+    # 独立正则：不 import 解析包的同名正则（共用会一起错）
+    want = bool(re.search(
+        r"discard an? pok[eé]mon tool or special energy card from 1 of your "
+        r"opponent's pok[eé]mon,?\s*or discard a stadium in play", d, re.I))
+    if want and not got:
+        partial = [t for t in tags
+                   if t.startswith(("discard_stadium", "discard_tool:"))]
+        errs.append(f"{card_name} · {item_name}：卡面是「道具/特殊能量 **或** "
+                    f"竞技场」二选一，却没有 `discard_tool_or_senergy:`；"
+                    f"实际 {partial or '无弃置 tag'}"
+                    f" —— 只做了其中一支（另一半局面下这张卡空转）")
+    elif got and not want:
+        errs.append(f"{card_name} · {item_name}：卡面没有「Pokémon Tool or "
+                    f"Special Energy … or discard a Stadium」，却出现 {got}"
+                    f" —— 认领越界")
+    elif got:
+        m_n = re.search(r"discard (?:a|an|\d+) pok[eé]mon tool", d, re.I)
+        if m_n:
+            for t in got:
+                parts = t.split(":")
+                if len(parts) > 2 and parts[2] != "opp":
+                    errs.append(f"{card_name} · {item_name}：卡面目标是**对手**"
+                                f"宝可梦，`{t}` 的范围却是 `{parts[2]}`")
+    return errs
+
+
 def audit_play_cost(card_name: str, desc: str, play_cost: str) -> list:
     """打出代价对账（2026-11-02 · 第三十二类）
 
@@ -764,8 +946,10 @@ def audit_play_cost(card_name: str, desc: str, play_cost: str) -> list:
       ③ 条目有 ``play_cost``、卡面**没有**该句 → 凭空加代价（静默削弱）。
 
     另守**限定类别的代价**：``discard a Basic {R} Energy card from your hand``
-    （Blowtorch）不是「任意 N 张」，本对账**不认**它为 ``discard:N`` ——
-    否则解析侧把限定放宽成「任意牌」时，这里会跟着一起"通过"（自己给自己盖章）。
+    （Blowtorch）不是「任意 N 张」—— 第三十六批时本对账**故意不认**它（宁可
+    停在未建模）。第三十八批解析侧新增了 ``discard_energy:<n>:<etype>`` 形态，
+    这里改为用**独立正则**核对：卡面写 Basic {R} 却落成 ``discard:1``，说明
+    「只能弃基本火能量」被放宽成「弃任意牌」= 代价被静默放宽。
 
     ⚠ 正则必须在本脚本内**独立实现**，不 import 解析包的同名正则：共用同一个
     正则时，解析写错 → 对账一起错 → 永远通过。对账的全部价值就在「换一套写法
@@ -777,21 +961,25 @@ def audit_play_cost(card_name: str, desc: str, play_cost: str) -> list:
     """
     errs = []
     d = _norm(desc or "")
-    m = _PLAY_COST_SHAPE.search(d)
+    m_en = _PLAY_COST_ENERGY_SHAPE.search(d)
+    m = None if m_en else _PLAY_COST_SHAPE.search(d)
     want = ""
-    if m:
+    if m_en:
+        want = (f"discard_energy:{int(m_en.group('n')) if m_en.group('n') else 1}:"
+                f"{_TYPE_COLOR.get(m_en.group('c').upper(), m_en.group('c').lower())}")
+    elif m:
         want = f"discard:{int(m.group('n')) if m.group('n') else 1}"
     got = str(play_cost or "").strip()
     if got and not _PLAY_COST_VALUE.fullmatch(got):
         # 形态先说：形态非法时下面「张数不符 / 凭空加代价」的判断都是噪音
         errs.append(f"{card_name}：`play_cost={got}` 形态非法（应为 "
-                    f"`discard:<n>`，n ≥ 1）")
+                    f"`discard:<n>` 或 `discard_energy:<n>:<etype>`，n ≥ 1）")
     elif want and not got:
         errs.append(f"{card_name}：卡面要求打出代价 `{want}`，条目却没有 "
                     f"`play_cost` —— 这张卡会**免费**使用（静默加强）")
     elif want and got != want:
         errs.append(f"{card_name}：卡面打出代价是 `{want}`，条目写的是 "
-                    f"`{got}`（张数不符）")
+                    f"`{got}`（张数/属性不符）")
     elif got and not want:
         errs.append(f"{card_name}：条目有 `play_cost={got}`，但卡面"
                     f"没有「only if you discard …」句（凭空加代价）")
@@ -1773,6 +1961,7 @@ def main() -> int:
                 errs += audit_recon_top(c["name"], it.get("name"), desc, eff)
                 errs += audit_opp_hand(c["name"], it.get("name"), desc, eff)
                 errs += audit_attach_spread(c["name"], it.get("name"), desc, eff)
+                errs += audit_attach_variants(c["name"], it.get("name"), desc, eff)
                 errs += audit_energy_cost(c["name"], it.get("name"), desc, eff)
                 errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
                 errs += audit_next_turn_dmg(c["name"], it.get("name"), desc, eff)
@@ -1799,6 +1988,10 @@ def main() -> int:
             n_items += 1
             _cdesc = c.get("desc") or ""
             errs += audit_play_cost(c["name"], _cdesc, c.get("play_cost") or "")
+            # 卡级 tag 的对账（第三十八批起）：`discard_tool_or_senergy` 是训练家
+            # 卡级 tag，不在 attacks/abilities 里，上面的循环看不到它。
+            errs += audit_discard_tool_or_senergy(
+                c["name"], c["name"], _cdesc, [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:
@@ -1833,7 +2026,8 @@ def main() -> int:
           "抛币形态 · 条件/全队伤害修正 · 指示物任意目标 · 印刷身份 · 抛币状态 · "
           "能量回手 · 特殊能量弃置 · 伤害前阶段 · 限定指示物计数 · 能量洗回牌库 · "
           "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
-          "检索能量自由分配 · 能量代价去向 · 打出代价 三十二类对账全部一致")
+          "检索能量自由分配 · 自由分配两变体（抛币/每只后备） · 能量代价去向 · "
+          "打出代价 · 弃对手道具或场地 三十四类对账全部一致")
     return 0
 
 

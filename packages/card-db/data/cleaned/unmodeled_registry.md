@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-02 10:25:07
+- 生成时间：2026-11-02 10:42:43
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **243** 条 · 已映射 tag 1349 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1009 张**
-- 解析层面「无未建模动作」卡：885 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **239** 条 · 已映射 tag 1352 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1013 张**
+- 解析层面「无未建模动作」卡：889 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -73,7 +73,6 @@
 | B5 | S4 | `rule` | 1 | 1 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
 | B5 | S2 | `rule` | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
 | B5 | S6 | `rule` | 1 | 1 | 回复范围/限定不可精确表达（B4） |
-| B5 | S2 | `rule` | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | B5 | S2 | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B5 | S2 | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
 | B5 | S6 | `rule` | 1 | 1 | 全量回复（范围/后续不可精确表达 · B4） |
@@ -319,10 +318,6 @@
 **B5 · S6**（1 条）
 
 - `Arven's Sandwich`（派帕的三明治）：Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead.
-
-**B5 · S2**（1 条）
-
-- `Blowtorch`（喷灯）：You can use this card only if you discard a Basic {R} Energy card from your hand.  Discard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokém
 
 **B5 · S2**（1 条）
 

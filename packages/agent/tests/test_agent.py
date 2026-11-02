@@ -310,11 +310,22 @@ class TestSystemPromptInjection(unittest.TestCase):
         来源/门槛形态说明）进入 `dmg_vocab().passive_tags`，自动注入。
         实测：**9143** 字符（上一版 8965）；差额 178 全部来自该槽位。
         模板正文未改 → 与历次同性质。
+
+        ── 2026-11-02 上调至 9250（**仍是引擎能力驱动，正文逐字节未改**）──
+        第三十八批新增两个附着变体与一个训练家动作类型，进入
+        `enum_action_type` 槽位（`" · ".join(ACTION_TYPES)`）：
+          · `attach_spread_flip`（Mega Audino ex 抛币计数分配）
+          · `attach_each_bench`（Mega Gardevoir ex 每只后备各一份）
+          · `discard_tool_or_senergy`（Blowtorch 二选一）
+        实测：**9246** 字符（上一版 9200 内）。这三个名字 LLM 侧也**必须**知道：
+        后端切到 LLM 时，同句卡面的 `actions[].type` 只能从这份枚举里取，
+        少一个就会产出「action.type 非法」的整条作废。
+        模板正文未改 → 与历次「引擎加能力 → 提示词同步」同性质。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9200,
-            f"提示词已 {len(sp)} 字符，超过 9200 预算；"
+            len(sp), 9250,
+            f"提示词已 {len(sp)} 字符，超过 9250 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 

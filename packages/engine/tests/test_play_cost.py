@@ -86,8 +86,25 @@ class TestParsePlayCost(unittest.TestCase):
     """``_parse_play_cost`` 的形态与非法输入"""
 
     def test_valid(self):
-        self.assertEqual(_parse_play_cost("discard:1"), ("discard", 1))
-        self.assertEqual(_parse_play_cost("discard:3"), ("discard", 3))
+        self.assertEqual(_parse_play_cost("discard:1"), ("discard", 1, None))
+        self.assertEqual(_parse_play_cost("discard:3"), ("discard", 3, None))
+
+    def test_energy_cost_shape(self):
+        """限定属性的基本能量代价（第三十八批，Blowtorch）
+
+        第三项是**属性**，不是可选装饰：`discard_energy:1:fire` 与
+        `discard:1` 是两种代价（前者只能弃基本火能量）。
+        """
+        self.assertEqual(_parse_play_cost("discard_energy:1:fire"),
+                         ("discard_energy", 1, "fire"))
+        self.assertEqual(_parse_play_cost("discard_energy:2:water"),
+                         ("discard_energy", 2, "water"))
+
+    def test_energy_cost_bad_shape_raises(self):
+        for bad in ("discard_energy:1", "discard_energy:0:fire",
+                    "discard_energy:1:", "discard_energy:x:fire"):
+            with self.assertRaises(ValueError, msg=bad):
+                _parse_play_cost(bad)
 
     def test_empty_is_none(self):
         self.assertIsNone(_parse_play_cost(""))
@@ -291,6 +308,71 @@ class TestBuiltinCostTags(unittest.TestCase):
         # 若双重扣牌会得到 1（−4 +1 −1）
         self.assertEqual(len(p.hand), 3, "Ultra Ball 被双重扣牌了")
         self.assertEqual(len(p.discard_refs), 3)   # 2 张代价 + 本卡
+
+
+class TestEnergyCost(unittest.TestCase):
+    """限定属性的基本能量代价（2026-11-02 第三十八批 · Blowtorch PFL 86）
+
+    卡面：「You can use this card only if you discard a **Basic {R} Energy** card
+    from your hand.」
+
+    与 `discard:<n>` 的三处差异各有用例守着：
+      · 候选集**只有**该属性的基本能量（拿别的颜色不能顶）；
+      · **特殊能量不能**当代价（卡面写的是 Basic）；
+      · 属性不符 / 数量不够 → **不进**合法动作表（不是「打了才失败」）。
+    """
+
+    def _special(self, color: str = "fire"):
+        return EnergyRef(EnergyDef(color, name=f"Special {color} Energy",
+                                   tag="senergy:legacy"))
+
+    def test_payable_only_with_matching_basic(self):
+        b = arena()
+        p = b.players[0]
+        p.hand = [_energy("fire"), _energy("water")]
+        self.assertTrue(_play_cost_ok(p, "discard_energy:1:fire"))
+        self.assertFalse(_play_cost_ok(p, "discard_energy:2:fire"))
+        # 属性不符 → 付不出（不能拿水能量顶火能量）
+        self.assertFalse(_play_cost_ok(p, "discard_energy:1:water") is False)
+        p.hand = [_energy("water")]
+        self.assertFalse(_play_cost_ok(p, "discard_energy:1:fire"))
+
+    def test_special_energy_not_valid_cost(self):
+        """卡面写 Basic → 特殊能量卡不能当代价"""
+        b = arena()
+        p = b.players[0]
+        p.hand = [self._special("fire")]
+        self.assertFalse(_play_cost_ok(p, "discard_energy:1:fire"))
+
+    def test_not_listed_without_matching_energy(self):
+        b = arena()
+        _hand(b, _cost_card(cost="discard_energy:1:fire", kind="item"),
+              _energy("water"), _energy("grass"))
+        self.assertEqual(_legals(b), [])
+
+    def test_listed_and_pays_matching_energy(self):
+        b = arena()
+        p = b.players[0]
+        _hand(b, _cost_card(cost="discard_energy:1:fire", kind="item"),
+              _energy("water"), _energy("fire"))
+        self.assertEqual([a["name"] for a in _legals(b)], ["CostCard"])
+        r = b.step({"verb": "trainer", "hand": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        # 缺省从末尾（= fire）取 → 弃的必须是火能量
+        self.assertIn("fire Energy", p.discard)
+        self.assertNotIn("water Energy", p.discard)
+        self.assertIn("CostCard", p.discard)
+
+    def test_pick_wrong_type_rejected(self):
+        """`discard_pick` 指到非火能量 → 抛错，不悄悄换牌"""
+        b = arena()
+        p = b.players[0]
+        _hand(b, _cost_card(cost="discard_energy:1:fire", kind="item"),
+              _energy("water"), _energy("fire"))
+        r = b.step({"verb": "trainer", "hand": 0, "discard_pick": 1})
+        self.assertFalse(r["ok"])
+        self.assertIn("discard_pick", r["error"])
+        self.assertEqual(len(p.hand), 3)
 
 
 if __name__ == "__main__":

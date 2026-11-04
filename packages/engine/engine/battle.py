@@ -503,6 +503,13 @@ class Battle:
                             not _bounce_discard_candidates(
                                 p, ab.tag, self.cfg.max_bench):
                         continue
+                if ab.tag.startswith("coin:"):
+                    # 特性侧抛币（第四十四批，Dustox）：正面要收回**对手战斗位**
+                    # 的 1 个能量；对手那里没有能量时空转 → 不列动作。
+                    if "bounce:energy:opp_active" in ab.tag \
+                            and (opp.active is None
+                                 or opp.active.total_energy() <= 0):
+                        continue
                 if ab.tag.startswith("discard_tool:"):
                     _sc = (ab.tag.split(":")[2]
                            if len(ab.tag.split(":")) > 2 else "both")
@@ -774,6 +781,28 @@ class Battle:
                 # 是否符合卡面，由结算时的 `_do_*` 兜底（取不满不算错）。
                 if _zone_energy_available(p, None, "any"):
                     out.append(dict(base))
+            elif tag.startswith("coin_flip:"):
+                # 同一枚币的双分支（第四十四批，Venture Bomb）：正面/反面都能落
+                # 到指示物（对手任意 1 只 / 己方战斗位）→ 总是可打。
+                # 目标选择沿用 `action["snipe"]`（与 `counters:` 同一口径）。
+                out.append(dict(base))
+            elif tag.startswith("shuffle_both_coin_draw:"):
+                # 双方洗回手牌后抽（第四十五批，Harlequin）：洗牌后自己牌库为空
+                # 再抽会直接判负 → 该卡不进合法动作表（避免 AI 自选自杀动作）。
+                _sbp = str(tag).split(":")
+                if len(_sbp) == 5 and all(x.isdigit() for x in _sbp[1:]) \
+                        and len(p.deck) + len(p.hand) - 1 > 0:
+                    out.append(dict(base))
+            elif tag.startswith("shield_choose:"):
+                # 单体限时护盾 + 打出前置条件（第四十六批，Acerola's Mischief）
+                try:
+                    _scspec = _parse_shield_choose_tag(tag)
+                    if not self._play_gate_ok(p, _scspec["gate"]):
+                        continue
+                except ValueError:
+                    continue
+                for tpos, _fp in _field_iter(p):
+                    out.append({**base, "target": tpos})
             elif tag.startswith("attach"):
                 _n, _et, _zn = _parse_attach_tag(tag)
                 if _zone_energy_available(p, _et, _zn or "any"):
@@ -1264,6 +1293,37 @@ class Battle:
                                       "detail": "|".join(subs)})
                 self._apply_attack_effects(fp, subs, action={})
 
+    def _ability_coin(self, fp: FieldPokemon, tag: str, action: dict) -> str:
+        """特性侧抛币（2026-11-03 第四十四批）——**只抛一次**后派发子效果
+
+        · ``coin:<side>:<sub>``                单分支（Dustox「Boisterous Wind」）
+        · ``coin_flip:heads:<a>[|tails:<b>]``  双分支**共用同一次**抛币
+
+        子效果交给 `_apply_attack_effects`（bounce / counters 等已有实现），
+        **不重新抛币**。除上述两种形态外一律抛错，绝不静默忽略。
+        """
+        if tag.startswith("coin_flip:"):
+            branches = _parse_coin_flip_tag(tag)
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": self.current, "result": res, "tag": tag})
+            sub = branches.get(res)
+            if not sub:
+                return f"coin {res}: no effect"
+            self._apply_attack_effects(
+                fp, tuple(s for s in sub.split("|") if s), action=action)
+            return f"coin {res}: {sub}"
+        parts = str(tag).split(":", 2)
+        if len(parts) != 3 or parts[1] not in ("heads", "tails"):
+            raise ValueError(f"特性抛币 tag 非法：{tag}")
+        _, side, sub = parts
+        res = "heads" if self.rng.random() < 0.5 else "tails"
+        self._log("coin", {"player": self.current, "result": res, "tag": tag})
+        if res != side:
+            return f"coin {res}: no effect"
+        self._apply_attack_effects(
+            fp, tuple(s for s in sub.split("|") if s), action=action)
+        return f"coin {res}: {sub}"
+
     def _do_ability(self, p: PlayerState, action: dict) -> dict:
         """特性发动（E3）：field=场上每回合一次；hand=手牌弃卡发动"""
         name, tag = action["name"], action.get("tag", "")
@@ -1476,6 +1536,14 @@ class Battle:
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith(("coin:", "coin_flip:")):
+                # 特性侧抛币（2026-11-03 第四十四批）：Dustox「Boisterous Wind」
+                # 「Flip a coin. If heads, put an Energy attached to your
+                # opponent's Active Pokémon into their hand.」
+                detail = self._ability_coin(fp, tag, action)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("bounce:"):
                 # S6 回手族（如 Alomomola「弃牌堆基础宝可梦铺后备」/ Duskull）
                 detail = self._apply_bounce(tag, fp, action)
@@ -1596,6 +1664,16 @@ class Battle:
                 raise ValueError("recon 前置条件未登记：ko_last_turn")
             return bool(fn(self, p, self.players[1 - self.current]))
         raise ValueError(f"未知 recon 前置条件：{gate}")
+
+    def _play_gate_ok(self, p: PlayerState, gate: Optional[str]) -> bool:
+        """卡面「You can use this card only if …」前置条件
+
+        与 `_recon_gate_ok` 同一纪律：未知条件**抛错**（不默认放行）。
+        条件语法复用 `_eval_condition`（如 `opp_prizes_le:2`）。
+        """
+        if not gate:
+            return True
+        return _eval_condition(self, gate)
 
     def _do_recon(self, p: PlayerState, tag: str, action: dict) -> str:
         """检视牌库顶 N 张 → 按筛选取 ≤K 张 → 入手 / 铺场 / 附着，其余放回牌库。
@@ -1889,6 +1967,19 @@ class Battle:
         elif tag.startswith("coin_gate_attach:"):
             # 训练家抛币门（第三十九批，Energy Coin）
             placed = self._trainer_coin_gate_attach(p, tag, action)
+        elif tag.startswith("coin_flip:"):
+            # 同一枚币的**双分支**（2026-11-03 第四十四批，Venture Bomb）：
+            # `coin_flip:heads:<a>|tails:<b>` —— 训练家侧自己抛一次并派发。
+            placed = self._trainer_coin_flip(p, tag, action)
+        elif tag.startswith("shuffle_both_coin_draw:"):
+            # 双方洗回手牌 + 单次抛币分抽（第四十五批，Harlequin）
+            placed = self._trainer_shuffle_both_coin_draw(p, tag, c, action)
+        elif tag.startswith("team_shield:"):
+            # 全队限时减伤（第四十六批，Iron Defender）
+            placed = self._trainer_team_shield(p, tag)
+        elif tag.startswith("shield_choose:"):
+            # 单体限时护盾 + 打出前置条件（第四十六批，Acerola's Mischief）
+            placed = self._trainer_shield_choose(p, tag, action)
         elif tag.startswith("attach"):
             placed = self._trainer_attach_energy(p, tag, action)
         elif tag.startswith("discard_opp_random:"):
@@ -2479,6 +2570,77 @@ class Battle:
         self._log("discard_opp_random", {"player": 1 - self.current, "n": done})
         return done
 
+    def _shuffle_opp_pokemon(self, scope: str) -> int:
+        """把对手 1 只宝可梦**连同附着卡**洗回其牌库 → 移动的卡数（0 = 无目标）
+
+        卡面原型（2026-11-03 第四十二批）：
+          · Sylveon「… choose 1 of your opponent's **Benched** Pokémon. Shuffle that
+            Pokémon and all attached cards into their deck.」→ ``opp_bench``
+          · Shiftry「… choose 1 of your opponent's Pokémon. …」→ ``opp``（含战斗位）
+
+        **不是击倒**：不取奖赏、不触发被击倒特性、不进弃牌堆 —— 卡与附着卡都回
+        **对手的牌库**。战斗位被洗走 → 对手必须从后备补位（无后备则直接判负，
+        与「无宝可梦」同一路径）。牌库洗牌用 `self.rng`（可复现）。
+
+        确定性目标：``opp`` 取战斗位（位置码 0 的口径），``opp_bench`` 取后备第 0 只。
+        """
+        opp = self.players[1 - self.current]
+        fp = None
+        if scope == "opp_bench":
+            if opp.bench:
+                fp = opp.bench[0]
+        else:
+            fp = opp.active if opp.active is not None else (
+                opp.bench[0] if opp.bench else None)
+        if fp is None:
+            self._log("no_effect", {"tag": f"shuffle_opp_pokemon:{scope}",
+                                    "reason": "对手无合法目标"})
+            return 0
+        was_active = fp is opp.active
+        moved = 0
+        # 宝可梦卡本体（化石卡本体是训练家卡，必须放回 TrainerRef）
+        opp.deck.append(getattr(fp, "fossil_ref", None) or PokeRef(fp.pdef))
+        moved += 1
+        # 附着的基本能量：引擎里是计数 → 按点数各还原 1 张能量卡
+        for t, n in list(fp.energy.items()):
+            for _ in range(int(n)):
+                opp.deck.append(EnergyRef(EnergyDef(str(t))))
+                moved += 1
+        fp.energy.clear()
+        # 特殊能量：整张原样（不拆成提供量）
+        for ref in list(fp.senergy):
+            opp.deck.append(ref)
+            moved += 1
+        fp.senergy.clear()
+        # 道具
+        if getattr(fp, "tool_ref", None) is not None:
+            opp.deck.append(fp.tool_ref)
+            moved += 1
+            fp.tool_ref = None
+            fp.tool = None
+            fp.tool_name = ""
+        # 移出场上
+        if was_active:
+            opp.active = None
+        else:
+            opp.bench.remove(fp)
+        self.rng.shuffle(opp.deck)
+        self._log("shuffle_opp_pokemon", {"player": 1 - self.current,
+                                          "card": fp.name,
+                                          "pos": "active" if was_active else "bench",
+                                          "n": moved})
+        if was_active:
+            if opp.bench:
+                opp.active = opp.bench.pop(0)
+                opp.active.moved_active_turn = self.turn_number
+                opp.active.clear_status()
+                self._log("promote", {"player": 1 - self.current,
+                                      "to": opp.active.name})
+            else:
+                self._finish(self.current, "no_pokemon",
+                             {"loser": 1 - self.current})
+        return moved
+
     def _shuffle_opp_hand(self, n: int) -> int:
         """**随机**选对手 n 张手牌洗回其牌库（Snorunt / Rotom / Aipom）"""
         o = self.players[1 - self.current]
@@ -2900,6 +3062,129 @@ class Battle:
             self.rng.shuffle(p.deck)
         return f"coin gate passed, attach {got} {etype or 'any'} to {fp.name}"
 
+    def _trainer_coin_flip(self, p: PlayerState, tag: str,
+                           action: dict) -> str:
+        """``coin_flip:heads:<a>[|tails:<b>]`` —— 训练家**只抛一次**再派发
+
+        卡面原型（Team Rocket's Venture Bomb）：
+        「Flip a coin. If heads, put 2 damage counters on 1 of your opponent's
+         Pokémon. If tails, put 2 damage counters on your Active Pokémon.」
+        同一枚币只可能有一个分支生效 —— 拆成两条 `coin:` tag 会抛两次
+        （两分支可能同时生效或都不生效），属**静默错算**。
+
+        目前只承接 `counters:` 子效果（指示物直放，含 `:scope:self`）。
+        其它子效果直接抛错 —— 新增形态时在此补齐，绝不静默忽略。
+        """
+        branches = _parse_coin_flip_tag(tag)
+        res = "heads" if self.rng.random() < 0.5 else "tails"
+        self._log("coin", {"player": self.current, "result": res, "tag": tag})
+        sub = branches.get(res)
+        if not sub:
+            return f"coin {res}: no effect"
+        for one in sub.split("|"):
+            if not one:
+                continue
+            if one.startswith("counters:"):
+                self._apply_counters(one, action)
+            else:
+                raise ValueError(f"coin_flip 训练家子效果未建模：{one}")
+        return f"coin {res}: {sub}"
+
+    def _trainer_shuffle_both_coin_draw(self, p: PlayerState, tag: str,
+                                        card, action: dict) -> str:
+        """``shuffle_both_coin_draw:<mine_h>:<opp_h>:<mine_t>:<opp_t>``（Harlequin）
+
+        卡面：「Each player shuffles their hand into their deck. Then, flip a
+        coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If
+        tails, you draw 3 cards, and your opponent draws 5 cards.」
+
+        顺序必须与卡面一致：**先双方洗回手牌**，再抛**一次**币，再按结果给双方
+        抽不同张数。⚠ 不能拆成「对手洗牌 + 我方抽」两条动作：训练家只有一个
+        卡级 tag，拆开只能保留一半（另一半静默丢失）。
+        自己那张支援者卡在结算中，**不算**「手牌」被洗回（同 `shuffle_draw:`）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) != 5 or not all(x.isdigit() for x in parts[1:]):
+            raise ValueError(f"shuffle_both_coin_draw tag 非法：{tag}")
+        mine_h, opp_h, mine_t, opp_t = (int(x) for x in parts[1:])
+        opp = self.players[1 - self.current]
+        # 双方手牌洗回**各自**牌库（自己的本卡除外）
+        own_others = [x for x in p.hand if x is not card]
+        p.hand = [x for x in p.hand if x is card]
+        p.deck.extend(own_others)
+        opp_n = len(opp.hand)
+        opp.deck.extend(opp.hand)
+        opp.hand = []
+        self.rng.shuffle(p.deck)
+        self.rng.shuffle(opp.deck)
+        self._log("hand_shuffle", {"player": self.current,
+                                   "n": len(own_others), "side": "both"})
+        self._log("hand_shuffle", {"player": 1 - self.current,
+                                   "n": opp_n, "side": "both"})
+        res = "heads" if self.rng.random() < 0.5 else "tails"
+        self._log("coin", {"player": self.current, "result": res, "tag": tag})
+        mine, theirs = ((mine_h, opp_h) if res == "heads"
+                        else (mine_t, opp_t))
+        got_mine = self._safe_draw(self.current, mine, source="trainer")
+        got_opp = 0
+        if not self.finished:
+            got_opp = self._safe_draw(1 - self.current, theirs,
+                                      source="trainer")
+        return f"coin {res}: draw {got_mine}/{got_opp}"
+
+    def _trainer_team_shield(self, p: PlayerState, tag: str) -> str:
+        """``team_shield:reduce:<n>:type:<color>`` —— 全队限时减伤
+
+        卡面原型（Iron Defender）：「During your opponent's next turn, all of
+        your {M} Pokémon take 30 less damage from attacks from your opponent's
+        Pokémon (after applying Weakness and Resistance). (This includes new
+        Pokémon that come into play.)」
+
+        记在**玩家**层面（`PlayerState.team_shield_*`）：逐只写 shield 会漏掉
+        「之后上场的宝可梦」。到期 = 施加方 `turn_counts + 2`（同 shield 口径）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) != 5 or not parts[2].isdigit() \
+                or parts[3] != "type" or parts[4] not in TYPES:
+            raise ValueError(f"team_shield tag 非法：{tag}")
+        n, color = int(parts[2]), parts[4]
+        if n <= 0:
+            raise ValueError(f"team_shield 数值非法：{tag}")
+        p.team_shield_n = n
+        p.team_shield_type = color
+        p.team_shield_until = self.turn_counts[self.current] + 2
+        self._log("team_shield", {"player": self.current, "n": n,
+                                  "type": color})
+        return f"team shield {color} -{n}"
+
+    def _trainer_shield_choose(self, p: PlayerState, tag: str,
+                               action: dict) -> str:
+        """``shield_choose:prevent_all[:from:<src>][:effects][:gate:<cond>]``
+
+        卡面原型（Acerola's Mischief）：「You can use this card only if your
+        opponent has 2 or fewer Prize cards remaining. Choose 1 of your Pokémon
+        in play. During your opponent's next turn, prevent all damage from and
+        effects of attacks done to that Pokémon by your opponent's Pokémon {ex}.」
+
+        - 目标：`action["target"]` 位置码（0=战斗位，i≥1=后备 i-1），缺省战斗位；
+        - 护盾沿用既有字段，到期在**持有者**下个回合开始时清除（= 覆盖对手的
+          下一个回合）；
+        - `:gate:` 前置条件不满足 → 直接抛错（合法动作表已提前过滤）。
+        """
+        spec = _parse_shield_choose_tag(tag)
+        if not self._play_gate_ok(p, spec["gate"]):
+            raise ValueError("不满足该卡的打出前置条件")
+        fp = _field_at(p, int((action or {}).get("target", 0)))
+        if fp is None:
+            raise ValueError("护盾目标无效")
+        fp.shield_prevent_all = True
+        fp.shield_prevent_effects = bool(spec["effects"])
+        fp.shield_prevent_qual = spec["qual"]
+        self._log("shield", {"player": self.current, "target": fp.name,
+                             "kind": "prevent_all", "qual": spec["qual"],
+                             "effects": bool(spec["effects"])})
+        return f"shield {fp.name}"
+
     def _trainer_discard_tool_or_senergy(self, p: PlayerState, tag: str,
                                          action: dict) -> str:
         """「弃对手 1 只宝可梦身上的道具**或**特殊能量，**或**弃场上竞技场」
@@ -3245,9 +3530,16 @@ class Battle:
         「Search your deck for up to 2 Basic {P} Energy cards」（Aromatisse）/
         「up to 7 Basic {R} Energy cards」（Firebreather）必须按**属性**筛选，
         否则会把其它颜色的能量一并拿到手（静默超范围）。
+
+        ``search_energy:all[:distinct]``（2026-11-02 第四十批）：卡面「any number
+        of Basic Energy cards **of different types**」（Energy Search Pro SSP 176）
+        —— 数量是自由选择，但备选集合被「不同属性」封死，上限 = 牌库里出现的基本
+        能量属性种类数，因此**不需要交互层**，确定性默认「取满」就是卡面最大值。
+        ⚠ 不能退化成常数 N：牌库只有 2 种属性时 N=3 拿不满、N=8 又拿不到。
         """
         parts = tag.split(":")
-        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 2
+        _raw = parts[1] if len(parts) > 1 else ""
+        n = 999 if _raw == "all" else (int(_raw) if _raw.isdigit() else 2)
         etype = (parts[3].lower()
                  if len(parts) > 3 and parts[2] == "type" else None)
         # 「of different types」：属性两两不同（Eevee SFA 50，第三十九批）
@@ -3488,6 +3780,13 @@ class Battle:
                 # 卡面写「after applying Weakness and Resistance」→ 静态减伤在弱抗之后
                 if static["dmg_reduce"] and not ignore_eff:
                     dmg = max(0, dmg - static["dmg_reduce"])
+                # 全队限时减伤（第四十六批，Iron Defender）：玩家级，同样在弱抗之后
+                if not ignore_eff:
+                    ts_red = self._team_shield_reduce(defender, attacker)
+                    if ts_red:
+                        dmg = max(0, dmg - ts_red)
+                        self._log("team_shield_reduce", {
+                            "target": defender.name, "n": ts_red})
                 # 全队常驻减伤（2026-10-29 第十九批）：效果源在**守方阵营**
                 # 任意一只身上（Curly Wall / Gear Coating / Stone Palace），
                 # 因此不能挂在受击者自己的 passive 上；同口径在弱抗之后。
@@ -3508,6 +3807,12 @@ class Battle:
                     shield_block = _shield_blocks(defender, attacker, dmg)
                     dmg = apply_shield(defender, dmg,  # 护盾在弱抗之后
                                        block=shield_block)
+                # 抛币免伤被动（第四十五批，Fezandipiti）：被招式伤害时抛一枚，
+                # 正面则本次伤害归零。必须在**伤害结算内**（事后无法撤销）。
+                if dmg > 0 and not ignore_eff and self._coin_prevent_of(defender):
+                    dmg = 0
+                    self._log("blocked", {"target": defender.name,
+                                          "by": "coin_prevent"})
                 if imm:
                     dmg = 0
                     self._log("blocked", {"target": defender.name,
@@ -4420,6 +4725,12 @@ class Battle:
                 raise ValueError(f"{tag}：缺少条件（if:<cond>）")
             if _eval_condition(self, cond):
                 out["plus"] += n
+        elif kind == "recoil":
+            # ``dmg_plus:N:recoil:M``（第四十七批，Gurdurr / Dondozo ex）：
+            # 加伤 N 在伤害修正层计入；M 由 `_apply_attack_effects` 结算反伤。
+            if len(parts) < 4 or not parts[3].isdigit():
+                raise ValueError(f"{tag}：反伤数值缺失/非法")
+            out["plus"] += n
         else:
             raise ValueError(f"未知 dmg_plus 形式：{tag}")
 
@@ -4536,18 +4847,48 @@ class Battle:
 
     def _resolve_coin_until_tails(self, attacker: FieldPokemon, tag: str,
                                   out: dict) -> None:
-        """``coin_until_tails:dmg_plus:<per>`` —— 连续抛币直到反面
+        """``coin_until_tails:<kind>[:<param>]`` —— 连续抛币直到反面
 
-        卡面原型 Breloom / Tyrogue / Voltorb ex：「Flip a coin until you get
-        tails. This attack does N more damage for each heads.」
-        每个正面 +per，直到出现反面为止（上限 100 次，防极端死循环；
-        概率 2^-100 可忽略，且日志完整可复现）。
+        卡面原型：「Flip a coin until you get tails. … for each heads」
+        **正面数在结算时才知道**（几何分布），解析期折算成任何常数都是静默改强度，
+        所以这里是唯一的掷币点。
+
+        kind（2026-11-02 第四十批把「伤害唯一形态」扩成通用计数源）：
+          · ``dmg_plus:<per>``          在印刷伤害上**加** per × 正面数
+                                       （Breloom / Tyrogue / Voltorb ex）
+          · ``dmg_set:<per>``           印刷伤害**按正面数重算**，0 正面 = 0
+                                       （Marill TEF 64 / Mudbray / Beartic / Jigglypuff）
+          · ``mill:opp``                磨对手牌库 正面数 张（Tyrantrum POR 45）
+          · ``shuffle_opp_hand``        对手手牌随机正面数 张洗回其牌库（Houndstone）
+          · ``search:any``              牌库顶 正面数 张入手（Gholdengo MEG 99）
+
+        非伤害三种只把正面数**记进 out**，真正执行在 `_apply_attack_effects`
+        （那里才有「效果是否被免疫」的上下文；在伤害修正层直接动手会绕过护盾判断）。
+        上限 100 次，防极端死循环（概率 2^-100 可忽略，且日志完整可复现）。
         """
         parts = tag.split(":")
         kind = parts[1] if len(parts) > 1 else ""
         per = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
-        if kind != "dmg_plus" or per <= 0:
-            raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        if kind in ("dmg_plus", "dmg_set"):
+            if per <= 0:
+                raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        elif kind == "mill":
+            if len(parts) < 3 or parts[2] not in ("opp", "self"):
+                raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        elif kind == "shuffle_opp_hand":
+            if len(parts) != 2:
+                raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        elif kind == "search":
+            if len(parts) < 3 or parts[2] != "any":
+                raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        elif kind == "discard_energy":
+            # 「for each heads, discard an Energy from your opponent's Active
+            # Pokémon」（LugiaEX PRE 82「Hyper Whirlpool」）——弃能落在**对手**
+            # 战斗位，按正面数计次；落到常数 1 就是静默削弱。
+            if len(parts) != 3 or parts[2] != "opp":
+                raise ValueError(f"coin_until_tails tag 非法：{tag}")
+        else:
+            raise ValueError(f"coin_until_tails 未支持的子效果：{tag}")
         heads = 0
         for _ in range(100):
             res = "heads" if self.rng.random() < 0.5 else "tails"
@@ -4559,8 +4900,16 @@ class Battle:
         out["coins"].append({"tag": tag, "side": "heads", "sub": "",
                              "result": "heads" if heads else "none",
                              "hits": heads, "until_tails": True})
-        if heads:
-            out["plus"] += per * heads
+        if kind == "dmg_plus":
+            if heads:
+                out["plus"] += per * heads
+        elif kind == "dmg_set":
+            # 覆盖基础伤害：0 正面必须是 0（写成 `if heads:` 会让 0 正面保留
+            # 印刷伤害，正是「does N damage for each heads」最容易落错的地方）
+            out["set"] = per * heads
+        else:
+            out.setdefault("until_tails", []).append(
+                {"tag": tag, "heads": heads})
 
     def _apply_coin_sub(self, attacker: FieldPokemon, sub: str, out: dict,
                         repeat: int = 1) -> None:
@@ -4588,6 +4937,79 @@ class Battle:
                     out["ignore_resistance"] = True
             # 非伤害类子效果（discard_energy / shield: / status…）由
             # _apply_attack_effects 的 coin 分支统一处理，这里不重复执行
+
+    def _apply_until_tails_effect(self, attacker: FieldPokemon, tag: str,
+                                  pre_mods: Optional[dict],
+                                  plan: Optional[list] = None,
+                                  action: Optional[dict] = None) -> None:
+        """「Flip a coin until you get tails」的**非伤害**子效果执行点
+
+        卡面（2026-11-02 第四十批）：
+          · ``mill:opp``           磨对手牌库（Tyrantrum POR 45「Wreak Havoc」）
+          · ``shuffle_opp_hand``   对手手牌随机 N 张洗回其牌库（Houndstone）
+          · ``search:any``         牌库顶 N 张入手（Gholdengo MEG 99）
+          · ``discard_energy:opp`` 对手战斗位按正面数弃能（LugiaEX PRE 82）
+
+        与 `_apply_coin_non_damage` 同一条纪律：**不得重新抛币**。抛币已在
+        `_attack_mods` 阶段完成（同一次攻击只掷一次），这里只消费记录下来的正面数。
+        找不到记录时才现抛（直接调 `_apply_attack_effects` 的路径，如特性 / 测试）。
+
+        全反面 = 「for each heads」为 0 次 → 合法无效果，**不报错**（与官方一致）。
+        """
+        parts = str(tag).split(":")
+        kind = parts[1] if len(parts) > 1 else ""
+        if kind in ("dmg_plus", "dmg_set"):
+            # 伤害类已在 `_attack_mods` → `_resolve_coin_until_tails` 并入伤害层，
+            # 这里再执行一次就是**翻倍**。明确跳过并留注释，避免以后被当成
+            # 「未知 tag 被静默忽略」而误加回来。
+            return
+        rec = None
+        for it in ((pre_mods or {}).get("until_tails") or []):
+            if str(it.get("tag")) == tag:
+                rec = it
+                break
+        if rec is not None:
+            heads = int(rec.get("heads") or 0)
+        else:
+            heads = 0
+            for _ in range(100):
+                res = "heads" if self.rng.random() < 0.5 else "tails"
+                self._log("coin", {"player": self.current, "result": res,
+                                   "tag": tag})
+                if res == "tails":
+                    break
+                heads += 1
+        if heads <= 0:
+            self._log("no_effect", {"tag": tag, "reason": "无正面"})
+            return
+        if kind == "mill":
+            victim = (1 - self.current
+                      if len(parts) > 2 and parts[2] == "opp" else self.current)
+            vp = self.players[victim]
+            moved = 0
+            for _ in range(heads):
+                if not vp.deck:
+                    break
+                self._to_discard(vp, vp.deck.pop())
+                moved += 1
+            self._log("mill", {"player": victim, "n": moved,
+                               "left": len(vp.deck)})
+        elif kind == "shuffle_opp_hand":
+            self._shuffle_opp_hand(heads)
+        elif kind == "search":
+            p = self.players[self.current]
+            got = _take_any_from_deck(p, heads)
+            self.rng.shuffle(p.deck)     # 卡面「Then, shuffle your deck」
+            self._log("search", {"player": self.current, "n": got,
+                                 "kind": "any", "heads": heads})
+        elif kind == "discard_energy":
+            # 复用既有 `discard_energy:<n>:opp` 的**整条派发**（含护盾 / 效果免疫 /
+            # 后备免疫判定与日志），不另写一份弃能逻辑 —— 两份实现迟早会漂。
+            self._apply_attack_effects(attacker,
+                                       (f"discard_energy:{heads}:opp",),
+                                       plan, action, pre_mods)
+        else:
+            raise ValueError(f"coin_until_tails 未支持的子效果：{tag}")
 
     def _apply_coin_non_damage(self, attacker: FieldPokemon, tag: str,
                                pre_mods: Optional[dict],
@@ -4617,6 +5039,112 @@ class Battle:
                 for _ in range(repeat):
                     # 递归深度恒为 1：子效果不含 coin: 前缀（构造时不生成嵌套抛币）
                     self._apply_attack_effects(attacker, (one,), plan, action)
+
+    def _apply_coin_per_target(self, attacker: FieldPokemon, tag: str,
+                               action: Optional[dict],
+                               pre_mods: Optional[dict] = None) -> bool:
+        """``coin_per_target:<per>:scope:opp`` —— 每个对手宝可梦**各抛一枚**
+
+        卡面原型（Mega Zygarde ex「Nullifying Zero」）：「For each of your
+        opponent's Pokémon, flip a coin. If heads, this attack does N damage to
+        that Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)」
+
+        ⚠ 两种错误折叠：
+          · `snipe:opp:N:all` → 每只**必中**（静默加强）；
+          · `coin:heads:snipe:…` → 只抛一次，全中或全不中（概率分布完全不同）。
+        命中集合交给 `_apply_snipe` 执行，**复用**其「战斗位走弱抗 / 后备原始值 /
+        免疫与护盾拦截」口径，不另写一份伤害逻辑。
+
+        返回 ``True`` 表示对局已结束。
+        """
+        parts = str(tag).split(":")
+        if len(parts) != 4 or not parts[1].isdigit() \
+                or parts[2] != "scope" or parts[3] != "opp":
+            raise ValueError(f"coin_per_target tag 非法：{tag}")
+        per = int(parts[1])
+        if per <= 0:
+            raise ValueError(f"coin_per_target 伤害非法：{tag}")
+        cands = self._snipe_candidates("opp")
+        hits = []
+        for pos, fp in cands:
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": self.current, "result": res,
+                               "tag": tag, "target": fp.name})
+            if res == "heads":
+                hits.append(pos)
+        if not hits:
+            self._log("no_effect", {"tag": tag, "reason": "全部反面"})
+            return False
+        # `:all` + `action["snipe"]` = 只在**抛出正面**的目标上结算（不重掷）。
+        return self._apply_snipe(f"snipe:opp:{per}:all", {"snipe": hits},
+                                  (), pre_mods)
+
+    def _coin_prevent_of(self, fp: Optional[FieldPokemon]) -> bool:
+        """``passive:coin_prevent:<color>`` —— 本次伤害是否被抛币挡下
+
+        卡面原型（Fezandipiti「Adrena-Pheromone」）：「If this Pokémon has any
+        {D} Energy attached and is damaged by an attack, flip a coin. If heads,
+        prevent that damage.」
+
+        只在**伤害应用点**调用（主伤害 / spread / spread_free / snipe），
+        且调用方必须已确认本次伤害 > 0 —— 伤害为 0 不算「被伤害」，不该抛币。
+        伤害指示物（`counters:`）不是「damage from an attack」，**不触发**。
+        """
+        if fp is None:
+            return False
+        for ab in fp.pdef.abilities:
+            tag = str(ab.tag or "")
+            if not tag.startswith("passive:coin_prevent:"):
+                continue
+            parts = tag.split(":")
+            if len(parts) != 3 or parts[2] not in TYPES:
+                raise ValueError(f"passive:coin_prevent 形态非法：{tag}")
+            if fp.energy_of_type(parts[2]) <= 0:
+                continue
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": 1 - self.current, "result": res,
+                               "tag": tag, "ability": ab.name})
+            if res == "heads":
+                self._log("ability_trigger", {
+                    "player": 1 - self.current, "ability": ab.name,
+                    "kind": "coin_prevent", "target": fp.name})
+                return True
+        return False
+
+    def _team_shield_reduce(self, fp: Optional[FieldPokemon],
+                            attacker: Optional[FieldPokemon] = None) -> int:
+        """``team_shield:reduce:<n>:type:<color>`` —— 己方全队限时减伤（≥0）
+
+        卡面（Iron Defender）：「During your opponent's next turn, all of your
+        {M} Pokémon take 30 less damage from attacks … (This includes new
+        Pokémon that come into play.)」——玩家级状态，**新上场的宝可梦同样受益**。
+        到期：`team_shield_until <= 持有方 turn_counts` 时失效。
+        ⚠ 卡面限定「from attacks from **your opponent's** Pokémon」→ 己方招式
+        给自己宝可梦造成的伤害**不减免**（snipe/spread 的自方目标）。
+        """
+        if fp is None:
+            return 0
+        owner = None
+        for i, pl in enumerate(self.players):
+            if pl.active is fp or any(fp is b for b in pl.bench):
+                owner = i
+                break
+        if owner is None:
+            return 0
+        if attacker is not None:
+            atk_side = next((i for i, pl in enumerate(self.players)
+                             if pl.active is attacker
+                             or any(attacker is b for b in pl.bench)), None)
+            if atk_side == owner:
+                return 0
+        p = self.players[owner]
+        if not p.team_shield_n or not p.team_shield_type:
+            return 0
+        if p.team_shield_until <= self.turn_counts[owner]:
+            return 0
+        if str(fp.pdef.ptype).lower() != p.team_shield_type:
+            return 0
+        return p.team_shield_n
 
     def _evolve_from_deck(self, p: PlayerState, fp: FieldPokemon) -> None:
         """``evolve_from_deck``：从牌库检索「可进化此宝可梦的卡」直接进化
@@ -4649,6 +5177,37 @@ class Battle:
                              "to": fp.name, "from_zone": "deck"})
         self._trigger_evolve_attach(fp)
 
+    def _evolve_fp_from_deck(self, p: PlayerState, fp: FieldPokemon) -> bool:
+        """在牌库中找「可进化**这一只**」的卡并直接进化 → 是否进化成功
+
+        逐只进化的**公共实现**（`_evolve_each_bench` / `_evolve_each_pick` 共用）。
+        判据：`evolves_from` 与当前卡名一致、且阶数恰好高一阶。
+        找不到 → 返回 False（卡面是「可以」，牌库没有目标就跳过，不抛错）。
+
+        ⚠ 不要在两个调用方里各写一份检索：两份实现迟早会漂（一边改了判据、另一边
+        没改），而「进化到了错的东西」在日志里长得跟正常进化一模一样。
+        """
+        want = fp.pdef.name
+        idx = None
+        for j in range(len(p.deck) - 1, -1, -1):
+            c = p.deck[j]
+            if isinstance(c, PokeRef) and c.pdef.stage > 0 \
+                    and c.pdef.evolves_from == want \
+                    and fp.pdef.stage + 1 == c.pdef.stage:
+                idx = j
+                break
+        if idx is None:
+            return False
+        ref = p.deck.pop(idx)
+        old = fp.name
+        fp.evolve_to(ref.pdef)
+        fp.evolved_turn = self.turn_number
+        fp.evolved_from_name = old
+        self._log("evolve", {"player": self.current, "from": old,
+                             "to": fp.name, "from_zone": "deck"})
+        self._trigger_evolve_attach(fp)
+        return True
+
     def _evolve_each_bench(self, p: PlayerState) -> int:
         """逐只后备各进化一次（``evolve_each_bench`` · Reuniclus「Cellular Ascension」）
 
@@ -4661,30 +5220,33 @@ class Battle:
         不抛错。最后洗牌（卡面「Then, shuffle your deck」）。
         """
         done = 0
-        for i in range(len(p.bench)):
-            fp = p.bench[i]
-            want = fp.pdef.name
-            idx = None
-            for j in range(len(p.deck) - 1, -1, -1):
-                c = p.deck[j]
-                if isinstance(c, PokeRef) and c.pdef.stage > 0 \
-                        and c.pdef.evolves_from == want \
-                        and fp.pdef.stage + 1 == c.pdef.stage:
-                    idx = j
-                    break
-            if idx is None:
-                continue
-            ref = p.deck.pop(idx)
-            old = fp.name
-            fp.evolve_to(ref.pdef)
-            fp.evolved_turn = self.turn_number
-            fp.evolved_from_name = old
-            done += 1
-            self._log("evolve", {"player": self.current, "from": old,
-                                 "to": fp.name, "from_zone": "deck"})
-            self._trigger_evolve_attach(fp)
+        for fp in list(p.bench):
+            if self._evolve_fp_from_deck(p, fp):
+                done += 1
         if done:
             self.rng.shuffle(p.deck)        # 检索后洗牌（引擎统一约定）
+        return done
+
+    def _evolve_each_pick(self, p: PlayerState, mx: int, scope: str) -> int:
+        """「**选**至多 N 只，各进化一次」（``evolve_each_pick:<max>:<scope>``）
+
+        卡面原型（Team Rocket's Nidorina DRI 115「Dark Awakening」）：
+        「Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search
+         your deck for a card that evolves from that Pokémon and put it onto that
+         Pokémon to evolve it. Then, shuffle your deck.」
+
+        与 `_evolve_each_bench` 的**唯一**差别是目标集合：这边是「选出」的至多 N
+        只（可含战斗位），确定性默认按 active→bench 顺序取前 N 只（与
+        `_do_attach_each_pick` 同一口径）。进化本身的检索/落位走同一 helper。
+        ⚠ 拿 `_evolve_each_bench`（全部后备）顶替会让「至多 2 只」变成「全部后备」。
+        """
+        picked = _spread_targets(p, scope)[:max(0, int(mx))]
+        done = 0
+        for fp in picked:
+            if self._evolve_fp_from_deck(p, fp):
+                done += 1
+        if done:
+            self.rng.shuffle(p.deck)
         return done
 
     def _apply_attack_effects(self, attacker: FieldPokemon, effects: tuple,
@@ -4726,8 +5288,9 @@ class Battle:
             """目标是否免疫指令效果（护盾 / 后备被动 / 效果免疫 / 静态免伤）"""
             if fp is None:
                 return True
-            # 护盾：只有卡面写明「from and effects of attacks」的才挡效果
-            if fp.shield_prevent_all and fp.shield_prevent_effects:
+            # 护盾：只有卡面写明「from and effects of attacks」的才挡效果；
+            # `from:<src>` 限定同样作用于效果（Acerola's Mischief 只挡 {ex}）
+            if _shield_blocks_effects(fp, attacker):
                 return True
             if families.effect_immune(self, fp, "attack"):
                 return True
@@ -4773,6 +5336,10 @@ class Battle:
             if tag.startswith("coin:") or tag.startswith("coin_each:") \
                     or tag.startswith("coin_all:"):
                 self._apply_coin_non_damage(attacker, tag, pre_mods, plan, action)
+            elif tag.startswith("coin_until_tails:"):
+                # 「Flip a coin until you get tails」+ 非伤害子效果
+                # （2026-11-02 第四十批）：抛币在 `_attack_mods` 已做，这里只执行
+                self._apply_until_tails_effect(attacker, tag, pre_mods, plan, action)
             elif tag.startswith("status_self:"):
                 # 自身陷入状态（「This Pokémon is now Confused」）
                 st = tag.split(":", 1)[1]
@@ -4901,6 +5468,44 @@ class Battle:
                 # 逐只后备各进化一次（Reuniclus「Cellular Ascension」）
                 n = self._evolve_each_bench(p)
                 self._log("evolve_each_bench", {"player": self.current, "n": n})
+            elif tag.startswith("evolve_each_pick:"):
+                # 「选至多 N 只、各进化一次」（2026-11-02 第四十批 ·
+                # Team Rocket's Nidorina「Dark Awakening」）
+                parts = tag.split(":")
+                if len(parts) < 3 or not parts[1].isdigit() \
+                        or int(parts[1]) < 1:
+                    raise ValueError(f"evolve_each_pick tag 非法：{tag}")
+                n = self._evolve_each_pick(p, int(parts[1]), parts[2])
+                self._log("evolve_each_pick", {"player": self.current, "n": n})
+            elif tag.startswith("coin_per_target:"):
+                # 逐目标各抛一枚（第四十五批，Mega Zygarde ex「Nullifying Zero」）
+                if self._apply_coin_per_target(attacker, tag, action, pre_mods):
+                    return
+            elif tag.startswith("status_choose:"):
+                # 抛币选状态（第四十五批，Cradily「Selective Slime」）：
+                # 卡面「choose Burned, Confused, or Poisoned」三选一；引擎无
+                # 交互层 → 确定性默认取**卡面首个**，可用 action 覆盖。
+                _opts = [x for x in tag.split(":", 1)[1].split("+") if x]
+                if not _opts or any(x not in STATUSES for x in _opts):
+                    raise ValueError(f"status_choose tag 非法：{tag}")
+                _pick = action.get("status_choice") \
+                    if isinstance(action, dict) else None
+                if _pick not in _opts:
+                    _pick = _opts[0]
+                if opp.active is None or opp.active.is_ko:
+                    continue
+                if _opp_blocked(opp.active):
+                    self._log("blocked", {"target": opp.active.name,
+                                          "by": "prevent_all"})
+                    continue
+                if self._status_blocked(opp.active):
+                    self._log("blocked", {"target": opp.active.name,
+                                          "by": "status_immune"})
+                    continue
+                opp.active.status.add(_pick)
+                self._log("status", {"player": 1 - self.current,
+                                     "target": opp.active.name,
+                                     "status": _pick, "chosen_from": _opts})
             elif tag.startswith("spread_free:"):
                 total = int(tag.split(":")[1])
                 # 真 bug 修复（v1.4）：对手**后备为空**时该效果无对象可放置，
@@ -4929,6 +5534,15 @@ class Battle:
                         self._log("blocked", {"target": fp.name,
                                               "by": "dmg_immune"})
                         continue
+                    dmg = max(0, dmg - self._team_shield_reduce(fp, attacker))
+                    if dmg <= 0:
+                        self._log("blocked", {"target": fp.name,
+                                              "by": "team_shield"})
+                        continue
+                    if self._coin_prevent_of(fp):
+                        self._log("blocked", {"target": fp.name,
+                                              "by": "coin_prevent"})
+                        continue
                     fp.damage += dmg
                     self._log("damage", {"target": fp.name,
                                          "player": 1 - self.current,
@@ -4950,10 +5564,19 @@ class Battle:
                 picked = targets[:int(n)]
                 killed = []
                 for fp in picked:
-                    fp.damage += per
+                    per_hit = max(0, per - self._team_shield_reduce(fp, attacker))
+                    if per_hit <= 0:
+                        self._log("blocked", {"target": fp.name,
+                                              "by": "team_shield"})
+                        continue
+                    if self._coin_prevent_of(fp):
+                        self._log("blocked", {"target": fp.name,
+                                              "by": "coin_prevent"})
+                        continue
+                    fp.damage += per_hit
                     self._log("damage", {"target": fp.name,
                                          "player": 1 - self.current,
-                                         "dmg": per, "base": per,
+                                         "dmg": per_hit, "base": per,
                                          "spread": True})
                     if fp.is_ko:
                         killed.append(fp)
@@ -5099,6 +5722,23 @@ class Battle:
                 # 招式击倒（2026-10-28 第九批）
                 if self._apply_knockout(tag, action, _opp_blocked):
                     return
+            elif tag.startswith("dmg_plus:") and ":recoil:" in tag:
+                # 可选加伤 + 反伤（第四十七批，Gurdurr / Dondozo ex）：
+                # 「You may do N more damage. If you do, this Pokémon also does M
+                #  damage to itself.」——加伤已在 `_attack_mods` 计入，这里按
+                # 「If you do」的联动结算反伤（与 `self:N` 同口径：不吃弱抗、可自爆）。
+                _rp = str(tag).split(":")
+                if len(_rp) != 4 or not _rp[3].isdigit():
+                    raise ValueError(f"dmg_plus:recoil tag 非法：{tag}")
+                _ramt = int(_rp[3])
+                attacker.damage += _ramt
+                self._log("damage", {"target": attacker.name,
+                                     "player": self.current,
+                                     "dmg": _ramt, "self": True, "recoil": True})
+                if attacker.is_ko:
+                    self._resolve_ko(self.current, attacker)
+                    if self.finished:
+                        return
             elif tag.startswith("self:"):
                 # 「This Pokémon also does N damage to itself.」→ `self:N`
                 # 2026-10-29 第十七批：`:per:<counter>` 每份伤害按计数源缩放
@@ -5216,6 +5856,19 @@ class Battle:
                 done = _energy_to_deck(self, p, color, raw)
                 self._log("energy_to_deck", {"player": self.current,
                                              "color": color, "n": done})
+            elif tag.startswith("energy_self_to_deck:"):
+                # 「Shuffle all Energy attached to this Pokémon into your deck」
+                # （Mega Skarmory ex「Sonic Ripper」，2026-11-03 第四十一批）——
+                # **强制代价**：附着的基本能量按点数还原成能量卡、特殊能量按整张
+                # 原样放回牌库（引擎的能量是计数，卡级来源在 `senergy` 里），
+                # 然后洗牌。⚠ 只计数不动牌库会让牌库少 N 张（「洗回」变「消失」）。
+                n = _energy_self_to_deck(self, p, attacker)
+                self._log("energy_self_to_deck", {"player": self.current,
+                                                  "from": attacker.name, "n": n})
+            elif tag.startswith("shuffle_opp_pokemon:"):
+                # 「Shuffle that Pokémon and all attached cards into their deck」
+                # （2026-11-03 第四十二批 · Sylveon / Shiftry，抛币门内的子效果）
+                self._shuffle_opp_pokemon(tag.split(":", 1)[1])
             elif tag.startswith("energy_move:"):
                 # S6 能量移动族（自身↔后备 / 对手战斗位→后备 / 双向任选）
                 self._apply_energy_move(tag, attacker, action)
@@ -5592,6 +6245,12 @@ class Battle:
         need_damaged = ":target:damaged" in body
         if need_damaged:
             body = body.replace(":target:damaged", "", 1)
+        # `:target:ex`：只挑对手的 Pokémon {ex}（2026-11-03 第四十一批）。
+        # ⚠ 按 `pdef.is_ex` 判定 —— Mega ex 的 is_ex 也为 True，符合卡面口径
+        #   （「Pokémon {ex}」包含 Mega Evolution ex）。
+        need_ex = ":target:ex" in body
+        if need_ex:
+            body = body.replace(":target:ex", "", 1)
         cond = None
         if ":if:" in body:
             body, cond = body.split(":if:", 1)
@@ -5619,6 +6278,11 @@ class Battle:
             # 先筛目标再选数量：卡面「1 of … that has any damage counters」的
             # 「1」是在**合格目标里**选 1 个，不是先取前 1 个再看它有没有指示物。
             cands = [(pos, fp) for pos, fp in cands if fp.damage > 0]
+        if need_ex:
+            # 同理：`{ex}` 也是**先筛再选**（「1 of your opponent's Benched
+            # Pokémon {ex}」= 在 ex 后备里选 1 只）。
+            cands = [(pos, fp) for pos, fp in cands
+                     if bool(getattr(fp.pdef, "is_ex", False))]
         if per_target:
             # 确定性默认：按**自身指示物数降序**（同分保持候选顺序）——等价于
             # 玩家总会挑伤得最重的那只（打 0 指示物目标等于白打）
@@ -5637,6 +6301,7 @@ class Battle:
             picked = [fp for _, fp in cands[:n]]
         opp = self.players[1 - self.current]
         opp_ids = {id(x) for x in opp.all_field()}
+        _atk = self.players[self.current].active
         killed = []
         for fp in picked:
             # 逐目标缩放：每目标 = per × **它自己**的指示物数（0 即 0 伤害）
@@ -5663,6 +6328,15 @@ class Battle:
                         continue
             else:
                 owner = self.current
+            # 全队限时减伤（第四十六批，Iron Defender）：逐目标在弱抗之后扣减
+            deal = max(0, deal - self._team_shield_reduce(fp, _atk))
+            if deal <= 0:
+                self._log("blocked", {"target": fp.name, "by": "team_shield"})
+                continue
+            # 抛币免伤被动（第四十五批，Fezandipiti）：逐个目标独立触发
+            if deal > 0 and self._coin_prevent_of(fp):
+                self._log("blocked", {"target": fp.name, "by": "coin_prevent"})
+                continue
             fp.damage += deal
             self._log("damage", {"target": fp.name, "player": owner,
                                  "dmg": deal, "base": deal, "snipe": scope})
@@ -5703,7 +6377,7 @@ class Battle:
 
     def _apply_counters(self, tag: str, action: Optional[dict] = None,
                         holder: Optional[FieldPokemon] = None) -> bool:
-        """``counters:<n>[:per:<counter>][:scope:opp[:<count>]][:selfko]``
+        """``counters:<n>[:per:<counter>][:scope:opp[:<count>]|:scope:self][:selfko]``
 
         伤害指示物**直放**（2026-10-29 第二十批）。指示物不吃弱点/抗性、也不触发
         「受击反应」以外的伤害修正，因此**不能**复用 `damage`/`snipe` 字段。
@@ -5712,6 +6386,7 @@ class Battle:
         · `:scope:opp[:<count>]` → 对手**任意**宝可梦（战斗位优先，与 snipe 的
           确定性默认同口径）；显式选择用 ``action["snipe"]`` 的位置码
           （0 = 战斗位，i≥1 = 后备 i-1，见 `_snipe_candidates`）
+        · `:scope:self` → **己方**战斗位（Venture Bomb 的反面分支，第四十四批）
         · `:scope:ability:all` → **双方**全场「拥有特性」的宝可梦逐个各吃 N
           （Cofagrigus「Law of the Underworld」，2026-10-29 第二十八批）
         · `:selfko` → 结算完成后**持有者自身**被击倒（对手照常取奖赏；
@@ -5758,6 +6433,12 @@ class Battle:
             else:
                 targets = [fp for _, fp in (cands if count is None
                                             else cands[:count])]
+        elif scope == "self":
+            # 「put N damage counters on **your** Active Pokémon」
+            # （Team Rocket's Venture Bomb 的反面分支，2026-11-03 第四十四批）
+            # —— 指示物放在**自己**战斗位；不吃弱点/抗性，也不走 `self:N`
+            # （后者是「受到 N 点伤害」，两者在「受击反应」之外仍要区分）。
+            targets = [me.active] if me.active is not None else []
         elif scope == "ability":
             # 「each Pokémon that has an Ability (both yours and your opponent's)」
             # （Cofagrigus）——双方全场逐个筛选；判定口径与静态限定
@@ -6358,6 +7039,29 @@ def _parse_hand_energy_tag(tag: str) -> tuple:
     return n, etype, required
 
 
+def _parse_coin_flip_tag(tag: str) -> dict:
+    """``coin_flip:heads:<a>[|tails:<b>]`` → ``{"heads": a, "tails": b}``
+
+    每段必须以 ``heads:`` / ``tails:`` 开头 —— 子效果自身含冒号，只有显式
+    分支前缀能无歧义切分。未知段 → 抛错（绝不静默丢效果）。
+    """
+    body = str(tag)[len("coin_flip:"):]
+    out: dict = {}
+    for seg in body.split("|"):
+        seg = seg.strip()
+        if not seg:
+            continue
+        if seg.startswith("heads:"):
+            out["heads"] = seg[len("heads:"):]
+        elif seg.startswith("tails:"):
+            out["tails"] = seg[len("tails:"):]
+        else:
+            raise ValueError(f"coin_flip 分支前缀非法：{tag}")
+    if not out:
+        raise ValueError(f"coin_flip tag 非法：{tag}")
+    return out
+
+
 def _draw_spec(battle, tag: str) -> tuple:
     """``draw:N`` / ``draw:per:<counter>`` / ``draw:N:if:<cond>`` → ``(n, cond)``
 
@@ -6705,6 +7409,25 @@ def _take_kind_from_deck(p: PlayerState, n: int, kind: str,
         if flt and kind == "pokemon" and not _poke_matches_filter(c, flt):
             continue
         p.hand.append(p.deck.pop(i))
+        got += 1
+    return got
+
+
+def _take_any_from_deck(p: PlayerState, n: int) -> int:
+    """从牌库取 n 张**任意**卡入手的确定性默认（无交互层）→ 实际入手数
+
+    「Search your deck for a number of cards … put them into your hand」
+    （Gholdengo MEG 99「All-You-Can-Grab」）不限定类别，**连能量卡也算**。
+
+    ⚠ 不能复用 `_take_kind_from_deck(p, n, "any")`：那里的 ``any`` 明确**
+    排除能量**（`_kind_matches` 的既有约定）—— 用它会静默少检索。
+    洗牌由调用方执行（卡面「Then, shuffle your deck」）。
+    """
+    got = 0
+    for _ in range(max(0, n)):
+        if not p.deck:
+            break
+        p.hand.append(p.deck.pop())
         got += 1
     return got
 
@@ -7142,7 +7865,8 @@ def _parse_attach_tag(tag: str) -> tuple:
 
 def _take_energy_from_deck(p: PlayerState, n: int,
                            etype: Optional[str],
-                           distinct: bool = False) -> int:
+                           distinct: bool = False,
+                           basic_only: bool = True) -> int:
     """从牌库检索 n 张（指定色的）能量入手 → 实际入手数
 
     洗牌由调用方用 ``battle.rng`` 执行（保持全局可复现性，勿在 helper 内自造 RNG）。
@@ -7152,6 +7876,12 @@ def _take_energy_from_deck(p: PlayerState, n: int,
     拿到的每张**属性必须两两不同**。不加这个约束会允许拿 3 张同色能量
     （静默加强，实测这两张已进池的卡一直如此）。默认 **False**：多数检索没有
     这个限制，默认开启等于凭空虚削。
+
+    ``basic_only``（2026-11-02 第四十批）：本 helper 只服务于卡面写
+    「**Basic** Energy cards」的检索（全库 9 张 `search_energy:` 逐张核对，无例外）。
+    特殊能量在牌库里同样是 `EnergyRef`（`edef.tag = "senergy:…"`），不加这道过滤
+    会把它们一并拿到手 —— 那是**静默超范围**（Basic 检索拿了 Special 能量），
+    实测 Energy Search Pro 会因此拿到「任意张」特殊能量。默认 **True**。
     """
     from .cards import EnergyRef
     got = 0
@@ -7162,6 +7892,8 @@ def _take_energy_from_deck(p: PlayerState, n: int,
         c = p.deck[i]
         if not isinstance(c, EnergyRef):
             continue
+        if basic_only and getattr(c.edef, "tag", ""):
+            continue                     # 特殊能量（tag = senergy:…）不算 Basic
         if etype and getattr(c.edef, "type", None) != etype:
             continue
         if distinct and getattr(c.edef, "type", None) in used:
@@ -7344,6 +8076,38 @@ def _energy_to_deck(battle, p: PlayerState, color: str, raw: str) -> int:
                 break
         p.deck.append(ref)
         moved += 1
+    if moved:
+        battle.rng.shuffle(p.deck)
+    return moved
+
+
+def _energy_self_to_deck(battle, p: PlayerState,
+                         fp: Optional[FieldPokemon]) -> int:
+    """把 fp 身上附着的**全部能量**还原成卡并洗回牌库 → 移动张数
+
+    卡面原型（Mega Skarmory ex POR 55「Sonic Ripper」，2026-11-03 第四十一批）：
+    「Shuffle all Energy attached to this Pokémon into your deck, and this attack
+    does 220 damage to 1 of your opponent's Pokémon.」
+
+    · 基本能量在引擎里是**计数**（`fp.energy`）→ 按点数各还原 1 张能量卡；
+    · 特殊能量是**卡**（`fp.senergy`）→ 整张原样放回（不拆成提供量）；
+    · 洗回后**立刻洗牌**（与检索后洗牌同一约定，`battle.rng` 驱动、可复现）。
+
+    ⚠ 只把计数清零而不往牌库放卡，等于「洗回」变成「消失」（牌库少 N 张，
+    抽空的胜负判定会提前）—— 必须真的建卡。卡名按属性生成基本能量定义。
+    """
+    if fp is None:
+        return 0
+    moved = 0
+    for t, n in list(fp.energy.items()):
+        for _ in range(int(n)):
+            p.deck.append(EnergyRef(EnergyDef(str(t))))
+            moved += 1
+    fp.energy.clear()
+    for ref in list(fp.senergy):
+        p.deck.append(ref)
+        moved += 1
+    fp.senergy.clear()
     if moved:
         battle.rng.shuffle(p.deck)
     return moved
@@ -7774,6 +8538,10 @@ _DYNAMIC_COUNTER_RE = re.compile(
     r"|own_bench_counters_type:[a-z]+"
     r"|own_bench_counters_named:[a-z0-9]+"
     r"|own_field_named_with_damage:[a-z0-9]+"
+    # 第四十三批（2026-11-03）：按**卡牌子类**（Ancient）的弃牌堆计数，以及
+    # 「具名阵营 + 属性」的全队能量数（Roaring Moon / Iono's Voltorb）。
+    r"|own_discard_category:[a-z0-9]+"
+    r"|own_field_named_energy:[a-z0-9]+:[a-z]+"
     r")$")
 
 
@@ -7885,6 +8653,29 @@ def _eval_counter(battle, counter: str) -> int:
         key = m.group(1)
         return sum(1 for fp in p.all_field()
                    if key and key in _name_key(fp.pdef.name) and fp.damage > 0)
+    # ---- 第四十三批（2026-11-03）：两个限定计数源 ----
+    # 「for each Ancient card in your discard pile」（Roaring Moon）——
+    # Ancient 是**卡牌子类**（`category`），不是卡名子串：按卡名找会恒为 0
+    # （静默少算），按弃牌堆总数又会把别的卡算进来（静默多算）。
+    m = re.match(r"^own_discard_category:([a-z0-9]+)$", counter)
+    if m:
+        cat = m.group(1)
+
+        def _cat_of(c):
+            d = getattr(c, "pdef", None) or getattr(c, "tdef", None)
+            return str(getattr(d, "category", "") or "").lower()
+
+        return sum(1 for c in p.discard_refs if cat and cat in _cat_of(c))
+    # 「for each {L} Energy attached to all of your Iono's Pokémon」
+    # （Iono's Voltorb）—— 阵营 + **属性** + 具名三重限定；用全队
+    # `own_field_energy_<color>` 会把别的宝可梦身上的能量也算进来。
+    m = re.match(r"^own_field_named_energy:([a-z0-9]+):([a-z]+)$", counter)
+    if m:
+        key, color = m.group(1), m.group(2)
+        if color not in TYPES:
+            raise ValueError(f"未知宝可梦属性 {color}（{counter}）")
+        return sum(fp.energy_of_type(color) for fp in p.all_field()
+                   if key and key in _name_key(fp.pdef.name))
     fn = _COUNTERS.get(counter)
     if fn is not None:
         p = battle.players[battle.current]
@@ -7945,6 +8736,13 @@ def _eval_condition(battle, cond: str) -> bool:
         if not raw_n.isdigit():
             raise ValueError(f"条件参数非整数：{cond}")
         return _eval_counter(battle, f"own_discard_energy_{color}") >= int(raw_n)
+    if name == "opp_prizes_le":
+        # 卡面「You can use this card only if your opponent has N or fewer Prize
+        # cards remaining.」（第四十六批，Acerola's Mischief / Briar）
+        # ⚠ 是**剩余**奖赏（`prizes_left`），不是已取得数。
+        if not arg.isdigit():
+            raise ValueError(f"条件参数非整数：{cond}")
+        return o.prizes_left <= int(arg)
     if name == "own_bench_stage2_type":
         return any(fp.pdef.stage == 2 and str(fp.pdef.ptype) == arg
                    for fp in p.bench)
@@ -8596,6 +9394,39 @@ def _shield_blocks(fp: Optional[FieldPokemon], attacker: Optional[FieldPokemon],
     if parts[0] == "if_damage" and len(parts) > 2 and parts[1] == "le":
         return dmg is not None and dmg <= int(parts[2])
     raise ValueError(f"未识别的护盾限定：{qual}")
+
+
+def _parse_shield_choose_tag(tag: str) -> dict:
+    """``shield_choose:prevent_all[:from:<src>][:effects][:gate:<cond>]`` → dict
+
+    `:gate:` 必须**先**切掉：条件本身带冒号（`opp_prizes_le:2`），
+    留在 `_shield_tag_parts` 里会被当成未知限定。
+    """
+    body = str(tag)[len("shield_choose:"):]
+    gate = None
+    if ":gate:" in body:
+        body, gate = body.split(":gate:", 1)
+    parts = body.split(":")
+    if not parts or parts[0] != "prevent_all":
+        raise ValueError(f"shield_choose 形态非法：{tag}")
+    qual, effects = _shield_tag_parts(parts[1:])
+    return {"qual": qual, "effects": effects, "gate": gate}
+
+
+def _shield_blocks_effects(fp: Optional[FieldPokemon],
+                           attacker: Optional[FieldPokemon]) -> bool:
+    """护盾是否挡**效果**：`from:<src>` 限定同样作用于效果（Acerola 只挡 {ex}）
+
+    `if_damage` 限定沿用历史口径（效果不看伤害门槛）。
+    """
+    if fp is None or not (fp.shield_prevent_all and fp.shield_prevent_effects):
+        return False
+    qual = str(getattr(fp, "shield_prevent_qual", "") or "")
+    if not qual:
+        return True
+    if qual.startswith("from:"):
+        return _shield_blocks(fp, attacker, None)
+    return True
 
 
 def _has_passive(fp: Optional[FieldPokemon], tag: str) -> bool:

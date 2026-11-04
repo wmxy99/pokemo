@@ -868,9 +868,14 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertIn("dmg_plus:30:per:opp_active_energy", r["tags"])
 
     def test_scaling_unrecognized_counter_is_honest(self):
-        """计数源无法识别 → 如实报 unsupported，不得猜一个计数源出来"""
-        r = self._tags("This attack does 10 more damage for each Ancient card "
-                       "in your discard pile.")
+        """计数源无法识别 → 如实报 unsupported，不得猜一个计数源出来
+
+        ⚠ 第四十三批：原来的例子是「Ancient card in your discard pile」，
+        现已被 **`own_discard_category:ancient`** 精确建模（Roaring Moon），
+        故改用仍无法识别的「you placed in this way」（Walking Wake，可选数量）。
+        """
+        r = self._tags("This attack does 20 more damage for each damage counter "
+                       "you placed in this way.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(any("缩放" in u["reason"] or "未识别" in u["reason"]
                             for u in r["unsupported"]), r["unsupported"])
@@ -1625,13 +1630,18 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_prevent_damage_reaction_still_unmodeled(self):
-        """「prevent that damage」需要伤害预防层 → 仍如实未建模"""
+    def test_prevent_damage_reaction_modeled_as_coin_prevent(self):
+        """抛币免伤（第四十五批）：由 `passive:coin_prevent:` 承载，不得无条件免伤
+
+        决策反转留痕：本用例原断言「prevent that damage 需要伤害预防层 → 未建模」。
+        Fezandipiti 的抛币免伤现已在**伤害结算内**实现（正面才归零），因此改为
+        锁定该 tag；无条件 `passive:dmg_immune` 才是静默加强。
+        """
         r = self._tags("If this Pok\u00e9mon has any {D} Energy attached and is "
                        "damaged by an attack, flip a coin. If heads, prevent "
                        "that damage.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["passive:coin_prevent:darkness"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_history_condition_rejected(self):
         """「was damaged … during your opponent's last turn」需回合级历史"""

@@ -91,11 +91,16 @@ class TestCoinAllSelfParse(unittest.TestCase):
         self.assertEqual(r["tags"], ["coin_all:2:heads:dmg_plus:100"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_optional_extra_still_unmodeled(self):
-        """「You may … If you do」是可选代价 → 仍如实未建模，不得退化成无条件"""
+    def test_optional_extra_modeled_as_linked_recoil(self):
+        """「You may … If you do」现已按确定性取用落成联动 tag（第四十七批）
+
+        决策反转留痕：本用例原断言「可选代价 → 整段未建模」。现由
+        `dmg_plus:N:recoil:M` **同一条** tag 承载（加伤与反伤联动），
+        不再拆成 `dmg_plus` + `self`（那会丢失「If you do」的绑定）。
+        """
         r = _tags(GURDURR)
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["dmg_plus:30:recoil:30"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestCoinStatusParse(unittest.TestCase):

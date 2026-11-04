@@ -331,11 +331,16 @@ class TestSystemPromptInjection(unittest.TestCase):
         实测：**9326** 字符（上一版 9246）。同上：这些名字 LLM 侧也必须知道，
         后端切到 LLM 时 `actions[].type` 只能从这份枚举里取。
         模板正文未改 → 与历次同性质。
+
+        ── 2026-11-02 上调至 9345（**仍是引擎能力驱动，正文逐字节未改**）──
+        第四十批新增 `until_tails`（「Flip a coin until you get tails」+ 磨牌 /
+        弃对手手牌 / 任意卡检索 / 弃对手战斗位能量的**非伤害**子效果）。
+        实测：**9340** 字符（上一版 9326，+14 = 该枚举名）。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9330,
-            f"提示词已 {len(sp)} 字符，超过 9330 预算；"
+            len(sp), 9345,
+            f"提示词已 {len(sp)} 字符，超过 9345 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 

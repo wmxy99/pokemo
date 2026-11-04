@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-02 11:18:05",
+  "reparsed_at": "2026-11-04 09:27:59",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1018,
+  "engine_ready": 1045,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1018,
-   "engine_approximated": 1003,
-   "engine_unmatched": 249,
-   "engine_namekey_mismatch": 37
+   "zh_backfill": 1045,
+   "engine_approximated": 1030,
+   "engine_unmatched": 222,
+   "engine_namekey_mismatch": 34
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 119,
-   "engine_tags": 1356,
-   "unsupported": 234,
+   "errors": 125,
+   "engine_tags": 1381,
+   "unsupported": 209,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1003,
+  "engine_approximated": 1030,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -1980,6 +1980,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": "damaged",
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -2010,6 +2011,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": "damaged",
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -4363,6 +4365,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -4393,6 +4396,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -4659,6 +4663,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -4744,6 +4749,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -4867,6 +4873,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": "stadium_in_play"
           }
          },
@@ -4906,6 +4913,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": "stadium_in_play"
         }
        },
@@ -6583,6 +6591,7 @@
            "snipe_count": 1,
            "snipe_per": "own_discarded_energy_this_turn",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -6681,6 +6690,7 @@
          "snipe_count": 1,
          "snipe_per": "own_discarded_energy_this_turn",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -6792,14 +6802,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Marill@TEF 64",
    "parse": {
     "items": [
      {
@@ -6816,13 +6828,26 @@
           "type": "damage",
           "amount": 10,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "until_tails",
+           "sub": "dmg_set",
+           "sub_amount": 10
+          }
          }
         ],
         "source_text": "Flip a coin until you get tails. This attack does 10 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_until_tails:dmg_set:10"
+      ],
       "unsupported": []
      }
     ],
@@ -6837,13 +6862,26 @@
         "type": "damage",
         "amount": 10,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "until_tails",
+         "sub": "dmg_set",
+         "sub_amount": 10
+        }
        }
       ],
       "source_text": "Flip a coin until you get tails. This attack does 10 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_until_tails:dmg_set:10"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -7805,14 +7843,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Roaring Moon@TEF 109",
    "parse": {
     "items": [
      {
@@ -7826,11 +7866,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 10,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（Ancient card in your discard p）"
+           "mode": "plus_per",
+           "per": "own_discard_category:ancient",
+           "phrase": "Ancient card in your discard pile"
           }
          }
         ],
@@ -7838,13 +7880,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（Ancient card in your discard p）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:10:per:own_discard_category:ancient"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -7855,11 +7894,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 10,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（Ancient card in your discard p）"
+         "mode": "plus_per",
+         "per": "own_discard_category:ancient",
+         "phrase": "Ancient card in your discard pile"
         }
        }
       ],
@@ -7867,13 +7908,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（Ancient card in your discard p）"
-     }
+    "engine_tags": [
+     "dmg_plus:10:per:own_discard_category:ancient"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -10448,6 +10486,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          },
@@ -10522,6 +10561,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        },
@@ -10900,6 +10940,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -10989,6 +11030,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -15702,14 +15744,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Gurdurr@TWM 104",
    "parse": {
     "items": [
      {
@@ -15723,26 +15767,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "damage",
+          "type": "dmg_recoil",
           "amount": 30,
           "target": "active_opponent",
           "extra": {
-           "unaligned_target": "itself",
-           "clause": "does 30 damage to itself"
+           "recoil": 30
           }
          }
         ],
         "source_text": "You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（itself）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：dmg_recoil"
+      ],
+      "engine_tags": [
+       "dmg_plus:30:recoil:30"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -15753,26 +15795,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "damage",
+        "type": "dmg_recoil",
         "amount": 30,
         "target": "active_opponent",
         "extra": {
-         "unaligned_target": "itself",
-         "clause": "does 30 damage to itself"
+         "recoil": 30
         }
        }
       ],
       "source_text": "You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself."
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（itself）"
-     }
+    "errors": [
+     "[0] action.type 非法：dmg_recoil"
     ],
+    "engine_tags": [
+     "dmg_plus:30:recoil:30"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -18811,14 +18851,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Sylveon@SFA 22",
    "parse": {
     "items": [
      {
@@ -18836,7 +18878,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "shuffle_opp_pokemon": "opp_bench"
           }
          }
         ],
@@ -18844,13 +18886,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:shuffle_opp_pokemon:opp_bench"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -18893,7 +18932,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "shuffle_opp_pokemon": "opp_bench"
         }
        }
       ],
@@ -18919,14 +18958,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "coin:heads:shuffle_opp_pokemon:opp_bench",
      "confuse"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -19831,6 +19866,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -19895,6 +19931,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -20477,6 +20514,7 @@
            "snipe_count": 3,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -20548,6 +20586,7 @@
          "snipe_count": 3,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -20873,14 +20912,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Cradily@SCR 6",
    "parse": {
     "items": [
      {
@@ -20935,11 +20976,13 @@
         ],
         "actions": [
          {
-          "type": "rule",
+          "type": "coin_flip",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+           "side": "heads",
+           "mode": "single",
+           "sub": "status_choose:burn+confuse+poison"
           }
          }
         ],
@@ -20947,13 +20990,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:status_choose:burn+confuse+poison"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -20994,11 +21034,13 @@
       ],
       "actions": [
        {
-        "type": "rule",
+        "type": "coin_flip",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+         "side": "heads",
+         "mode": "single",
+         "sub": "status_choose:burn+confuse+poison"
         }
        }
       ],
@@ -21007,14 +21049,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:100:per:opp_active_status_count"
+     "dmg_set:100:per:opp_active_status_count",
+     "coin:heads:status_choose:burn+confuse+poison"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -21715,6 +21753,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -21793,6 +21832,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -24520,6 +24560,7 @@
            "snipe_count": 1,
            "snipe_per": "own_active_energy",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -24550,6 +24591,7 @@
          "snipe_count": 1,
          "snipe_per": "own_active_energy",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -29034,6 +29076,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": "own_deck_at_most:3"
           }
          }
@@ -29093,6 +29136,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": "own_deck_at_most:3"
         }
        }
@@ -33037,6 +33081,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -33114,6 +33159,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -35115,14 +35161,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Vaporeon ex@PRE 23",
    "parse": {
     "items": [
      {
@@ -35138,10 +35186,14 @@
          {
           "type": "damage",
           "amount": 60,
-          "target": "active_opponent",
+          "target": "active_opponent_bench",
           "extra": {
-           "unaligned_target": "each of your opponent’s Pokémon {ex}",
-           "clause": "does 60 damage to each of your opponent’s Pokémon {ex}"
+           "snipe_scope": "opp",
+           "snipe_count": "all",
+           "snipe_per": null,
+           "snipe_target": null,
+           "snipe_ex": true,
+           "snipe_if": null
           }
          },
          {
@@ -35166,15 +35218,11 @@
       ],
       "errors": [],
       "engine_tags": [
+       "snipe:opp:60:all:target:ex",
        "ignore_weakness",
        "ignore_resistance"
       ],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（each of your opponent’s Pokémon {ex}）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -35247,10 +35295,14 @@
        {
         "type": "damage",
         "amount": 60,
-        "target": "active_opponent",
+        "target": "active_opponent_bench",
         "extra": {
-         "unaligned_target": "each of your opponent’s Pokémon {ex}",
-         "clause": "does 60 damage to each of your opponent’s Pokémon {ex}"
+         "snipe_scope": "opp",
+         "snipe_count": "all",
+         "snipe_per": null,
+         "snipe_target": null,
+         "snipe_ex": true,
+         "snipe_if": null
         }
        },
        {
@@ -35312,17 +35364,13 @@
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
+     "snipe:opp:60:all:target:ex",
      "ignore_weakness",
      "ignore_resistance",
      "attack_lock:all:turn",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（each of your opponent’s Pokémon {ex}）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -35538,6 +35586,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -35625,6 +35674,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -37981,6 +38031,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -38045,6 +38096,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -38736,14 +38788,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Iono’s Voltorb@JTG 47",
    "parse": {
     "items": [
      {
@@ -38757,11 +38811,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "damage_mod",
+          "amount": 20,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（{L} Energy attached to all of ）"
+           "mode": "plus_per",
+           "per": "own_field_named_energy:iono:lightning",
+           "phrase": "{L} Energy attached to all of your Iono'"
           }
          }
         ],
@@ -38769,13 +38825,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（{L} Energy attached to all of ）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus:20:per:own_field_named_energy:iono:lightning"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -38786,11 +38839,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "damage_mod",
+        "amount": 20,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（{L} Energy attached to all of ）"
+         "mode": "plus_per",
+         "per": "own_field_named_energy:iono:lightning",
+         "phrase": "{L} Energy attached to all of your Iono'"
         }
        }
       ],
@@ -38798,13 +38853,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（{L} Energy attached to all of ）"
-     }
+    "engine_tags": [
+     "dmg_plus:20:per:own_field_named_energy:iono:lightning"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -41828,6 +41880,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -41875,6 +41928,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -43045,6 +43099,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -43103,6 +43158,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -43225,6 +43281,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -43287,6 +43344,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -43667,6 +43725,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -43725,6 +43784,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -47831,20 +47891,22 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": 1,
+          "type": "until_tails",
+          "amount": null,
           "target": "active_opponent",
           "extra": {
-           "card_type": "energy"
+           "kind": "discard_energy",
+           "scope": "opp"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon."
+        "source_text": "Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:1:opp"
+       "coin_until_tails:discard_energy:opp"
       ],
       "unsupported": []
      }
@@ -47857,20 +47919,22 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": 1,
+        "type": "until_tails",
+        "amount": null,
         "target": "active_opponent",
         "extra": {
-         "card_type": "energy"
+         "kind": "discard_energy",
+         "scope": "opp"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon."
+      "source_text": "Flip a coin until you get tails. For each heads, discard an Energy from your opponent’s Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:1:opp"
+     "coin_until_tails:discard_energy:opp"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -51580,6 +51644,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -51610,6 +51675,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -51927,14 +51993,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Dondozo ex@DRI 66",
    "parse": {
     "items": [
      {
@@ -51978,26 +52046,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "damage",
-          "amount": 50,
+          "type": "dmg_recoil",
+          "amount": 120,
           "target": "active_opponent",
           "extra": {
-           "unaligned_target": "itself",
-           "clause": "does 50 damage to itself"
+           "recoil": 50
           }
          }
         ],
         "source_text": "You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（itself）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：dmg_recoil"
+      ],
+      "engine_tags": [
+       "dmg_plus:120:recoil:50"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -52027,28 +52093,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "damage",
-        "amount": 50,
+        "type": "dmg_recoil",
+        "amount": 120,
         "target": "active_opponent",
         "extra": {
-         "unaligned_target": "itself",
-         "clause": "does 50 damage to itself"
+         "recoil": 50
         }
        }
       ],
       "source_text": "You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：dmg_recoil"
+    ],
     "engine_tags": [
-     "dmg_plus:10:per:own_active_counters"
+     "dmg_plus:10:per:own_active_counters",
+     "dmg_plus:120:recoil:50"
     ],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（itself）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -52357,6 +52420,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -52416,6 +52480,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -52703,6 +52768,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -52733,6 +52799,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -52989,14 +53056,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Zeraora@DRI 78",
    "parse": {
     "items": [
      {
@@ -53021,10 +53090,14 @@
          {
           "type": "damage",
           "amount": 210,
-          "target": "active_opponent",
+          "target": "active_opponent_bench",
           "extra": {
-           "unaligned_target": "1 of your opponent’s Benched Pokémon {ex}",
-           "clause": "does 210 damage to 1 of your opponent’s Benched Pokémon {ex}"
+           "snipe_scope": "opp_bench",
+           "snipe_count": 1,
+           "snipe_per": null,
+           "snipe_target": null,
+           "snipe_ex": true,
+           "snipe_if": null
           }
          }
         ],
@@ -53033,14 +53106,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:all"
+       "discard_energy:all",
+       "snipe:opp_bench:210:1:target:ex"
       ],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex}）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -53062,10 +53131,14 @@
        {
         "type": "damage",
         "amount": 210,
-        "target": "active_opponent",
+        "target": "active_opponent_bench",
         "extra": {
-         "unaligned_target": "1 of your opponent’s Benched Pokémon {ex}",
-         "clause": "does 210 damage to 1 of your opponent’s Benched Pokémon {ex}"
+         "snipe_scope": "opp_bench",
+         "snipe_count": 1,
+         "snipe_per": null,
+         "snipe_target": null,
+         "snipe_ex": true,
+         "snipe_if": null
         }
        }
       ],
@@ -53074,14 +53147,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:all"
+     "discard_energy:all",
+     "snipe:opp_bench:210:1:target:ex"
     ],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex}）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -53715,14 +53784,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Mudbray@DRI 107",
    "parse": {
     "items": [
      {
@@ -53739,13 +53810,26 @@
           "type": "damage",
           "amount": 40,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "until_tails",
+           "sub": "dmg_set",
+           "sub_amount": 40
+          }
          }
         ],
         "source_text": "Flip a coin until you get tails. This attack does 40 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_until_tails:dmg_set:40"
+      ],
       "unsupported": []
      }
     ],
@@ -53760,13 +53844,26 @@
         "type": "damage",
         "amount": 40,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "until_tails",
+         "sub": "dmg_set",
+         "sub_amount": 40
+        }
        }
       ],
       "source_text": "Flip a coin until you get tails. This attack does 40 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_until_tails:dmg_set:40"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -57447,6 +57544,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -57486,6 +57584,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -62373,6 +62472,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -62434,6 +62534,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -62640,14 +62741,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Nidorina@DRI 115",
    "parse": {
     "items": [
      {
@@ -62661,34 +62764,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
-          "extra": {
-           "what": "pokemon"
-          }
-         },
-         {
           "type": "evolve",
           "amount": null,
-          "target": "self"
+          "target": "self",
+          "extra": {
+           "each_pick": 2,
+           "scope": "type-darkness"
+          }
          }
         ],
-        "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck."
+        "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       },
-       {
-        "type": "evolve",
-        "reason": "招式/特性驱动的进化需卡级 tag"
-       }
-      ]
+      "engine_tags": [
+       "evolve_each_pick:2:type-darkness"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -62699,34 +62792,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
-        "extra": {
-         "what": "pokemon"
-        }
-       },
-       {
         "type": "evolve",
         "amount": null,
-        "target": "self"
+        "target": "self",
+        "extra": {
+         "each_pick": 2,
+         "scope": "type-darkness"
+        }
        }
       ],
-      "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck."
+      "source_text": "Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     },
-     {
-      "type": "evolve",
-      "reason": "招式/特性驱动的进化需卡级 tag"
-     }
+    "engine_tags": [
+     "evolve_each_pick:2:type-darkness"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -64470,6 +64553,7 @@
            "snipe_count": 1,
            "snipe_per": "target_counters",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -64500,6 +64584,7 @@
          "snipe_count": 1,
          "snipe_per": "target_counters",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -69851,14 +69936,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Beartic@BLK 26",
    "parse": {
     "items": [
      {
@@ -69875,13 +69962,26 @@
           "type": "damage",
           "amount": 50,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "until_tails",
+           "sub": "dmg_set",
+           "sub_amount": 50
+          }
          }
         ],
         "source_text": "Flip a coin until you get tails. This attack does 50 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_until_tails:dmg_set:50"
+      ],
       "unsupported": []
      },
      {
@@ -69927,6 +70027,17 @@
         "type": "damage",
         "amount": 50,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "until_tails",
+         "sub": "dmg_set",
+         "sub_amount": 50
+        }
        }
       ],
       "source_text": "Flip a coin until you get tails. This attack does 50 damage for each heads."
@@ -69954,6 +70065,7 @@
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
+     "coin_until_tails:dmg_set:50",
      "attack_lock:opp_all:turn"
     ],
     "unsupported": [],
@@ -70176,6 +70288,7 @@
            "snipe_count": "all",
            "snipe_per": "opp_prizes_taken",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -70206,6 +70319,7 @@
          "snipe_count": "all",
          "snipe_per": "opp_prizes_taken",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -72651,6 +72765,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": "damaged",
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -72709,6 +72824,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": "damaged",
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -73652,6 +73768,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -73700,6 +73817,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -80009,6 +80127,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -80039,6 +80158,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -80706,6 +80826,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          },
@@ -80771,6 +80892,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        },
@@ -84305,6 +84427,7 @@
            "snipe_count": 1,
            "snipe_per": "own_active_energy",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -84335,6 +84458,7 @@
          "snipe_count": 1,
          "snipe_per": "own_active_energy",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -86745,6 +86869,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -86775,6 +86900,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -87806,6 +87932,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -87868,6 +87995,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -88989,14 +89117,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Shiftry@MEG 15",
    "parse": {
     "items": [
      {
@@ -89014,7 +89144,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "shuffle_opp_pokemon": "opp"
           }
          }
         ],
@@ -89022,13 +89152,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:shuffle_opp_pokemon:opp"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -89071,7 +89198,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "shuffle_opp_pokemon": "opp"
         }
        }
       ],
@@ -89097,14 +89224,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "coin:heads:shuffle_opp_pokemon:opp",
      "confuse"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -89958,6 +90081,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -89988,6 +90112,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -91948,6 +92073,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -92009,6 +92135,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -93264,14 +93391,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Grafaiai@MEG 92",
    "parse": {
     "items": [
      {
@@ -93285,11 +93414,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "coin_flip",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "side": "heads",
+           "mode": "single",
+           "sub": "status_choose:poison+burn+sleep+paralyze+confuse"
           }
          }
         ],
@@ -93297,13 +93428,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:status_choose:poison+burn+sleep+paralyze+confuse"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -93314,11 +93442,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "coin_flip",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "side": "heads",
+         "mode": "single",
+         "sub": "status_choose:poison+burn+sleep+paralyze+confuse"
         }
        }
       ],
@@ -93326,13 +93456,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "coin:heads:status_choose:poison+burn+sleep+paralyze+confuse"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -93738,7 +93865,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "note": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
           }
          }
         ],
@@ -93750,7 +93877,7 @@
       "unsupported": [
        {
         "type": "rule",
-        "reason": "静态/未建模（英文）"
+        "reason": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
        }
       ]
      }
@@ -93767,7 +93894,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "note": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
         }
        }
       ],
@@ -93779,7 +93906,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "静态/未建模（英文）"
+      "reason": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
      }
     ],
     "generated_by": "rule",
@@ -94127,14 +94254,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Gholdengo@MEG 99",
    "parse": {
     "items": [
      {
@@ -94148,25 +94277,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "until_tails",
+          "amount": null,
+          "target": "active_opponent",
           "extra": {
+           "kind": "search",
            "what": "any"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck."
+        "source_text": "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "coin_until_tails:search:any"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -94177,25 +94305,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "until_tails",
+        "amount": null,
+        "target": "active_opponent",
         "extra": {
+         "kind": "search",
          "what": "any"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck."
+      "source_text": "Flip a coin until you get tails. Search your deck for a number of cards up to the number of heads and put them into your hand. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
+    "engine_tags": [
+     "coin_until_tails:search:any"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -97804,6 +97931,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          },
@@ -97843,6 +97971,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        },
@@ -100808,14 +100937,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Houndstone@MEG 66",
    "parse": {
     "items": [
      {
@@ -100829,25 +100960,23 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "until_tails",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "shuffle_opp_hand"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. For each heads, choose a random card from your opponent’s hand. Your opponent reveals those cards and shuffles them into their deck."
+        "source_text": "Flip a coin until you get tails. For each heads, choose a random card from your opponent’s hand. Your opponent reveals those cards and shuffles them into their deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "coin_until_tails:shuffle_opp_hand"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -100858,25 +100987,23 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "until_tails",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "shuffle_opp_hand"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. For each heads, choose a random card from your opponent’s hand. Your opponent reveals those cards and shuffles them into their deck."
+      "source_text": "Flip a coin until you get tails. For each heads, choose a random card from your opponent’s hand. Your opponent reveals those cards and shuffles them into their deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "coin_until_tails:shuffle_opp_hand"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -101689,6 +101816,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -101719,6 +101847,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -103386,6 +103515,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -103425,6 +103555,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -103970,6 +104101,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -104000,6 +104132,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -104737,6 +104870,7 @@
            "snipe_count": 1,
            "snipe_per": "own_active_energy_grass",
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -104767,6 +104901,7 @@
          "snipe_count": 1,
          "snipe_per": "own_active_energy_grass",
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -107170,6 +107305,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -107200,6 +107336,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -111422,14 +111559,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Jigglypuff@PFL 76",
    "parse": {
     "items": [
      {
@@ -111446,13 +111585,26 @@
           "type": "damage",
           "amount": 20,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "until_tails",
+           "sub": "dmg_set",
+           "sub_amount": 20
+          }
          }
         ],
         "source_text": "Flip a coin until you get tails. This attack does 20 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_until_tails:dmg_set:20"
+      ],
       "unsupported": []
      }
     ],
@@ -111467,13 +111619,26 @@
         "type": "damage",
         "amount": 20,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "until_tails",
+         "sub": "dmg_set",
+         "sub_amount": 20
+        }
        }
       ],
       "source_text": "Flip a coin until you get tails. This attack does 20 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_until_tails:dmg_set:20"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -111825,6 +111990,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -111864,6 +112030,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -113038,14 +113205,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dustox@ASC 15",
    "parse": {
     "items": [
      {
@@ -113093,11 +113262,13 @@
         ],
         "actions": [
          {
-          "type": "rule",
+          "type": "coin_flip",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "抛币分支内的能量回手（需 coin 嵌套，B4）"
+           "side": "heads",
+           "mode": "single",
+           "sub": "bounce:energy:opp_active:1"
           }
          }
         ],
@@ -113105,13 +113276,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抛币分支内的能量回手（需 coin 嵌套，B4）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:bounce:energy:opp_active:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -113145,11 +113313,13 @@
       ],
       "actions": [
        {
-        "type": "rule",
+        "type": "coin_flip",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "抛币分支内的能量回手（需 coin 嵌套，B4）"
+         "side": "heads",
+         "mode": "single",
+         "sub": "bounce:energy:opp_active:1"
         }
        }
       ],
@@ -113158,14 +113328,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "sleep"
+     "sleep",
+     "coin:heads:bounce:energy:opp_active:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抛币分支内的能量回手（需 coin 嵌套，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -114474,6 +114640,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -114521,6 +114688,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -114854,6 +115022,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -114916,6 +115085,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -115040,6 +115210,7 @@
            "snipe_count": 2,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -115103,6 +115274,7 @@
          "snipe_count": 2,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -116901,21 +117073,22 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": 1,
-          "target": "deck",
+          "type": "until_tails",
+          "amount": null,
+          "target": "active_opponent",
           "extra": {
-           "from_deck": true,
-           "side": "opp"
+           "kind": "mill",
+           "scope": "opp"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck."
+        "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "mill:1:opp"
+       "coin_until_tails:mill:opp"
       ],
       "unsupported": []
      }
@@ -116928,21 +117101,22 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": 1,
-        "target": "deck",
+        "type": "until_tails",
+        "amount": null,
+        "target": "active_opponent",
         "extra": {
-         "from_deck": true,
-         "side": "opp"
+         "kind": "mill",
+         "scope": "opp"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck."
+      "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "mill:1:opp"
+     "coin_until_tails:mill:opp"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -117859,6 +118033,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          },
@@ -117926,6 +118101,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        },
@@ -122685,6 +122861,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -122724,6 +122901,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -123281,6 +123459,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -123311,6 +123490,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -124769,6 +124949,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -124809,6 +124990,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -127683,14 +127865,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Fezandipiti@TWM 96",
    "parse": {
     "items": [
      {
@@ -127739,11 +127923,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+           "kind": "coin_prevent",
+           "color": "darkness"
           }
          }
         ],
@@ -127751,13 +127936,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-       }
-      ]
+      "engine_tags": [
+       "passive:coin_prevent:darkness"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -127792,11 +127974,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+         "kind": "coin_prevent",
+         "color": "darkness"
         }
        }
       ],
@@ -127805,14 +127988,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:30:per:own_active_energy"
+     "dmg_set:30:per:own_active_energy",
+     "passive:coin_prevent:darkness"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -129544,6 +129723,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -129602,6 +129782,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -132344,6 +132525,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -132401,6 +132583,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -134491,6 +134674,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -134531,6 +134715,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -135617,6 +135802,7 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -135678,6 +135864,7 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -135875,14 +136062,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Aurorus@POR 24",
    "parse": {
     "items": [
      {
@@ -135927,25 +136116,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "tag": "fx:team_reduce:50:energy:water:nonstack",
+           "family": "team_reduce"
           }
          }
         ],
-        "source_text": "All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Tundra Wall doesn’t stack."
+        "source_text": "All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Tundra Wall doesn’t stack.",
+        "fx_family": "team_reduce"
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "engine_tags": [
+       "fx:team_reduce:50:energy:water:nonstack"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -135974,29 +136162,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "tag": "fx:team_reduce:50:energy:water:nonstack",
+         "family": "team_reduce"
         }
        }
       ],
-      "source_text": "All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Tundra Wall doesn’t stack."
+      "source_text": "All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Tundra Wall doesn’t stack.",
+      "fx_family": "team_reduce"
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:opp_all:turn"
+     "attack_lock:opp_all:turn",
+     "fx:team_reduce:50:energy:water:nonstack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -138809,21 +138995,22 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": 1,
-          "target": "deck",
+          "type": "until_tails",
+          "amount": null,
+          "target": "active_opponent",
           "extra": {
-           "from_deck": true,
-           "side": "opp"
+           "kind": "mill",
+           "scope": "opp"
           }
          }
         ],
-        "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck."
+        "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "mill:1:opp"
+       "coin_until_tails:mill:opp"
       ],
       "unsupported": []
      },
@@ -138867,16 +139054,17 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": 1,
-        "target": "deck",
+        "type": "until_tails",
+        "amount": null,
+        "target": "active_opponent",
         "extra": {
-         "from_deck": true,
-         "side": "opp"
+         "kind": "mill",
+         "scope": "opp"
         }
        }
       ],
-      "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck."
+      "source_text": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck.",
+      "citations": []
      },
      {
       "kind": "ability",
@@ -138898,7 +139086,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "mill:1:opp"
+     "coin_until_tails:mill:opp"
     ],
     "unsupported": [
      {
@@ -139081,14 +139269,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Zygarde ex@POR 47",
    "parse": {
     "items": [
      {
@@ -139130,12 +139320,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "damage",
-          "amount": 150,
-          "target": "active_opponent",
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent_bench",
           "extra": {
-           "unaligned_target": "that Pokémon",
-           "clause": "does 150 damage to that Pokémon"
+           "side": "heads",
+           "mode": "per_target",
+           "sub_amount": 150
           }
          }
         ],
@@ -139143,13 +139334,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（that Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "coin_per_target:150:scope:opp"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -139177,12 +139365,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "damage",
-        "amount": 150,
-        "target": "active_opponent",
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent_bench",
         "extra": {
-         "unaligned_target": "that Pokémon",
-         "clause": "does 150 damage to that Pokémon"
+         "side": "heads",
+         "mode": "per_target",
+         "sub_amount": 150
         }
        }
       ],
@@ -139191,14 +139380,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "shield:reduce:30"
+     "shield:reduce:30",
+     "coin_per_target:150:scope:opp"
     ],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（that Pokémon）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -140241,14 +140426,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Skarmory ex@POR 55",
    "parse": {
     "items": [
      {
@@ -140270,7 +140457,16 @@
            "snipe_count": 1,
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
+          }
+         },
+         {
+          "type": "rule",
+          "amount": null,
+          "target": "any",
+          "extra": {
+           "energy_self_to_deck": true
           }
          }
         ],
@@ -140279,14 +140475,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "snipe:opp:220:1"
+       "snipe:opp:220:1",
+       "energy_self_to_deck:all"
       ],
-      "unsupported": [
-       {
-        "type": "cost",
-        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -140305,7 +140497,16 @@
          "snipe_count": 1,
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
+        }
+       },
+       {
+        "type": "rule",
+        "amount": null,
+        "target": "any",
+        "extra": {
+         "energy_self_to_deck": true
         }
        }
       ],
@@ -140314,14 +140515,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "snipe:opp:220:1"
+     "snipe:opp:220:1",
+     "energy_self_to_deck:all"
     ],
-    "unsupported": [
-     {
-      "type": "cost",
-      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141562,6 +141759,7 @@
            "snipe_count": "all",
            "snipe_per": null,
            "snipe_target": null,
+           "snipe_ex": false,
            "snipe_if": null
           }
          }
@@ -141592,6 +141790,7 @@
          "snipe_count": "all",
          "snipe_per": null,
          "snipe_target": null,
+         "snipe_ex": false,
          "snipe_if": null
         }
        }
@@ -144154,14 +144353,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Search your deck for any number of Basic Energy cards of different types, reveal them, and put them into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从牌库中检索任意数量的不同类型的基本能量卡，展示它们并加入手牌。然后洗牌。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Energy Search Pro@SSP 176",
    "parse": {
     "items": [
      {
@@ -144188,14 +144389,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "search_energy:all:distinct"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -144219,13 +144417,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
+    "engine_tags": [
+     "search_energy:all:distinct"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -147325,14 +147520,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抛硬币。若为正面，在对手的 1 只宝可梦身上放置 2 个伤害指示物。若为反面，在你的战斗宝可梦身上放置 2 个伤害指示物。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Venture Bomb@DRI 179",
    "parse": {
     "items": [
      {
@@ -147346,33 +147543,14 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon）"
-          }
-         },
-         {
           "type": "coin_flip",
           "amount": null,
           "target": "active_opponent_bench",
           "extra": {
            "side": "heads",
-           "mode": "single",
-           "sub": "spread_free",
-           "sub_amount": 20
-          }
-         },
-         {
-          "type": "coin_flip",
-          "amount": null,
-          "target": "self",
-          "extra": {
-           "side": "tails",
-           "mode": "single",
-           "sub": "self",
-           "sub_amount": 20
+           "mode": "fork",
+           "sub": "counters:2:scope:opp:1",
+           "sub_tails": "counters:2:scope:self"
           }
          }
         ],
@@ -147381,16 +147559,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "coin:heads:spread_free:20",
-       "coin:tails:self:20"
+       "coin_flip:heads:counters:2:scope:opp:1|tails:counters:2:scope:self"
       ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147401,33 +147573,14 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon）"
-        }
-       },
-       {
         "type": "coin_flip",
         "amount": null,
         "target": "active_opponent_bench",
         "extra": {
          "side": "heads",
-         "mode": "single",
-         "sub": "spread_free",
-         "sub_amount": 20
-        }
-       },
-       {
-        "type": "coin_flip",
-        "amount": null,
-        "target": "self",
-        "extra": {
-         "side": "tails",
-         "mode": "single",
-         "sub": "self",
-         "sub_amount": 20
+         "mode": "fork",
+         "sub": "counters:2:scope:opp:1",
+         "sub_tails": "counters:2:scope:self"
         }
        }
       ],
@@ -147436,15 +147589,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "coin:heads:spread_free:20",
-     "coin:tails:self:20"
+     "coin_flip:heads:counters:2:scope:opp:1|tails:counters:2:scope:self"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -148166,14 +148313,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "在对手的下个回合中，你所有的 {M} 宝可梦受到对手宝可梦的招式伤害减少 30 点（在计算弱点和抗性之后）。（这包括新上场的宝可梦。）",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Iron Defender@MEG 118",
    "parse": {
     "items": [
      {
@@ -148187,26 +148336,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "team_shield",
+          "amount": 30,
+          "target": "self",
           "extra": {
-           "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+           "color": "metal"
           }
          }
         ],
         "source_text": "During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：team_shield"
+      ],
+      "engine_tags": [
+       "team_shield:reduce:30:type:metal"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -148217,25 +148365,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "team_shield",
+        "amount": 30,
+        "target": "self",
         "extra": {
-         "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
+         "color": "metal"
         }
        }
       ],
       "source_text": "During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
-     }
+    "errors": [
+     "[0] action.type 非法：team_shield"
     ],
+    "engine_tags": [
+     "team_shield:reduce:30:type:metal"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156403,14 +156550,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "每位玩家将手牌洗回牌库。然后，抛硬币。若为正面，你抽 5 张牌，对手抽 3 张牌。若为反面，你抽 3 张牌，对手抽 5 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Harlequin@WHT 83",
    "parse": {
     "items": [
      {
@@ -156424,26 +156573,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "shuffle_both_coin_draw",
           "amount": null,
-          "target": "deck",
+          "target": "both",
           "extra": {
-           "note": "抛币分支内的抽牌（需 coin 嵌套，B4）"
+           "mine_heads": 5,
+           "opp_heads": 3,
+           "mine_tails": 3,
+           "opp_tails": 5
           }
          }
         ],
         "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：shuffle_both_coin_draw",
+       "[0] action.target 非法：both"
+      ],
+      "engine_tags": [
+       "shuffle_both_coin_draw:5:3:3:5"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156454,25 +156606,28 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "shuffle_both_coin_draw",
         "amount": null,
-        "target": "deck",
+        "target": "both",
         "extra": {
-         "note": "抛币分支内的抽牌（需 coin 嵌套，B4）"
+         "mine_heads": 5,
+         "opp_heads": 3,
+         "mine_tails": 3,
+         "opp_tails": 5
         }
        }
       ],
       "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：shuffle_both_coin_draw",
+     "[0] action.target 非法：both"
     ],
+    "engine_tags": [
+     "shuffle_both_coin_draw:5:3:3:5"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156864,14 +157019,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent’s Pokémon {ex}.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当对手的剩余奖赏卡为 2 张或更少时，才能使用此卡。\n\n选择你场上的 1 只宝可梦。在对手的下个回合中，防止对手的宝可梦{ex}的招式对该宝可梦造成的所有伤害和效果。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Acerola's Mischief@MEG 113",
    "parse": {
     "items": [
      {
@@ -156885,38 +157042,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "shield_choose",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "kind": "prevent_all",
+           "from": "ex",
+           "effects": true,
+           "gate": "opp_prizes_le:2"
           }
          }
         ],
         "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent’s Pokémon {ex}."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：shield_choose"
+      ],
+      "engine_tags": [
+       "shield_choose:prevent_all:from:ex:effects:gate:opp_prizes_le:2"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
-       },
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156927,37 +157074,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "shield_choose",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态规则修改（弱点/抗性/伤害减免/限制）"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "kind": "prevent_all",
+         "from": "ex",
+         "effects": true,
+         "gate": "opp_prizes_le:2"
         }
        }
       ],
       "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent’s Pokémon {ex}."
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态规则修改（弱点/抗性/伤害减免/限制）"
-     },
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "errors": [
+     "[0] action.type 非法：shield_choose"
     ],
+    "engine_tags": [
+     "shield_choose:prevent_all:from:ex:effects:gate:opp_prizes_le:2"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

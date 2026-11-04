@@ -110,11 +110,16 @@ class TestEnergyToHandParse(unittest.TestCase):
         r = _tags(self.OPP)
         self.assertEqual(r["tags"], ["bounce:energy:opp_active:1"])
 
-    def test_coin_branch_still_unmodeled(self):
-        """抛币分支内不得退化成无条件回手（50% → 100% 是静默加强）"""
+    def test_coin_branch_modeled_as_coin_not_unconditional(self):
+        """抛币分支内的回手（第四十四批）：由 `coin:` 承载，**不得**退化成无条件
+
+        决策反转留痕：本用例原断言「整段未建模」。Dustox 的抛币回手现在有
+        引擎执行器（`_do_ability` 抛一次后派发 `bounce:`），因此改为锁定
+        「仍然是 50% 分支」——无条件 `bounce:energy:...` 才是静默加强。
+        """
         r = _tags(self.COIN, kind="ability")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["coin:heads:bounce:energy:opp_active:1"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_optional_cost_still_unmodeled(self):
         """「You may … to have this attack do N more」是可选代价，不是白赚回手"""

@@ -60,6 +60,14 @@ class PlayerState:
     last_turn_ancient_attackers: list = field(default_factory=list)
     prizes_taken_this_turn: int = 0
     prizes_taken_last_turn: int = 0
+    # ---- 全队限时减伤（2026-11-03 第四十六批，Iron Defender）----
+    # 「During your opponent's next turn, all of your {M} Pokémon take N less
+    # damage … (This includes new Pokémon that come into play.)」
+    # 记在**玩家**层面：逐只写 `shield_reduce` 会漏掉「之后上场的宝可梦」。
+    # 到期口径：`team_shield_until = 施加时 owner turn_counts + 2`（同 shield）。
+    team_shield_n: int = 0
+    team_shield_type: str = ""
+    team_shield_until: int = 0
 
     # ---- 便捷查询 ----
     @property

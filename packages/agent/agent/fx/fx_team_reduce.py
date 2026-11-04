@@ -21,7 +21,7 @@ from your opponent's Pokémon (after applying Weakness and Resistance)`）：
 
 tag 形态（引擎 `engine/families/fx_team_reduce.py` 逐字解析）：
     fx:team_reduce:<n>:basic:<color>[:other:<namekey>][:nonstack]
-    fx:team_reduce:<n>:energy:<color>
+    fx:team_reduce:<n>:energy:<color>[:nonstack]
     fx:team_reduce:<n>:faction:<namekey>[:source_bench][:nonstack]
 """
 from __future__ import annotations
@@ -39,6 +39,9 @@ _TYPE = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
 _POKE = r"pok[eé]mon"
 _TAIL = (r" take (?P<n>\d+) less damage from attacks from your opponent's "
          + _POKE + r" \(after applying weakness and resistance\)\.")
+# 卡面末尾可带「The effect of <特性名> doesn't stack.」（Aurorus「Tundra Wall」）
+# → `:nonstack`（同名效果不叠加）。Klinklang「Gear Coating」无此句。
+_NONSTACK_TAIL = r"(?: the effect of [^.]+ doesn't stack\.)?"
 
 
 def _type_of(token: str) -> str | None:
@@ -57,7 +60,7 @@ _CURLY = re.compile(
     + r" the effect of [^.]+ doesn't stack\.$")
 _GEAR = re.compile(
     r"^all of your " + _POKE + r" that have any \{(?P<type>[a-z])\} energy "
-    r"attached" + _TAIL + r"$")
+    r"attached" + _TAIL + _NONSTACK_TAIL + r"$")
 _STONE = re.compile(
     r"^as long as this " + _POKE + r" is on your bench, all of your "
     r"(?P<faction>[a-z][a-z .'-]{2,25}?)'s " + _POKE + _TAIL
@@ -94,7 +97,8 @@ def detect(text: str, kind: str = "attack", name: str = "") -> dict | None:
         color = _type_of("{" + m.group("type") + "}")
         if color is None:
             return None
-        return _spec(f"fx:team_reduce:{int(m.group('n'))}:energy:{color}")
+        tail = ":nonstack" if "doesn't stack" in t else ""
+        return _spec(f"fx:team_reduce:{int(m.group('n'))}:energy:{color}{tail}")
 
     m = _STONE.match(t)
     if m:

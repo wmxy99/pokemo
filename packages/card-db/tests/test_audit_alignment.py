@@ -861,5 +861,506 @@ class TestAuditPrintingIdentity(unittest.TestCase):
         self.assertTrue(any("数据集 SSP 1" in e for e in errs), errs)
 
 
+class TestAuditBatch40(unittest.TestCase):
+    """第四十批（2026-11-02 · 第三十六类）：连续抛币计数源 / 选 N 只进化 / 任意张检索
+
+    这一族的共同失效模式是「随机张数被折算成常数」——不报错、测试全绿，只是强度
+    变了。下列用例逐条证明对账能拦。
+    """
+
+    DMG_SET = ("Flip a coin until you get tails. This attack does 40 damage "
+               "for each heads.")
+    DMG_PLUS = ("Flip a coin until you get tails. This attack does 40 more damage "
+                "for each heads.")
+    MILL = ("Flip a coin until you get tails. For each heads, discard the top "
+            "card of your opponent’s deck.")
+    HAND = ("Flip a coin until you get tails. For each heads, choose a random "
+            "card from your opponent’s hand. Your opponent reveals those cards "
+            "and shuffles them into their deck.")
+    SEARCH = ("Flip a coin until you get tails. Search your deck for a number of "
+              "cards up to the number of heads and put them into your hand. "
+              "Then, shuffle your deck.")
+    DISCARD = ("Flip a coin until you get tails. For each heads, discard an Energy "
+               "from your opponent’s Active Pokémon.")
+    EVOLVE = ("Choose up to 2 of your {D} Pokémon. For each of those Pokémon, "
+              "search your deck for a card that evolves from that Pokémon and put "
+              "it onto that Pokémon to evolve it. Then, shuffle your deck.")
+    ANY_NUM = ("Search your deck for any number of Basic Energy cards of different "
+               "types, reveal them, and put them into your hand. Then, shuffle "
+               "your deck.")
+
+    # ---- ① 伤害型：more 有无是两种语义 ----
+    def test_damage_without_more_needs_set(self):
+        self.assertEqual(
+            A.audit_batch40("Marill", "Ball Roll", self.DMG_SET,
+                            ["coin_until_tails:dmg_set:40"]), [])
+
+    def test_damage_without_more_flattened_to_plus_flagged(self):
+        """「does N damage」落成 dmg_plus → 0 正面仍打 N（静默加强）"""
+        errs = A.audit_batch40("Marill", "Ball Roll", self.DMG_SET,
+                               ["coin_until_tails:dmg_plus:40"])
+        self.assertTrue(errs, errs)
+
+    def test_damage_with_more_needs_plus(self):
+        self.assertEqual(
+            A.audit_batch40("Breloom", "X", self.DMG_PLUS,
+                            ["coin_until_tails:dmg_plus:40"]), [])
+
+    def test_damage_with_more_but_set_flagged(self):
+        errs = A.audit_batch40("Breloom", "X", self.DMG_PLUS,
+                               ["coin_until_tails:dmg_set:40"])
+        self.assertTrue(any("dmg_plus" in e for e in errs), errs)
+
+    # ---- ② 非伤害三形态 ----
+    def test_non_damage_forms_recognized(self):
+        for desc, tag in ((self.MILL, "coin_until_tails:mill:opp"),
+                          (self.HAND, "coin_until_tails:shuffle_opp_hand"),
+                          (self.SEARCH, "coin_until_tails:search:any"),
+                          (self.DISCARD, "coin_until_tails:discard_energy:opp")):
+            self.assertEqual(A.audit_batch40("X", "Y", desc, [tag]), [],
+                             f"{tag} 被误报")
+
+    def test_mill_folded_to_constant_flagged(self):
+        """「for each heads 磨牌」落成 mill:1:opp → 恒定磨 1 张"""
+        errs = A.audit_batch40("Diglett", "Relentless Burrowing", self.MILL,
+                               ["mill:1:opp"])
+        self.assertTrue(any("coin_until_tails:mill:opp" in e for e in errs), errs)
+
+    def test_discard_folded_to_constant_flagged(self):
+        errs = A.audit_batch40("LugiaEX", "Hyper Whirlpool", self.DISCARD,
+                               ["discard_energy:1:opp"])
+        self.assertTrue(any("discard_energy:opp" in e for e in errs), errs)
+
+    def test_unclaimed_until_tails_flagged(self):
+        """写了连续掷币却完全没有本族 tag → 张数静默丢失"""
+        errs = A.audit_batch40("X", "Y", self.MILL, [])
+        self.assertTrue(any("没有" in e for e in errs), errs)
+
+    def test_attach_flip_until_not_flagged(self):
+        """Snorlax 的「检索能量并附着」是 attach_flip_until，不属本族"""
+        desc = ("Flip a coin until you get tails. Search your deck for an amount "
+                "of Basic Energy up to the number of heads and attach it to this "
+                "Pokémon. Then, shuffle your deck.")
+        self.assertEqual(
+            A.audit_batch40("Snorlax", "Gormandizer", desc,
+                            ["attach_flip_until:any:deck"]), [])
+
+    # ---- ③ 选 N 只各进化一次 ----
+    def test_evolve_each_pick_recognized(self):
+        self.assertEqual(
+            A.audit_batch40("Nidorina", "Dark Awakening", self.EVOLVE,
+                            ["evolve_each_pick:2:type-darkness"]), [])
+
+    def test_evolve_each_pick_missing_flagged(self):
+        errs = A.audit_batch40("Nidorina", "Dark Awakening", self.EVOLVE, [])
+        self.assertTrue(any("evolve_each_pick" in e for e in errs), errs)
+
+    def test_evolve_each_bench_substitution_flagged(self):
+        """拿「全部后备」顶替「至多 2 只」→ 静默加强"""
+        errs = A.audit_batch40("Nidorina", "Dark Awakening", self.EVOLVE,
+                               ["evolve_each_bench"])
+        self.assertTrue(any("全部后备" in e for e in errs), errs)
+
+    def test_evolve_each_pick_wrong_cap_flagged(self):
+        errs = A.audit_batch40("Nidorina", "Dark Awakening", self.EVOLVE,
+                               ["evolve_each_pick:3:type-darkness"])
+        self.assertTrue(any("上限" in e for e in errs), errs)
+
+    def test_attach_each_pick_sentence_not_matched(self):
+        """「Choose up to 2 … attach energy」是附着族，不是进化族"""
+        desc = ("Choose up to 2 of your {D} Pokémon. For each of those Pokémon, "
+                "search your deck for a Basic {D} Energy card and attach it to "
+                "that Pokémon. Then, shuffle your deck.")
+        self.assertEqual(
+            A.audit_batch40("Janine’s Secret Art", "Janine’s Secret Art", desc,
+                            ["attach_each_pick:2:1:darkness:deck:"
+                             "target:type-darkness"]), [])
+
+    # ---- ④ any number of different types ----
+    def test_any_number_distinct_recognized(self):
+        self.assertEqual(
+            A.audit_batch40("Energy Search Pro", "Energy Search Pro",
+                            self.ANY_NUM, ["search_energy:all:distinct"]), [])
+
+    def test_any_number_folded_to_constant_flagged(self):
+        errs = A.audit_batch40("Energy Search Pro", "Energy Search Pro",
+                               self.ANY_NUM, ["search_energy:3:distinct"])
+        self.assertTrue(any("search_energy:all:distinct" in e for e in errs), errs)
+
+    def test_any_number_without_distinct_flagged(self):
+        errs = A.audit_batch40("Energy Search Pro", "Energy Search Pro",
+                               self.ANY_NUM, ["search_energy:all"])
+        self.assertTrue(errs, errs)
+
+
+class TestAuditBatch41(unittest.TestCase):
+    """第四十一批（2026-11-03 · 第三十七类）：{ex} 目标筛选 / 自身能量洗回牌库"""
+
+    EX_EACH = ("This attack does 60 damage to each of your opponent’s Pokémon "
+               "{ex}. This attack’s damage isn’t affected by Weakness or "
+               "Resistance.")
+    EX_BENCH = ("Discard all Energy from this Pokémon, and this attack does 210 "
+                "damage to 1 of your opponent’s Benched Pokémon {ex}. (Don’t apply "
+                "Weakness and Resistance for Benched Pokémon.)")
+    EX_OR_V = ("This attack does 60 damage to 1 of your opponent’s Benched Pokémon "
+               "{ex} or Benched Pokémon {V}. (Don’t apply Weakness and Resistance "
+               "for Benched Pokémon.)")
+    SKARMORY = ("Shuffle all Energy attached to this Pokémon into your deck, and "
+                "this attack does 220 damage to 1 of your opponent’s Pokémon. "
+                "(Don’t apply Weakness and Resistance for Benched Pokémon.)")
+
+    # ---- ① {ex} 目标 ----
+    def test_ex_target_recognized(self):
+        self.assertEqual(
+            A.audit_extra_damage("Vaporeon ex", "Severe Squall", self.EX_EACH,
+                                 ["snipe:opp:60:all:target:ex"]), [])
+
+    def test_ex_target_missing_flagged(self):
+        """缺 `:target:ex` → 会打非 ex 目标（静默超范围）"""
+        errs = A.audit_extra_damage("Vaporeon ex", "Severe Squall", self.EX_EACH,
+                                    ["snipe:opp:60:all"])
+        self.assertTrue(any(":target:ex" in e for e in errs), errs)
+
+    def test_benched_ex_target_recognized(self):
+        self.assertEqual(
+            A.audit_extra_damage("Zeraora", "Thunder Raid", self.EX_BENCH,
+                                 ["snipe:opp_bench:210:1:target:ex"]), [])
+
+    def test_ex_or_v_still_unmodeled(self):
+        """与 {V} 混写 → 不可精确表达，进池即报错"""
+        errs = A.audit_extra_damage("Shaymin", "Pinpoint Dive", self.EX_OR_V,
+                                    ["snipe:opp_bench:60:1"])
+        self.assertTrue(any("不可精确表达" in e for e in errs), errs)
+
+    def test_no_ex_qualifier_plain_target(self):
+        """没有 {ex} 限定 → 普通 snipe 不应被要求 `:target:ex`"""
+        desc = "This attack does 60 damage to each of your opponent’s Pokémon."
+        self.assertEqual(
+            A.audit_extra_damage("X", "Y", desc, ["snipe:opp:60:all"]), [])
+
+    # ---- ② 自身能量洗回牌库（强制代价，双向核对）----
+    def test_energy_self_to_deck_recognized(self):
+        self.assertEqual(
+            A.audit_energy_self_to_deck("Mega Skarmory ex", "Sonic Ripper",
+                                        self.SKARMORY,
+                                        ["snipe:opp:220:1",
+                                         "energy_self_to_deck:all"]), [])
+
+    def test_cost_missing_flagged(self):
+        """只建模伤害、不洗回能量 → 「不付代价白打」"""
+        errs = A.audit_energy_self_to_deck("Mega Skarmory ex", "Sonic Ripper",
+                                           self.SKARMORY, ["snipe:opp:220:1"])
+        self.assertTrue(any("energy_self_to_deck" in e for e in errs), errs)
+
+    def test_tag_without_sentence_flagged(self):
+        """卡面没写该句却带 tag → 凭空削掉自己全部能量（认领越界）"""
+        desc = "This attack does 220 damage to 1 of your opponent’s Pokémon."
+        errs = A.audit_energy_self_to_deck("X", "Y", desc,
+                                           ["energy_self_to_deck:all"])
+        self.assertTrue(any("认领越界" in e for e in errs), errs)
+
+
+class TestAuditBatch42(unittest.TestCase):
+    """第四十二批（2026-11-03 · 第三十八类）：对手宝可梦连同附着卡洗回牌库"""
+
+    SYLVEON = ("Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. "
+               "Shuffle that Pokémon and all attached cards into their deck.")
+    SHIFTRY = ("Flip a coin. If heads, choose 1 of your opponent’s Pokémon. "
+               "Shuffle that Pokémon and all attached cards into their deck.")
+
+    def test_benched_scope_recognized(self):
+        self.assertEqual(
+            A.audit_shuffle_opp_pokemon(
+                "Sylveon", "Ribbon", self.SYLVEON,
+                ["coin:heads:shuffle_opp_pokemon:opp_bench"]), [])
+
+    def test_any_scope_recognized(self):
+        self.assertEqual(
+            A.audit_shuffle_opp_pokemon(
+                "Shiftry", "X", self.SHIFTRY,
+                ["coin:heads:shuffle_opp_pokemon:opp"]), [])
+
+    def test_scope_mismatch_flagged(self):
+        """Benched 限定却落成 `:opp` → 战斗位也会进候选集合（打错对象）"""
+        errs = A.audit_shuffle_opp_pokemon(
+            "Sylveon", "Ribbon", self.SYLVEON,
+            ["coin:heads:shuffle_opp_pokemon:opp"])
+        self.assertTrue(any("opp_bench" in e for e in errs), errs)
+
+    def test_missing_tag_flagged(self):
+        """卡面有该句却没有任何 tag → 打出去什么都不发生"""
+        errs = A.audit_shuffle_opp_pokemon("Sylveon", "Ribbon", self.SYLVEON, [])
+        self.assertTrue(any("无该 tag" in e for e in errs), errs)
+
+    def test_tag_without_sentence_flagged(self):
+        desc = "Flip a coin. If heads, this attack does 30 more damage."
+        errs = A.audit_shuffle_opp_pokemon(
+            "X", "Y", desc, ["coin:heads:shuffle_opp_pokemon:opp"])
+        self.assertTrue(any("认领越界" in e for e in errs), errs)
+
+
+class TestAuditBatch43(unittest.TestCase):
+    """第四十三批（2026-11-03）：Ancient 弃牌堆计数 / 具名阵营能量计数"""
+
+    ANCIENT = ("This attack does 10 more damage for each Ancient card in your "
+               "discard pile.")
+    IONO = ("This attack does 20 more damage for each {L} Energy attached to all "
+            "of your Iono’s Pokémon.")
+
+    def test_ancient_category_recognized(self):
+        self.assertEqual(
+            A.audit_counter_subset("Roaring Moon", "X", self.ANCIENT,
+                                   ["dmg_plus:10:per:own_discard_category:ancient"]),
+            [])
+
+    def test_ancient_as_card_name_flagged(self):
+        """Ancient 不是卡名 → `own_discard_named:ancient` 恒为 0（静默少算）"""
+        errs = A.audit_counter_subset("Roaring Moon", "X", self.ANCIENT,
+                                      ["dmg_plus:10:per:own_discard_named:ancient"])
+        self.assertTrue(any("own_discard_category:ancient" in e for e in errs), errs)
+
+    def test_named_energy_recognized(self):
+        self.assertEqual(
+            A.audit_counter_subset("Iono’s Voltorb", "X", self.IONO,
+                                   ["dmg_plus:20:per:own_field_named_energy:"
+                                    "iono:lightning"]), [])
+
+    def test_named_energy_missing_flagged(self):
+        """落成全队能量（无具名限定）→ 会把别的宝可梦的能量也算进来"""
+        errs = A.audit_counter_subset("Iono’s Voltorb", "X", self.IONO,
+                                      ["dmg_plus:20:per:own_field_energy_lightning"])
+        self.assertTrue(any("own_field_named_energy" in e for e in errs), errs)
+
+
+class TestAuditBatch44(unittest.TestCase):
+    """第四十四批（2026-11-03）：同一枚币的双分支 / 抛币子效果对账"""
+
+    VENTURE_BOMB = ("Flip a coin. If heads, put 2 damage counters on 1 of your "
+                    "opponent’s Pokémon. If tails, put 2 damage counters on your "
+                    "Active Pokémon.")
+    DUSTOX = ("Once during your turn, you may use this Ability. Flip a coin. "
+              "If heads, put an Energy attached to your opponent’s Active Pokémon "
+              "into their hand.")
+    FORK = ("coin_flip:heads:counters:2:scope:opp:1"
+            "|tails:counters:2:scope:self")
+
+    def test_fork_single_tag_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Team Rocket's Venture Bomb", "X",
+                               self.VENTURE_BOMB, [self.FORK]), [])
+
+    def test_split_branches_flagged(self):
+        """拆成两条 `coin:` = 抛两次（可能两个分支同时生效/都不生效）"""
+        errs = A.audit_coin_forms(
+            "Team Rocket's Venture Bomb", "X", self.VENTURE_BOMB,
+            ["coin:heads:counters:2:scope:opp:1",
+             "coin:tails:counters:2:scope:self"])
+        self.assertTrue(any("coin_flip:" in e for e in errs), errs)
+
+    def test_counters_recognized_through_coin(self):
+        self.assertEqual(
+            A.audit_extra_damage("Team Rocket's Venture Bomb", "X",
+                                 self.VENTURE_BOMB, [self.FORK]), [])
+
+    def test_counters_missing_flagged(self):
+        errs = A.audit_extra_damage("Team Rocket's Venture Bomb", "X",
+                                    self.VENTURE_BOMB, [])
+        self.assertTrue(any("counters:" in e for e in errs), errs)
+
+    def test_energy_bounce_recognized_through_coin(self):
+        self.assertEqual(
+            A.audit_energy_to_hand("Dustox", "Boisterous Wind", self.DUSTOX,
+                                   ["coin:heads:bounce:energy:opp_active:1"]), [])
+
+    def test_energy_bounce_missing_flagged(self):
+        errs = A.audit_energy_to_hand("Dustox", "Boisterous Wind", self.DUSTOX,
+                                      ["coin:heads:draw:1"])
+        self.assertTrue(any("bounce:energy:" in e for e in errs), errs)
+
+
+class TestAuditBatch45(unittest.TestCase):
+    """第四十五批（2026-11-03）：逐目标抛币 / 抛币选状态 / 抛币免伤 / 洗回分抽"""
+
+    ZYGARDE = ("For each of your opponent’s Pokémon, flip a coin. If heads, this "
+               "attack does 150 damage to that Pokémon. (Don’t apply Weakness and "
+               "Resistance for Benched Pokémon.)")
+    CRADILY = ("Once during your turn, you may flip a coin. If heads, choose "
+               "Burned, Confused, or Poisoned. Your opponent’s Active Pokémon is "
+               "now affected by that Special Condition.")
+    FEZANDIPITI = ("If this Pokémon has any {D} Energy attached and is damaged by "
+                   "an attack, flip a coin. If heads, prevent that damage.")
+    HARLEQUIN = ("Each player shuffles their hand into their deck. Then, flip a "
+                 "coin. If heads, you draw 5 cards, and your opponent draws 3 cards. "
+                 "If tails, you draw 3 cards, and your opponent draws 5 cards.")
+
+    # ---- 逐目标抛币 ----
+    def test_per_target_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Mega Zygarde ex", "Nullifying Zero",
+                               self.ZYGARDE,
+                               ["coin_per_target:150:scope:opp"]), [])
+        self.assertEqual(
+            A.audit_extra_damage("Mega Zygarde ex", "Nullifying Zero",
+                                 self.ZYGARDE,
+                                 ["coin_per_target:150:scope:opp"]), [])
+
+    def test_per_target_folded_to_snipe_flagged(self):
+        """落成 `snipe:opp:150:all` = 每只必中（静默加强）"""
+        errs = A.audit_coin_forms(
+            "Mega Zygarde ex", "Nullifying Zero", self.ZYGARDE,
+            ["snipe:opp:150:all"])
+        self.assertTrue(any("coin_per_target" in e for e in errs), errs)
+
+    def test_per_target_missing_flags_damage(self):
+        errs = A.audit_extra_damage(
+            "Mega Zygarde ex", "Nullifying Zero", self.ZYGARDE, [])
+        self.assertTrue(any("不可精确表达" in e for e in errs), errs)
+
+    # ---- 抛币选状态 ----
+    def test_status_choose_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Cradily", "Selective Slime", self.CRADILY,
+                               ["coin:heads:status_choose:"
+                                "burn+confuse+poison"]), [])
+
+    def test_status_choose_split_flagged(self):
+        """拆成三条状态 tag = 三种状态全中"""
+        errs = A.audit_coin_forms(
+            "Cradily", "Selective Slime", self.CRADILY,
+            ["coin:heads:burn", "coin:heads:confuse", "coin:heads:poison"])
+        self.assertTrue(any("status_choose" in e for e in errs), errs)
+
+    # ---- 抛币免伤 ----
+    def test_coin_prevent_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Fezandipiti", "Adrena-Pheromone",
+                               self.FEZANDIPITI,
+                               ["passive:coin_prevent:darkness"]), [])
+
+    def test_coin_prevent_post_damage_flagged(self):
+        """落成 `on_damaged:` 时伤害已加上，事后无法撤销"""
+        errs = A.audit_coin_forms(
+            "Fezandipiti", "Adrena-Pheromone", self.FEZANDIPITI,
+            ["on_damaged:counter:0"])
+        self.assertTrue(any("coin_prevent" in e for e in errs), errs)
+
+    # ---- 双方洗回 + 抛币分抽 ----
+    def test_shuffle_both_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Harlequin", "Harlequin", self.HARLEQUIN,
+                               ["shuffle_both_coin_draw:5:3:3:5"]), [])
+
+    def test_shuffle_both_counts_mismatch_flagged(self):
+        """张数写错（把反面也写成 5/3）→ 静默改强度"""
+        errs = A.audit_coin_forms(
+            "Harlequin", "Harlequin", self.HARLEQUIN,
+            ["shuffle_both_coin_draw:5:3:5:3"])
+        self.assertTrue(any("shuffle_both_coin_draw" in e for e in errs), errs)
+
+
+class TestAuditBatch46(unittest.TestCase):
+    """第四十六批（2026-11-03）：全队限时减伤 / 单体限时护盾 / 常驻减伤 nonstack"""
+
+    AURORUS = ("All of your Pokémon that have any {W} Energy attached take 50 less "
+               "damage from attacks from your opponent’s Pokémon (after applying "
+               "Weakness and Resistance). The effect of Tundra Wall doesn't stack.")
+    IRON = ("During your opponent’s next turn, all of your {M} Pokémon take 30 "
+            "less damage from attacks from your opponent’s Pokémon (after "
+            "applying Weakness and Resistance). (This includes new Pokémon that "
+            "come into play.)")
+    ACEROLA = ("You can use this card only if your opponent has 2 or fewer Prize "
+               "cards remaining. Choose 1 of your Pokémon in play. During your "
+               "opponent’s next turn, prevent all damage from and effects of "
+               "attacks done to that Pokémon by your opponent’s Pokémon {ex}.")
+    ACEROLA_TAG = ("shield_choose:prevent_all:from:ex:effects:"
+                   "gate:opp_prizes_le:2")
+
+    # ---- 全队常驻减伤（Aurorus）----
+    def test_aurorus_recognized(self):
+        self.assertEqual(
+            A.audit_dmg_layer("Aurorus", "Tundra Wall", self.AURORUS,
+                              ["fx:team_reduce:50:energy:water:nonstack"]), [])
+
+    def test_missing_nonstack_flagged(self):
+        """卡面写明 doesn't stack 却漏标 `:nonstack` → 多只同族在场重复减伤"""
+        errs = A.audit_dmg_layer("Aurorus", "Tundra Wall", self.AURORUS,
+                                 ["fx:team_reduce:50:energy:water"])
+        self.assertTrue(any("nonstack" in e for e in errs), errs)
+
+    # ---- 全队限时减伤（Iron Defender）----
+    def test_iron_defender_recognized(self):
+        self.assertEqual(
+            A.audit_dmg_layer("Iron Defender", "Iron Defender", self.IRON,
+                              ["team_shield:reduce:30:type:metal"]), [])
+
+    def test_iron_defender_as_persistent_flagged(self):
+        """落成 `fx:team_reduce` = 永久减伤（时限制被静默放大）"""
+        errs = A.audit_dmg_layer("Iron Defender", "Iron Defender", self.IRON,
+                                 ["fx:team_reduce:30:type:metal"])
+        self.assertTrue(any("team_shield" in e for e in errs), errs)
+
+    # ---- 单体限时护盾（Acerola's Mischief）----
+    def test_acerola_recognized(self):
+        self.assertEqual(
+            A.audit_dmg_layer("Acerola's Mischief", "Acerola's Mischief",
+                              self.ACEROLA, [self.ACEROLA_TAG]), [])
+
+    def test_acerola_partial_tag_flagged(self):
+        """缺 gate / 缺 effects / 换来源 → 可用性或护盾范围被静默改变"""
+        for bad in ("shield_choose:prevent_all:from:ex",
+                    "shield_choose:prevent_all:from:ex:effects",
+                    "shield_choose:prevent_all:from:basic_ex:effects:"
+                    "gate:opp_prizes_le:2"):
+            errs = A.audit_dmg_layer("Acerola's Mischief", "Acerola's Mischief",
+                                     self.ACEROLA, [bad])
+            self.assertTrue(any("shield_choose" in e for e in errs), (bad, errs))
+
+
+class TestAuditBatch47(unittest.TestCase):
+    """第四十七批（2026-11-03）：可选加伤 + 反伤 / 抛币选状态全集"""
+
+    GURDURR = ("You may do 30 more damage. If you do, this Pokémon also does 30 "
+               "damage to itself.")
+    GRAFAIAI = ("Flip a coin. If heads, choose a Special Condition. Your "
+                "opponent’s Active Pokémon is now affected by that Special "
+                "Condition.")
+
+    def test_optional_recoil_recognized(self):
+        self.assertEqual(
+            A.audit_extra_damage("Gurdurr", "Superpower", self.GURDURR,
+                                 ["dmg_plus:30:recoil:30"]), [])
+
+    def test_optional_recoil_missing_flagged(self):
+        errs = A.audit_extra_damage("Gurdurr", "Superpower", self.GURDURR, [])
+        self.assertTrue(any("dmg_plus:30:recoil:30" in e for e in errs), errs)
+
+    def test_optional_recoil_split_flagged(self):
+        """拆成 `dmg_plus` + `self` = 丢掉「If you do」联动"""
+        errs = A.audit_extra_damage("Gurdurr", "Superpower", self.GURDURR,
+                                    ["dmg_plus:30", "self:30"])
+        self.assertTrue(any("dmg_plus:30:recoil:30" in e for e in errs), errs)
+
+    def test_plain_recoil_still_self(self):
+        """无「You may」的纯反伤仍由 `self:M` 承载（不误报为联动 tag）"""
+        self.assertEqual(
+            A.audit_extra_damage(
+                "Test", "Take Down",
+                "This Pokémon also does 30 damage to itself.", ["self:30"]), [])
+
+    def test_full_status_set_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms(
+                "Grafaiai", "Miraculous Paint", self.GRAFAIAI,
+                ["coin:heads:status_choose:"
+                 "poison+burn+sleep+paralyze+confuse"]), [])
+
+    def test_partial_status_set_flagged(self):
+        """只列三种状态 = 静默缩小选择范围"""
+        errs = A.audit_coin_forms(
+            "Grafaiai", "Miraculous Paint", self.GRAFAIAI,
+            ["coin:heads:status_choose:burn+confuse+poison"])
+        self.assertTrue(any("status_choose" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main()

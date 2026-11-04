@@ -31,6 +31,7 @@
         "mill:N[:opp]",
         "evolve_from_deck",
         "dmg_plus:N[:per:<counter>][:if:<cond>]",
+        "dmg_plus:N:recoil:M (可选加伤 + 反伤联动，第四十七批)",
         "dmg_set:N[:per:<counter>]（基础伤害按计数源重算，非加伤）",
         "dmg_zero",
         "ignore_weakness",
@@ -40,6 +41,8 @@
         "coin:heads:<tag>",
         "coin:tails:<tag>",
         "coin_each:N|<counter>:<side>:<tag>",
+        "coin_per_target:N:scope:opp (每个对手宝可梦各抛一枚，正面才打它)",
+        "status_choose:<s1>+<s2>+<s3> (抛币后三选一，确定性取首个)",
         "dmg_plus:N:if:own_active_energy_type:<color>（带参条件）",
         "dmg_plus:N:if:own_active_energy_at_least:<n>（带参条件）"
       ],
@@ -75,7 +78,10 @@
         "stadium:status_immune:require:energy (场地：附着能量者免疫特殊状态)",
         "stadium:evolve_same_turn:type:<c> (场地：上场当回合可进化)",
         "stadium:dmg_immune:box:none:from:rulebox (场地：无规则框目标免疫规则框来源)",
-        "search_pokemon|trainer|any|energy:N (全牌库检索；与 recon 语义不同)"
+        "search_pokemon|trainer|any|energy:N (全牌库检索；与 recon 语义不同)",
+        "coin:heads:<tag> (特性侧抛一次后执行子效果，Dustox)",
+        "passive:coin_prevent:<color> (被招式伤害时抛币免伤，Fezandipiti)",
+        "counters:<n>[:per:<c>][:scope:opp[:<count>]|:scope:self] (指示物直放；含己方战斗位)"
       ],
       "trainers": [
         "poffin",
@@ -91,7 +97,11 @@
         "search_pokemon:N",
         "search_trainer:N",
         "search_any:N",
-        "candy"
+        "candy",
+        "coin_flip:heads:<a>[|tails:<b>] (同一枚币的双分支，只抛一次)",
+        "shuffle_both_coin_draw:<mine_h>:<opp_h>:<mine_t>:<opp_t> (双方洗回手牌 + 抛币分抽)",
+        "team_shield:reduce:<n>:type:<color> (对手下回合全队限时减伤，含新上场者)",
+        "shield_choose:prevent_all[:from:<src>][:effects][:gate:<cond>] (单体限时护盾 + 打出前置条件)"
       ],
       "counters": [
         "own_bench", "opp_bench", "both_bench",
@@ -109,7 +119,8 @@
       ],
       "conditions": [
         "opp_ko_last_turn", "own_ko_last_turn", "own_behind_prizes",
-        "own_prizes_full", "opp_has_bench", "own_has_bench"
+        "own_prizes_full", "opp_has_bench", "own_has_bench",
+        "opp_prizes_le:<n> (对手剩余奖赏 ≤ n；打出前置条件用)"
       ]
     },
     "ip_note": "仅收录卡名与规则数值，不含官方图像/插画（C2）；数据与代码分离，再分发红线见 PRD C1/C5",

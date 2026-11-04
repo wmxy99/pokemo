@@ -90,7 +90,15 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "discard_tool_or_senergy:",
                 # 2026-11-02 第三十九批：选 N 只各附（Janine's Secret Art）
                 # 与训练家抛币门（Energy Coin）
-                "attach_each_pick:", "coin_gate_attach:")
+                "attach_each_pick:", "coin_gate_attach:",
+                # 2026-11-03 第四十四批：同一枚币的双分支（Venture Bomb）
+                # `coin_flip:heads:<a>|tails:<b>` —— 训练家侧抛一次后派发
+                "coin_flip:",
+                # 2026-11-03 第四十五批：双方洗回手牌 + 抛币分抽（Harlequin）
+                "shuffle_both_coin_draw:",
+                # 2026-11-03 第四十六批：全队限时减伤（Iron Defender）/
+                # 单体限时护盾 + 奖赏数打出前置条件（Acerola's Mischief）
+                "team_shield:", "shield_choose:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -125,10 +133,20 @@ ATTACK_TAG_PREFIXES = (
     "knockout:", "shuffle_top:",
     # 第十二批（2026-10-28）：逐只后备各进化一次（Reuniclus）
     "evolve_each_bench",
+    # 第四十批（2026-11-02）：**选**至多 N 只各进化一次
+    # （Team Rocket's Nidorina）。⚠ 与上面那条是两种目标集合，不能互相顶替：
+    # 用 each_bench 代替会把「至多 2 只」变成「全部后备」（静默加强）。
+    "evolve_each_pick:",
+    # 第四十一批（2026-11-03）：自身附着能量洗回牌库（Mega Skarmory ex 的强制
+    # 代价）。⚠ 与 `energy_to_deck:`（弃牌堆基本能量）是两种来源，不能互代。
+    "energy_self_to_deck:",
     # 第十三批（2026-10-28）：Checkup 伤害改写（Nidoking ex）
     "checkup_set:",
     # 第十四批（2026-10-28）：伤害指示物直放（不吃弱抗，Haunter / Alakazam）
     "counters:",
+    # 第四十五批（2026-11-03）：逐目标各抛一枚（Mega Zygarde ex）
+    # 与抛币选状态（Cradily）——两者都是招式侧 tag
+    "coin_per_target:", "status_choose:",
     # 第十七批（2026-10-29）：**补白** —— 第七批就落地了 `nullify_if:<cond>`
     # （「If …, this attack does nothing.」失败门），但准入白名单一直漏了它：
     # 池内 `nullify_if:` tag 数量为 **0**，等于该机制从未真正可用（诚实但不达标）。
@@ -192,7 +210,10 @@ ABILITY_TAG_PREFIXES = (
     "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
     "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
     # 第二十批（2026-10-29）：特性直放伤害指示物（Dusclops / Dusknoir「诅咒爆裂」）
-    "counters:"
+    "counters:",
+    # 第四十四批（2026-11-03）：特性侧抛币（Dustox「Boisterous Wind」）——
+    # `coin:heads:bounce:energy:opp_active:1`，由 `_do_ability` 抛一次后派发
+    "coin:"
 )
 
 # 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）

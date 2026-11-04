@@ -18,6 +18,10 @@
          都没有，伤害计数恒 0，反向削弱）
      三者都无法用现有 tag 精确表达 → 新增通用守卫如实拒绝。
 
+     ⚠ **第四十一批更新**：Mega Skarmory ex 的「洗回牌库」已由
+     ``energy_self_to_deck:all`` 精确建模（对应用例已反转为正向）；本文件
+     继续守护仍不可表达的两种（可选代价 / any amount）。
+
 运行：cd packages/agent && python -m unittest tests.test_energy_cost_guard -v
 """
 from __future__ import annotations
@@ -94,9 +98,19 @@ class TestEnergyCostGuard(unittest.TestCase):
         """可选能量代价 + 麻痹：代价不可表达 → 必须报 unsupported"""
         self.assertTrue(self._has_cost_gap(EELEKTROSS))
 
-    def test_skarmory_rejected(self):
-        """「洗回牌库」引擎无对应语义 → 必须报 unsupported"""
-        self.assertTrue(self._has_cost_gap(SKARMORY))
+    def test_skarmory_cost_now_modeled(self):
+        """⚠ 决策反转（第四十一批）：Mega Skarmory ex 的「洗回牌库」已建模
+
+        本用例原断言「引擎无对应语义 → 必须报 unsupported」。第四十一批新增
+        ``energy_self_to_deck:all``（自身附着能量洗回牌库）后，该句**可以精确表达**，
+        因此改为正向用例；仍如实未建模的近邻是 Mega Eelektross ex（可选代价）
+        与 Mega Charizard X ex（any amount），由上面两条用例继续守护。
+        """
+        r = _tags(SKARMORY)
+        self.assertFalse([u for u in r["unsupported"] if u.get("type") == "cost"],
+                         "代价已建模，不得再报「能量代价子句未被映射」")
+        self.assertIn("energy_self_to_deck:all", r["tags"])
+        self.assertIn("snipe:opp:220:1", r["tags"])
 
     def test_charizard_x_rejected(self):
         """「any amount」需交互层 → 必须报 unsupported"""

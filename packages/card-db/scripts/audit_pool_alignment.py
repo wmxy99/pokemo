@@ -62,10 +62,46 @@ _COIN_UNTIL_RE = re.compile(
 _COIN_COMPOSITE_RE = re.compile(
     r"flip a coin[^.]*?\.\s*if heads[^.]*?does (\d+) more damage, and heal "
     r"(\d+) damage from this pok[eé]mon", re.I)
+# 同一枚币的**双分支**（第四十四批）：必须落在单条 `coin_flip:`（一次抛币）
+_COIN_FORK_COUNTERS_RE = re.compile(
+    r"flip a coin\.\s*if heads,\s*put (\d+) damage counters?\s*on 1 of your "
+    r"opponent[\u2019']?s pok[eé]mon\.\s*if tails,\s*put (\d+) damage counters?\s*on "
+    r"your active pok[eé]mon", re.I)
+# 逐目标各抛一枚（第四十五批，Mega Zygarde ex）
+_COIN_PER_TARGET_RE = re.compile(
+    r"for each of your opponent[\u2019']?s pok[eé]mon,\s*flip a coin\.\s*"
+    r"if heads,\s*this attack does (\d+) damage to that pok[eé]mon", re.I)
+# 抛币选状态（第四十五批，Cradily）——三选一必须是一条 status_choose 子效果
+_COIN_STATUS_CHOOSE_RE = re.compile(
+    r"flip a coin\.\s*if heads,\s*choose burned,\s*confused,\s*or poisoned\.\s*"
+    r"your opponent[\u2019']?s active pok[eé]mon is now affected by that "
+    r"special condition", re.I)
+# 「choose a Special Condition」全集（第四十七批，Grafaiai）
+_COIN_STATUS_CHOOSE_ANY_RE = re.compile(
+    r"flip a coin\.\s*if heads,\s*choose a special condition\.\s*"
+    r"your opponent[\u2019']?s active pok[eé]mon is now affected by that "
+    r"special condition", re.I)
+# 抛币免伤被动（第四十五批，Fezandipiti）——必须在伤害结算内抛币
+_COIN_PREVENT_PASSIVE_RE = re.compile(
+    r"has any \{([a-z])\} energy attached and is damaged by an attack,\s*"
+    r"flip a coin\.\s*if heads,\s*prevent that damage", re.I)
+# 双方洗回手牌 + 抛币分抽（第四十五批，Harlequin）
+_SHUFFLE_BOTH_COIN_DRAW_RE = re.compile(
+    r"each player shuffles their hand into their deck\.\s*then,\s*flip a coin\.\s*"
+    r"if heads,\s*you draw (\d+) cards?,\s*and your opponent draws (\d+) cards?\.\s*"
+    r"if tails,\s*you draw (\d+) cards?,\s*and your opponent draws (\d+) cards?",
+    re.I)
 # 条件 / 全队伤害修正（2026-10-29 第十九批）
 _TEAM_REDUCE_RE = re.compile(
     r"all of your [^.]{0,90}? take (\d+) less damage from attacks from your "
     r"opponent", re.I)
+# 单体限时护盾 + 奖赏数打出前置条件（第四十六批，Acerola's Mischief）
+_SHIELD_CHOOSE_RE = re.compile(
+    r"you can use this card only if your opponent has (\d+) or fewer prize "
+    r"cards remaining\.\s*choose 1 of your pok[eé]mon in play\.\s*"
+    r"during your opponent[\u2019']?s next turn, prevent all damage from and "
+    r"effects of attacks done to that pok[eé]mon by your opponent[\u2019']?s "
+    r"pok[eé]mon \{ex\}", re.I)
 _EXTRA_ENERGY_RE = re.compile(
     r"has at least (\d+) extra energy attached \(in addition to this attack'?s "
     r"cost\), this attack does (\d+) more damage", re.I)
@@ -136,6 +172,12 @@ def _want_snipe(tgt: str, per: int):
     # （2026-10-29 第二十七批）——**可精确执行**，不算「不可表达子集」。
     # 去掉限定词后继续按目标形态解析（1 of … benched / each benched …）。
     t = re.sub(r"\s*that (?:has|have) any damage counters? on it", "", t)
+    # 「…Pokémon {ex}」→ 引擎 `:target:ex` 目标筛选（2026-11-03 第四十一批）。
+    # ⚠ 只认「**仅** {ex}」：与 {V} 混写（「{ex} or Pokémon {V}」/「{ex} and
+    #   Pokémon {V}」）在引擎无法表达 → 继续走下面的 unmodeled 判定。
+    if re.search(r"pok[eé]mon \{ex\}", t) and not re.search(r"\{v\}", t) \
+            and not re.search(r"\{ex\}\s+(?:or|and)\b", t):
+        t = re.sub(r"\s*\{ex\}", "", t)
     if re.search(r"\bitself\b", t) or t.startswith("this pok"):
         return "self"
     if "bench" not in t and ("active pok" in t or "defending pok" in t):
@@ -189,15 +231,54 @@ def _expand_evolve_act(effects: list) -> list:
     return out
 
 
+def _expand_coin_subs(effects: list) -> list:
+    """展开抛币 tag 的**子效果**，供「指示物 / 能量回手」类对账逐条核对
+
+    外层 tag 同时保留（其它检查仍要看原始形态）。第四十四批起
+    ``coin_flip:heads:<a>|tails:<b>`` 是**同一枚币的双分支**。
+    """
+    out: list = []
+    for t in effects or []:
+        s = str(t)
+        out.append(s)
+        if s.startswith("coin_flip:"):
+            for seg in s[len("coin_flip:"):].split("|"):
+                if seg.startswith(("heads:", "tails:")):
+                    out.append(seg.split(":", 1)[1])
+        elif s.startswith("coin:"):
+            out.append(":".join(s.split(":")[2:]))
+        elif s.startswith(("coin_each:", "coin_all:")):
+            out.append(":".join(s.split(":")[3:]))
+    return out
+
+
 def audit_extra_damage(card_name: str, item_name: str, desc: str,
                        effects: list) -> list:
     """附加伤害 / 放置指示物子句 → 必须有对应 tag（self:N / snipe:…），否则报错"""
     errs = []
     d = PAREN.sub(" ", desc or "")
+    # 抛币分支里的指示物由子效果承载 → 对账时展开（第四十四批）
+    eff = _expand_coin_subs(effects)
+    # 逐目标抛币（第四十五批）：`that Pokémon` 子句由 `coin_per_target:` 承载
+    _per_tgt = any(str(e).startswith("coin_per_target:") for e in effects)
     ko_ctx = bool(re.search(r"is knocked out by damage", _norm(desc)))
     for m in DMG_TO.finditer(d):
         if m.group(2):                      # 「more damage」属修正器范畴
             continue
+        if _per_tgt and _norm(m.group(3)).strip() == "that pokémon":
+            continue
+        # 可选加伤 + 反伤（第四十七批，Gurdurr / Dondozo ex）：
+        # 「You may do N more damage. If you do, this Pokémon also does M damage
+        #  to itself.」→ 必须**同一条** `dmg_plus:N:recoil:M`（联动不被拆散）。
+        if _norm(m.group(3)).strip() == "itself":
+            mm = re.search(r"you may do (\d+) more damage", d, re.I)
+            if mm:
+                want = f"dmg_plus:{int(mm.group(1))}:recoil:{int(m.group(1))}"
+                if want not in [str(e) for e in effects]:
+                    errs.append(f"{card_name} · {item_name}：可选反伤 "
+                                f"`{m.group(0)[:60]}` 必须落 `{want}`"
+                                f"（现为 {[str(e) for e in effects]}）")
+                continue
         errs += _check_clause(card_name, item_name, m.group(3), m.group(1),
                               effects, m.group(0), ko_ok=ko_ctx)
     for m in PLACE_COUNTERS.finditer(d):
@@ -208,25 +289,25 @@ def audit_extra_damage(card_name: str, item_name: str, desc: str,
         #   承载，必须先排除，否则会被误报「缺 counters」。
         if re.search(r"each pok[eé]mon that has an ability", _cl) \
                 and "checkup" not in _norm(desc or "").lower():
-            hits = [str(e) for e in effects
+            hits = [str(e) for e in eff
                     if str(e).startswith(f"counters:{int(m.group(1))}:")
                     and ":scope:ability:all" in str(e)]
             if not hits:
                 errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                             "缺 `counters:N:scope:ability:all`"
                             "（双方「有特性者」逐个，现为 "
-                            f"{[e for e in effects if str(e).startswith('counters')]}）")
+                            f"{[e for e in eff if str(e).startswith('counters')]}）")
             continue
         # 「If you attached Energy to a Pokémon in this way, place N damage
         # counters on that Pokémon」→ 由 `attach:…:counters:N` 承载（Toxtricity）
         if "attached energy to a pok" in _norm(desc or "").lower():
-            if not any(":counters:" in str(e) for e in effects):
+            if not any(":counters:" in str(e) for e in eff):
                 errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                             "缺 `:counters:`（附能后的指示物未建模）")
             continue
         # 指示物**直放**对手战斗位（不吃弱/抗）→ `counters:`（Haunter / Alakazam）
         if "bench" not in _cl and "active pok" in _cl and "each" not in _cl:
-            if not any(str(e).startswith("counters:") for e in effects):
+            if not any(str(e).startswith("counters:") for e in eff):
                 errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                             "缺 `counters:` tag（指示物直放未建模）")
             continue
@@ -239,7 +320,7 @@ def audit_extra_damage(card_name: str, item_name: str, desc: str,
         if "bench" not in _cl and re.search(
                 r"\b(?:\d+|each) of your opponent'?s? pok", _cl):
             _suffix = ":scope:opp:all" if _many else ":scope:opp:1"
-            hits = [str(e) for e in effects
+            hits = [str(e) for e in eff
                     if str(e).startswith(f"counters:{int(m.group(1))}:")
                     and _suffix in str(e)]
             if not hits:
@@ -317,6 +398,14 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         return [f"{card_name} · {item_name}：`{raw[:60]}` 是**按计数源缩放**的，"
                 f"缺 `:per:<counter>`（现为 {hits}）"]
     low_clause = _norm(clause)
+    # 「Pokémon {ex}」→ 必须有 `:target:ex`（第四十一批）：缺了就会打**非 ex**
+    # 的目标（卡面本不允许），属静默超范围。
+    if re.search(r"pok[eé]mon \{ex\}", low_clause) \
+            and not re.search(r"\{v\}", low_clause) \
+            and not re.search(r"\{ex\}\s+(?:or|and)\b", low_clause) \
+            and not any(":target:ex" in h for h in hits):
+        return [f"{card_name} · {item_name}：`{raw[:60]}` 缺 `:target:ex`"
+                f"（只允许选对手的 ex 宝可梦，现为 {hits}）"]
     # 「that has any damage counters on it」→ 必须有目标筛选（第二十七批）：
     # 缺了就会打「没有指示物」的目标 —— 卡面本不允许，属**打错对象**。
     if re.search(r"that (?:has|have) any damage counters? on it", low_clause) \
@@ -347,9 +436,33 @@ def audit_dmg_layer(card_name: str, item_name: str, desc: str,
     d = PAREN.sub(" ", desc or "").replace("\u2019", "'")
     for m in _TEAM_REDUCE_RE.finditer(d):
         n = int(m.group(1))
+        if re.search(r"during your opponent'?s next turn", d, re.I):
+            # 第四十六批（Iron Defender）：**时限制**全队减伤不是 `fx:team_reduce`
+            # （那是常驻特性）→ 必须落 `team_shield:reduce:N:type:<color>`。
+            ok = any(str(e).startswith(f"team_shield:reduce:{n}:type:")
+                     for e in effects)
+            if not ok:
+                errs.append(f"{card_name} · {item_name}：全队限时减伤 "
+                            f"`{m.group(0)[:60]}` 缺 `team_shield:reduce:{n}:type:…`")
+            continue
         if not any(str(e).startswith(f"fx:team_reduce:{n}:") for e in effects):
             errs.append(f"{card_name} · {item_name}：全队减伤 `{m.group(0)[:60]}` "
                         f"缺 `fx:team_reduce:{n}:…` tag")
+        elif "doesn't stack" in d.lower() and not any(
+                str(e).startswith(f"fx:team_reduce:{n}:") and ":nonstack" in str(e)
+                for e in effects):
+            # 「The effect of … doesn't stack.」漏标 → 多只同族在场时会重复减伤
+            errs.append(f"{card_name} · {item_name}：卡面写明「doesn't stack」，"
+                        f"`fx:team_reduce:{n}` 缺 `:nonstack`")
+    for m in _SHIELD_CHOOSE_RE.finditer(d):
+        # 单体限时护盾：来源限定（{ex}）/ 连效果一起挡 / 奖赏数 gate 三者缺一
+        # 都会让这张卡的效果或可用性静默改变 → 逐项核对整条 tag。
+        n = int(m.group(1))
+        want = (f"shield_choose:prevent_all:from:ex:effects:"
+                f"gate:opp_prizes_le:{n}")
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（现为 {[str(e) for e in effects]}）")
     for m in _EXTRA_ENERGY_RE.finditer(d):
         n, dmg = int(m.group(1)), int(m.group(2))
         want = f"dmg_plus:{dmg}:if:own_active_extra_energy_at_least:{n}"
@@ -382,6 +495,54 @@ def audit_coin_forms(card_name: str, item_name: str, desc: str,
         if not any(want_d in t and want_h in t for t in coin):
             errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 的加伤与"
                         f"回复必须在**同一条** coin tag（现为 {coin}）")
+    for m in _COIN_FORK_COUNTERS_RE.finditer(d):
+        # 「Flip a coin. If heads, … If tails, …」——同一枚币只能有一个分支生效。
+        # 拆成 `coin:heads:` + `coin:tails:` 会抛**两次**（可能两个都生效/都不
+        # 生效），因此必须是一条 `coin_flip:heads:<a>|tails:<b>`。
+        want = (f"coin_flip:heads:counters:{int(m.group(1))}:scope:opp:1"
+                f"|tails:counters:{int(m.group(2))}:scope:self")
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 的双分支"
+                        "必须落在**同一条** `coin_flip:`（一次抛币；现为 "
+                        f"{[str(e) for e in effects]}）")
+    for m in _COIN_PER_TARGET_RE.finditer(d):
+        # 逐目标各抛一枚：落成 `snipe:opp:N:all` = 每只必中；落成
+        # `coin:heads:snipe:…` = 只抛一次（全中/全不中）。
+        want = f"coin_per_target:{int(m.group(1))}:scope:opp"
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（逐目标独立抛币；现为 "
+                        f"{[str(e) for e in effects]}）")
+    for m in _COIN_STATUS_CHOOSE_RE.finditer(d):
+        # 三选一必须是一条 `status_choose:` 子效果（拆成三条 = 三种状态全中）。
+        want = "coin:heads:status_choose:burn+confuse+poison"
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（三选一不能拆成多条状态 tag）")
+    for m in _COIN_STATUS_CHOOSE_ANY_RE.finditer(d):
+        # 「choose a Special Condition」全集（Grafaiai，第四十七批）：
+        # 五种状态必须一条 tag；顺序固定为 `rules.STATUSES`（默认首个 poison）。
+        want = ("coin:heads:status_choose:"
+                "poison+burn+sleep+paralyze+confuse")
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（全集五选一；现为 "
+                        f"{[str(e) for e in effects]}）")
+    for m in _COIN_PREVENT_PASSIVE_RE.finditer(d):
+        # 抛币免伤必须在伤害结算内触发；写成 `on_damaged:` 时伤害已加上。
+        col = _TYPE_COLOR.get(m.group(1).upper())
+        want = f"passive:coin_prevent:{col}" if col else None
+        if not want or want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want or 'passive:coin_prevent:<color>'}`"
+                        "（伤害结算内抛币；事后无法撤销）")
+    for m in _SHUFFLE_BOTH_COIN_DRAW_RE.finditer(d):
+        # 训练家只有一个卡级 tag：洗牌 + 单次抛币 + 双方不同张数必须合并。
+        want = (f"shuffle_both_coin_draw:{int(m.group(1))}:{int(m.group(2))}:"
+                f"{int(m.group(3))}:{int(m.group(4))}")
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（四条信息不能拆成多条 tag）")
     return errs
 
 
@@ -435,8 +596,15 @@ def audit_ability_search(card_name: str, item_name: str, desc: str,
 
 def audit_mill(card_name: str, item_name: str, desc: str,
                effects: list) -> list:
-    """磨牌子句 → 必须有 `mill:N[:opp]`"""
+    """磨牌子句 → 必须有 `mill:N[:opp]`
+
+    ⚠ 2026-11-02 收窄：``flip a coin until you get tails`` 的磨牌张数是**正面数**
+    （随机变量），正确形态是 `coin_until_tails:mill:opp`，由本批新类逐项核对；
+    若在此仍然要求常数 `mill:1:opp`，就把「每正面磨 1 张」压成了「恒磨 1 张」。
+    """
     errs = []
+    if re.search(r"flip a coin until you get tails", desc or "", re.I):
+        return errs
     for m in MILL.finditer(desc or ""):
         n = int(m.group(1)) if m.group(1) else 1
         side = "opp" if "opponent" in _norm(m.group(2)) else "own"
@@ -929,7 +1097,8 @@ def audit_attach_variants(card_name: str, item_name: str, desc: str,
     # ---------------- ④ 「Choose up to N of your {X} Pokémon」逐只各附 ----------------
     pick = [t for t in tags if t.startswith("attach_each_pick:")]
     m_p = re.search(r"choose up to (\d+) of your \{([a-z])\} pok[eé]mon[.] "
-                    r"for each of those pok[eé]mon", d, re.I)
+                    r"for each of those pok[eé]mon, search your deck for a basic "
+                    r"\{[a-z]\} energy card and attach it", d, re.I)
     if m_p:
         want_mx = m_p.group(1)
         want_et = _TYPE_COLOR.get(m_p.group(2).upper(), m_p.group(2).lower())
@@ -1179,7 +1348,8 @@ def audit_energy_cost(card_name: str, item_name: str, desc: str,
     # ③ 代价子句被吞（`and` 绑定式）
     if _ENERGY_COST_CLAUSE.search(d):
         cost_tags = [t for t in tags if t.startswith(
-            ("discard_energy", "discard_hand_energy", "energy_to_deck", "self:"))]
+            ("discard_energy", "discard_hand_energy", "energy_to_deck",
+             "energy_self_to_deck", "self:"))]
         if not cost_tags:
             errs.append(f"{card_name} · {item_name}：卡面有能量代价子句（and 绑定），"
                         f"却没有任何代价 tag —— 招式会白拿附加效果")
@@ -1232,6 +1402,17 @@ def audit_search_kind(card_name: str, item_name: str, desc: str,
 
     # ---- ① 去向 ----
     if "to evolve it" in clause or "to evolve that" in clause:
+        # 「Choose up to N of your … For each of those … evolve it」= **选** N 只
+        # 各进化一次（Team Rocket's Nidorina，第四十批）→ `evolve_each_pick:<N>:…`
+        # ⚠ 必须排在 `evolve_from_deck` / `evolve_each_bench` 之前：本句的检索
+        #   主语是「those Pokémon」这个**选出的集合**，不是「你的牌库随便拿一张」。
+        m_pick = re.search(r"choose up to (\d+) of your", _norm(desc or ""))
+        if m_pick:
+            if not any(str(t).startswith("evolve_each_pick:") for t in effects):
+                errs.append(f"{card_name} · {item_name}：卡面「Choose up to "
+                            f"{m_pick.group(1)} of your … … evolve it」→ 应为 "
+                            f"`evolve_each_pick:{m_pick.group(1)}:…`，实际 {got}")
+            return errs
         # 「For each of your Benched Pokémon, …」= 逐只后备各进化一次
         # （Reuniclus「Cellular Ascension」）→ `evolve_each_bench`
         # ⚠ 「for each …」在 SEARCH_FOR 匹配点**之前**，必须看整段卡面。
@@ -1643,6 +1824,12 @@ def audit_set_per(card_name: str, item_name: str, desc: str,
             want = f":{side}:dmg_set:{n}"
             got = [str(t) for t in effects
                    if str(t).startswith("coin_each:") and want in str(t)]
+            if not got and re.search(r"flip a coin until you get tails",
+                                     desc or "", re.I):
+                # 「Flip a coin until you get tails」：正面数是**连续掷币**的累计，
+                # 形态是 `coin_until_tails:dmg_set:N`（第四十批），不是 `coin_each`。
+                got = [str(t) for t in effects
+                       if str(t) == f"coin_until_tails:dmg_set:{n}"]
             if not got:
                 errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                             f"应按正面/反面数重算基础伤害 `{want[1:]}…`，"
@@ -1849,8 +2036,9 @@ def audit_energy_to_hand(card_name: str, item_name: str, desc: str,
     """
     errs = []
     d = PAREN.sub(" ", desc or "")
+    eff = _expand_coin_subs(effects)     # 抛币分支内的回手（Dustox，第四十四批）
     for m in _ENERGY_TO_HAND_RE.finditer(d):
-        if not any(str(e).startswith("bounce:energy:") for e in effects):
+        if not any(str(e).startswith("bounce:energy:") for e in eff):
             errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                         "缺 `bounce:energy:` tag（能量回手未建模）")
     return errs
@@ -1896,6 +2084,37 @@ def audit_on_damaged(card_name: str, item_name: str, desc: str,
             if want not in tags:
                 errs.append(f"{card_name} · {item_name}：下回合反制 `{m.group(0)[:60]}` "
                             f"缺 `{want}`（整段效果丢失）")
+    return errs
+
+
+def audit_energy_self_to_deck(card_name: str, item_name: str, desc: str,
+                              effects: list) -> list:
+    """自身附着能量洗回牌库（2026-11-03 第四十一批 · 第三十七类对账）
+
+    卡面原型（Mega Skarmory ex POR 55「Sonic Ripper」）：
+    「Shuffle all Energy attached to this Pokémon into your deck, and this attack
+    does 220 damage to 1 of your opponent's Pokémon.」
+
+    ⚠ 这是**强制代价**：只建模伤害而不洗回能量 = 「不付代价白打」（静默加强）；
+    反过来卡面没有该句却带 tag = 凭空削掉自己全部能量（认领越界）。双向都要拦。
+    """
+    errs: list = []
+    d = PAREN.sub(" ", desc or "")
+    # ⚠ 只认同句带「, and this attack does」的**强制**代价形态；Dialga MEG 95
+    # 的「You may … and have this attack do 80 more damage」是可选代价，不在此列。
+    has_sent = bool(re.search(
+        r"shuffle all energy attached to this pok[eé]mon into your deck, "
+        r"and this attack does", d, re.I))
+    tags = [str(e) for e in effects]
+    if has_sent and "energy_self_to_deck:all" not in tags:
+        errs.append(f"{card_name} · {item_name}：卡面「Shuffle all Energy attached "
+                    "to this Pokémon into your deck」缺 `energy_self_to_deck:all`"
+                    "（= 不付代价白打，静默加强）")
+    if not has_sent and any(t.startswith("energy_self_to_deck:")
+                            for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面没有「Shuffle all Energy "
+                    "attached to this Pokémon …」，却出现 "
+                    "`energy_self_to_deck:` —— 认领越界")
     return errs
 
 
@@ -1972,6 +2191,33 @@ def audit_counter_subset(card_name: str, item_name: str, desc: str,
         if key and not any(want in t for t in tags):
             errs.append(f"{card_name} · {item_name}：`{m.group(0)[:50]}` "
                         f"缺 `{want}`（具名+带指示物才对，笼统数会多算）")
+
+    # ---- 第四十三批（2026-11-03）：两个新的限定计数源 ----
+    # 「for each Ancient card in your discard pile」（Roaring Moon）：Ancient 是
+    # **卡牌子类**，按卡名（`own_discard_named:ancient`）恒为 0、按弃牌堆总数又多算。
+    if re.search(r"ancient card in your discard pile", _norm(d)):
+        if not any("own_discard_category:ancient" in t for t in tags):
+            errs.append(f"{card_name} · {item_name}：`Ancient card in your discard "
+                        "pile` 缺 `own_discard_category:ancient`（按卡名恒 0、按总数多算）")
+    # 「for each {L} Energy attached to all of your Iono's Pokémon」（Iono's Voltorb）
+    # ——必须是「阵营 + 属性 + 具名」三重限定；落成 `<zone>_energy_<color>` 会把
+    # 别的宝可梦身上的能量也数进来。
+    for m in re.finditer(r"energy attached to all of your "
+                         r"((?!(?:opponent|benched)\b)[a-z][a-z' ]{1,20}?)'s "
+                         r"pok[eé]mon", _norm(d)):
+        key = re.sub(r"[^a-z0-9]", "", m.group(1).lower())
+        colors = {_TYPE_COLOR.get(x.upper()) for x in
+                  re.findall(r"\{([a-z])\}", d, re.I)}
+        colors.discard(None)
+        if not key or not colors:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:50]}` "
+                        "阵营/属性判不出 → 不该进池")
+            continue
+        for color in sorted(colors):
+            want = f"own_field_named_energy:{key}:{color}"
+            if not any(want in t for t in tags):
+                errs.append(f"{card_name} · {item_name}：`{m.group(0)[:50]}` "
+                            f"缺 `{want}`（笼统数全队能量会多算）")
     return errs
 
 
@@ -2085,6 +2331,155 @@ def audit_printing_identity(manual_cards: list | None = None,
     return errs
 
 
+# ==========================================================================
+# 第四十批（2026-11-02 · 第三十六类）：连续抛币计数源 / 选 N 只进化 / 不同属性检索
+# --------------------------------------------------------------------------
+# 三个族的共同风险是「张数（= 随机变量）被折算成常数」，而折算**不报错**：
+#   · 「Flip a coin until you get tails」+ 磨牌/弃手牌/检索 → 落成 `mill:1` /
+#     `discard_opp_random:1` / `search_any:1`（每正面 1 张变成恒定 1 张）；
+#   · 「Choose up to N of your …」逐只进化 → 落成 `evolve_each_bench`（至多 N 只
+#     变成**全部后备**）；
+#   · 「any number of Basic Energy cards of different types」→ 落成常数
+#     `search_energy:N:distinct`（牌库属性种类数一变就少拿/拿不到）。
+# 下面每条正则都**独立实现**（刻意不 import 解析包的同名正则）：共用同一个正则
+# 等于自己给自己盖章 —— 解析写错时对账会一起错、永远通过。
+_UTAIL_SENT = re.compile(r"flip a coin until you get tails", re.I)
+_UTAIL_DMG = re.compile(
+    r"flip a coin until you get tails[^.]{0,40}?\.\s*this attack does (\d+) "
+    r"(more )?damage for each heads", re.I)
+_UTAIL_MILL = re.compile(
+    r"flip a coin until you get tails[^.]{0,40}?\.\s*for each heads, discard "
+    r"the top card of your opponent", re.I)
+_UTAIL_HAND = re.compile(
+    r"flip a coin until you get tails[^.]{0,40}?\.\s*for each heads, choose a "
+    r"random card from your opponent", re.I)
+_UTAIL_SEARCH = re.compile(
+    r"flip a coin until you get tails[^.]{0,40}?\.\s*search your deck for a "
+    r"number of cards up to the number of heads", re.I)
+_UTAIL_DISCARD = re.compile(
+    r"flip a coin until you get tails[^.]{0,40}?\.\s*for each heads, discard an "
+    r"energy from your opponent", re.I)
+_EACHPICK = re.compile(
+    r"choose up to (\d+) of your (.+?)\.\s*for each of those pok[eé]mon, search "
+    r"your deck for a card that evolves from that pok[eé]mon and put it onto "
+    r"that pok[eé]mon to evolve it", re.I)
+_SEARCH_ANY_DISTINCT = re.compile(
+    r"search your deck for any number of basic energy cards of different types",
+    re.I)
+
+
+def audit_shuffle_opp_pokemon(card_name: str, item_name: str, desc: str,
+                              effects: list) -> list:
+    """对手宝可梦连同附着卡洗回其牌库（2026-11-03 第四十二批 · 第三十八类）
+
+    卡面原型：「Flip a coin. If heads, choose 1 of your opponent's [Benched]
+    Pokémon. Shuffle that Pokémon and all attached cards into their deck.」
+    （Sylveon / Shiftry）
+
+    两类静默错误都要拦：
+      · 卡面有该句却**没有** tag → 效果整段丢失（打出去什么都不发生）；
+      · 卡面没有该句却有 tag → 认领越界（会把别的效果误当成「洗回牌库」）。
+    ⚠ 并要核对 scope：Benched 限定必须有 `:opp_bench`（落成 `:opp` 会把战斗位
+      也纳入可选集合 = 打错对象）。
+    """
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or ""))     # ’ → ' 归一（否则 `opponent's` 不匹配）
+    tags = [str(e) for e in effects]
+    has = [t for t in tags if "shuffle_opp_pokemon:" in t]
+    m = re.search(
+        r"flip a coin[.] if heads, choose (\d+) of your opponent'?s? (benched )?"
+        r"pok[eé]mon[.] shuffle that pok[eé]mon and all attached cards into "
+        r"their deck", d, re.I)
+    if m:
+        n = int(m.group(1))
+        if n != 1:
+            errs.append(f"{card_name} · {item_name}：卡面写「choose {n}」，"
+                        "而本机制的确定性目标只支持 1 只 → 不该进池")
+            return errs
+        want = ("coin:heads:shuffle_opp_pokemon:"
+                + ("opp_bench" if m.group(2) else "opp"))
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Shuffle that Pokémon "
+                        f"and all attached cards into their deck」应为 `{want}`，"
+                        f"实际 {has or '无该 tag'}")
+    elif has:
+        errs.append(f"{card_name} · {item_name}：卡面没有「… Shuffle that Pokémon "
+                    "and all attached cards into their deck」，却出现 "
+                    f"{has} —— 认领越界")
+    return errs
+
+
+def audit_batch40(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """连续抛币计数源 / 选 N 只进化 / 不同属性检索（第三十六类）"""
+    errs: list = []
+    d = PAREN.sub(" ", desc or "")
+    tags = [str(e) for e in effects]
+
+    # ① 「does N [more] damage for each heads」（连续掷币）
+    m = _UTAIL_DMG.search(d)
+    if m:
+        n = int(m.group(1))
+        want = (f"coin_until_tails:dmg_plus:{n}" if m.group(2)
+                else f"coin_until_tails:dmg_set:{n}")
+        have = [t for t in tags if t.startswith("coin_until_tails:")]
+        if want not in have:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 应为 "
+                        f"`{want}`（{'加在印刷伤害上' if m.group(2) else '按正面数重算基础伤害'}），"
+                        f"实际 {have or '无 coin_until_tails tag'}")
+
+    # ② 非伤害三形态（张数 = 正面数）
+    for rx, want, what in ((_UTAIL_MILL, "coin_until_tails:mill:opp", "磨对手牌库"),
+                           (_UTAIL_HAND, "coin_until_tails:shuffle_opp_hand",
+                            "对手手牌洗回牌库"),
+                           (_UTAIL_SEARCH, "coin_until_tails:search:any",
+                            "牌库顶按正面数入手"),
+                           (_UTAIL_DISCARD,
+                            "coin_until_tails:discard_energy:opp",
+                            "对手战斗位按正面数弃能")):
+        if rx.search(d) and want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「{what}」按正面数结算，"
+                        f"应为 `{want}`，实际 {tags}（张数被折成常数）")
+
+    # ③ 未认领守门：卡面写了连续掷币、却没有任何本族 tag
+    if _UTAIL_SENT.search(d) \
+            and not any(t.startswith("coin_until_tails:") for t in tags) \
+            and not any(t.startswith("attach_flip_until:") for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面有「Flip a coin until you "
+                    f"get tails」，却没有任何 `coin_until_tails:` / "
+                    f"`attach_flip_until:` tag（张数会静默丢失或被折成常数）")
+
+    # ④ 选 N 只各进化一次
+    m = _EACHPICK.search(d)
+    if m:
+        n = int(m.group(1))
+        pick = [t for t in tags if t.startswith("evolve_each_pick:")]
+        if not pick:
+            if "evolve_each_bench" in tags:
+                errs.append(f"{card_name} · {item_name}：卡面「Choose up to {n} "
+                            f"of your …」落成 `evolve_each_bench` —— 「至多 {n} 只」"
+                            f"被放大成「全部后备」")
+            else:
+                errs.append(f"{card_name} · {item_name}：卡面「Choose up to {n} "
+                            f"of your … … evolve it」缺 `evolve_each_pick:{n}:…`")
+        else:
+            part = pick[0].split(":")
+            if len(part) < 3 or not part[1].isdigit() or int(part[1]) != n:
+                errs.append(f"{card_name} · {item_name}：卡面选取上限是 {n}，"
+                            f"`{pick[0]}` 不符")
+
+    # ⑤ 「any number of Basic Energy cards of different types」
+    if _SEARCH_ANY_DISTINCT.search(d):
+        if "search_energy:all:distinct" not in tags:
+            const = [t for t in tags if t.startswith("search_energy:")
+                     and t.split(":")[1].isdigit()] if any(
+                t.startswith("search_energy:") for t in tags) else []
+            errs.append(f"{card_name} · {item_name}：卡面「any number … of "
+                        f"different types」应为 `search_energy:all:distinct`，"
+                        f"实际 {const or '无该 tag'}（张数被折成常数）")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -2127,8 +2522,13 @@ def main() -> int:
                 errs += audit_pre_phase(c["name"], it.get("name"), desc, eff)
                 errs += audit_counter_subset(c["name"], it.get("name"), desc, eff)
                 errs += audit_energy_to_deck(c["name"], it.get("name"), desc, eff)
+                errs += audit_energy_self_to_deck(c["name"], it.get("name"),
+                                                  desc, eff)
                 errs += audit_on_damaged(c["name"], it.get("name"), desc, eff)
                 errs += audit_set_per(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch40(c["name"], it.get("name"), desc, eff)
+                errs += audit_shuffle_opp_pokemon(c["name"], it.get("name"),
+                                                  desc, eff)
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
@@ -2145,6 +2545,8 @@ def main() -> int:
             # 卡级 tag，不在 attacks/abilities 里，上面的循环看不到它。
             errs += audit_discard_tool_or_senergy(
                 c["name"], c["name"], _cdesc, [_ctag] if _ctag else [])
+            errs += audit_batch40(c["name"], c["name"], _cdesc,
+                                  [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:
@@ -2181,7 +2583,8 @@ def main() -> int:
           "受击反制 · 对手指定招式封锁 · 检视牌库顶去向 · 对手手牌操作 · "
           "检索能量自由分配 · 自由分配两变体（抛币/每只后备） · 能量代价去向 · "
           "打出代价 · 弃对手道具或场地 · 附着四形态（双色/选N只/抛到反面/抛币门） · "
-          "检索不同属性 三十五类对账全部一致")
+          "检索不同属性 · 连续抛币计数源/选N只进化/任意张检索 · "
+          "{ex} 目标筛选/自身能量洗回牌库 · 对手宝可梦洗回牌库 三十八类对账全部一致")
     return 0
 
 

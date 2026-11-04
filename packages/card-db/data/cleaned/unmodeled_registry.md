@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-02 11:12:27
+- 生成时间：2026-11-04 09:28:05
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **234** 条 · 已映射 tag 1356 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1018 张**
-- 解析层面「无未建模动作」卡：894 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **209** 条 · 已映射 tag 1381 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1045 张**
+- 解析层面「无未建模动作」卡：917 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -20,28 +20,14 @@
 
 | 批次 | 子类 | 动作类型 | 条目 | 影响卡数 | 原因 |
 |---|---|---|---:|---:|---|
-| B4 | coin_flip | `rule` | 6 | 6 | 静态/未建模（英文） |
-| B4 | type:cost | `cost` | 3 | 3 | 能量代价子句未被映射（可选/任意数量代价，B4） |
-| B4 | extra_damage_target | `damage` | 2 | 2 | 附加伤害目标未建模（itself） |
-| B4 | static_lock | `rule` | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B4 | coin_flip | `rule` | 2 | 2 | 静态/未建模（英文） |
+| B4 | type:cost | `cost` | 2 | 2 | 能量代价子句未被映射（可选/任意数量代价，B4） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（damage counter you placed in t） |
 | B4 | static_lock | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon） |
-| B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（Ancient card in your discard p） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
-| B4 | coin_flip | `rule` | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B4 | type:condition | `condition` | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex}） |
-| B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（{L} Energy attached to all of ） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex}） |
-| B4 | coin_flip | `rule` | 1 | 1 | 抛币分支内的能量回手（需 coin 嵌套，B4） |
-| B4 | coin_flip | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
-| B4 | static_lock | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
-| B4 | coin_flip | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
-| B4 | coin_flip | `rule` | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
-| B4 | static_lock | `rule` | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | B5 | S6 | `rule` | 61 | 61 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 14 | 14 | 静态/未建模（英文） |
 | B5 | S2 | `rule` | 6 | 6 | 静态/未建模（英文） |
@@ -79,27 +65,15 @@
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
 
-**B4 · coin_flip**（6 条）
+**B4 · coin_flip**（2 条）
 
-- `Sylveon`（仙子伊布）：Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.
 - `Ethan's Sudowoodo`（阿响的树才怪）：Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.
-- `Shiftry`（狡猾天狗）：Flip a coin. If heads, choose 1 of your opponent’s Pokémon. Shuffle that Pokémon and all attached cards into their deck.
+- `Mega Hawlucha ex`（超级摔角鹰人 ex）：If this Pokémon would be Knocked Out by damage from an attack, flip a coin. If heads, this Pokémon is not Knocked Out, and its remaining HP becomes 10.
 
-**B4 · type:cost**（3 条）
+**B4 · type:cost**（2 条）
 
 - `Mega Charizard X ex`（超级喷火龙X ex）：Discard any amount of {R} Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way.
 - `Mega Eelektross ex`（超级麻麻鳗鱼王 ex）：You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed.
-- `Mega Skarmory ex`（超级盔甲鸟 ex）：Shuffle all Energy attached to this Pokémon into your deck, and this attack does 220 damage to 1 of your opponent’s Pokémon. (Don’t apply Weakness and Resistanc
-
-**B4 · extra_damage_target**（2 条）
-
-- `Gurdurr`（铁骨土人）：You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.
-- `Dondozo ex`（吃吼霸 ex）：You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself.
-
-**B4 · static_lock**（2 条）
-
-- `Iron Defender`（铁壁防御）：During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance)
-- `Acerola's Mischief`（阿塞萝拉的恶作剧）：You can use this card only if your opponent has 2 or fewer Prize cards remaining.  Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 
 **B4 · scaling_damage**（1 条）
 
@@ -113,17 +87,9 @@
 
 - `Shaymin`（谢米）：This attack does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}. (Don’t apply Weakness and Resistance for Benched Pokémon.)
 
-**B4 · scaling_damage**（1 条）
-
-- `Roaring Moon`（轰鸣月）：This attack does 10 more damage for each Ancient card in your discard pile.
-
 **B4 · extra_damage_target**（1 条）
 
 - `Wellspring Mask Ogerpon ex`（厄诡椪（井之面具）ex）：You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t ap
-
-**B4 · coin_flip**（1 条）
-
-- `Cradily`（摇篮百合）：Once during your turn, you may flip a coin. If heads, choose Burned, Confused, or Poisoned. Your opponent’s Active Pokémon is now affected by that Special Condi
 
 **B4 · type:condition**（1 条）
 
@@ -132,46 +98,6 @@
 **B4 · extra_damage_target**（1 条）
 
 - `Flygon ex`（沙漠蜻蜓 ex）：This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Vaporeon ex`（水伊布 ex）：This attack does 60 damage to each of your opponent’s Pokémon {ex}. This attack’s damage isn’t affected by Weakness or Resistance.
-
-**B4 · scaling_damage**（1 条）
-
-- `Iono’s Voltorb`（奇树的霹雳电球）：This attack does 20 more damage for each {L} Energy attached to all of your Iono’s Pokémon.
-
-**B4 · extra_damage_target**（1 条）
-
-- `Zeraora`（捷拉奥拉）：Discard all Energy from this Pokémon, and this attack does 210 damage to 1 of your opponent’s Benched Pokémon {ex}. (Don’t apply Weakness and Resistance for Ben
-
-**B4 · coin_flip**（1 条）
-
-- `Dustox`（毒粉蛾）：Once during your turn, you may use this Ability. Flip a coin. If heads, put an Energy attached to your opponent’s Active Pokémon into their hand.
-
-**B4 · coin_flip**（1 条）
-
-- `Fezandipiti`（吉雉鸡）：If this Pokémon has any {D} Energy attached and is damaged by an attack, flip a coin. If heads, prevent that damage.
-
-**B4 · static_lock**（1 条）
-
-- `Aurorus`（冰雪巨龙）：All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). Th
-
-**B4 · extra_damage_target**（1 条）
-
-- `Mega Zygarde ex`（超级基格尔德 ex）：For each of your opponent’s Pokémon, flip a coin. If heads, this attack does 150 damage to that Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémo
-
-**B4 · coin_flip**（1 条）
-
-- `Team Rocket's Venture Bomb`（火箭队的冒险炸弹）：Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon.
-
-**B4 · coin_flip**（1 条）
-
-- `Harlequin`（小丑）：Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and
-
-**B4 · static_lock**（1 条）
-
-- `Acerola's Mischief`（阿塞萝拉的恶作剧）：You can use this card only if your opponent has 2 or fewer Prize cards remaining.  Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 
 **B5 · S6**（61 条）
 

@@ -1,6 +1,6 @@
 # PokéLab AI · 未建模动作清单（backlog）
 
-- 快照：`current` · 生成时间：2026-10-30 17:04:30
+- 快照：`current` · 生成时间：2026-11-04 09:28:06
 - 数据源：`packages/card-db/data/db/pokelab.db`（K2 解析后端：rule（离线确定性基线））
 
 ## 0. 总量
@@ -11,21 +11,21 @@
 | 已跑解析卡数 | 1119 |
 | 解析条目（item） | 1481 |
 | 解析动作条目（spec.actions） | 1481 |
-| 已映射引擎 tag 条目 | 1334 |
-| **未建模动作条目** | **259** |
-| 含未建模条目的卡数 | 250 |
-| 全效果可映射卡数 | 869 |
-| 至少 1 条引擎 tag 的卡数 | 1003 |
+| 已映射引擎 tag 条目 | 1381 |
+| **未建模动作条目** | **209** |
+| 含未建模条目的卡数 | 202 |
+| 全效果可映射卡数 | 917 |
+| 至少 1 条引擎 tag 的卡数 | 1027 |
 
 ## 1. 批次总览（按优先级）
 
 | 批次 | 主题 | 条目 | 影响卡数 | 占比 | 建模动作 |
 |---|---|---:|---:|---:|---|
 | **B1** | 预设卡组关键卡 | 0 | 0 | 0.0% | 为每张卡补引擎原生 tag（训练家 tag / 特性 tag），并补引擎派发 |
-| **B2** | tag 家族扩展 | 30 | 30 | 11.6% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
-| **B3** | 解析召回补齐（英文卡面） | 67 | 67 | 25.9% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
-| **B4** | 需新引擎机制（P1 登记） | 28 | 28 | 10.8% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
-| **B5** | 静态规则与新卡种（**实现队列**） | 134 | 134 | 51.7% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
+| **B2** | tag 家族扩展 | 15 | 15 | 7.2% | agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支 |
+| **B3** | 解析召回补齐（英文卡面） | 54 | 54 | 25.8% | agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句） |
+| **B4** | 需新引擎机制（P1 登记） | 10 | 10 | 4.8% | 登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持 |
+| **B5** | 静态规则与新卡种（**实现队列**） | 130 | 130 | 62.2% | S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定） |
 
 ## 2. B1 · 预设卡组关键卡（最高优先，逐卡建模）
 
@@ -36,35 +36,27 @@
 
 ## 3. B2–B5 · 分组明细
 
-### B2 · tag 家族扩展（30 条 / 30 卡）
+### B2 · tag 家族扩展（15 条 / 15 卡）
 
 - 目标：把引擎已有能力或低成本可扩展的 tag 家族补齐映射与派发
 - 动作：agent.effects.to_engine_tags 放通映射 + engine.battle 新增派发分支
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| trainer_search | search | 11 | 11 | 检索数量由计数源决定（B4） |
-| trainer_search | search | 7 | 7 | 检索附能需自行分配目标（B4） |
+| trainer_search | search | 4 | 4 | 检索数量由计数源决定（B4） |
 | trainer_search | search | 3 | 3 | 检索去向不可判（B4） |
-| evolve_skip | evolve | 3 | 3 | 招式/特性驱动的进化需卡级 tag |
 | trainer_search | search | 2 | 2 | 检索后放到牌库顶/底（B4） |
-| trainer_search | search | 2 | 2 | 抛币分支内的检索（需 coin 嵌套，B4） |
+| evolve_skip | evolve | 2 | 2 | 招式/特性驱动的进化需卡级 tag |
 | status_unknown | status | 1 | 1 | 特性发动代价未建模（B4） |
 | trainer_search | search | 1 | 1 | 检视牌库顶（非特性侧未精确识别，B4） |
+| trainer_search | search | 1 | 1 | 多类别并列检索（逐类别各取 1 张）未建模（B4） |
+| trainer_search | search | 1 | 1 | 抛币分支内的检索（需 coin 嵌套，B4） |
 
 <details><summary>样例 · trainer_search</summary>
 
 - **Lillie’s Comfey**（莉莉艾的花疗环环）：`You may search your deck for any number of Basic Lillie’s Pokémon and put them onto your Bench. Then, shuffle your deck.`
-- **Team Rocket's Nidorina**（火箭队的尼多娜）：`Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
 - **Musharna**（梦梦蚀）：`You may search your deck for any number of Fennel cards, reveal them, and put them into your hand. Then, shuffle your deck.`
-
-</details>
-
-<details><summary>样例 · trainer_search</summary>
-
-- **Miraidon**（密勒顿）：`Search your deck for up to 2 Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.`
-- **Joltik**（电电虫）：`Search your deck for up to 2 Basic {G} Energy cards and up to 2 Basic {L} Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.`
-- **Altaria**（七夕青鸟）：`Search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.`
+- **Rotom**（洛托姆）：`You may search your deck for any number of Pokémon that have “Rotom” in their name and put them onto your Bench. Then, shuffle your deck.`
 
 </details>
 
@@ -76,47 +68,53 @@
 
 </details>
 
+<details><summary>样例 · trainer_search</summary>
+
+- **Dialga**（帝牙卢卡）：`Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order.`
+- **Ciphermaniac’s Codebreaking**（密码狂人的破译）：`Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order.`
+
+</details>
+
 <details><summary>样例 · evolve_skip</summary>
 
-- **Team Rocket's Nidorina**（火箭队的尼多娜）：`Choose up to 2 of your {D} Pokémon. For each of those Pokémon, search your deck for a card that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
 - **Duosion**（双卵细胞球）：`Search your deck for a card that evolves from 1 of your Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.`
 - **Archeops**（始祖大鸟）：`Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent’s evolved Pokémon by putting the highest Stage Evolution card on it into your opponent’s hand.`
 
 </details>
 
-### B3 · 解析召回补齐（英文卡面）（67 条 / 67 卡）
+### B3 · 解析召回补齐（英文卡面）（54 条 / 54 卡）
 
 - 目标：英文卡面句式未被规则解析器识别，导致整条效果落进 rule 兜底
 - 动作：agent.effects._parse_rule_en 补正则（弃牌堆回收/弃自身能量/抛币前缀/附能/检索/附加伤害目标子句）
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| attach | rule | 13 | 13 | 静态/未建模（英文） |
+| attach | rule | 12 | 12 | 静态/未建模（英文） |
 | draw | rule | 6 | 6 | 抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4） |
-| search | rule | 4 | 4 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
-| discard_self | rule | 4 | 4 | 静态/未建模（英文） |
-| draw | rule | 4 | 4 | 打出前置条件（You can use this card only if …）未建模（B5） |
-| attach | rule | 3 | 3 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
 | attach | rule | 3 | 3 | 回复范围/限定不可精确表达（B4） |
 | attach | rule | 3 | 3 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | attach | rule | 2 | 2 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | switch | rule | 2 | 2 | 静态/未建模（英文） |
-| discard_self | rule | 2 | 2 | 打出前置条件（You can use this card only if …）未建模（B5） |
-| search | rule | 2 | 2 | 打出前置条件（You can use this card only if …）未建模（B5） |
+| draw | rule | 2 | 2 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（the Defending Pokémon） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（this Pokémon） |
 | spread | rule | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
 | spread | rule | 1 | 1 | 放置伤害指示物：任意分配含**战斗位**，引擎 spread_free 仅覆盖后备（B4） |
 | search | rule | 1 | 1 | 能量移动的源/目标未识别（B4） |
 | switch | rule | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
+| attach | rule | 1 | 1 | 自由分配附着（句式未精确识别，B4） |
 | move_damage | rule | 1 | 1 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | discard_self | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Misty's Pokémon that you disca） |
 | discard_energy_self | rule | 1 | 1 | 静态/未建模（英文） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 | spread | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（each of them） |
 | search | rule | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
+| discard_self | rule | 1 | 1 | 静态/未建模（英文） |
+| attach | rule | 1 | 1 | 「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4） |
 | discard_self | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Basic {W} Energy card that you） |
 | attach | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
+| attach | rule | 1 | 1 | 检视牌库顶：去向非「入手」（弃置/附着等），引擎 recon 仅支持取 1 入手（B4） |
+| search | rule | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | switch | rule | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
 | discard_self | rule | 1 | 1 | 回合末才执行的弃手牌（需延迟队列，B4） |
 | draw | rule | 1 | 1 | 抽到指定张数带分支替换（B4） |
@@ -141,72 +139,54 @@ Each player shuffles their hand into their deck. Then, you draw 5 cards, and you
 
 </details>
 
-<details><summary>样例 · search</summary>
+<details><summary>样例 · attach</summary>
 
-- **Morpeko**（莫鲁贝可）：`Once during your turn, you may look at the top card of your deck. You may discard that card.`
-- **Tatsugiri ex**（米立龙 ex）：`Look at the top 10 cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck.`
-- **Rockruff**（岩狗狗）：`Look at the top card of your deck. You may discard that card.`
-
-</details>
-
-<details><summary>样例 · discard_self</summary>
-
-- **Team Rocket's Porygon**（火箭队的多边兽）：`Discard a card from your hand. If you do, your opponent discards a card from their hand.`
-- **Mega Absol ex**（超级阿勃梭鲁 ex）：`Your opponent reveals their hand, and you discard a card you find there.`
-- **Luxray ex**（伦琴猫 ex）：`Your opponent reveals their hand, and you discard a card you find there.`
+- **Hydrapple ex**（蜜集大蛇 ex）：`Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.`
+- **Magearna**（玛机雅娜）：`As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon.`
+- **Jumbo Ice Cream**（特大冰淇淋）：`Heal 80 damage from your Active Pokémon that has 3 or more Energy attached.`
 
 </details>
 
-### B4 · 需新引擎机制（P1 登记）（28 条 / 28 卡）
+<details><summary>样例 · attach</summary>
+
+- **Glass Trumpet**（玻璃小号）：`You can use this card only if you have any Tera Pokémon in play.
+
+Choose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.`
+- **Chill Teaser Toy**（冰凉逗趣玩具）：`You can use this card only if you go second, and only during your first turn.
+Put an Energy attached to 1 of your opponent’s Pokémon into their hand.`
+- **Rosa's Encouragement**（鸣依的鼓励）：`You can use this card only if you have more Prize cards remaining than your opponent.
+
+Attach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.`
+
+</details>
+
+### B4 · 需新引擎机制（P1 登记）（10 条 / 10 卡）
 
 - 目标：需要条件表达式 / RNG 钩子 / 静态修正层 / 多目标选择等新机制，不属本轮
 - 动作：登记为 P1 批次；本轮仅保证「如实标注不支持」，不假装支持
 
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
-| coin_flip | rule | 6 | 6 | 静态/未建模（英文） |
-| extra_damage_target | damage | 2 | 2 | 附加伤害目标未建模（itself） |
-| static_lock | rule | 2 | 2 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| coin_flip | rule | 2 | 2 | 静态/未建模（英文） |
+| type:cost | cost | 2 | 2 | 能量代价子句未被映射（可选/任意数量代价，B4） |
 | scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（damage counter you placed in t） |
 | static_lock | rule | 1 | 1 | 静态/未建模（英文） |
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon） |
-| scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（Ancient card in your discard p） |
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
-| coin_flip | rule | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | type:condition | condition | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
 | extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
-| extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex}） |
-| scaling_damage | rule | 1 | 1 | 条件伤害缩放：计数源未识别（{L} Energy attached to all of ） |
-| extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex}） |
-| coin_flip | rule | 1 | 1 | 抛币分支内的能量回手（需 coin 嵌套，B4） |
-| coin_flip | rule | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
-| static_lock | rule | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
-| extra_damage_target | damage | 1 | 1 | 附加伤害目标未建模（that Pokémon） |
-| coin_flip | rule | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Pokémon） |
-| coin_flip | rule | 1 | 1 | 抛币分支内的抽牌（需 coin 嵌套，B4） |
-| static_lock | rule | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 
 <details><summary>样例 · coin_flip</summary>
 
-- **Sylveon**（仙子伊布）：`Flip a coin. If heads, choose 1 of your opponent’s Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck.`
 - **Ethan's Sudowoodo**（阿响的树才怪）：`Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.`
-- **Shiftry**（狡猾天狗）：`Flip a coin. If heads, choose 1 of your opponent’s Pokémon. Shuffle that Pokémon and all attached cards into their deck.`
+- **Mega Hawlucha ex**（超级摔角鹰人 ex）：`If this Pokémon would be Knocked Out by damage from an attack, flip a coin. If heads, this Pokémon is not Knocked Out, and its remaining HP becomes 10.`
 
 </details>
 
-<details><summary>样例 · extra_damage_target</summary>
+<details><summary>样例 · type:cost</summary>
 
-- **Gurdurr**（铁骨土人）：`You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.`
-- **Dondozo ex**（吃吼霸 ex）：`You may do 120 more damage. If you do, this Pokémon also does 50 damage to itself.`
-
-</details>
-
-<details><summary>样例 · static_lock</summary>
-
-- **Iron Defender**（铁壁防御）：`During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come i`
-- **Acerola's Mischief**（阿塞萝拉的恶作剧）：`You can use this card only if your opponent has 2 or fewer Prize cards remaining.
-
-Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks do`
+- **Mega Charizard X ex**（超级喷火龙X ex）：`Discard any amount of {R} Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way.`
+- **Mega Eelektross ex**（超级麻麻鳗鱼王 ex）：`You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed.`
 
 </details>
 
@@ -216,7 +196,13 @@ Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 
 </details>
 
-### B5 · 静态规则与新卡种（**实现队列**）（134 条 / 134 卡）
+<details><summary>样例 · static_lock</summary>
+
+- **Iron Thorns ex**（铁荆棘 ex）：`As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule`
+
+</details>
+
+### B5 · 静态规则与新卡种（**实现队列**）（130 条 / 130 卡）
 
 - 目标：原「永久登记」的静态规则 / 新卡种 / 元游戏效果 —— 现全部纳入实现范围，按机制族（S1–S6）分批实现
 - 动作：S1 静态修正层（HP/减伤/弱点/撤退）· S2 道具挂载 · S3 场地 · S4 特殊能量 · S5 元游戏与信息类 · S6 待拆解（需人工判定）
@@ -224,8 +210,8 @@ Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 | 子类 | 动作类型 | 条目 | 卡数 | 未建模原因 |
 |---|---|---:|---:|---|
 | S6 | rule | 61 | 61 | 静态/未建模（英文） |
-| S5 | rule | 16 | 16 | 静态/未建模（英文） |
-| S2 | rule | 7 | 7 | 静态/未建模（英文） |
+| S5 | rule | 14 | 14 | 静态/未建模（英文） |
+| S2 | rule | 6 | 6 | 静态/未建模（英文） |
 | S6 | rule | 5 | 5 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | S6 | rule | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | S6 | rule | 3 | 3 | 无视目标身上效果（需效果免疫/清除层，B5） |
@@ -254,7 +240,6 @@ Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 | S4 | rule | 1 | 1 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
 | S2 | rule | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
 | S6 | rule | 1 | 1 | 回复范围/限定不可精确表达（B4） |
-| S2 | rule | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | S2 | rule | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | S2 | rule | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
 | S6 | rule | 1 | 1 | 全量回复（范围/后续不可精确表达 · B4） |
@@ -277,9 +262,9 @@ Choose 1 of your Pokémon in play. During your opponent’s next turn, prevent a
 
 <details><summary>样例 · S2</summary>
 
-- **Rotom**（洛托姆）：`Your opponent reveals their hand. Discard all Item cards and Pokémon Tool cards you find there.`
 - **Rotom ex**（洛托姆 ex）：`Each of your Pokémon that has "Rotom" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Pokémon until only 1 remains on each.`
 - **Heavy Baton**（沉重接力棒）：`If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent’s Pokémon, move up to 3 Basic Energy card`
+- **Lillie’s Pearl**（莉莉艾的珍珠）：`If the Lillie’s Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, that player takes 1 fewer Prize card.`
 
 </details>
 

@@ -11,9 +11,14 @@
 import { lang as uiLang } from './i18n.js'
 
 export const cc = (entry, lang = uiLang) => {
-  if (typeof entry === 'function') return entry(lang)
+  // ⚠ 本函数是**所有** {zh,en} 文案的唯一解包口 —— 返回值**必须是字符串**。
+  //   漏解包（把对象直接 return 出去）时，React 会把它当子节点渲染 →
+  //   error #31「Objects are not valid as a React child」→ 整棵树卸载 → **整屏黑屏**。
+  //   （踩过：trainerDesc 的兜底分支漏了 cc()，真实卡组的训练家 tag 一进手牌就黑屏。）
+  if (typeof entry === 'function') return cc(entry(lang), lang)
   if (!entry) return ''
-  return entry[lang] ?? entry.zh ?? ''
+  if (typeof entry !== 'object') return String(entry)
+  return entry[lang] ?? entry.zh ?? entry.en ?? ''
 }
 
 // ---------------- 属性 / 能量 ----------------
@@ -95,6 +100,17 @@ export const cardKind = (c) => {
 const argOf = (a) => (/^\d+$/.test(String(a || '')) ? String(a) : 'n')
 const RECOVER_KIND = { any: '任意卡', energy: '能量卡', pokemon: '宝可梦', trainer: '训练家卡' }
 
+// tag 参数里的属性/类别 → 可读词（自带 zh/en，供文案函数代入）
+const TY = {
+  fire: ['火', 'Fire'], water: ['水', 'Water'], grass: ['草', 'Grass'],
+  lightning: ['雷', 'Lightning'], psychic: ['超', 'Psychic'],
+  fighting: ['斗', 'Fighting'], darkness: ['恶', 'Darkness'],
+  metal: ['钢', 'Metal'], dragon: ['龙', 'Dragon'],
+  colorless: ['无色', 'Colorless'], any: ['任意', 'any type'],
+}
+const ty = (k) => TY[k] || [k || '—', k || '—']
+const numsOf = (parts) => (parts || []).filter((x) => /^\d+$/.test(x))
+
 export const TRAINER_TAG_DESC = {
   poffin: { zh: '从牌库中检索 2 张基础宝可梦，放置到后备。', en: 'Search your deck for 2 Basic Pokémon and put them on the Bench.' },
   ultra_ball: { zh: '弃置 2 张手牌，从牌库检索 1 张宝可梦加入手牌。', en: 'Discard 2 cards, then search your deck for a Pokémon.' },
@@ -115,6 +131,83 @@ export const TRAINER_TAG_DESC = {
   search_pokemon: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张宝可梦加入手牌。`, en: `Search your deck for ${argOf(a)} Pokémon.` }),
   search_trainer: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张训练家卡加入手牌。`, en: `Search your deck for ${argOf(a)} Trainer cards.` }),
   search_any: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张任意卡加入手牌。`, en: `Search your deck for ${argOf(a)} cards.` }),
+  // ---- 真实卡池的 39 类 tag 族（2026-11-04 补齐）----
+  // 背景：真实卡组（A1–A4 / B1–B5）一进手牌就整屏黑屏 —— trainerDesc 对
+  // 未收录的族走了「返回 {zh,en} 对象」的兜底分支，被 React 当子节点渲染。
+  // 修好兜底只是止血，这里把池子里实际出现的族**逐族补齐说明**（自述转写，C1/C5）。
+  gust: { zh: '将对手的 1 只后备宝可梦换到战斗位。', en: 'Switch in 1 of your opponent’s Benched Pokémon to the Active Spot.' },
+  gust_confuse: { zh: '将对手的 1 只后备基础宝可梦换到战斗位，并使其陷入混乱。', en: 'Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot and Confuse it.' },
+  heal: (a) => ({ zh: `为 1 只己方宝可梦回复 ${argOf(a)} 点伤害。`, en: `Heal ${argOf(a)} damage from 1 of your Pokémon.` }),
+  mill: (a) => ({ zh: `弃掉牌库顶 ${argOf(a)} 张卡。`, en: `Discard the top ${argOf(a)} card(s) of your deck.` }),
+  draw: (a, _x, parts) => {
+    if ((parts || []).includes('per')) {
+      return { zh: `按场上计数抽牌（基数 ${argOf(a)} 张，每满足 1 个计数条件额外抽 1 张）。`, en: `Draw cards by a count on the field (base ${argOf(a)}, plus 1 per condition met).` }
+    }
+    return { zh: `抽 ${argOf(a)} 张牌。`, en: `Draw ${argOf(a)} card(s).` }
+  },
+  draw_to: (a) => ({ zh: `抽牌，直到手牌达到 ${argOf(a)} 张。`, en: `Draw cards until you have ${argOf(a)} in hand.` }),
+  draw_cond: (_a, _x, parts) => {
+    const ns = numsOf(parts)
+    const base = ns[0] || 'n'
+    const more = ns[1] || 'n'
+    return { zh: `抽 ${base} 张牌；若满足卡面条件，额外抽 ${more} 张。`, en: `Draw ${base} card(s); if the condition is met, draw ${more} more.` }
+  },
+  shuffle_draw_split: (a) => ({ zh: `双方各自将手牌洗回牌库，然后各抽 ${argOf(a)} 张牌。`, en: `Each player shuffles their hand into their deck and draws ${argOf(a)} card(s).` }),
+  shuffle_both_coin_draw: (a) => ({ zh: `双方将手牌洗回牌库，然后抛硬币决定各自抽牌数（你抽 ${argOf(a)} 张）。`, en: `Both players shuffle their hands into their decks, then flip a coin to set the draws (you draw ${argOf(a)}).` }),
+  opp_shuffle_draw: { zh: '对手把手牌洗回并置于其牌库底。', en: 'Your opponent shuffles their hand and puts it on the bottom of their deck.' },
+  opp_hand: (act) => ({
+    zh: `查看对手手牌，并从中${act === 'discard' ? '弃置' : '置于其牌库底'}符合条件的卡。`,
+    en: `Reveal your opponent’s hand and ${act === 'discard' ? 'discard' : 'put on the bottom of their deck'} matching cards.`,
+  }),
+  discard_opp_to: (a) => ({ zh: `对手弃牌，直到手牌剩 ${argOf(a)} 张。`, en: `Your opponent discards cards until they have ${argOf(a)} in hand.` }),
+  discard_to_both: (a) => ({ zh: `双方各自弃牌，直到手牌剩 ${argOf(a)} 张（对手先弃）。`, en: `Each player discards until they have ${argOf(a)} cards in hand (opponent discards first).` }),
+  discard_tool: (a) => ({ zh: `弃置至多 ${argOf(a)} 张双方宝可梦身上的道具。`, en: `Discard up to ${argOf(a)} Pokémon Tools attached to Pokémon (either side).` }),
+  discard_tool_or_senergy: (a) => ({ zh: `弃置对手的 ${argOf(a)} 张道具或特殊能量。`, en: `Your opponent discards ${argOf(a)} Pokémon Tool or Special Energy.` }),
+  energy_to_deck: (a) => ({ zh: `从弃牌堆把至多 ${argOf(a)} 张基本能量洗回牌库。`, en: `Shuffle up to ${argOf(a)} Basic Energy from your discard pile into your deck.` }),
+  energy_move: (a) => ({ zh: `在己方宝可梦之间移动至多 ${argOf(a)} 个能量。`, en: `Move up to ${argOf(a)} Energy between your Pokémon.` }),
+  recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),
+  search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),
+  attach: (a, _x, parts) => {
+    const tv = (parts || []).find((x) => TY[x] && x !== 'any')
+    const w = tv ? ty(tv) : ['基本', 'Basic']
+    return { zh: `从弃牌堆附着 ${argOf(a)} 个${w[0]}能量。`, en: `Attach ${argOf(a)} ${w[1]} Energy from your discard pile.` }
+  },
+  attach_each_pick: (a) => ({ zh: `选择至多 ${argOf(a)} 只宝可梦，各为其检索并附着 1 个基本能量。`, en: `Choose up to ${argOf(a)} Pokémon; for each, search your deck for a Basic Energy and attach it.` }),
+  bounce: { zh: '将 1 只宝可梦及其附属卡收回手牌。', en: 'Put 1 Pokémon and all attached cards back into your hand.' },
+  switch_draw_to: (a) => ({ zh: `将己方战斗位与 1 只后备交换，然后抽牌直到手牌达到 ${argOf(a)} 张。`, en: `Switch your Active Pokémon with 1 Benched Pokémon, then draw until you have ${argOf(a)} cards.` }),
+  coin_flip: { zh: '抛一次硬币，按正反面执行不同效果。', en: 'Flip a coin and resolve the matching branch.' },
+  coin_gate_attach: (a) => ({ zh: `抛 2 枚硬币；若全为正面，从牌库检索并附着 ${argOf(a)} 个基本能量。`, en: `Flip 2 coins; if both are heads, search your deck for ${argOf(a)} Basic Energy and attach it.` }),
+  status_multi: { zh: '使对手的战斗位宝可梦同时陷入多个特殊状态。', en: 'Give your opponent’s Active Pokémon multiple Special Conditions at once.' },
+  fossil: (a) => ({ zh: `化石卡：可当作 ${argOf(a)} HP 的基础无色宝可梦上场。`, en: `Fossil: may be played as a ${argOf(a)}-HP Basic Colorless Pokémon.` }),
+  team_boost: (a) => ({ zh: `本回合己方宝可梦的攻击额外造成 ${argOf(a)} 点伤害。`, en: `During this turn, your Pokémon’s attacks do ${argOf(a)} more damage.` }),
+  team_shield: (a) => ({ zh: `对手的下一个回合，己方宝可梦受到的攻击伤害减少 ${argOf(a)} 点。`, en: `During your opponent’s next turn, your Pokémon take ${argOf(a)} less damage from attacks.` }),
+  shield_choose: { zh: '选择 1 只己方宝可梦，使其本回合不受对手宝可梦招式效果影响。', en: 'Choose 1 of your Pokémon; it is unaffected by your opponent’s attack effects this turn.' },
+  tool: (kind, num) => {
+    if (kind === 'hp_plus') return { zh: `附着的宝可梦获得 ${argOf(num)} 点最大 HP。`, en: `The Pokémon this card is attached to gains ${argOf(num)} max HP.` }
+    if (kind === 'survive') return { zh: '附着的宝可梦满 HP 时，可承受一次本应将其击倒的攻击伤害。', en: 'If the attached Pokémon has full HP, it survives damage that would knock it out.' }
+    if (kind === 'on_damaged') return { zh: `附着的宝可梦在战斗位受到对手招式伤害时，抽 ${argOf(num)} 张牌。`, en: `When the attached Pokémon is damaged in the Active Spot, draw ${argOf(num)} card(s).` }
+    if (kind === 'retreat_less') return { zh: `附着的宝可梦撤退费用减少 ${argOf(num)}。`, en: `The attached Pokémon’s Retreat Cost is ${argOf(num)} less.` }
+    return { zh: '宝可梦道具：附着于己方宝可梦，持续生效。', en: 'Pokémon Tool: attach to your Pokémon for a lasting effect.' }
+  },
+  stadium: (_a, _mode, parts) => {
+    const ps = parts || []
+    const ns = numsOf(ps)
+    const tv = ps.find((x) => TY[x])
+    const w = tv ? ty(tv) : null
+    if (ps.includes('heal_all')) {
+      const n = ns[ns.length - 1] || 'n'
+      return { zh: `竞技场：满足卡面条件时，回复己方全部宝可梦 ${n} 点伤害。`, en: `Stadium: when its condition is met, heal ${n} damage from all your Pokémon.` }
+    }
+    if (ps.includes('poison_extra')) {
+      const n = ns[0] || 'n'
+      return { zh: `竞技场：宝可梦检查时，中毒宝可梦额外放置 ${n} 个伤害指示物${w ? `（${w[0]}属性）` : ''}。`, en: `Stadium: during Pokémon Checkup, Poisoned Pokémon take ${n} extra damage counters${w ? ` (${w[1]})` : ''}.` }
+    }
+    if (ps.includes('dmg_reduce')) {
+      const n = ns[0] || 'n'
+      return { zh: `竞技场：${w ? w[0] : '特定'}属性宝可梦受到的攻击伤害减少 ${n} 点。`, en: `Stadium: ${w ? w[1] : 'certain'} Pokémon take ${n} less damage from attacks.` }
+    }
+    return { zh: '竞技场：持续生效的场地效果。', en: 'Stadium: a persistent field effect.' }
+  },
 }
 
 /**
@@ -125,8 +218,16 @@ export function trainerDesc(tag) {
   const parts = String(tag || '').split(':')
   const [head, arg, extra] = parts
   const entry = TRAINER_TAG_DESC[head] || TRAINER_TAG_DESC[tag]
-  if (!entry) return { zh: '（该效果暂无说明）', en: '(no description yet)' }
-  return cc(typeof entry === 'function' ? entry(arg, extra) : entry)
+  if (!entry) {
+    // ⚠ 兜底**必须经 cc() 解包成字符串**：直接返回 {zh,en} 对象会被 React 当作
+    //   子节点渲染（error #31）→ 整棵树卸载 → 整屏黑屏（真实卡组必踩）。
+    //   未收录的族如实标注 tag（C5 差异透明），不假装有说明。
+    return cc({
+      zh: `（效果说明未收录：${tag || '无 tag'}）`,
+      en: `(description not catalogued: ${tag || 'no tag'})`,
+    })
+  }
+  return cc(typeof entry === 'function' ? entry(arg, extra, parts) : entry)
 }
 
 // ---------------- 特性效果说明 ----------------

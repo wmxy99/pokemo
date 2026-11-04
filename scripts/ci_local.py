@@ -137,6 +137,8 @@ def build_jobs() -> list:
                  needs="node"),
             Step("plays.js 目标语义对账", ["node", "e2e/plays_check.cjs"],
                  _p("apps", "web"), needs="node"),
+            Step("卡面文案守卫（trainerDesc 恒返回字符串 + tag 族全收录）",
+                 ["node", "e2e/cardtext_check.cjs"], _p("apps", "web"), needs="node"),
         ]),
         Job("redline", [
             Step("Data-redline guard (文件名)", [PY, "-c",

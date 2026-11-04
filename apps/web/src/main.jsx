@@ -10,6 +10,44 @@ import CardCenterPage from './pages/CardCenterPage.jsx'
 import { TrainingPage } from './pages/admin.jsx'
 import ModelConfigPage from './pages/ModelConfig.jsx'
 
+/**
+ * 顶层错误边界（ErrorBoundary）
+ *
+ * 为什么必须有：React 里任何一个组件渲染抛错（最常见的是「把对象当子节点
+ * 渲染」→ error #31），**没有 ErrorBoundary 时 React 会卸载整棵树** → 整屏黑屏，
+ * 用户连报错都看不到（踩过：真实卡组的训练家 tag 未收录 → trainerDesc 返回
+ * {zh,en} 对象 → 一进手牌就黑屏）。
+ *
+ * 这里把错误**就地显示**在页面里，并给出可复制的诊断信息，其余部分照常可用。
+ */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error) { return { error } }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    console.error('[UI] 渲染异常已被错误边界捕获：', error, info?.componentStack)
+  }
+  render() {
+    const { error } = this.state
+    if (!error) return this.props.children
+    return (
+      <div className="card" style={{ borderColor: 'var(--brand, #c0392b)' }}>
+        <h3>该区域渲染出错（已隔离，其余功能仍可用）</h3>
+        <p className="sm muted">
+          错误不会影响其他页面。请把下面的信息反馈给维护者：
+        </p>
+        <pre className="log mono sm">{String(error?.message || error)}</pre>
+        <button className="ghost sm" onClick={() => this.setState({ error: null })}>
+          重试
+        </button>
+      </div>
+    )
+  }
+}
+
 const FRONT = [
   { key: 'battle', label: t('nav.battle') },
   { key: 'collection', label: t('nav.collection') },
@@ -98,14 +136,17 @@ function App() {
 
       <main className="area">
         <PageHead {...(PAGE_META[page] || {})} />
-        {zone === 'front' && (<>
-          {page === 'battle' && <BattleCenterPage onMsg={onMsg} onGoDecks={() => setPage('collection')} />}
-          {page === 'collection' && <CardCenterPage onMsg={onMsg} onGoBattle={() => setPage('battle')} />}
-        </>)}
-        {zone === 'admin' && (<>
-          {page === 'training' && <TrainingPage onMsg={onMsg} authed={!!user} />}
-          {page === 'model' && <ModelConfigPage onMsg={onMsg} authed={!!user} />}
-        </>)}
+        {/* 页面级错误边界：任一页渲染抛错时只隔离该页，导航/页脚仍可用 */}
+        <ErrorBoundary>
+          {zone === 'front' && (<>
+            {page === 'battle' && <BattleCenterPage onMsg={onMsg} onGoDecks={() => setPage('collection')} />}
+            {page === 'collection' && <CardCenterPage onMsg={onMsg} onGoBattle={() => setPage('battle')} />}
+          </>)}
+          {zone === 'admin' && (<>
+            {page === 'training' && <TrainingPage onMsg={onMsg} authed={!!user} />}
+            {page === 'model' && <ModelConfigPage onMsg={onMsg} authed={!!user} />}
+          </>)}
+        </ErrorBoundary>
       </main>
 
       {/* 全站版权与隐私声明：恒定可见，不在 view 层隐藏 */}

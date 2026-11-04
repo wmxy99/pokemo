@@ -353,6 +353,17 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 _EN_STATUS = (("asleep", "sleep"), ("burned", "burn"), ("confused", "confuse"),
               ("paralyzed", "paralyze"), ("poisoned", "poison"))
+# 「Your opponent's Active Pokémon is now Burned **and** Poisoned.」（2026-11-04
+# 第五十三批）——一句挂两个异常。下面 `_EN_STATUS` 的循环**命中首个状态词就
+# break**（`_EN_STATUS` 的遍历顺序与文本顺序无关），第二状态被静默丢掉：
+# Salazzle ex「Burned and Poisoned」只剩烧伤、Drapion「Paralyzed and Poisoned」
+# 只剩麻痹。两者都**不报错、测试全绿、卡照样能打**。
+# 判定按**该词所在那一句**（`_sentence_at`），且以本正则的捕获为准 ——
+# 不能靠「循环里先命中谁」推断谁是 a 谁是 b。
+_EN_MULTI_STATUS_SENT = re.compile(
+    r"opponent'?s? active pok[eé]mon is now "
+    r"(?P<a>asleep|burned|confused|paralyzed|poisoned) and "
+    r"(?P<b>asleep|burned|confused|paralyzed|poisoned)", re.I)
 
 
 def _status_word_is_condition(text: str, word: str) -> bool:
@@ -753,8 +764,74 @@ _TC_GUST_STATUS = re.compile(
 # 「If you go first, you may use this card during your first turn.」（Carmine）——
 # 这是**许可**（放宽回合限制），不是效果也不是代价。引擎本来就不限制支援者
 # 首回合使用，故整句剥掉；留着会被读成条件，把主效果挤掉。
+# 招式侧同义句是「you **can** use this attack during your first turn」
+# （2026-11-04 第五十三批：Tapu Koko「Fast Flight」）——此前只剥训练家写法，
+# 招式那句留在正文里，于是紧随其后的「Discard your hand and draw 5 cards.」
+# 不再处于句首，`_TC_RESEARCH` 的 `^…$` 锚点失配 → 落成 `discard:all`+`draw:5`
+# 两条（多 tag 对招式无害，但 `research:` 的**一条**语义丢了，且与卡面对账不符）。
 _TURN1_PERMISSION = re.compile(
-    r"^if you go first, you may use this card during your first turn[.]\s*", re.I)
+    r"^if you go first, you (?:may use this card|can use this attack) during "
+    r"your first turn[.]\s*", re.I)
+
+
+# ---- 对手手牌弃置族（2026-11-04 第五十四批）----
+# 引擎早已有 `discard_opp_random:N`（对手自选 ⇒ 随机）与 `discard_opp_to:N`
+# （弃到剩 N 张），但**解析侧从来没产出过** —— 4 张卡（Sandile / Krokorok /
+# Krookodile / Furfrou）因此整卡不收。
+#
+# ⚠ 口径方向：卡面写「**Your opponent** discards … from their hand」时，选择权
+# 在对手手里 ⇒ 引擎按**随机**执行是对的（与 `opp_hand:`「you discard a card you
+# find there」= 我方选 严格相反，别混用）。
+#
+# ⚠ 与 `_OPP_HAND_PATTERNS` 的分工：那边要求句首是「Your opponent reveals their
+# hand」并整句收尾；这边**不带 reveal**，只认「对手自己弃」。两族正则互不重叠。
+_OPP_DISCARD_N = re.compile(
+    r"^your opponent discards (?P<n>\d+|a) cards? from their hand[.]$", re.I)
+# 「Discard random cards from your opponent's hand until they have 5 cards in
+# their hand.」（Furfrou「Hand Trim」）
+_OPP_DISCARD_TO = re.compile(
+    r"^discard random cards? from your opponent'?s hand until they have "
+    r"(?P<n>\d+) cards? in their hand[.]$", re.I)
+# 「Each player discards cards from their hand until they have N cards in their
+# hand. Your opponent discards first. (If a player has N or fewer …)」
+# （Hand Trimmer TEF 150）——顺序（对手先弃）在「同时弃到剩 N」口径下无影响，
+# 但括号里的**免弃**说明必须允许。
+_DISCARD_TO_BOTH = re.compile(
+    r"^each player discards cards? from their hand until they have "
+    r"(?P<n>\d+) cards? in their hand[.]"
+    r"(?:\s*your opponent discards first[.])?"
+    r"(?:\s*\([^)]*\))?$", re.I)
+# 「Discard a card from your hand. If you do, your opponent discards a card
+# from their hand.」（Team Rocket's Porygon「Hacking」）—— 我方付账 + 对手随机弃
+_HACKING = re.compile(
+    r"^discard a card from your hand[.]\s*if you do, your opponent discards a "
+    r"card from their hand[.]$", re.I)
+
+
+def _detect_opp_discard(text: str, kind: str) -> list:
+    """「对手自己弃手牌」→ ``discard_opp_random:N`` / ``discard_opp_to:N``
+
+    整句认领（``^…$``）：句首认领却不收尾，会把同一句后半段的其它效果
+    静默吞掉；反过来若允许出现在句中，多句式卡面里的这一段又会被别条带偏。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _HACKING.match(t)
+    if m:
+        # 付账在前、效果在后：引擎按 tag 顺序派发，`discard:1` 必须先扣掉手牌，
+        # 否则「If you do」的门形同虚设（付不出也能让对手弃）。
+        return [act("discard", 1, "hand"),
+                act("discard", 1, "opponent_hand")]
+    m = _OPP_DISCARD_TO.match(t)
+    if m:
+        return [act("discard", None, "opponent_hand", {"to": int(m.group("n"))})]
+    m = _DISCARD_TO_BOTH.match(t)
+    if m:
+        return [act("discard", None, "both_hand", {"to": int(m.group("n"))})]
+    m = _OPP_DISCARD_N.match(t)
+    if m:
+        n = 1 if not str(m.group("n")).isdigit() else int(m.group("n"))
+        return [act("discard", n, "opponent_hand")]
+    return []
 
 
 def _detect_trainer_compound(text: str) -> list:
@@ -2674,6 +2751,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _pick_evo,
                 "source_text": str(text or ""), "citations": []}
+    # 对手手牌弃置（2026-11-04 第五十四批）：已在引擎里有精确 tag，只缺解析。
+    _od = _detect_opp_discard(t, kind)
+    if _od:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _od,
+                "source_text": str(text or ""), "citations": []}
     # 训练家复合句（2026-11-04 第五十一批）：整句认领成**一条**复合 tag。
     _tc = _detect_trainer_compound(t)
     if _tc:
@@ -3574,6 +3657,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                 break
             tgt = "active_opponent" if _EN_OPP_RE.search(t) else "self"
             extra = {"status": tag}
+            # 「is now Burned and Poisoned」（2026-11-04 第五十三批）：同一句里
+            # 第二个状态必须一起落成 `status_multi:<a>+<b>`。捕获以本正则为准
+            # （循环命中顺序 ≠ 文本顺序），位置判定限制在**该词所在那一句**。
+            _ms = _EN_MULTI_STATUS_SENT.search(_norm_apostrophe(t))
+            if _ms and _ms.start() <= pos <= _ms.end():
+                _a = _STATUS_WORD_TO_TAG.get(_ms.group("a").lower())
+                _b = _STATUS_WORD_TO_TAG.get(_ms.group("b").lower())
+                if _a and _b and _a != _b:
+                    extra = {"status": _a, "status2": _b}
             # 「If you discarded a Pokémon Tool **in this way**, … is now
             # Paralyzed.」（N's Joltik，第二十五批）—— 状态以伤害前阶段**真的
             # 弃到道具**为前提。此前该从句被整段忽略，变成无条件麻痹（静默加强）。
@@ -3892,8 +3984,10 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     # 「If you go first, you may use this card during your first turn.」（第五十一批）
     # 是**许可**不是效果、也不是代价 → 剥掉；留着会被读成条件并挤掉主效果。
     _t = str(text or "")
-    if kind in ("item", "supporter", "stadium", "tool"):
-        _t = _TURN1_PERMISSION.sub("", _t).strip()
+    # 首回合许可句：训练家与招式都剥（两者写法不同，见 `_TURN1_PERMISSION`）。
+    # 招式侧也要剥的理由：剥掉后主效果才回到**句首**，能被整句认领式正则
+    # （`_TC_RESEARCH` 等 `^…$`）命中；否则会退化成多条散动作。
+    _t = _TURN1_PERMISSION.sub("", _t).strip()
     text, _pcost = _split_play_cost(_t, kind)
     # 特性发动代价（2026-11-04 第四十九批）：同样**先剥离**再解析（理由同上）。
     text, _acost = _split_ability_cost(text, kind)
@@ -4190,6 +4284,19 @@ _COIN_OPP_STATUS_RE = re.compile(
     r"flip\s+a\s+coin[\s\S]{0,80}?if\s+(heads|tails)[^.]*?"
     r"your\s+opponent'?s\s+active\s+pok[eé]mon\s+is\s+now\s+"
     r"(asleep|burned|confused|paralyzed|poisoned)\s*(?:[.!]|$)", re.I)
+# 「Flip a coin. If heads, <状态(可两个)>. If tails, <状态>.」（2026-11-04
+# 第五十三批，Lilligant「Bemusing Aroma」）——**同一枚币的双分支**。
+# 此前 heads 分支匹配不上（其后跟的是 " and Poisoned" 而非句号），于是只落
+# `coin:tails:confuse`：正面那半（麻痹+中毒）**整段静默消失**，且不掉卡。
+# 表达方式：`coin_each:1:heads:<heads子效果>|cond:all_tails:<tails子效果>`
+# —— 只抛 1 枚币，正面走 plain 子效果、反面走 `all_tails` 条件子效果，
+# 共用同一次结果，既不重复抛币也不落成两条 `coin:`（= 两次独立抛币）。
+_COIN_STATUS_FORK_RE = re.compile(
+    r"flip a coin[.]\s*if heads,\s*your opponent'?s? active pok[eé]mon is now "
+    r"(?P<h>(?:asleep|burned|confused|paralyzed|poisoned)"
+    r"(?: and (?:asleep|burned|confused|paralyzed|poisoned))?)"
+    r"[.]\s*if tails,\s*your opponent'?s? active pok[eé]mon is now "
+    r"(?P<t>asleep|burned|confused|paralyzed|poisoned)", re.I)
 # 多币条件（both / either / at least N）暂无法用现有 coin_each 精确表达
 # （coin_each 只能表达「至少 1 个正面」的重复子效果）。
 _MULTI_COIN_COND_RE = re.compile(
@@ -5597,6 +5704,23 @@ _KO_PATTERNS = (
     (r"if your opponent'?s active pok[eé]mon is a basic pok[eé]mon, "
      r"it is knocked out",
      lambda m: "opp_active:basic", False),
+    # ---- 第五十五批（2026-11-04）：击倒族补齐三个限定 ----
+    # 「If your opponent's Active Pokémon has exactly 6 damage counters on it,
+    # that Pokémon is Knocked Out.」（Mega Absol ex「Terminal Period」）
+    # ⚠ 指示物数 ×10 = 伤害值；引擎按 `fp.damage == n*10` 判，故这里传**个数**。
+    (r"if your opponent'?s active pok[eé]mon has exactly (\d+) damage counters? "
+     r"on it, that pok[eé]mon is knocked out",
+     lambda m: f"opp_counters:{int(m.group(1))}", False),
+    # 「… has any Special Energy attached, it is Knocked Out.」（Haxorus）
+    (r"if your opponent'?s active pok[eé]mon has any special energy attached, "
+     r"it is knocked out",
+     lambda m: "opp_active:if:senergy", False),
+    # 「Knock Out **each** of your opponent's Pokémon that has 50 HP or less
+    # remaining.」（Yveltal ex「Soul Destroyer」）
+    # ⚠ 「each」= 逐只全倒，不是「1 of」（`opp_any`）；落错会把多杀削成单杀。
+    (r"knock out each of your opponent'?s pok[eé]mon that has (\d+) hp or less "
+     r"remaining",
+     lambda m: f"opp_all:if:hp_le:{int(m.group(1))}", False),
     # 被动语态：「… your opponent's Active Pokémon is Knocked Out.」
     # ⚠ **必须**落在抛币分支里（Iono's Electrode「Flip a coin. If heads, …」）；
     # 否则它多半是**触发从句**（Togekiss「When your opponent's Active Pokémon is
@@ -6556,6 +6680,19 @@ def _detect_coin(text: str, low: str) -> list:
         if mh:
             act_["extra"]["sub_more"] = [f"heal:{int(mh.group(1))}"]
         out.append(act_)
+    # 同一枚币的两个状态分支（2026-11-04 第五十三批）——必须在单分支
+    # `_COIN_OPP_STATUS_RE` 之前认领，否则只会命中 tails 那半、heads 静默消失。
+    mforkst = _COIN_STATUS_FORK_RE.search(_norm_apostrophe(text))
+    if mforkst:
+        _hs = [_STATUS_WORD_TO_TAG[w.lower()] for w in
+               re.split(r"\s+and\s+", mforkst.group("h"))]
+        _ts = _STATUS_WORD_TO_TAG[mforkst.group("t").lower()]
+        _sub = ("status_multi:" + "+".join(_hs)) if len(_hs) > 1 else _hs[0]
+        out.append(act("coin_flip", None, "active_opponent",
+                       {"side": "heads", "mode": "each", "counter": "1",
+                        "sub": _sub,
+                        "sub_more": [f"cond:all_tails:{_ts}"]}))
+        return out
     mstat = _COIN_OPP_STATUS_RE.search(_norm_apostrophe(text))
     mall = re.search(r"flip (\d+) coins\.\s*if both of them are (heads|tails),",
                      text, re.I)
@@ -7433,7 +7570,19 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"attach:{n}{suffix}{zsuffix}")
             elif t == "discard":
                 n = int(amt) if amt is not None else 1
-                if extra.get("from_deck"):
+                if str(tgt or "") == "opponent_hand":
+                    # 「Your opponent discards … from their hand」（第五十四批）：
+                    # 选择权在**对手**手里 ⇒ 引擎按随机弃（`discard_opp_random`）
+                    # 与卡面一致；`opp_hand:` 才是「我方选」，两者不可互换。
+                    if extra.get("to") is not None:
+                        tags.append(f"discard_opp_to:{int(extra['to'])}")
+                    else:
+                        tags.append(f"discard_opp_random:{n}")
+                elif str(tgt or "") == "both_hand":
+                    # 「Each player discards … until they have N cards」
+                    # （Hand Trimmer）—— 双方同时弃到剩 N，**不是**只弃对手。
+                    tags.append(f"discard_to_both:{int(extra.get('to') or 0)}")
+                elif extra.get("from_deck"):
                     # 磨牌：牌库顶 N 张进弃牌堆（`mill:N[:opp]`）
                     tags.append(f"mill:{n}"
                                 + (":opp" if extra.get("side") == "opp" else ""))
@@ -8569,11 +8718,13 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"checkup_set:{st}:{int(amt)}")
             elif t == "knockout":
                 # 招式击倒（2026-10-28 第九批）：`knockout:<scope>`
-                # scope：opp_active[:basic] · opp_bench[:basic] · opp_any ·
+                # scope：opp_active[:basic|if:senergy] · opp_bench[:basic] ·
+                #        opp_any · opp_all[:if:hp_le:<n>] ·
                 #        opp_counters:<n> · both_active
                 scope = str(extra.get("scope") or "")
                 if scope.split(":")[0] not in ("opp_active", "opp_bench",
-                                               "opp_any", "opp_counters",
+                                               "opp_any", "opp_all",
+                                               "opp_counters",
                                                "both_active"):
                     unsupported.append(
                         {"type": t, "reason": f"击倒目标范围未识别：{scope}"})

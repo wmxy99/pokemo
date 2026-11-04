@@ -75,6 +75,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
                 "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
                 "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
+                # 第五十四批：**双方**各弃手牌到剩 N（Hand Trimmer）。
+                # 前缀不被 `discard:` 覆盖（第 8 位是 `_` 不是 `:`），必须显式列出。
+                "discard_to_both:",
                 # 化石卡（2026-10-28）：当作 N-HP 基础宝可梦上场
                 "fossil:",
                 # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 打出前置条件
@@ -140,6 +143,8 @@ ATTACK_TAG_PREFIXES = (
     # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
     "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
     "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
+    # 第五十四批：双方各弃手牌到剩 N（招式侧同样已实现派发）
+    "discard_to_both:",
     # 攻击复用 / 下回合限制 / 无视效果（2026-10-28）
     "borrow_attack:", "attack_denial:", "attack_cost_up:",
     "retreat_cost_up:", "ignore_effects",
@@ -233,6 +238,8 @@ ABILITY_TAG_PREFIXES = (
     # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
     "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
     "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
+    # 第五十四批：双方各弃手牌到剩 N（Hand Trimmer）
+    "discard_to_both:",
     # 第二十批（2026-10-29）：特性直放伤害指示物（Dusclops / Dusknoir「诅咒爆裂」）
     "counters:",
     # 第四十四批（2026-11-03）：特性侧抛币（Dustox「Boisterous Wind」）——

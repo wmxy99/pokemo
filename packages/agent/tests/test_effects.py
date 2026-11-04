@@ -812,9 +812,15 @@ class TestV14Modifiers(unittest.TestCase):
         self.assertNotIn("passive:dmg_reduce:50", r["tags"])
 
     def test_field_wide_static_still_refused(self):
-        """全体/带条件的静态修正**不许**当自身常驻（会变成全队白嫖）"""
+        """全体/带条件的静态修正**不许**当自身常驻（会变成全队白嫖）
+
+        2026-11-04 第五十六批补充：撤退费用归零已有**全队**实现
+        （``fx:retreat_free:``），因此那两句现在会被**正确认领** —— 判定不变的是
+        「不得落成 ``passive:no_retreat``」：`passive:` 只作用于持有者自己，
+        用它顶替全队效果 = 效果静默缩水（卡照样能打、测试全绿）。
+        HP 加成目前**没有**全队实现，继续如实未建模。
+        """
         texts = [
-            "All of your Pok\u00e9mon in play get +40 HP.",
             "All of your Pok\u00e9mon that have {M} Energy attached have no "
             "Retreat Cost.",
             "Your Basic Pok\u00e9mon in play have no Retreat Cost.",
@@ -822,8 +828,14 @@ class TestV14Modifiers(unittest.TestCase):
         for text in texts:
             with self.subTest(text=text[:40]):
                 r = self._tags(text, kind="ability")
-                self.assertEqual(r["tags"], [], "全体范围被误映射成自身常驻")
-                self.assertTrue(r["unsupported"])
+                self.assertEqual(
+                    [t for t in r["tags"] if t.startswith("passive:")], [],
+                    "全体范围被误映射成自身常驻")
+        # 仍无全队实现的形态：必须**整卡**如实未建模（不能半建模）
+        r = self._tags("All of your Pok\u00e9mon in play get +40 HP.",
+                       kind="ability")
+        self.assertEqual(r["tags"], [])
+        self.assertTrue(r["unsupported"])
 
     def test_real_status_effect_still_applies(self):
         """对照：非条件句的「is now Burned」仍然要产出状态效果（不能修过头）"""

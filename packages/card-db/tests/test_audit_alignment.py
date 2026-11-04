@@ -1364,3 +1364,123 @@ class TestAuditBatch47(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAuditBatch53(unittest.TestCase):
+    """第五十三批对账的**负向自测**：六族新 tag + 特性发动代价
+
+    每组都覆盖「正确 → 不报」与「静默削弱 → 必须报」两侧；只测正向等于橡皮图章。
+    """
+
+    KPM = ("If this Pokémon is Knocked Out by damage from an attack from your "
+           "opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your "
+           "opponent takes 1 fewer Prize card.")
+    KPM_TEAM = ("If 1 of your {D} Pokémon is Knocked Out by damage from an attack "
+                "from your opponent’s Pokémon {ex}, that player takes 1 fewer "
+                "Prize card.")
+    PAIR = "Your opponent’s Active Pokémon is now Burned and Poisoned."
+    FORK = ("Flip a coin. If heads, your opponent’s Active Pokémon is now "
+            "Paralyzed and Poisoned. If tails, your opponent’s Active Pokémon "
+            "is now Confused.")
+    SWITCH_DRAW = ("Switch your Active Pokémon with 1 of your Benched Pokémon. "
+                   "If you do, draw cards until you have 5 cards in your hand.")
+    GUST = ("Switch in 1 of your opponent’s Benched Basic Pokémon to the Active "
+            "Spot. If you do, the new Active Pokémon is now Confused.")
+
+    def test_ko_prize_minus_ok(self):
+        self.assertEqual(A.audit_batch53(
+            "Munkidori ex", "Oh No You Don’t", self.KPM,
+            ["ko_prize_minus:1:if_named:pecharunt"]), [])
+
+    def test_ko_prize_minus_missing_flagged(self):
+        errs = A.audit_batch53("Munkidori ex", "Oh No You Don’t", self.KPM, [])
+        self.assertTrue(any("ko_prize_minus:1:if_named:pecharunt" in e
+                            for e in errs), errs)
+
+    def test_ko_prize_minus_number_flagged(self):
+        """少给 2 张写成 1 张 = 量纲错（奖赏数是胜负量纲）"""
+        errs = A.audit_batch53(
+            "X", "Y",
+            self.KPM.replace("1 fewer", "2 fewer"),
+            ["ko_prize_minus:1:if_named:pecharunt"])
+        self.assertTrue(any("fewer Prize card" in e for e in errs), errs)
+
+    def test_ko_prize_minus_team_ok(self):
+        self.assertEqual(A.audit_batch53(
+            "Mega Gengar ex", "Shadowy Concealment", self.KPM_TEAM,
+            ["ko_prize_minus:1:from_ex:team_darkness"]), [])
+
+    def test_ko_prize_minus_team_missing_flagged(self):
+        """丢掉同队限定 = 全队都能少给奖赏（静默加强）"""
+        errs = A.audit_batch53("Mega Gengar ex", "Shadowy Concealment",
+                               self.KPM_TEAM, ["ko_prize_minus:1:from_ex"])
+        self.assertTrue(any("team_darkness" in e for e in errs), errs)
+
+    def test_status_multi_ok(self):
+        self.assertEqual(A.audit_batch53("Drapion", "Hazardous Tail", self.PAIR,
+                                         ["status_multi:burn+poison"]), [])
+
+    def test_status_multi_embedded_in_coin_ok(self):
+        """双状态嵌在抛币子效果里也算（Lilligant 形态）"""
+        self.assertEqual(A.audit_batch53(
+            "Lilligant", "Bemusing Aroma", self.FORK,
+            ["coin_each:1:heads:status_multi:paralyze+poison"
+             "|cond:all_tails:confuse"]), [])
+
+    def test_single_status_flagged(self):
+        errs = A.audit_batch53("Drapion", "Hazardous Tail", self.PAIR, ["burn"])
+        self.assertTrue(any("status_multi:burn+poison" in e for e in errs), errs)
+
+    def test_switch_draw_to_ok(self):
+        self.assertEqual(A.audit_batch53("Surfer", "Surfer", self.SWITCH_DRAW,
+                                         ["switch_draw_to:5"]), [])
+
+    def test_switch_draw_split_flagged(self):
+        """拆成 switch + draw:5 = 「补到 5 张」变成「多抽 5 张」"""
+        errs = A.audit_batch53("Surfer", "Surfer", self.SWITCH_DRAW,
+                               ["switch_self", "draw:5"])
+        self.assertTrue(any("switch_draw_to:5" in e for e in errs), errs)
+
+    def test_gust_confuse_ok(self):
+        self.assertEqual(A.audit_batch53("Lisia’s Appeal", "Lisia’s Appeal",
+                                         self.GUST, ["gust_confuse"]), [])
+
+    def test_bare_gust_flagged(self):
+        errs = A.audit_batch53("Lisia’s Appeal", "Lisia’s Appeal", self.GUST,
+                               ["gust"])
+        self.assertTrue(any("gust_confuse" in e for e in errs), errs)
+
+    def test_research_ok(self):
+        self.assertEqual(A.audit_batch53(
+            "Tapu Koko", "Fast Flight",
+            "If you go first, you can use this attack during your first turn. "
+            "Discard your hand and draw 5 cards.", ["research:5"]), [])
+
+    def test_research_split_flagged(self):
+        errs = A.audit_batch53(
+            "Tapu Koko", "Fast Flight",
+            "Discard your hand and draw 5 cards.", ["discard:all", "draw:5"])
+        self.assertTrue(any("research:5" in e for e in errs), errs)
+
+    def test_ability_cost_ok(self):
+        desc = ("You must discard a Basic {L} Energy from this Pokémon in order "
+                "to use this Ability. Once during your turn, you may draw cards "
+                "until you have 6 cards in your hand.")
+        self.assertEqual(A.audit_batch53("Iono’s Kilowattrel", "Flashing Draw",
+                                         desc, ["draw_to:6"],
+                                         cost="discard_self_energy:1:lightning"),
+                         [])
+
+    def test_ability_cost_empty_flagged(self):
+        """漏了 cost = 特性**免费发动**（比不建模更糟）"""
+        desc = ("You must discard a card from your hand in order to use this "
+                "Ability. Once during your turn, you may draw 2 cards.")
+        errs = A.audit_batch53("N’s Zoroark ex", "Trade", desc, ["draw:2"],
+                               cost="")
+        self.assertTrue(any("免费发动" in e for e in errs), errs)
+
+    def test_ability_cost_overclaim_flagged(self):
+        """卡面无代价句却写了 cost → 认领越界"""
+        errs = A.audit_batch53("X", "Y", "Draw 2 cards.", ["draw:2"],
+                               cost="discard:1")
+        self.assertTrue(any("认领越界" in e for e in errs), errs)

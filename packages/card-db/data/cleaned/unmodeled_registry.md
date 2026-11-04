@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-04 10:19:45
+- 生成时间：2026-11-04 10:57:28
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **206** 条 · 已映射 tag 1383 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1061 张**
-- 解析层面「无未建模动作」卡：920 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **190** 条 · 已映射 tag 1399 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1077 张**
+- 解析层面「无未建模动作」卡：936 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -29,24 +29,23 @@
 | B4 | type:condition | `condition` | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
 | B4 | type:ability_cost | `ability_cost` | 1 | 1 | 特性发动代价形态未识别（B4） |
-| B5 | S6 | `rule` | 61 | 61 | 静态/未建模（英文） |
-| B5 | S5 | `rule` | 11 | 11 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 55 | 55 | 静态/未建模（英文） |
+| B5 | S5 | `rule` | 10 | 10 | 静态/未建模（英文） |
 | B5 | S2 | `rule` | 6 | 6 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | B5 | S6 | `rule` | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S6 | `rule` | 3 | 3 | 无视目标身上效果（需效果免疫/清除层，B5） |
 | B5 | S6 | `rule` | 3 | 3 | 静态伤害增减（需引擎静态修正层，B4） |
-| B5 | S6 | `rule` | 3 | 3 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
-| B5 | S2 | `rule` | 2 | 2 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S6 | `rule` | 2 | 2 | 首回合招式使用限制（需招式静态条件层，B5） |
-| B5 | S1 | `rule` | 2 | 2 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 2 | 2 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B5 | S5 | `rule` | 2 | 2 | 打出前置条件（You can use this card only if …）未建模（B5） |
 | B5 | S3 | `rule` | 2 | 2 | 场地形态未建模（S3 未覆盖） |
 | B5 | S4 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 未建模的招式失败门（条件不满足则此招式无效，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
+| B5 | S2 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S1 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
+| B5 | S1 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4） |
@@ -56,6 +55,7 @@
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon） |
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 | B5 | S6 | `rule` | 1 | 1 | 能量移动的源/目标未识别（B4） |
+| B5 | S6 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
 | B5 | S4 | `rule` | 1 | 1 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
 | B5 | S2 | `rule` | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
@@ -104,13 +104,13 @@
 
 - `Lunatone`（月石）：Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t
 
-**B5 · S6**（61 条）
+**B5 · S6**（55 条）
 
 - `Shiftry`（狡猾天狗）：Choose 3 of your opponent’s Benched Pokémon. If you do, shuffle all of your opponent’s Benched Pokémon that you didn’t choose, and all cards attached to those P
 - `Dipplin`（裹蜜虫）：If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again
 - `Goldeen`（角金鱼）：If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again
 
-**B5 · S5**（11 条）
+**B5 · S5**（10 条）
 
 - `Hoothoot`（咕咕）：Your opponent reveals their hand.
 - `Espurr`（妙喵）：Your opponent reveals their hand.
@@ -146,26 +146,10 @@
 - `Premium Power Pro`（高级力量强化）：During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).
 - `Black Belt’s Training`（空手道的锻炼）：During this turn, attacks used by your Pokémon do 40 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance).
 
-**B5 · S6**（3 条）
-
-- `Tyranitar`（班基拉斯）：As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards from their hand.
-- `Team Rocket's Arbok`（火箭队的阿柏怪）：As long as this Pokémon is in the Active Spot, your opponent can’t play any Pokémon that has an Ability from their hand, except for Team Rocket’s Pokémon.
-- `Scream Tail ex`（吼叫尾 ex）：You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next t
-
-**B5 · S2**（2 条）
-
-- `Genesect`（盖诺赛克特）：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
-- `Jellicent ex`（胖嘟嘟 ex）：As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards or Pokémon Tool cards from their hand.
-
 **B5 · S6**（2 条）
 
 - `Terapagos ex`（太乐巴戈斯 ex）：If you go second, you can’t use this attack during your first turn. This attack does 30 damage for each of your Benched Pokémon.
 - `Scream Tail ex`（吼叫尾 ex）：You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next t
-
-**B5 · S1**（2 条）
-
-- `Latias ex`（拉帝亚斯 ex）：Your Basic Pokémon in play have no Retreat Cost.
-- `Ludicolo`（乐天河童）：All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack.
 
 **B5 · S6**（2 条）
 
@@ -194,9 +178,17 @@
 
 - `Zoroark`（索罗亚克）：This attack does 60 damage for each of your opponent’s Pokémon {ex} and Pokémon {V} in play.
 
+**B5 · S2**（1 条）
+
+- `Genesect`（盖诺赛克特）：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
+
 **B5 · S1**（1 条）
 
 - `Archaludon ex`（铝钢桥龙 ex）：During your opponent’s next turn, this Pokémon has no Weakness.
+
+**B5 · S1**（1 条）
+
+- `Ludicolo`（乐天河童）：All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack.
 
 **B5 · S6**（1 条）
 
@@ -233,6 +225,10 @@
 **B5 · S6**（1 条）
 
 - `Azumarill ex`（玛力露丽 ex）：As often as you like during your turn, you may use this Ability. Move an Energy from 1 of your other Pokémon to this Pokémon.
+
+**B5 · S6**（1 条）
+
+- `Scream Tail ex`（吼叫尾 ex）：You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next t
 
 **B5 · S6**（1 条）
 

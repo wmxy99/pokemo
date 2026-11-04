@@ -2060,6 +2060,10 @@ class Battle:
             placed = f"opp shuffle {self._shuffle_opp_hand(int(tag.split(':')[1]))}"
         elif tag.startswith("discard_opp_to:"):
             placed = f"opp discard to {self._discard_opp_to(int(tag.split(':')[1]))}"
+        elif tag.startswith("discard_to_both:"):
+            # 双方各弃到剩 N（第五十四批，Hand Trimmer）
+            _a, _b = self._discard_to_both(int(tag.split(":")[1]))
+            placed = f"discard to both: opp {_a} / me {_b}"
         elif tag.startswith("energy_move:"):
             placed = self._apply_energy_move(tag, None, action)
         elif tag.startswith("bounce:"):
@@ -2815,6 +2819,33 @@ class Battle:
         self._log("discard_opp_to", {"player": 1 - self.current, "n": done,
                                      "left": len(o.hand)})
         return done
+
+    def _discard_to_both(self, n: int) -> tuple:
+        """**双方**各弃手牌直到剩 ``n`` 张（Hand Trimmer TEF 150）
+
+        卡面：「Each player discards cards from their hand until they have 5 cards
+        in their hand. Your opponent discards first. (If a player has 5 or fewer
+        cards in their hand, they do not discard.)」
+
+        · 顺序按卡面**对手先弃**（此处结果与顺序无关，但保持卡面口径便于复盘）；
+        · 手牌 ≤ ``n`` 的一侧**弃 0 张**（卡面括号里写明），不能为了「凑数」
+          反手弃掉几张；
+        · 选择权各自在自己手里 ⇒ 与 `discard_opp_to` 同口径，按**随机**弃。
+        """
+        done = []
+        for who in (1 - self.current, self.current):
+            pl = self.players[who]
+            moved = 0
+            while len(pl.hand) > n:
+                i = self.rng.randrange(len(pl.hand))
+                self._to_discard(pl, pl.hand.pop(i))
+                moved += 1
+                if moved > 60:
+                    break
+            self._log("discard_to_both", {"player": who, "n": moved,
+                                          "left": len(pl.hand)})
+            done.append(moved)
+        return tuple(done)
 
     def _do_opp_hand(self, p: PlayerState, tag: str, action: dict) -> str:
         """对手手牌操作（``opp_hand:<op>:<sel>[:<n>|:all]``）—— **我方选**口径
@@ -6087,6 +6118,9 @@ class Battle:
                 self._shuffle_opp_hand(int(tag.split(":")[1]))
             elif tag.startswith("discard_opp_to:"):
                 self._discard_opp_to(int(tag.split(":")[1]))
+            elif tag.startswith("discard_to_both:"):
+                # 双方各弃到剩 N（第五十四批）—— 招式侧同样可达
+                self._discard_to_both(int(tag.split(":")[1]))
             elif tag.startswith("bounce:"):
                 self._apply_bounce(tag, attacker, action)
             elif tag.startswith("discard_tool:"):
@@ -6693,8 +6727,14 @@ class Battle:
           ``opp_active[:basic]``   对手战斗位
           ``opp_bench[:basic]``    对手后备 1 只
           ``opp_any``              对手任意 1 只
+          ``opp_all``              **每一只**满足限定的对手宝可梦（第五十五批）
           ``opp_counters:<n>``     对手「恰好 n 个伤害指示物」的 1 只
           ``both_active``          双方战斗位同时被击倒
+
+        限定（可叠加在 opp_active / opp_bench / opp_any / opp_all 后）：
+          ``basic``            只挑基础宝可梦
+          ``if:senergy``       该宝可梦身上有**特殊**能量（Haxorus「Bring Down the Axe」）
+          ``if:hp_le:<n>``     **剩余** HP ≤ n（Yveltal ex「Soul Destroyer」）
 
         目标选择：``action["ko"]`` 位置码（0=对手战斗位，i≥1=对手后备 i-1）优先；
         否则取**确定性默认**（战斗位优先，其次后备顺序）——与 snipe 的默认口径一致。
@@ -6728,13 +6768,18 @@ class Battle:
 
         if scope == "opp_active":
             pool = [(0, opp.active)] if opp.active is not None else []
-            qual = parts[2] if len(parts) > 2 else ""
+            qual = ":".join(parts[2:])
         elif scope == "opp_bench":
             pool = [(i + 1, fp) for i, fp in enumerate(opp.bench)]
-            qual = parts[2] if len(parts) > 2 else ""
+            qual = ":".join(parts[2:])
         elif scope == "opp_any":
             pool = self._snipe_candidates("opp")
-            qual = ""
+            qual = ":".join(parts[2:])
+        elif scope == "opp_all":
+            # 第五十五批：**每一只**满足限定的对手宝可梦都被击倒
+            # （Yveltal ex「Soul Destroyer」）。与 `opp_any`（只倒 1 只）必须分开。
+            pool = self._snipe_candidates("opp")
+            qual = ":".join(parts[2:])
         elif scope == "opp_counters":
             n = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else -1
             pool = [(pos, fp) for pos, fp in self._snipe_candidates("opp")
@@ -6744,6 +6789,20 @@ class Battle:
             raise ValueError(f"未识别的 knockout 范围：{tag}")
         if qual == "basic":
             pool = [(pos, fp) for pos, fp in pool if fp.stage == 0]
+        elif qual == "if:senergy":
+            # 「If your opponent's Active Pokémon has any Special Energy attached,
+            # it is Knocked Out.」（Haxorus「Bring Down the Axe」）
+            # ⚠ 特殊能量挂在 `senergy` 上（`energy` 只是基本能量的计数字典），
+            # 用 `energy_counts()` 判会把**基本能量也算进去** ⇒ 无条件击倒。
+            pool = [(pos, fp) for pos, fp in pool if fp.senergy]
+        elif qual.startswith("if:hp_le:"):
+            # 「… that has 50 HP or less **remaining**」——比的是剩余 HP，
+            # 不是上限（用 max_hp 会把已经打残的错过、把满血的误伤）。
+            _raw = qual.split(":")[2] if len(qual.split(":")) > 2 else ""
+            if not _raw.isdigit():
+                raise ValueError(f"未识别的 knockout 限定：{tag}")
+            _lim = int(_raw)
+            pool = [(pos, fp) for pos, fp in pool if fp.hp_remaining <= _lim]
         elif qual:
             raise ValueError(f"未识别的 knockout 限定：{tag}")
         if wanted:
@@ -6752,6 +6811,19 @@ class Battle:
                 pool = narrowed
         if not pool:
             self._log("no_effect", {"tag": tag, "reason": "无合法击倒目标"})
+            return False
+        if scope == "opp_all":
+            # 逐只结算（不是「倒第一只就算完」）。每倒一只都可能直接结束对局
+            # （拿完奖赏），因此每次都要检查 `finished` 后再继续。
+            for _pos, fp in list(pool):
+                if fp.is_ko:
+                    continue
+                if blocked(fp):
+                    self._log("blocked", {"target": fp.name, "by": "knockout"})
+                    continue
+                _ko_one(1 - self.current, fp)
+                if self.finished:
+                    return True
             return False
         fp = pool[0][1]
         if fp.is_ko:

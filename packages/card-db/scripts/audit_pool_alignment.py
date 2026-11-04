@@ -1661,6 +1661,12 @@ _KO_TEXT = {
     "opp_bench:basic": r"knock out 1 of your opponent'?s benched basic pok[eé]mon",
     "opp_bench": r"knock out 1 of your opponent'?s benched pok[eé]mon",
     "opp_any": r"knock out 1 of your opponent'?s pok[eé]mon",
+    # 第五十五批：限定式。⚠ 与无条件写法必须严格区分 ——
+    # `opp_active` 的通用正则只认「主动语态」与「… is knocked out」的被动语态，
+    # 而这两条各带**自己的前提从句**，拿通用正则顶替会把「条件击倒」当无条件。
+    "opp_active:if:senergy": (
+        r"if your opponent'?s active pok[eé]mon has any special energy attached, "
+        r"it is knocked out"),
 }
 
 
@@ -1682,6 +1688,17 @@ def audit_knockout(card_name: str, item_name: str, desc: str,
             if f"exactly {n} damage counters" not in low:
                 errs.append(f"{card_name} · {item_name}：`{tag}` 的指示物数"
                             f"与卡面不符")
+            continue
+        if scope.startswith("opp_all:if:hp_le:"):
+            # 第五十五批：「Knock Out **each** … that has N HP or less remaining」
+            # ⚠ 「each」= 逐只全倒；落成 `opp_any`（只倒一只）是把多杀削成单杀，
+            # 而两者在卡面文本上只差一个词，对账必须逐字核对 HP 阈值。
+            _n = scope.rsplit(":", 1)[-1]
+            if not re.search(
+                    r"knock out each of your opponent'?s pok[eé]mon that has "
+                    + re.escape(_n) + r" hp or less remaining", low):
+                errs.append(f"{card_name} · {item_name}：`{tag}` 的「each … "
+                            f"{_n} HP or less remaining」与卡面不符")
             continue
         rx = _KO_TEXT.get(scope)
         if rx is None:
@@ -2480,6 +2497,345 @@ def audit_batch40(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# --------------------------------------------------------------------------
+# 2026-11-04 第五十三批对账：`ko_prize_minus` / `status_multi` / `switch_draw_to` /
+# `gust_confuse` / `research` / 特性发动代价 `AbilityDef.cost`。
+#
+# 这六族的共同风险都是「**少一个状态变化，卡照样能打**」：
+#   · 少 `ko_prize_minus:` → 该少拿的奖赏照样拿满（白送对手 1 张，全程不报错）；
+#   · `status_multi:` 只落一个状态 → 两个异常削成一个（静默变弱，测试全绿）；
+#   · `switch_draw_to:` 落成 `switch` + `draw:5` → 不是「补到 5 张」而是「多 5 张」；
+#   · `gust_confuse` 落成裸 `gust` → 拉上来的那只不混乱；
+#   · `research:` 拆成 `discard:all` + `draw:N` → 训练家只认一个卡级 tag，
+#     拆两条 = 整卡拒收且**不记录原因**（9 张训练家曾这样消失）；
+#   · 特性代价字段漏写 → 特性**免费发动**，比不建模更糟（强度凭空变高）。
+#
+# 正则同样**独立实现**，不 import 解析包的同名正则。
+_KO_PM_IF_NAMED = re.compile(
+    r"if this pok[eé]mon is knocked out by damage from an attack from your "
+    r"opponent'?s? pok[eé]mon, and if you have any (.+?) in play, your opponent "
+    r"takes (\d+) fewer prize card", re.I)
+_KO_PM_EX_ALL = re.compile(
+    r"if this pok[eé]mon is knocked out by damage from an attack from your "
+    r"opponent'?s? pok[eé]mon \{ex\}, your opponent can'?t take any prize cards",
+    re.I)
+_KO_PM_TEAM = re.compile(
+    r"if 1 of your \{(\w)\} pok[eé]mon is knocked out by damage from an attack "
+    r"from your opponent'?s? pok[eé]mon \{ex\}, that player takes (\d+) fewer "
+    r"prize card", re.I)
+_STATUS_PAIR = re.compile(
+    r"opponent'?s? active pok[eé]mon is now (\w+) and (\w+)", re.I)
+_SWITCH_DRAW_TO = re.compile(
+    r"switch your active pok[eé]mon with 1 of your benched pok[eé]mon[.]\s*"
+    r"if you do, draw cards until you have (\d+) cards in your hand", re.I)
+_GUST_CONFUSE = re.compile(
+    r"switch in 1 of your opponent'?s? benched .+? to the active spot[.]?\s*"
+    r"if you do, the new active pok[eé]mon is now (\w+)", re.I)
+_RESEARCH = re.compile(r"discard your hand and draw (\d+) cards?", re.I)
+_ABILITY_COST_SENT = re.compile(
+    r"you must (.+?) in order to use this ability", re.I)
+
+_STATUS_WORDS = {"asleep": "sleep", "burned": "burn", "confused": "confuse",
+                 "paralyzed": "paralyze", "poisoned": "poison"}
+_ENERGY_LETTER = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
+                  "P": "psychic", "F": "fighting", "D": "darkness",
+                  "M": "metal", "C": "colorless", "N": "dragon",
+                  "Y": "psychic"}
+
+
+def _name_key(s: str) -> str:
+    """卡名 → `if_named` / `discard_named` 用的键（小写、去非字母数字）
+
+    ⚠ 必须先剥掉 `{ex}` 这类**卡面标记**：解析侧 `_tag_name_key` 是在剥离之后
+    归一化的，照抄原文会把键算成 `pecharuntex`，于是「标签正确」也会被判不符。
+    """
+    s = re.sub(r"\{[^}]*\}", "", s or "")
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _want_ability_cost(cost_clause: str):
+    """「You must … in order to use this Ability」子句 → 期望的 cost 字段
+
+    五种形态与引擎 `_parse_ability_cost` 一一对应；返回 ``None`` = 该子句
+    落在已建模形态之外（应当未建模，不该出现 cost 字段）。
+    """
+    c = _norm(cost_clause).strip()
+    # 顺序不可换：`from this Pokémon` 必须先于 `from your hand` 判定，
+    # 否则「discard a Basic {L} Energy from this Pokémon」会被当成手牌代价。
+    if re.search(r"put a card from your hand on the bottom of (?:your|the) deck",
+                 c):
+        return "hand_bottom:1"
+    if re.search(r"from this pok[eé]mon", c):
+        m = re.search(r"discard a basic \{(\w)\} energy", c)
+        return (f"discard_self_energy:1:{_ENERGY_LETTER[m.group(1).upper()]}"
+                if m else None)
+    if re.search(r"from your hand", c):
+        m = re.search(r"discard a basic \{(\w)\} energy", c)
+        if m:
+            return f"discard_hand_energy:1:{_ENERGY_LETTER[m.group(1).upper()]}"
+        # 「a card」是**任意**一张（不是具名卡）→ `discard:1`。必须先于具名分支
+        # 判定：否则「discard a card from your hand」里没有可捕获的卡名，会落到
+        # 「不在已建模形态内」的误判。
+        if re.search(r"discard a card from your hand", c):
+            return "discard:1"
+        m = re.search(r"discard a (.+?) card from your hand", c)
+        if m:
+            return f"discard_named:1:{_name_key(m.group(1))}"
+        m = re.search(r"discard (\d+) cards? from your hand", c)
+        if m:
+            return f"discard:{int(m.group(1))}"
+    return None
+
+
+def audit_batch53(card_name: str, item_name: str, desc: str,
+                  effects: list, cost: str | None = None) -> list:
+    """奖赏减少 / 双状态 / 换位补抽 / 拉人+混乱 / 弃手重抽 / 特性代价（第三十九类）
+
+    ``cost`` 为 ``None`` 表示该条目不是特性（不做代价对账）；空字符串表示
+    「特性但没解析出代价」——后者是本节最想抓的静默加强。
+    """
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or ""))
+    tags = [str(e) for e in effects]
+
+    # ① 被击倒时少给奖赏
+    m = _KO_PM_IF_NAMED.search(d)
+    if m:
+        want = f"ko_prize_minus:{int(m.group(2))}:if_named:{_name_key(m.group(1))}"
+        have = [t for t in tags if t.startswith("ko_prize_minus:")]
+        if want not in have:
+            errs.append(f"{card_name} · {item_name}：卡面「… takes {m.group(2)} "
+                        f"fewer Prize card」+「if you have any {m.group(1)} in "
+                        f"play」应为 `{want}`，实际 {have or '无该 tag'}")
+        return errs
+    m = _KO_PM_TEAM.search(d)
+    if m:
+        want = (f"ko_prize_minus:{int(m.group(2))}:from_ex:"
+                f"team_{_ENERGY_LETTER[m.group(1).upper()]}")
+        have = [t for t in tags if t.startswith("ko_prize_minus:")]
+        if want not in have:
+            errs.append(f"{card_name} · {item_name}：卡面「1 of your "
+                        f"{{{m.group(1)}}} Pokémon … takes {m.group(2)} fewer "
+                        f"Prize card」应为 `{want}`（阵营 + 受击者限定都要在），"
+                        f"实际 {have or '无该 tag'}")
+        return errs
+    if _KO_PM_EX_ALL.search(d) and "ko_prize_minus:all:from_ex" not in tags:
+        errs.append(f"{card_name} · {item_name}：卡面「… opponent can't take any "
+                    "Prize cards for it」应为 `ko_prize_minus:all:from_ex`，"
+                    f"实际 {[t for t in tags if 'ko_prize' in t] or '无该 tag'}")
+
+    # ② 一句挂两个异常状态
+    m = _STATUS_PAIR.search(d)
+    if m:
+        _pair = [_STATUS_WORDS[w.lower()] for w in m.groups()
+                 if w.lower() in _STATUS_WORDS]
+        want = "status_multi:" + "+".join(_pair)
+        # ⚠ 不能只比 `startswith("status_multi:")`：双状态也可能**嵌在抛币子效果
+        # 里**（`coin_each:1:heads:status_multi:paralyze+poison|cond:all_tails:…`，
+        # Lilligant「Bemusing Aroma」）。用子串判定，两种形态都覆盖。
+        _joined = " ".join(tags)
+        _hit = bool(_pair) and (want in _joined
+                                or ("status_multi:" + "+".join(reversed(_pair)))
+                                in _joined)
+        have = [t for t in tags if "status_multi:" in t]
+        if _pair and not _hit:
+            single = [t for t in tags if t in _STATUS_WORDS.values()]
+            errs.append(f"{card_name} · {item_name}：卡面「is now {m.group(1)} "
+                        f"and {m.group(2)}」应为 `{want}`，"
+                        f"实际 {have or single or '无状态 tag'}"
+                        f"（两个异常削成一个 = 静默变弱）")
+
+    # ③ 换位后「补到手牌 N 张」
+    m = _SWITCH_DRAW_TO.search(d)
+    if m:
+        want = f"switch_draw_to:{int(m.group(1))}"
+        if want not in tags:
+            hint = [t for t in tags if t.startswith(("switch", "draw"))]
+            errs.append(f"{card_name} · {item_name}：卡面「draw cards until you "
+                        f"have {m.group(1)} cards in your hand」应为 `{want}`，"
+                        f"实际 {hint or '无该 tag'}（拆成 switch + draw:N 会把"
+                        f"「补到 N」变成「多抽 N」）")
+
+    # ④ 拉对手后备 + 新战斗位混乱
+    m = _GUST_CONFUSE.search(d)
+    if m:
+        st = _STATUS_WORDS.get(m.group(1).lower())
+        if st == "confuse":
+            if "gust_confuse" not in tags:
+                errs.append(f"{card_name} · {item_name}：卡面「… the new Active "
+                            "Pokémon is now Confused」应为 `gust_confuse`，"
+                            f"实际 {[t for t in tags if 'gust' in t] or '无 gust'}"
+                            "（裸 gust 拉上来的那只不混乱）")
+        else:
+            errs.append(f"{card_name} · {item_name}：本机制只支持「拉人 + 混乱」，"
+                        f"卡面挂的是 {m.group(1)} → 不该进池")
+
+    # ⑤ 弃光手牌再抽 N 张（训练家/招式都只认**一条**复合 tag）
+    m = _RESEARCH.search(d)
+    if m:
+        want = f"research:{int(m.group(1))}"
+        if want not in tags:
+            split = [t for t in tags if t.startswith(("discard:all", "draw:"))]
+            errs.append(f"{card_name} · {item_name}：卡面「Discard your hand and "
+                        f"draw {m.group(1)} cards」应为 `{want}`，"
+                        f"实际 {split or '无该 tag'}"
+                        f"（拆成两条 = 训练家整卡拒收，招式侧顺序也可能反）")
+
+    # ⑥ 特性发动代价：漏字段 = 免费发动
+    if cost is not None:
+        m = _ABILITY_COST_SENT.search(d)
+        if m:
+            want = _want_ability_cost(m.group(1))
+            if want is None:
+                errs.append(f"{card_name} · {item_name}：代价子句「{m.group(1)[:50]}」"
+                            "不在已建模的五形态内，却仍进池（应有 cost 或不出现在池中）")
+            elif cost != want:
+                errs.append(f"{card_name} · {item_name}：卡面代价「{m.group(1)[:50]}」"
+                            f"应为 `{want}`，实际 {cost or '空（特性免费发动）'}")
+        elif cost:
+            errs.append(f"{card_name} · {item_name}：卡面没有「You must … in order "
+                        f"to use this Ability」，却写了 cost=`{cost}` → 认领越界")
+    return errs
+
+
+_OPP_DISCARD_TEXT = re.compile(
+    r"^your opponent discards (\d+|a) cards? from their hand$", re.I)
+_OPP_DISCARD_TO_TEXT = re.compile(
+    r"^discard random cards? from your opponent'?s hand until they have "
+    r"(\d+) cards? in their hand$", re.I)
+_DISCARD_BOTH_TEXT = re.compile(
+    r"^each player discards cards? from their hand until they have "
+    r"(\d+) cards? in their hand", re.I)
+_HACKING_TEXT = re.compile(
+    r"^discard a card from your hand[.]\s*if you do, your opponent discards a "
+    r"card from their hand$", re.I)
+_RETREAT_FREE_ENERGY = re.compile(
+    r"all of your pok[eé]mon that have (?:any )?\{(\w)\} energy attached have "
+    r"no retreat cost", re.I)
+_RETREAT_FREE_BASIC = re.compile(
+    r"your basic pok[eé]mon in play have no retreat cost", re.I)
+_RETREAT_FREE_SELF = re.compile(
+    r"if this pok[eé]mon has no energy attached, it has no retreat cost", re.I)
+_PLAY_BLOCK_ITEM = re.compile(
+    r"as long as this pok[eé]mon is in the active spot, your opponent can'?t "
+    r"play any item cards from their hand", re.I)
+_PLAY_BLOCK_ITEM_TOOL = re.compile(
+    r"as long as this pok[eé]mon is in the active spot, your opponent can'?t "
+    r"play any item cards or pok[eé]mon tool cards from their hand", re.I)
+_PLAY_BLOCK_ABILITY = re.compile(
+    r"as long as this pok[eé]mon is in the active spot, your opponent can'?t "
+    r"play any pok[eé]mon that has an ability from their hand, except for "
+    r"(.+?) pok[eé]mon", re.I)
+_EN_LETTER = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
+              "P": "psychic", "F": "fighting", "D": "darkness", "M": "metal",
+              "C": "colorless", "N": "dragon", "Y": "psychic"}
+
+
+def audit_batch54(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """对手手牌弃置 / 撤退费归零 / 常驻禁打（第四十类 · 第五十四~五十七批）
+
+    三族的共同风险都是「**少一个限制，卡照样能打**」：
+      · `discard_opp_random:N` 的 N 少写 → 少弃对手资源（静默变弱）；
+      · `discard_to_both:N` 只弃对手 → 我方手牌没减，「双方」削成「单方」；
+      · `fx:retreat_free:` 落成 `passive:no_retreat`（只管自己）→ 全队免费撤退消失；
+      · `fx:play_block:` 漏了 `:active` → 封锁**永久生效**（离场也不解除）；
+      · 限时形态（During your opponent's next turn）被误当常驻 → 永久封锁。
+    """
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or "")).strip().rstrip(".")
+    tags = [str(e) for e in effects]
+    blob = " ".join(tags)
+
+    # ① 对手弃手牌 / 双方弃到剩 N
+    m = _HACKING_TEXT.match(d)
+    if m:
+        if "discard_opp_random:1" not in tags or "discard:1" not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Discard a card from "
+                        f"your hand. If you do, your opponent discards a card "
+                        f"from their hand.」应为 `discard:1` + "
+                        f"`discard_opp_random:1`，实际 {tags}")
+        return errs
+    m = _OPP_DISCARD_TO_TEXT.match(d)
+    if m:
+        want = f"discard_opp_to:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「discard random cards "
+                        f"… until they have {m.group(1)} cards」应为 `{want}`，"
+                        f"实际 {[t for t in tags if 'discard' in t] or '无该 tag'}")
+        return errs
+    m = _DISCARD_BOTH_TEXT.match(d)
+    if m:
+        want = f"discard_to_both:{int(m.group(1))}"
+        if want not in tags:
+            hint = "（只弃对手 = 「双方」削成「单方」）" \
+                if any(t.startswith("discard_opp_to:") for t in tags) else ""
+            errs.append(f"{card_name} · {item_name}：卡面「Each player discards "
+                        f"… until they have {m.group(1)} cards」应为 `{want}`，"
+                        f"实际 {[t for t in tags if 'discard' in t] or '无该 tag'}"
+                        f"{hint}")
+        return errs
+    m = _OPP_DISCARD_TEXT.match(d)
+    if m:
+        raw = m.group(1).lower()
+        n = 1 if not raw.isdigit() else int(raw)
+        want = f"discard_opp_random:{n}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Your opponent discards "
+                        f"{m.group(1)} card(s) from their hand」应为 `{want}`，"
+                        f"实际 {[t for t in tags if 'discard' in t] or '无该 tag'}")
+        return errs
+
+    # ② 撤退费用归零
+    m = _RETREAT_FREE_ENERGY.search(d)
+    if m:
+        want = f"fx:retreat_free:energy:{_EN_LETTER.get(m.group(1).upper())}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「All of your Pokémon "
+                        f"that have {{{m.group(1)}}} Energy attached have no "
+                        f"Retreat Cost」应为 `{want}`，实际 {tags}")
+        return errs
+    if _RETREAT_FREE_BASIC.search(d):
+        if "fx:retreat_free:basic" not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Your Basic Pokémon in "
+                        "play have no Retreat Cost」应为 `fx:retreat_free:basic`，"
+                        f"实际 {tags}")
+        return errs
+    if _RETREAT_FREE_SELF.search(d):
+        if "fx:retreat_free:self:if:no_energy" not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「If this Pokémon has no "
+                        "Energy attached, it has no Retreat Cost」应为 "
+                        f"`fx:retreat_free:self:if:no_energy`，实际 {tags}")
+        return errs
+
+    # ③ 常驻禁打
+    for rx, want in ((_PLAY_BLOCK_ITEM_TOOL, "fx:play_block:item+tool:active"),
+                     (_PLAY_BLOCK_ITEM, "fx:play_block:item:active")):
+        if rx.search(d):
+            if want not in tags:
+                errs.append(f"{card_name} · {item_name}：卡面「… can't play any "
+                            f"…」应为 `{want}`，"
+                            f"实际 {[t for t in tags if 'play_block' in t] or '无该 tag'}")
+            return errs
+    m = _PLAY_BLOCK_ABILITY.search(d)
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", _norm(m.group(1)))
+        want = f"fx:play_block:ability_pokemon:active:except:{key}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「… except for "
+                        f"{m.group(1)} Pokémon」应为 `{want}`，"
+                        f"实际 {[t for t in tags if 'play_block' in t] or '无该 tag'}")
+        return errs
+
+    # ④ 未认领守门：常驻禁打的卡面却**没有任何**对应 tag（含限时形态误落常驻）
+    if re.search(r"as long as this pok[eé]mon is in the active spot, your "
+                 r"opponent can'?t play any", d) and "fx:play_block:" not in blob:
+        errs.append(f"{card_name} · {item_name}：卡面是**常驻**禁打"
+                    f"（As long as … in the Active Spot），却没有任何 "
+                    f"`fx:play_block:` tag → 封锁整段丢失")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -2527,6 +2883,11 @@ def main() -> int:
                 errs += audit_on_damaged(c["name"], it.get("name"), desc, eff)
                 errs += audit_set_per(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch40(c["name"], it.get("name"), desc, eff)
+                # `cost` 只对特性有意义（招式没有发动代价字段）
+                errs += audit_batch53(c["name"], it.get("name"), desc, eff,
+                                      it.get("cost") if kind == "abilities"
+                                      else None)
+                errs += audit_batch54(c["name"], it.get("name"), desc, eff)
                 errs += audit_shuffle_opp_pokemon(c["name"], it.get("name"),
                                                   desc, eff)
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
@@ -2546,6 +2907,10 @@ def main() -> int:
             errs += audit_discard_tool_or_senergy(
                 c["name"], c["name"], _cdesc, [_ctag] if _ctag else [])
             errs += audit_batch40(c["name"], c["name"], _cdesc,
+                                  [_ctag] if _ctag else [])
+            errs += audit_batch53(c["name"], c["name"], _cdesc,
+                                  [_ctag] if _ctag else [])
+            errs += audit_batch54(c["name"], c["name"], _cdesc,
                                   [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
@@ -2584,7 +2949,9 @@ def main() -> int:
           "检索能量自由分配 · 自由分配两变体（抛币/每只后备） · 能量代价去向 · "
           "打出代价 · 弃对手道具或场地 · 附着四形态（双色/选N只/抛到反面/抛币门） · "
           "检索不同属性 · 连续抛币计数源/选N只进化/任意张检索 · "
-          "{ex} 目标筛选/自身能量洗回牌库 · 对手宝可梦洗回牌库 三十八类对账全部一致")
+          "{ex} 目标筛选/自身能量洗回牌库 · 对手宝可梦洗回牌库 · "
+          "奖赏减少/双状态/换位补抽/拉人混乱/弃手重抽/特性发动代价 · "
+          "对手弃手牌/撤退费归零/常驻禁打 四十类对账全部一致")
     return 0
 
 

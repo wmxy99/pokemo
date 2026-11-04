@@ -1,36 +1,44 @@
-# PokéLab AI · 卡牌规则全量实现路线图
+## 本轮成果（2026-11-04 · 第五十三~五十七批 · 5 批）
 
-> **2026-10-26 策略变更**：取消 B5「永久不建模」豁免。项目目标从「诚实披露覆盖率」
-> 改为「**全部 1267 张卡的规则全部实现**」。本文是这条路的施工图。
+**一句话**：`engine_ready` **1061 → 1077（83.7% → 85.0%）**，池 1046 → **1062**，
+未建模动作条目 206 → **190**；对账 **38 → 40 类**（含负向自测 17 例）；
+全仓测试 **2084 → 2137**（engine 1133 · agent 857 · api 135 · gym 12）。
 
-## 本轮成果（2026-11-04 · 第四十八~五十二批 · 5 批）
-
-**一句话**：`engine_ready` **1045 → 1061（82.5% → 83.7%）**，池 1030 → **1046**，
-未建模动作条目 209 → **206**；全仓测试 **2000 → 2084**（engine 1103 · agent 834 · api 135 · gym 12）。
-
-| 批次 | 主题 | 落地 | 顺带修掉的静默缺陷 |
+| 批次 | 主题 | 落地卡 | 顺带修掉的静默缺陷 |
 |---|---|---|---|
-| 48 | `coin_each` 的币数计数源 | 4 | **31 个招式**全反面仍打满伤；4 张卡零 tag 零理由 |
-| 49 | 特性发动代价 `AbilityDef.cost` | 4（净 +3） | 特性侧 `draw_to:` 漏白名单；1 张「免费发动」被暴露 |
-| 50 | 被击倒时「对手少拿奖赏卡」 | 3 | 被动钩子误进合法动作表 |
-| 51 | 训练家复合句（一 tag 两动作） | 4 | **5 个招式**多状态只落第一个 |
-| 52 | 白名单补白（零新机制） | 3 | `research:` / `mill:` / `gust` 三处从未真正可用 |
+| 53 | **对账补课**（上轮遗留 6 个新族）+ 3 处解析修复 | 0（修正 4 张） | 招式下多状态只落第一个（2 张）；`research:` 招式侧被拆两条（1 张）；抛币双分支只剩 tails（1 张，正面那半整段消失） |
+| 54 | 对手 / 双方弃手牌（复用既有 `discard_opp_*`） | 6 | 引擎早有 `discard_opp_random` / `discard_opp_to`，解析侧从未产出 —— 6 张卡白等 |
+| 55 | 击倒族三个限定（`opp_all` / `if:hp_le` / `if:senergy`） | 3 | 「each」与「1 of」只差一个词，落错即多杀变单杀 |
+| 56 | `fx:retreat_free:`（全队撤退费归零） | 4 | 此前的替代写法 `passive:no_retreat` 只作用于持有者自己 ⇒ 全队效果缩水 |
+| 57 | `fx:play_block:`（常驻手牌禁打） | 3 | 与**限时**形态（`play_lock`）混淆就会永久封锁 / 封锁整段消失 |
 
-**方法论沉淀（三条，都是本轮的实证）**：
-1. **「静默丢卡」比「未建模」危险**：9 张训练家 + 4 张 `coin_each` 卡的共同特征是
-   「整卡不收、没有任何理由」—— 登记表里只剩一个 `unmatched`。本轮给 `to_engine_tags`
-   加了兜底登记，并把「多 tag 拒收」这类**结构性**拒绝也变成可见问题。
-2. **白名单是第二套真相**：`draw_to:` / `research:` / `mill:` / `gust` / `nullify_if:` 五次事故同源 ——
-   解析产出、引擎支持，但准入白名单漏了前缀 ⇒ 机制从未触发。**新增 tag 必须同步三处**
-   （`ATTACK_TAG_PREFIXES` / `ABILITY_TAG_PREFIXES` / `TRAINER_TAGS`），并跑一次
-   `test_v14_pool_ext`（池内**全部**招式/特性逐个执行）。
-3. **IGNORECASE 不改捕获大小写**：卡面首字母大写、映射表全小写键 ⇒ 检测器静默返回空。
-   凡「用捕获值查表」的地方都必须显式 `.lower()`。
+**五批的共同主题**：这一轮几乎没有「新机制」，主要是**把已有能力接通**。
+三族（54 的 `discard_opp_random` / 55 的 `knockout:opp_counters` / 56 的
+`families.retreat_cost` 钩子）引擎侧早就实现，缺的只是解析产出或一个 scope 参数；
+真正新写的只有 2 个 fx 族文件 + 3 个派发分支。**逐卡翻「引擎有什么、解析产出了什么」
+比逐卡猜句式更快**。
 
-**已知缺口（下一批首要）**：本轮新增的 `ko_prize_minus` / `status_multi` / `switch_draw_to` /
-`gust_confuse` / `coin_until_tails` 三种新子效果 / `AbilityDef.cost` **尚未纳入
-`audit_pool_alignment.py` 的对账类**（仍 38 类）。按本仓纪律，这些族目前只有单测与
-「池内全量执行」兜底，缺「卡面 ↔ tag」的双向核对 —— 这是下一批第一优先事项。
+**方法论沉淀（四条，都是本轮的实证）**：
+1. **对账脚本自己也会错**：本轮新写的 `audit_batch53` 首跑报 11 处，其中 5 处是
+   **对账自身的 bug**（漏 `status_multi:` 前缀、`{ex}` 未剥离、`discard a card`
+   无可捕获卡名）。写对账时同样要跑「已知正确 → 不报」与「已知错误 → 必报」两侧；
+   只写一侧等于橡皮图章。
+2. **「一句两动作」的两种失败方向**：拆成两条 tag（训练家整卡拒收、且不记录原因）
+   与只落第一个动作（第二个静默消失）。后者更隐蔽 —— 卡能打、测试全绿。
+   本轮的 `status_multi` 在**句中**（非整句）位置就是这样丢了 2 张的第二状态。
+3. **卡面动词决定口径方向**：「Your opponent discards …」= 对手选 ⇒ 随机；
+   「… and **you** discard a card you find there」= 我方选 ⇒ 确定性。同一句
+   「弃对手手牌」有**两个相反的 tag**，复用前必须先读 docstring。
+4. **「As long as … in the Active Spot」是常驻，不是限时**：与「During your
+   opponent's next turn」只差半句，落错方向一边是永久封锁、一边是效果整段消失。
+
+**已知缺口（下一批首要）**：
+- 「**+HP 全队静态**」仍无实现（`Ludicolo`/`Okidogi`/`Tyrantrum` 三张），
+  卡在 `FieldPokemon.max_hp` 拿不到 battle 引用 —— 需要先在 `families` 里加
+  `hp_plus(battle, fp)` 钩子并决定「何时重算」。
+- 「`{ACE SPEC}` 卡牌子类」引擎没有数据模型（Genesect 因此只能如实未建模）。
+- 剩余 190 条未建模里，「静态/未建模（英文）」兜底从 101 降到 **83**，仍是最大单堆
+  —— 但已从「一个大族」碎成十几个 2–5 张的小族，需要逐族做。
 
 ## 一、完成定义（每一族都必须同时满足，缺一不算完成）
 
@@ -38,19 +46,19 @@
 2. **派发**：引擎能真正执行（`engine/battle.py`，未知 tag 抛错，不静默忽略）
 3. **准入**：`gen_engine_pool.py` 放通该 tag 家族（整卡不收原则不变）
 4. **用例**：正例 + **负向守卫**（不可表达的近邻写法必须仍被拒绝）
-5. **对账**：`audit_pool_alignment.py` 三十八类全过（语义错映射是最高优先级缺陷）
+5. **对账**：`audit_pool_alignment.py` 四十类全过（语义错映射是最高优先级缺陷）
 6. **度量**：`coverage_backlog.py` 记录该族条目/卡数下降，`engine_ready` 上升
 7. **CI**：本地复刻 8/8 PASS + K1 双盲 200 局不退化
 
-## 二、当前状态（2026-10-30）
+## 二、当前状态（2026-11-04）
 
 | 指标 | 值 |
 |---|---:|
 | 卡库总卡数 | 1267 |
-| 引擎可对战（`engine_ready`） | **1061（83.7%）** |
-| 不可对战 | **206** |
-| 未建模动作条目 | **206** |
-| 测试总数 | **2084** |
+| 引擎可对战（`engine_ready`） | **1077（85.0%）** |
+| 不可对战 | **190** |
+| 未建模动作条目 | **190** |
+| 测试总数 | **2137** |
 
 > ✅ **口径修正（2026-10-27）**：`name_key` 同名回落已收紧为「招式/特性名集合
 > 一致」。此前 152 张 `name_key` 命中里有 150 张宝可梦与池内同名条目**招式完全
@@ -86,7 +94,7 @@
 > ⚠ **本表是 2026-10-27 的快照**：同日后续两批（受击反应 `on_damaged`、条件伤害
 > 缩放第五批 17 条件）已落地，`B4-scaling` / `S6` 两行的实时数字已变动。
 > **实时口径以 `packages/card-db/data/cleaned/unmodeled_registry.md` 为准**
-> （当前：未建模 206 条 · `engine_ready` 1061 张）。本表不逐日重排，避免与
+> （当前：未建模 190 条 · `engine_ready` 1077 张）。本表不逐日重排，避免与
 > 生成物产生第二份真相。
 
 ## 四、实施顺序（依赖关系决定，不按数字大小）
@@ -214,6 +222,11 @@ S6 不是"一类机制"，而是解析链**一个动作都没产出的兜底桶*
 | 2026-10-28 | **第九批：全量回复 / 招式击倒 / 场地形态 / 牌库顶重排** —— ① 全量回复 `heal:all[:<scope>][:type:<c>]`（范围口径与 `heal:N` 共用 `_heal_scope_of`，补 `from your Benched Pokémon` 与「HP/指示物阈值」负向守卫），抛币条件版走 `coin_all:N:heads:heal:all:<scope>`（Whimsicott / Miltank）。② 招式击倒 `knockout:<scope>`：`opp_active[:basic]` · `opp_bench[:basic]` · `opp_any` · `opp_counters:<n>` · `both_active`，目标位置可由 `action.ko` 指定、缺省按战斗位优先；普通/全中抛币两路都经 `coin…` 子 tag 派发；击倒属**招式效果**，受效果免疫拦截（Hydrapple / Annihilape / Glaceon ex / Team Rocket's Exeggutor / Iono's Electrode / Alolan Exeggutor）。③ 场地形态新增 7 类：`no_tool_effect`（Jamming Tower，道具仍附着但全部失效）、`no_retreat:faction:ns`（N's Castle）、`attack_plus:N:faction:hops`（Postwick，弱点/抗性之前）、`dmg_reduce:N:faction:stevens`（Granite Cave，弱抗之后）、`status_immune:require:energy`（Festival Grounds：施加拦截 + 回合开始恢复）、`evolve_same_turn:type:grass`（Forest of Vitality，仅放宽「本回合从手牌放置」且非首回合）、`dmg_immune:box:none:from:rulebox`（Neutralization Zone）。阵营键按 `_name_key` 前缀精确判定，认不出的一律拒绝。④ 检视牌库顶：`shuffle_top:N[:opp]`（Team Rocket's Dottler，只重排顺序、不移动卡）。对账新增第十三/十四类「招式击倒范围」「场地静态规则」+ 6 个负向自测；engine 624 / agent 480；CI 8/8、对账 14/14、K1 0.795 | **766（60.5%）** |
 | 2026-10-28 | **静态免伤族（第八批）+ 护盾来源限定修正** —— 新被动 `passive:dmg_immune:<self|team_bench>[:from:<src>|:min:<n>|:no_rule_box][:effects]`：来源限定只收**可精确判定**的五种（`basic_ex` / `ex` / `tera` / `has_ability` / `special_energy`）加伤害门槛 `min:N`，范围区分「自身」与「全队后备」（+`no_rule_box`）；`effects` 后缀表示卡面写明「from and effects of attacks」（连效果一起挡），只写 prevent all damage 的**只挡伤害**。引擎侧在 `_do_attack`（伤害）与 `_opp_blocked`（效果）双点拦截，spread/snipe 逐目标判定全队后备免伤。**同时修掉两处池内静默错算**：① 护盾 `shield:prevent_all` 此前把「只挡伤害」与「连效果一起挡」合成一个标志（Metapod/Roggenrola/Bronzong 等把中毒也挡了）→ 拆为 `shield_prevent_effects`；② Metapod/Roggenrola「伤害 ≤N 才挡」、Archaludon/Dipplin「只挡基础宝可梦」、Terapagos ex「Basic non-{C}」的来源/门槛限定此前被丢弃 → 新增 `shield:prevent_all[:from:…|:if_damage:le:N][:effects]` 并在引擎按攻击方与伤害判定；认不出的来源一律如实未建模。另把 Tera 规则 `bench_immune` 拆成 `bench_immune_dmg`（Tera 只挡伤害）。落地 Rabsca / Farigiraf ex / Milotic ex / Sylveon / Crustle / Shaymin / Drednaw / Carracosta；对账新增第十二类「静态免伤来源」+ 6 个负向自测；engine 598 / agent 456；CI 8/8、对账 12/12、K1 0.795 | **751（59.3%）** |
 | 2026-10-30 | **第三十批：对手指定招式的封锁（`attack_lock:opp_name`）** —— 引擎早有 `attack_lock` 的 `all`/`opp_all`/`name` 三种范围，唯独缺「**Choose 1 of your opponent's Active Pokémon's attacks … that Pokémon can't use that attack**」这一类（Klefki「Memory Lock」/ Team Rocket's Murkrow「Torment」）。① 解析侧：新增整段认领正则 `_ATTACK_LOCK_CHOOSE_RE` → `scope=opp_name`；**并把「that attack」从 named 规则里排除**（原先会被当成具体卡名生成 `attack_lock:name:turn:that attack`，锚不到任何招式 → 静默不生效）。② `to_engine_tags` 增 `opp_name` 分支（不再报「对手指定招式的封锁（B4）」）；`gen_engine_pool.py` 的 `attack_lock:` 前缀白名单本就覆盖。③ 引擎 `_apply_attack_lock_tag` 增 `opp_name` 范围：目标=对手战斗位、窗口=对手**下一个**回合（`_lock_until(1-current)`），**招式名由出招动作 `action['lock_attack']` 运行时选择**（沿用 `snipe` 的「无选择→确定性默认」口径：缺省锁对手首个招式，绝不静默不生效）。④ 对账新增**第二十七类**「对手指定招式封锁」：卡面写了「choose 1 … that attack」却缺 tag、或把指代词当卡名，均报错；3 个负向自测证明能拦。新增 engine 3 例 / agent 2 例。池 953 张、`engine_ready` 966 → **968（76.4%）**、未建模 268 → **266**；engine 788 / agent 610；审计 27/27 | **968（76.4%）** |
+| 2026-11-04 | **第五十七批：常驻手牌禁打 `fx:play_block:`（3 张）** —— 新增 fx 族（引擎 `families/fx_play_block.py` + 解析 `agent/fx/fx_play_block.py`），复用早已接线的 `families.blocked_play` 钩子（合法动作表与打出路径**都会**问它）。三形态：`fx:play_block:item:active`（Tyranitar「Daunting Gaze」）、`item+tool:active`（Jellicent ex「Oceanic Curse」）、`ability_pokemon:active:except:teamrocket`（Team Rocket's Arbok「Potent Glare」，按卡名前缀豁免本阵营）。⚠ 与**限时**形态 `play_lock:<kind>:opp:turn`（Budew / Frillish）只差半句「As long as … in the Active Spot」vs「During your opponent's next turn」——落错方向一边是永久封锁、一边是封锁整段消失；负向用例锁死限时写法仍走 `play_lock`。`{ACE SPEC}` 因引擎**没有卡牌子类数据**（Genesect）如实未建模。落地 Tyranitar · Jellicent ex · Team Rocket's Arbok（+3） | **1077（85.0%）** |
+| 2026-11-04 | **第五十六批：全队撤退费归零 `fx:retreat_free:`（4 张）** —— 新增 fx 族，通过既有的 `families.retreat_cost` 钩子（`_retreat_cost` 早已调用）接管。三形态：`energy:<color>`（Archaludon「Metal Bridge」，**队友**带该属性能量即免费 —— 受益者不是持有者）、`basic`（Latias ex「Skyliner」）、`self:if:no_energy`（Ethan's Magcargo / Charmander「Agile」）。⚠ 此前这类卡被测试**显式要求拒收**，理由是唯一可用写法 `passive:no_retreat` 只作用于持有者自己（拿它顶替 = 全队效果缩水、卡照样能打）；本批有了真正的全队实现，旧断言改为「**不得**落成 `passive:`」，并保留 `+HP` 全队形态仍如实未建模。判定 `{M} Energy attached` 用 `energy_of_type`（含提供该色的特殊能量）。落地 Archaludon · Latias ex · Ethan's Magcargo · Charmander（+4） | **1074（84.8%）** |
+| 2026-11-04 | **第五十五批：击倒族三个限定（3 张）** —— `knockout:` 原有 `opp_active[:basic]` / `opp_bench[:basic]` / `opp_any` / `opp_counters:<n>` / `both_active`，本批补：① `opp_counters:<n>` 由「1 of … exactly N damage counters」**扩展到条件被动语态**（Mega Absol ex「Terminal Period」）；② `opp_active:if:senergy`（Haxorus：⚠ 特殊能量挂在 `senergy`，用 `energy_counts()` 判会把**基本能量也算进去** ⇒ 无条件击倒）；③ 新范围 `opp_all:if:hp_le:<n>`（Yveltal ex：**逐只**全倒，比的是**剩余 HP** 不是上限；落成 `opp_any` 就把多杀削成单杀）。`qual` 改为 `":".join(parts[2:])` 以承载 `if:` 段，未知限定/范围一律抛错。对账的 `_KO_TEXT` 同步扩两项（`each` 与 `1 of` 只差一个词，必须逐字核对 HP 阈值）。落地 Mega Absol ex · Haxorus · Yveltal ex（+3） | **1070（84.5%）** |
+| 2026-11-04 | **第五十四批：对手 / 双方弃手牌（6 张）** —— 引擎早就有 `discard_opp_random:N`（对手自选 ⇒ 随机）与 `discard_opp_to:N`（弃到剩 N），但**解析侧从未产出过**，6 张卡白白整卡不收。① 新增整句认领 `_detect_opp_discard`（`^…$` 双向锚定）：`Your opponent discards N cards` / `discard random cards … until they have N` / `Each player discards … until they have N` / 「弃自己 1 张，若如此做对手再弃 1 张」（付账在前）。② 新 tag `discard_to_both:<n>`（Hand Trimmer）：**双方**各弃到剩 N、手牌 ≤N 的一侧弃 0 张、按卡面「对手先弃」。③ 口径方向是本批最容易错的地方：「Your opponent discards …」= 对手选 ⇒ 随机；「… and **you** discard a card you find there」= 我方选 ⇒ `opp_hand:` —— 两者相反不可互换。只揭示无后续操作的三张（Hoothoot / Espurr / Pidove）**仍故意不建模**（状态变化为零）。落地 Sandile · Krokorok · Krookodile · Furfrou · Hand Trimmer · Team Rocket's Porygon（+6） | **1067（84.2%）** |
+| 2026-11-04 | **第五十三批：对账补课 + 3 处解析静默缺陷（0 张新卡，修正 4 张）** —— ① 把上轮遗留的 6 个新族纳入 `audit_pool_alignment.py`（38 → **39 类**，新增 `audit_batch53` + 17 个负向自测），首跑就抓出 4 张真实缺陷：招式下「is now X **and** Y」在**句中**位置时只落第一个状态（Salazzle ex / Drapion）、`research:` 招式侧因首回合许可句挡在句首被拆成 `discard:all`+`draw:5`（Tapu Koko）、抛币双分支只剩 tails（Lilligant，正面那半整段消失）。② 修复：多状态按**该词所在句**判定并以正则捕获为准；`_TURN1_PERMISSION` 扩到「you can use this attack」并对**所有 kind** 剥句；抛币状态双分支用 `coin_each:1:heads:<sub>|cond:all_tails:<sub>`（只抛 1 枚币，两分支互斥）。⚠ 本轮教训：**对账脚本自己也会错** —— 首跑的 11 处里 5 处是对账自身的 bug（漏 `status_multi:` 前缀、`{ex}` 未剥离、`discard a card` 无可捕获卡名），写对账必须两侧都测。 | **1061（83.7%）** |
 | 2026-11-04 | **第五十二批：白名单补白（3 张，零新机制）** —— 三条「解析早已产出、引擎也早已支持、但准入白名单漏了前缀」的**静默失效**：① 招式侧 `research:`（Raging Bolt ex「Burst Roar」弃全部手牌抽 6）；② 特性侧 `mill:`（Durant ex「Sudden Shearing」磨对手牌库）；③ 特性侧 `gust`（Meowstic「Beckoning Tail」拉后备）。这类缺陷的特征是**卡能打、测试全绿、机制却从未触发过** —— 与第七批 `nullify_if:` 漏白名单同源。引擎侧三处派发均复用既有实现（`_trainer_mill` / `_trainer_boss` / 手牌弃置 + `_safe_draw`），并给 `gust` 补「对手无后备则不可发动」的合法动作过滤。落地 Raging Bolt ex · Durant ex · Meowstic SSP 85（+3）；池 1043 → **1046**、`engine_ready` 1058 → **1061（83.7%）** | **1061（83.7%）** |
 | 2026-11-04 | **第五十一批：训练家复合句 + 多状态静默丢失（4 张训练家 + 5 个招式修复）** —— 训练家只认**一个**卡级 tag，而这些句子被通用分支拆成两条（`discard:all`+`draw:5` / `switch_self`+`draw_to:5` / `gust`+`confuse`）→ 建池判「多 tag」→ **整卡不收，且没有任何理由记录**（9 张训练家因此静默消失）。解法：整句认领成一条复合 tag —— ① `research:N`（Carmine，复用引擎早有的实现）；② `switch_draw_to:N`（Surfer：换位后抽到 N，抽牌口径要减掉**还在手上**的本卡）；③ `gust_confuse`（Lisia's Appeal：拉后备后**新战斗位**混乱，派发必须排在 `startswith(gust)` 之前）；④ `status_multi:<a>+<b>`（Dangerous Laser「Burned **and** Confused」）。⚠ ④ 顺带修了一处**静默削弱**：招式侧「is now X and Y」此前只落第一个状态，第二个被丢掉（5 个招式受影响）；现在招式/训练家两侧共用同一 tag，并按 `_status_blocked` 走免疫判定。⚠ 另记一条坑：正则的 IGNORECASE 只影响匹配、**不改捕获的大小写**（`Burned` 原样返回），而映射表是全小写键 → 必须显式 `.lower()`，否则检测器静默返回空（本轮实测踩到）。落地 Dangerous Laser · Carmine · Surfer · Lisia's Appeal（+4）；池 1040 → **1043**、`engine_ready` 1055 → **1058（83.5%）** | **1058（83.5%）** |
 | 2026-11-04 | **第五十批：被击倒时「对手少拿奖赏卡」（3 张）** —— 新 tag **`ko_prize_minus:<n|all>[:from_ex][:team_<color>][:if_named:<key>]`**，挂在**被击倒方**（特性 / 同队 / 道具三种载体）。⚠ 与既有 `ko_prize_plus:`（**多拿**，挂在取奖赏方）方向相反、挂载方也不同，混用会让奖赏数反向变化。四条条件各自独立：`from_ex`（必须被对手 **{ex}** 宝可梦的**招式伤害**击倒 —— Mega 的 `is_ex` 同为 True；「不是招式击倒」（指示物/自爆）一律不成立）、`team_<color>`（「1 of your {X} Pokémon」同队判定，特性可能挂在**没被击倒**的那只身上，属性按**被击倒者**判）、`if_named:<key>`（Munkidori 要求场上有 Pecharunt ex；⚠ `{ex}` 是**卡面标记**不是卡名，归一化前必须剥掉，否则键变成 `pecharuntex`、按卡名匹配永不成立）、无前缀（道具形态）。另剥掉「The effect of X doesn't stack.」—— 它是**叠加限制**不是条件，引擎本就取 max 不叠加。⚠ 首版把 `ko_prize_minus:` 放进了合法动作表，随机对局立刻报「未知 field tag」→ 它和 `ko_draw:` /`ko_prize_plus:` 一样是**被动钩子**，必须进被动前缀名单。落地 Shedinja · Munkidori ex · Mega Gengar ex（+3）；池 1039 → **1040**、`engine_ready` 1052 → **1055（83.3%）** | **1055（83.3%）** |

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-04 10:16:26",
+  "reparsed_at": "2026-11-04 10:56:13",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1061,
+  "engine_ready": 1077,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1061,
-   "engine_approximated": 1046,
-   "engine_unmatched": 206,
-   "engine_namekey_mismatch": 30
+   "zh_backfill": 1077,
+   "engine_approximated": 1062,
+   "engine_unmatched": 190,
+   "engine_namekey_mismatch": 24
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 125,
-   "engine_tags": 1383,
-   "unsupported": 206,
+   "errors": 126,
+   "engine_tags": 1399,
+   "unsupported": 190,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1046,
+  "engine_approximated": 1062,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -11762,7 +11762,7 @@
           }
          }
         ],
-        "source_text": "If you go first, you can use this attack during your first turn. Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -11817,7 +11817,7 @@
         }
        }
       ],
-      "source_text": "If you go first, you can use this attack during your first turn. Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
      },
      {
       "kind": "attack",
@@ -24385,14 +24385,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Archaludon@SCR 107",
    "parse": {
     "items": [
      {
@@ -24433,30 +24435,29 @@
        {
         "kind": "ability",
         "name": "Metal Bridge",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:retreat_free:energy:metal",
+           "family": "retreat_free"
           }
          }
         ],
-        "source_text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost."
+        "source_text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost.",
+        "fx_family": "retreat_free"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:retreat_free:energy:metal"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -24481,33 +24482,31 @@
      {
       "kind": "ability",
       "name": "Metal Bridge",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:retreat_free:energy:metal",
+         "family": "retreat_free"
         }
        }
       ],
-      "source_text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost."
+      "source_text": "All of your Pokémon that have {M} Energy attached have no Retreat Cost.",
+      "fx_family": "retreat_free"
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:all:turn"
+     "attack_lock:all:turn",
+     "fx:retreat_free:energy:metal"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -25584,7 +25583,7 @@
           }
          }
         ],
-        "source_text": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
+        "source_text": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -25623,7 +25622,7 @@
         }
        }
       ],
-      "source_text": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
+      "source_text": "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -26505,14 +26504,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Latias ex@SSP 76",
    "parse": {
     "items": [
      {
@@ -26553,30 +26554,29 @@
        {
         "kind": "ability",
         "name": "Skyliner",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:retreat_free:basic",
+           "family": "retreat_free"
           }
          }
         ],
-        "source_text": "Your Basic Pokémon in play have no Retreat Cost."
+        "source_text": "Your Basic Pokémon in play have no Retreat Cost.",
+        "fx_family": "retreat_free"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:retreat_free:basic"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -26601,33 +26601,31 @@
      {
       "kind": "ability",
       "name": "Skyliner",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:retreat_free:basic",
+         "family": "retreat_free"
         }
        }
       ],
-      "source_text": "Your Basic Pokémon in play have no Retreat Cost."
+      "source_text": "Your Basic Pokémon in play have no Retreat Cost.",
+      "fx_family": "retreat_free"
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:all:turn"
+     "attack_lock:all:turn",
+     "fx:retreat_free:basic"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -42067,14 +42065,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Tyranitar@JTG 95",
    "parse": {
     "items": [
      {
@@ -42117,26 +42117,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "tag": "fx:play_block:item:active",
+           "family": "play_block"
           }
          }
         ],
-        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards from their hand."
+        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards from their hand.",
+        "fx_family": "play_block"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:play_block:item:active"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -42165,27 +42164,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "tag": "fx:play_block:item:active",
+         "family": "play_block"
         }
        }
       ],
-      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards from their hand."
+      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards from their hand.",
+      "fx_family": "play_block"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "mill:2:opp"
+     "mill:2:opp",
+     "fx:play_block:item:active"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -50305,14 +50302,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Ethan's Magcargo@DRI 36",
    "parse": {
     "items": [
      {
@@ -50357,30 +50356,29 @@
        {
         "kind": "ability",
         "name": "Melt Away",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:retreat_free:self:if:no_energy",
+           "family": "retreat_free"
           }
          }
         ],
-        "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost."
+        "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost.",
+        "fx_family": "retreat_free"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:retreat_free:self:if:no_energy"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -50411,31 +50409,29 @@
      {
       "kind": "ability",
       "name": "Melt Away",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:retreat_free:self:if:no_energy",
+         "family": "retreat_free"
         }
        }
       ],
-      "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost."
+      "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost.",
+      "fx_family": "retreat_free"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:70:per:own_discarded_this_turn"
+     "dmg_set:70:per:own_discarded_this_turn",
+     "fx:retreat_free:self:if:no_energy"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -62552,14 +62548,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Arbok@DRI 113",
    "parse": {
     "items": [
      {
@@ -62606,26 +62604,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "tag": "fx:play_block:ability_pokemon:active:except:teamrockets",
+           "family": "play_block"
           }
          }
         ],
-        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Pokémon that has an Ability from their hand, except for Team Rocket’s Pokémon."
+        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Pokémon that has an Ability from their hand, except for Team Rocket’s Pokémon.",
+        "fx_family": "play_block"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:play_block:ability_pokemon:active:except:teamrockets"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -62658,27 +62655,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "tag": "fx:play_block:ability_pokemon:active:except:teamrockets",
+         "family": "play_block"
         }
        }
       ],
-      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Pokémon that has an Ability from their hand, except for Team Rocket’s Pokémon."
+      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Pokémon that has an Ability from their hand, except for Team Rocket’s Pokémon.",
+      "fx_family": "play_block"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "snipe:opp:30:all"
+     "snipe:opp:30:all",
+     "fx:play_block:ability_pokemon:active:except:teamrockets"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -65937,14 +65932,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Porygon@DRI 153",
    "parse": {
     "items": [
      {
@@ -65958,25 +65955,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "静态/未建模（英文）"
-          }
+          "type": "discard",
+          "amount": 1,
+          "target": "hand"
+         },
+         {
+          "type": "discard",
+          "amount": 1,
+          "target": "opponent_hand"
          }
         ],
-        "source_text": "Discard a card from your hand. If you do, your opponent discards a card from their hand."
+        "source_text": "Discard a card from your hand. If you do, your opponent discards a card from their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "discard:1",
+       "discard_opp_random:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -65987,25 +65985,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "静态/未建模（英文）"
-        }
+        "type": "discard",
+        "amount": 1,
+        "target": "hand"
+       },
+       {
+        "type": "discard",
+        "amount": 1,
+        "target": "opponent_hand"
        }
       ],
-      "source_text": "Discard a card from your hand. If you do, your opponent discards a card from their hand."
+      "source_text": "Discard a card from your hand. If you do, your opponent discards a card from their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "discard:1",
+     "discard_opp_random:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -67335,9 +67334,13 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "side": "tails",
-           "mode": "single",
-           "sub": "confuse"
+           "side": "heads",
+           "mode": "each",
+           "counter": "1",
+           "sub": "status_multi:paralyze+poison",
+           "sub_more": [
+            "cond:all_tails:confuse"
+           ]
           }
          }
         ],
@@ -67346,7 +67349,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "coin:tails:confuse"
+       "coin_each:1:heads:status_multi:paralyze+poison|cond:all_tails:confuse"
       ],
       "unsupported": []
      }
@@ -67363,9 +67366,13 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "side": "tails",
-         "mode": "single",
-         "sub": "confuse"
+         "side": "heads",
+         "mode": "each",
+         "counter": "1",
+         "sub": "status_multi:paralyze+poison",
+         "sub_more": [
+          "cond:all_tails:confuse"
+         ]
         }
        }
       ],
@@ -67374,7 +67381,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "coin:tails:confuse"
+     "coin_each:1:heads:status_multi:paralyze+poison|cond:all_tails:confuse"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -74376,14 +74383,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Sandile@BLK 57",
    "parse": {
     "items": [
      {
@@ -74397,25 +74406,20 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "静态/未建模（英文）"
-          }
+          "type": "discard",
+          "amount": 1,
+          "target": "opponent_hand"
          }
         ],
-        "source_text": "Your opponent discards a card from their hand."
+        "source_text": "Your opponent discards a card from their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "discard_opp_random:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -74426,25 +74430,20 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "静态/未建模（英文）"
-        }
+        "type": "discard",
+        "amount": 1,
+        "target": "opponent_hand"
        }
       ],
-      "source_text": "Your opponent discards a card from their hand."
+      "source_text": "Your opponent discards a card from their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "discard_opp_random:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -74490,14 +74489,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Krokorok@BLK 58",
    "parse": {
     "items": [
      {
@@ -74511,25 +74512,20 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "静态/未建模（英文）"
-          }
+          "type": "discard",
+          "amount": 2,
+          "target": "opponent_hand"
          }
         ],
-        "source_text": "Your opponent discards 2 cards from their hand."
+        "source_text": "Your opponent discards 2 cards from their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "discard_opp_random:2"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -74540,25 +74536,20 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "静态/未建模（英文）"
-        }
+        "type": "discard",
+        "amount": 2,
+        "target": "opponent_hand"
        }
       ],
-      "source_text": "Your opponent discards 2 cards from their hand."
+      "source_text": "Your opponent discards 2 cards from their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "discard_opp_random:2"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -74620,14 +74611,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Krookodile@BLK 59",
    "parse": {
     "items": [
      {
@@ -74641,25 +74634,20 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "静态/未建模（英文）"
-          }
+          "type": "discard",
+          "amount": 2,
+          "target": "opponent_hand"
          }
         ],
-        "source_text": "Your opponent discards 2 cards from their hand."
+        "source_text": "Your opponent discards 2 cards from their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "discard_opp_random:2"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -74699,15 +74687,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "静态/未建模（英文）"
-        }
+        "type": "discard",
+        "amount": 2,
+        "target": "opponent_hand"
        }
       ],
-      "source_text": "Your opponent discards 2 cards from their hand."
+      "source_text": "Your opponent discards 2 cards from their hand.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -74730,14 +74716,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "discard_opp_random:2",
      "dmg_plus:120:if:opp_hand_at_most:3"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -81855,14 +81837,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Jellicent ex@WHT 45",
    "parse": {
     "items": [
      {
@@ -81905,26 +81889,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "tag": "fx:play_block:item+tool:active",
+           "family": "play_block"
           }
          }
         ],
-        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards or Pokémon Tool cards from their hand."
+        "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards or Pokémon Tool cards from their hand.",
+        "fx_family": "play_block"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:play_block:item+tool:active"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -81953,27 +81936,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "tag": "fx:play_block:item+tool:active",
+         "family": "play_block"
         }
        }
       ],
-      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards or Pokémon Tool cards from their hand."
+      "source_text": "As long as this Pokémon is in the Active Spot, your opponent can’t play any Item cards or Pokémon Tool cards from their hand.",
+      "fx_family": "play_block"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:80:if:own_active_extra_energy_at_least:2"
+     "dmg_plus:80:if:own_active_extra_energy_at_least:2",
+     "fx:play_block:item+tool:active"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -92813,14 +92794,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Absol ex@MEG 86",
    "parse": {
     "items": [
      {
@@ -92834,11 +92817,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "knockout",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "scope": "opp_counters:6"
           }
          }
         ],
@@ -92846,13 +92829,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "knockout:opp_counters:6"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -92896,11 +92876,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "knockout",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "scope": "opp_counters:6"
         }
        }
       ],
@@ -92931,14 +92911,10 @@
      "[0] action.type 非法：opp_hand"
     ],
     "engine_tags": [
+     "knockout:opp_counters:6",
      "opp_hand:discard:any"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -101756,7 +101732,7 @@
           }
          }
         ],
-        "source_text": "If you go first, you can use this attack during your first turn. Search your deck for a card and put it into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for a card and put it into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -101782,7 +101758,7 @@
         }
        }
       ],
-      "source_text": "If you go first, you can use this attack during your first turn. Search your deck for a card and put it into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for a card and put it into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -105410,14 +105386,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Charmander@PFL 11",
    "parse": {
     "items": [
      {
@@ -105427,59 +105405,57 @@
        {
         "kind": "ability",
         "name": "Agile",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:retreat_free:self:if:no_energy",
+           "family": "retreat_free"
           }
          }
         ],
-        "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost."
+        "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost.",
+        "fx_family": "retreat_free"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:retreat_free:self:if:no_energy"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Agile",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:retreat_free:self:if:no_energy",
+         "family": "retreat_free"
         }
        }
       ],
-      "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost."
+      "source_text": "If this Pokémon has no Energy attached, it has no Retreat Cost.",
+      "fx_family": "retreat_free"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "fx:retreat_free:self:if:no_energy"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -115980,26 +115956,21 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": null,
-          "target": "hand",
-          "extra": {
-           "all": true
-          }
-         },
-         {
           "type": "draw",
           "amount": 5,
-          "target": "deck"
+          "target": "deck",
+          "extra": {
+           "discard_all": true
+          }
          }
         ],
-        "source_text": "If you go first, you can use this attack during your first turn. Discard your hand and draw 5 cards."
+        "source_text": "Discard your hand and draw 5 cards.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard:all",
-       "draw:5"
+       "research:5"
       ],
       "unsupported": []
      },
@@ -116040,20 +116011,16 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": null,
-        "target": "hand",
-        "extra": {
-         "all": true
-        }
-       },
-       {
         "type": "draw",
         "amount": 5,
-        "target": "deck"
+        "target": "deck",
+        "extra": {
+         "discard_all": true
+        }
        }
       ],
-      "source_text": "If you go first, you can use this attack during your first turn. Discard your hand and draw 5 cards."
+      "source_text": "Discard your hand and draw 5 cards.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -116075,8 +116042,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard:all",
-     "draw:5",
+     "research:5",
      "discard_energy:2"
     ],
     "unsupported": [],
@@ -131610,14 +131576,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Haxorus@SFA 46",
    "parse": {
     "items": [
      {
@@ -131631,11 +131599,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "knockout",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "scope": "opp_active:if:senergy"
           }
          }
         ],
@@ -131643,13 +131611,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "knockout:opp_active:if:senergy"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -131689,11 +131654,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "knockout",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "scope": "opp_active:if:senergy"
         }
        }
       ],
@@ -131720,14 +131685,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "knockout:opp_active:if:senergy",
      "mill:3"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -135541,7 +135502,8 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "burn"
+           "status": "burn",
+           "status2": "poison"
           }
          },
          {
@@ -135555,7 +135517,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "burn",
+       "status_multi:burn+poison",
        "switch_self"
       ],
       "unsupported": []
@@ -135590,7 +135552,8 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "burn"
+         "status": "burn",
+         "status2": "poison"
         }
        },
        {
@@ -135605,7 +135568,7 @@
     "errors": [],
     "engine_tags": [
      "search_any:2",
-     "burn",
+     "status_multi:burn+poison",
      "switch_self"
     ],
     "unsupported": [],
@@ -140315,7 +140278,8 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "paralyze"
+           "status": "paralyze",
+           "status2": "poison"
           }
          }
         ],
@@ -140325,7 +140289,7 @@
       "errors": [],
       "engine_tags": [
        "self:70",
-       "paralyze"
+       "status_multi:paralyze+poison"
       ],
       "unsupported": []
      }
@@ -140351,7 +140315,8 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "paralyze"
+         "status": "paralyze",
+         "status2": "poison"
         }
        }
       ],
@@ -140361,7 +140326,7 @@
     "errors": [],
     "engine_tags": [
      "self:70",
-     "paralyze"
+     "status_multi:paralyze+poison"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -140426,14 +140391,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Yveltal ex@POR 53",
    "parse": {
     "items": [
      {
@@ -140447,11 +140414,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "knockout",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "scope": "opp_all:if:hp_le:50"
           }
          }
         ],
@@ -140459,13 +140426,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "knockout:opp_all:if:hp_le:50"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -140508,11 +140472,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "knockout",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "scope": "opp_all:if:hp_le:50"
         }
        }
       ],
@@ -140542,14 +140506,10 @@
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
+     "knockout:opp_all:if:hp_le:50",
      "attack_lock:name:turn:Dark Strike"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -142323,14 +142283,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Furfrou@POR 67",
    "parse": {
     "items": [
      {
@@ -142344,25 +142306,23 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "discard",
           "amount": null,
-          "target": "any",
+          "target": "opponent_hand",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "to": 5
           }
          }
         ],
-        "source_text": "Discard random cards from your opponent’s hand until they have 5 cards in their hand."
+        "source_text": "Discard random cards from your opponent’s hand until they have 5 cards in their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "discard_opp_to:5"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -142373,25 +142333,23 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "discard",
         "amount": null,
-        "target": "any",
+        "target": "opponent_hand",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "to": 5
         }
        }
       ],
-      "source_text": "Discard random cards from your opponent’s hand until they have 5 cards in their hand."
+      "source_text": "Discard random cards from your opponent’s hand until they have 5 cards in their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "discard_opp_to:5"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -143381,14 +143339,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.)",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "每位玩家弃置手牌，直到其手牌为 5 张。对手先弃置。（若某位玩家的手牌为 5 张或更少，则其不弃置。）",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Hand Trimmer@TEF 150",
    "parse": {
     "items": [
      {
@@ -143402,26 +143362,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "discard",
           "amount": null,
-          "target": "any",
+          "target": "both_hand",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "to": 5
           }
          }
         ],
-        "source_text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.)"
+        "source_text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.)",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：both_hand"
+      ],
+      "engine_tags": [
+       "discard_to_both:5"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -143432,25 +143392,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "discard",
         "amount": null,
-        "target": "any",
+        "target": "both_hand",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "to": 5
         }
        }
       ],
-      "source_text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.)"
+      "source_text": "Each player discards cards from their hand until they have 5 cards in their hand. Your opponent discards first. (If a player has 5 or fewer cards in their hand, they do not discard.)",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "errors": [
+     "[0] action.target 非法：both_hand"
     ],
+    "engine_tags": [
+     "discard_to_both:5"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

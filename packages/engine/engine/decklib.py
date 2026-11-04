@@ -165,9 +165,27 @@ def _real_deck(arch_id: str):
     return _build
 
 
-for _aid in ("A1", "A2", "A3", "A4"):
-    ALL_DECKS[_aid] = _real_deck(_aid)
-    ALL_DECKS[_aid.lower()] = ALL_DECKS[_aid]
+def _register_real_decks() -> None:
+    """按 `decklists.json` 的**实际** archetype 列表注册真实卡表卡组
+
+    ⚠ 不能硬编码 id：新增卡组（如 B1–B5 实例测试卡组）时漏改硬编码列表 →
+    `make_deck("B1")` 抛 KeyError，表现为「前端下拉选得到、后端建不出局」的
+    静默不可用。以数据文件为唯一真相源。
+    """
+    from . import reallib
+    # Meta 对手池 A1–A4 + 实例测试卡组 B1–B5（两套语义分开取，避免污染 presets）
+    for _aid in list(reallib.archetype_ids()) + list(reallib.example_deck_ids()):
+        ALL_DECKS[_aid] = _real_deck(_aid)
+        ALL_DECKS[_aid.lower()] = ALL_DECKS[_aid]
+
+
+try:
+    _register_real_decks()
+except Exception:                                   # noqa: BLE001
+    # 数据文件缺失/损坏时退回旧的四张（不让引擎 import 直接失败）
+    for _aid in ("A1", "A2", "A3", "A4"):
+        ALL_DECKS[_aid] = _real_deck(_aid)
+        ALL_DECKS[_aid.lower()] = ALL_DECKS[_aid]
 
 
 # 卡组中文展示名（前端/报告优先展示；英文 id 保持不变作为数据键）

@@ -1,0 +1,545 @@
+{
+ "meta": {
+  "version": "1.0",
+  "date": "2026-11-04",
+  "purpose": "实例测试卡组 B1–B5：全部由 engine_ready 卡池组建，60 张可对战",
+  "note": "与 decklists.json（A1–A4 Meta 对手池）分离：本文件不进 /decks/presets 的 Meta 语义，仅供前端对战下拉/实例对局"
+ },
+ "archetypes": [
+  {
+   "id": "B1",
+   "label": "Fire · Incineroar ex / Mega Charizard Y ex",
+   "label_zh": "火：炽焰咆哮虎ex / Mega 喷火龙Yex",
+   "role": "实例测试卡组",
+   "style": "火系双进化线（stage2 高 HP 打手 + 能量加速）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "fallback_energy": "fire",
+   "cards": [
+    {
+     "name": "Litten",
+     "count": 4,
+     "uid": "Litten@TEF 32"
+    },
+    {
+     "name": "Torracat",
+     "count": 3,
+     "uid": "Torracat@TEF 33"
+    },
+    {
+     "name": "Incineroar ex",
+     "count": 3,
+     "uid": "Incineroar ex@TEF 34"
+    },
+    {
+     "name": "Charmander",
+     "count": 4,
+     "uid": "Charmander@PFL 11"
+    },
+    {
+     "name": "Charmeleon",
+     "count": 2,
+     "uid": "Charmeleon@PFL 12"
+    },
+    {
+     "name": "Mega Charizard Y ex",
+     "count": 2,
+     "uid": "Mega Charizard Y ex@ASC 22"
+    },
+    {
+     "name": "Victini",
+     "count": 2,
+     "uid": "Victini@SSP 21"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Tera Orb",
+     "count": 2,
+     "uid": "Tera Orb@SSP 189"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie’s Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Search",
+     "count": 2,
+     "uid": "Energy Search@SVI 172"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Potion",
+     "count": 2,
+     "uid": "Potion@SVI 188"
+    },
+    {
+     "name": "Basic Fire Energy",
+     "count": 16,
+     "uid": "Basic {R} Energy@SVE 2"
+    }
+   ]
+  },
+  {
+   "id": "B2",
+   "label": "Water · Mega Feraligatr ex / Quaquaval",
+   "label_zh": "水：Mega 大力鳄ex / 狂欢浪舞鸭",
+   "role": "实例测试卡组",
+   "style": "水系双进化线（高 HP 体力压制 + 抽牌）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "fallback_energy": "water",
+   "cards": [
+    {
+     "name": "Totodile",
+     "count": 4,
+     "uid": "Totodile@TEF 39"
+    },
+    {
+     "name": "Croconaw",
+     "count": 3,
+     "uid": "Croconaw@TEF 40"
+    },
+    {
+     "name": "Mega Feraligatr ex",
+     "count": 3,
+     "uid": "Mega Feraligatr ex@ASC 43"
+    },
+    {
+     "name": "Quaxly",
+     "count": 4,
+     "uid": "Quaxly@UNKNOWN 50"
+    },
+    {
+     "name": "Quaxwell",
+     "count": 2,
+     "uid": "Quaxwell@SSP 51"
+    },
+    {
+     "name": "Quaquaval",
+     "count": 2,
+     "uid": "Quaquaval@SSP 52"
+    },
+    {
+     "name": "Jynx",
+     "count": 2,
+     "uid": "Jynx@TWM 46"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Tera Orb",
+     "count": 2,
+     "uid": "Tera Orb@SSP 189"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie’s Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Search",
+     "count": 2,
+     "uid": "Energy Search@SVI 172"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Potion",
+     "count": 2,
+     "uid": "Potion@SVI 188"
+    },
+    {
+     "name": "Basic Water Energy",
+     "count": 16,
+     "uid": "Basic {W} Energy@SVE 3"
+    }
+   ]
+  },
+  {
+   "id": "B3",
+   "label": "Lightning · Pikachu ex / Magnezone",
+   "label_zh": "雷：皮卡丘ex / 自爆磁怪",
+   "role": "实例测试卡组",
+   "style": "雷系 ex 打手 + 双进化线（速攻 + 检索）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "fallback_energy": "lightning",
+   "cards": [
+    {
+     "name": "Pikachu ex",
+     "count": 3,
+     "uid": "Pikachu ex@PRE 28"
+    },
+    {
+     "name": "Magnemite",
+     "count": 4,
+     "uid": "Magnemite@MEG 45"
+    },
+    {
+     "name": "Magneton",
+     "count": 2,
+     "uid": "Magneton@SSP 59"
+    },
+    {
+     "name": "Magnezone",
+     "count": 2,
+     "uid": "Magnezone@MEG 47"
+    },
+    {
+     "name": "Tynamo",
+     "count": 3,
+     "uid": "Tynamo@BLK 30"
+    },
+    {
+     "name": "Eelektrik",
+     "count": 2,
+     "uid": "Eelektrik@BLK 31"
+    },
+    {
+     "name": "Eelektross",
+     "count": 2,
+     "uid": "Eelektross@BLK 32"
+    },
+    {
+     "name": "Morpeko",
+     "count": 2,
+     "uid": "Morpeko@TWM 72"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Tera Orb",
+     "count": 2,
+     "uid": "Tera Orb@SSP 189"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie’s Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Search",
+     "count": 2,
+     "uid": "Energy Search@SVI 172"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Potion",
+     "count": 2,
+     "uid": "Potion@SVI 188"
+    },
+    {
+     "name": "Basic Lightning Energy",
+     "count": 16,
+     "uid": "Basic {L} Energy@SVE 4"
+    }
+   ]
+  },
+  {
+   "id": "B4",
+   "label": "Darkness · Hydreigon ex / Mega Gengar ex",
+   "label_zh": "恶：三首恶龙ex / Mega 耿鬼ex",
+   "role": "实例测试卡组",
+   "style": "恶系双进化线（高 HP 打手 + 铺伤）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "fallback_energy": "darkness",
+   "cards": [
+    {
+     "name": "Deino",
+     "count": 4,
+     "uid": "Deino@SSP 117"
+    },
+    {
+     "name": "Zweilous",
+     "count": 3,
+     "uid": "Zweilous@SSP 118"
+    },
+    {
+     "name": "Hydreigon ex",
+     "count": 3,
+     "uid": "Hydreigon ex@SSP 119"
+    },
+    {
+     "name": "Gastly",
+     "count": 4,
+     "uid": "Gastly@TEF 102"
+    },
+    {
+     "name": "Haunter",
+     "count": 2,
+     "uid": "Haunter@TEF 103"
+    },
+    {
+     "name": "Mega Gengar ex",
+     "count": 2,
+     "uid": "Mega Gengar ex@PFL 56"
+    },
+    {
+     "name": "Zorua",
+     "count": 2,
+     "uid": "Zorua@SFA 31"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Tera Orb",
+     "count": 2,
+     "uid": "Tera Orb@SSP 189"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie’s Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Search",
+     "count": 2,
+     "uid": "Energy Search@SVI 172"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Potion",
+     "count": 2,
+     "uid": "Potion@SVI 188"
+    },
+    {
+     "name": "Basic Darkness Energy",
+     "count": 16,
+     "uid": "Basic {D} Energy@SVE 7"
+    }
+   ]
+  },
+  {
+   "id": "B5",
+   "label": "Psychic · Mega Gardevoir ex / Dusknoir",
+   "label_zh": "超：Mega 沙奈朵ex / 黑夜魔灵",
+   "role": "实例测试卡组",
+   "style": "超能双进化线（高 HP 打手 + 指示物）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "fallback_energy": "psychic",
+   "cards": [
+    {
+     "name": "Ralts",
+     "count": 4,
+     "uid": "Ralts@MEG 58"
+    },
+    {
+     "name": "Kirlia",
+     "count": 2,
+     "uid": "Kirlia@MEG 59"
+    },
+    {
+     "name": "Mega Gardevoir ex",
+     "count": 3,
+     "uid": "Mega Gardevoir ex@MEG 60"
+    },
+    {
+     "name": "Duskull",
+     "count": 4,
+     "uid": "Duskull@SFA 18"
+    },
+    {
+     "name": "Dusclops",
+     "count": 2,
+     "uid": "Dusclops@SFA 19"
+    },
+    {
+     "name": "Dusknoir",
+     "count": 2,
+     "uid": "Dusknoir@SFA 20"
+    },
+    {
+     "name": "Abra",
+     "count": 3,
+     "uid": "Abra@TWM 80"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Tera Orb",
+     "count": 2,
+     "uid": "Tera Orb@SSP 189"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie’s Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Search",
+     "count": 2,
+     "uid": "Energy Search@SVI 172"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Potion",
+     "count": 2,
+     "uid": "Potion@SVI 188"
+    },
+    {
+     "name": "Basic Psychic Energy",
+     "count": 16,
+     "uid": "Basic {P} Energy@SVE 5"
+    }
+   ]
+  }
+ ]
+}

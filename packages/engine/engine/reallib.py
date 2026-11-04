@@ -31,6 +31,10 @@ CARDS_FILE = _DATA_DIR / "cards_real.json"
 # catalog() 中标记 engine_status="approximated"（保真度低于人工逐卡校对）。
 POOL_EXT_FILE = _DATA_DIR / "cards_pool_ext.json"
 DECKS_FILE = _DATA_DIR / "decklists.json"
+# 实例测试卡组（2026-11-04）：全部由 engine_ready 卡池组建的 B1–B5。
+# **故意与 decklists.json 分离**：archetypes 保持「Meta 对手池 A1–A4」语义
+# （/decks/presets 与 M1 验收口径都不变），B 组只经 `make_deck` / 前端对战下拉使用。
+EXAMPLES_FILE = _DATA_DIR / "example_decks.json"
 
 # 引擎 v1 支持的训练家 tag 前缀（与 battle._trainer_legals/_do_trainer 对齐）
 _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
@@ -133,6 +137,17 @@ def _catalog_raw() -> dict:
 @lru_cache(maxsize=1)
 def _decklists_raw() -> dict:
     return _read(DECKS_FILE)
+
+
+@lru_cache(maxsize=1)
+def _examples_raw() -> dict:
+    """实例测试卡组 B1–B5（可选文件；缺失时返回空列表，不拖垮导入）"""
+    if not EXAMPLES_FILE.exists():
+        return {"archetypes": []}
+    try:
+        return _read(EXAMPLES_FILE)
+    except Exception:                              # noqa: BLE001
+        return {"archetypes": []}
 
 
 def _cost(raw: Optional[dict]):
@@ -302,11 +317,25 @@ def _arch_raw(arch_id: str) -> dict:
     for a in _decklists_raw()["archetypes"]:
         if a["id"].upper() == key:
             return a
-    raise KeyError(f"未知预设卡组 {arch_id}（可用：A1–A4）")
+    # 实例测试卡组（B1–B5）：独立文件，**不进** archetypes()/presets 的 Meta 语义
+    for a in _examples_raw().get("archetypes") or []:
+        if a["id"].upper() == key:
+            return a
+    raise KeyError(f"未知预设卡组 {arch_id}（可用：A1–A4 / B1–B5）")
 
 
 def archetype_ids() -> list:
     return [a["id"] for a in _decklists_raw()["archetypes"]]
+
+
+def example_deck_ids() -> list:
+    """实例测试卡组 id（B1–B5）
+
+    ⚠ 与 `archetype_ids()`（Meta 对手池 A1–A4）**分属两套语义**：
+    本组由清洗卡池组建（fidelity=rule-parser-derived），不进 `/decks/presets`
+    的 Meta 披露，只经 `make_deck` 供前端对战下拉 / 实例对局使用。
+    """
+    return [a["id"] for a in _examples_raw().get("archetypes") or []]
 
 
 def archetypes() -> list:

@@ -60,6 +60,7 @@ export const api = {
   // F3 卡组
   importDeck: (text, name) => req('/decks/import', { method: 'POST', body: { text, name } }),
   myDecks: () => req('/decks'),
+  getDeck: (id) => req(`/decks/${id}`),
   deckPresets: () => req('/decks/presets'),
   deckPresetDetail: (id) => req(`/decks/presets/${id}`),
   opening: (id, trials = 1000) => req(`/decks/${id}/opening?trials=${trials}`, { method: 'POST' }),
@@ -115,6 +116,12 @@ export const DECKS = [
   { id: 'A2', label: 'A2 · 多龙巴鲁托ex / 火焰鸡ex（真实卡表）' },
   { id: 'A3', label: 'A3 · N的索罗亚克ex（真实卡表）' },
   { id: 'A4', label: 'A4 · 基础盒 · 厄诡椪ex / 皮皮ex（真实卡表）' },
+  // 实例测试卡组（B1–B5）：全部由 engine_ready 卡池组建，60 张可对战
+  { id: 'B1', label: 'B1 · 实例测试 · 火：炽焰咆哮虎ex / Mega 喷火龙Yex' },
+  { id: 'B2', label: 'B2 · 实例测试 · 水：Mega 大力鳄ex / 狂欢浪舞鸭' },
+  { id: 'B3', label: 'B3 · 实例测试 · 雷：皮卡丘ex / 自爆磁怪' },
+  { id: 'B4', label: 'B4 · 实例测试 · 恶：三首恶龙ex / Mega 耿鬼ex' },
+  { id: 'B5', label: 'B5 · 实例测试 · 超：Mega 沙奈朵ex / 黑夜魔灵' },
   { id: 'draco', label: '龙系进化演示卡组' },
   { id: 'lightning', label: '雷电演示卡组' },
   { id: 'fire', label: '火系演示卡组' },

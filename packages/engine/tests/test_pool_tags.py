@@ -194,8 +194,12 @@ class TestPoolTagVocabulary(unittest.TestCase):
                         or not parts[3].isdigit() or int(parts[3]) <= 0:
                     bad.append(f"{name} · {item}：{tag}（费用/撤退增量非法）")
             elif tag.startswith("ignore_effects"):
-                if tag != "ignore_effects":
-                    bad.append(f"{name} · {item}：{tag}")
+                # 第六十五批：两档**反口径** ——
+                #   `ignore_effects`     只无视守方身上的效果（弱抗照常）
+                #   `ignore_effects:wr`  连弱点/抗性一并无视
+                # 其它后缀一律拒绝：新口径被当成旧口径会静默漏掉弱抗那一半。
+                if tag not in ("ignore_effects", "ignore_effects:wr"):
+                    bad.append(f"{name} · {item}：{tag}（ignore_effects 形态非法）")
         self.assertEqual(bad, [], "攻击限制 tag 形态非法：\n" + "\n".join(bad))
 
     def test_counters_tag_shapes(self):

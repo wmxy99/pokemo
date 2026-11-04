@@ -2633,7 +2633,15 @@ class TestWeaknessResistanceBypassParsing(unittest.TestCase):
                       tags["tags"])
         self.assertEqual(tags["unsupported"], [])
 
-    def test_effect_bypass_clause_stays_unmodeled(self):
+    def test_effect_bypass_clause_is_wide_form(self):
+        """第六十五批（2026-11-04）：混合句式精确建模为 `ignore_effects:wr`
+
+        旧断言要求「效果无视未建模时不得只放通 W/R 绕过」—— 当时引擎没有
+        「无视守方效果」层，混合句式一律如实未建模。现在引擎补齐两档后，
+        继续拒绝就是**把已实现的能力压回灰名单**。改为要求精确落宽口径：
+        既不能退化成窄 `ignore_effects`（弱抗那一半会静默漏掉），也不能
+        只放通 W/R 绕过（效果那一半会静默漏掉）。
+        """
         for text in (
                 "This attack’s damage isn’t affected by Weakness or "
                 "Resistance, or by any effects on those Pokémon.",
@@ -2641,14 +2649,13 @@ class TestWeaknessResistanceBypassParsing(unittest.TestCase):
                 "Resistance, or by any effects on your opponent’s "
                 "Active Pokémon."):
             tags = self._tags(text)
-            self.assertEqual(tags["tags"], [],
-                             "效果无视未建模时不得只放通 W/R 绕过")
-            self.assertTrue(any("效果" in u.get("reason", "")
-                                for u in tags["unsupported"]))
+            self.assertEqual(tags["tags"], ["ignore_effects:wr"],
+                             "混合句式必须落宽口径（弱抗 + 效果一并无视）")
+            self.assertEqual(tags["unsupported"], [])
 
         # 只写「any effects」、完全没有 W/R 的形态：2026-10-28 起**已建模**
         # （`ignore_effects`，Koraidon「Shred」）—— 无视减伤/护盾等**效果**，
-        # 但仍吃弱点抗性；上方「… or by any effects …」的混合句式仍拒绝
+        # 但仍吃弱点抗性。两档是**反口径**，绝不能互换。
         tags = self._tags("This attack’s damage isn’t affected by any "
                           "effects on your opponent’s Active Pokémon.")
         self.assertEqual(tags["tags"], ["ignore_effects"])

@@ -2975,6 +2975,131 @@ def audit_batch58_62(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---- 第六十三~六十七批（2026-11-04）：五族卡面 ↔ tag 独立复算 ----
+# 正则刻意**重写一遍**，不 import 解析包 —— 复用解析侧的判定等于橡皮图章。
+_B63_CANT_ATTACK = re.compile(
+    r"during your next turn,?\s+this pok[eé]mon can'?t "
+    r"(?:use attacks|attack\b)", re.I)
+_B63_NAMED_LOCK = re.compile(
+    r"during your next turn,?\s+this pok[eé]mon can'?t use "
+    r"(?!attacks\b)(?!that attack\b)[a-z][a-z'\- ]{1,30}", re.I)
+_B64_OPP_CHOOSE = re.compile(
+    r"your opponent chooses (\d+) cards? from their hand and shuffles "
+    r"those cards into their deck", re.I)
+_B65_WR = re.compile(
+    r"this attack's damage isn't affected by weakness or resistance,?\s*"
+    r"or by any effects on", re.I)
+_B65_NARROW = re.compile(
+    r"this attack's damage isn't affected by any effects on", re.I)
+_B66_KOFU = re.compile(
+    r"attacks used by this pok[eé]mon cost \{c\} less for each kofu card "
+    r"in your discard pile", re.I)
+_B67_MOVE = re.compile(
+    r"move an? energy from (?P<src>[^.]{0,70}?)\s+to\s+"
+    r"(?P<dst>[^.]{0,70})", re.I)
+
+
+def audit_batch63_67(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """第六十三~六十七批五族对账（**两侧都查**：缺 tag 与口径写反）
+
+    ① `attack_lock:all:turn`：自身跨回合禁攻（`can't attack` 与
+       `can't use attacks` 是同一语义的两种动词）；指定招式句式落 `all`
+       会**扩大**封锁范围，必须抓出。
+    ② `shuffle_opp_hand:N`：对手自选 ⇒ 引擎随机；N 必须与卡面一致。
+    ③ `ignore_effects` / `ignore_effects:wr` **反口径**：写了 Weakness or
+       Resistance 就必须带 `:wr`（否则弱抗那一半静默漏掉）；只写「any
+       effects」却带 `:wr` 是静默加强。
+    ④ `own_discard_named:kofu`：按弃牌堆 Kofu 卡数减费；落成固定值/别的
+       计数源都会静默改变费用。
+    ⑤ `energy_move:1:from:<src>:to:<dst>`：新补的三种区域别名；阵营写反
+       （`opp_bench` 顶替 `bench`）必须抓出。
+    """
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or ""))
+    tags = [str(e) for e in effects]
+
+    # ① 自身跨回合禁攻
+    if _B63_CANT_ATTACK.search(d) and not _B63_NAMED_LOCK.search(d):
+        if "attack_lock:all:turn" not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「During your next "
+                        "turn, this Pokémon can't attack / use attacks」应为 "
+                        "`attack_lock:all:turn`，实际 "
+                        f"{[t for t in tags if t.startswith('attack_lock')] or '无'}"
+                        "（封锁整段消失）")
+    if _B63_NAMED_LOCK.search(d) and "attack_lock:all:turn" in tags:
+        errs.append(f"{card_name} · {item_name}：卡面只锁**指定招式**却落 "
+                    "`attack_lock:all:turn`（全部招式被封 = 静默加强），"
+                    "应为 `attack_lock:name:turn:<招式>`")
+
+    # ② 对手自选洗回牌库
+    m = _B64_OPP_CHOOSE.search(d)
+    if m:
+        want = f"shuffle_opp_hand:{int(m.group(1))}"
+        if want not in tags:
+            have = [t for t in tags if t.startswith("shuffle_opp_hand")]
+            hint = ""
+            if have:
+                hint = "（张数与卡面不符）"
+            errs.append(f"{card_name} · {item_name}：卡面「Your opponent "
+                        f"chooses {m.group(1)} cards … shuffles … into their "
+                        f"deck」应为 `{want}`，实际 {have or '无'}{hint}")
+
+    # ③ 无视效果的两档**反口径**
+    wr_have = "ignore_effects:wr" in tags
+    narrow_have = "ignore_effects" in tags
+    if _B65_WR.search(d):
+        if not wr_have:
+            hint = "（疑似用了窄口径 `ignore_effects`：弱抗那一半会静默漏掉）" \
+                if narrow_have else ""
+            errs.append(f"{card_name} · {item_name}：卡面写了「Weakness or "
+                        "Resistance, or by any effects」应为 "
+                        f"`ignore_effects:wr`，实际 "
+                        f"{[t for t in tags if t.startswith('ignore_effects')] or '无'}"
+                        f"{hint}")
+    elif _B65_NARROW.search(d):
+        if wr_have:
+            errs.append(f"{card_name} · {item_name}：卡面只写「any effects」"
+                        "却落 `ignore_effects:wr`（连弱抗一起无视 = 静默加强）")
+    elif wr_have:
+        errs.append(f"{card_name} · {item_name}：卡面无「无视弱点/抗性」句却带 "
+                    "`ignore_effects:wr`（认领越界）")
+
+    # ④ Kofu 计数源减费
+    kofu_tag = "fx:attack_cost:self:less:per:own_discard_named:kofu"
+    if _B66_KOFU.search(d):
+        if kofu_tag not in tags:
+            have = [t for t in tags if t.startswith("fx:attack_cost:self")]
+            errs.append(f"{card_name} · {item_name}：卡面「cost {{C}} less for "
+                        "each Kofu card in your discard pile」应为 "
+                        f"`{kofu_tag}`，实际 {have or '无'}")
+    elif kofu_tag in tags:
+        errs.append(f"{card_name} · {item_name}：卡面无 Kofu 计数源句却带 "
+                    f"`{kofu_tag}`（认领越界）")
+
+    # ⑤ 能量移动区域别名（只对本轮新认领的三种别名复算，不误伤旧句式）
+    mm = _B67_MOVE.search(d)
+    if mm:
+        src, dst = mm.group("src"), mm.group("dst")
+        want_src = want_dst = None
+        if "new benched pok" in dst or "your benched pok" in dst:
+            want_dst = "bench"
+        elif "this pok" in dst:
+            want_dst = "active"
+        if "other pok" in src:
+            want_src = "any"
+        elif "this pok" in src:
+            want_src = "active"
+        if want_src and want_dst:
+            want = f"energy_move:1:from:{want_src}:to:{want_dst}"
+            if want not in tags:
+                have = [t for t in tags if t.startswith("energy_move:")]
+                errs.append(f"{card_name} · {item_name}：卡面能量移动区域应为 "
+                            f"`{want}`，实际 {have or '无'}"
+                            "（阵营/战斗位写反会搬错能量）")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3031,6 +3156,7 @@ def main() -> int:
                                                   desc, eff)
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch58_62(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch63_67(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3055,6 +3181,8 @@ def main() -> int:
             errs += audit_batch58_62(c["name"], c["name"], _cdesc,
                                     [_ctag] if _ctag else [],
                                     c.get("play_gate") or None)
+            errs += audit_batch63_67(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:
@@ -3094,7 +3222,9 @@ def main() -> int:
           "检索不同属性 · 连续抛币计数源/选N只进化/任意张检索 · "
           "{ex} 目标筛选/自身能量洗回牌库 · 对手宝可梦洗回牌库 · "
           "奖赏减少/双状态/换位补抽/拉人混乱/弃手重抽/特性发动代价 · "
-          "对手弃手牌/撤退费归零/常驻禁打 四十类对账全部一致")
+          "对手弃手牌/撤退费归零/常驻禁打 · "
+          "自身跨回合禁攻/对手自选洗回/无视弱抗两档/Kofu 减费计数源/能量移动区域 "
+          "四十一类对账全部一致")
     return 0
 
 

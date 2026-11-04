@@ -1484,3 +1484,128 @@ class TestAuditBatch53(unittest.TestCase):
         errs = A.audit_batch53("X", "Y", "Draw 2 cards.", ["draw:2"],
                                cost="discard:1")
         self.assertTrue(any("认领越界" in e for e in errs), errs)
+
+
+class TestAuditBatch63_67(unittest.TestCase):
+    """第六十三~六十七批对账的**负向自测**（第四十一类）
+
+    五族各测两侧：正确映射不报、静默错映射必报。尤其 `ignore_effects` 两档
+    反口径 —— 用窄口径接宽句式会静默漏掉「无视弱点/抗性」那一半。
+    """
+
+    B63 = "Discard an Energy from your opponent’s Active Pokémon. " \
+          "During your next turn, this Pokémon can’t attack."
+    B63_NAMED = "During your next turn, this Pokémon can’t use Haymaker."
+    B64 = ("Your opponent chooses 3 cards from their hand and shuffles "
+           "those cards into their deck.")
+    B65_WR = ("This attack’s damage isn’t affected by Weakness or "
+              "Resistance, or by any effects on your opponent’s Active "
+              "Pokémon.")
+    B65_NARROW = ("This attack’s damage isn’t affected by any effects on "
+                  "your opponent’s Active Pokémon.")
+    B66 = ("Attacks used by this Pokémon cost {C} less for each Kofu "
+           "card in your discard pile.")
+    KOFU_TAG = "fx:attack_cost:self:less:per:own_discard_named:kofu"
+    B67_JYNX = "move an Energy from this Pokémon to the new Benched Pokémon."
+    B67_AZU = "Move an Energy from 1 of your other Pokémon to this Pokémon."
+
+    # ---- ① 自身跨回合禁攻 ----
+    def test_b63_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Floatzel", "Aqua Slash", self.B63,
+            ["discard_energy:1:opp", "attack_lock:all:turn"]), [])
+
+    def test_b63_missing_flagged(self):
+        errs = A.audit_batch63_67("Floatzel", "Aqua Slash", self.B63,
+                                  ["discard_energy:1:opp"])
+        self.assertTrue(any("attack_lock:all:turn" in e for e in errs), errs)
+
+    def test_b63_named_lock_written_as_all_flagged(self):
+        """只锁 Haymaker 却落 all：整只宝可梦一回合不能出招（静默加强）"""
+        errs = A.audit_batch63_67("Crabominable", "Haymaker", self.B63_NAMED,
+                                  ["attack_lock:all:turn"])
+        self.assertTrue(any("静默加强" in e for e in errs), errs)
+
+    # ---- ② 对手自选洗回牌库 ----
+    def test_b64_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Banette", "Cursed Words", self.B64, ["shuffle_opp_hand:3"]), [])
+
+    def test_b64_wrong_count_flagged(self):
+        errs = A.audit_batch63_67("Banette", "Cursed Words", self.B64,
+                                  ["shuffle_opp_hand:2"])
+        self.assertTrue(any("shuffle_opp_hand:3" in e for e in errs), errs)
+
+    def test_b64_missing_flagged(self):
+        self.assertTrue(A.audit_batch63_67("Banette", "Cursed Words",
+                                           self.B64, []))
+
+    # ---- ③ 无视效果两档反口径 ----
+    def test_b65_wr_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Mega Starmie ex", "Jetting Blow", self.B65_WR,
+            ["ignore_effects:wr"]), [])
+
+    def test_b65_wr_folded_to_narrow_flagged(self):
+        """宽句式用窄 tag → 弱点/抗性照常结算，静默漏掉一半效果"""
+        errs = A.audit_batch63_67("Mega Starmie ex", "Jetting Blow",
+                                  self.B65_WR, ["ignore_effects"])
+        self.assertTrue(any("ignore_effects:wr" in e for e in errs), errs)
+
+    def test_b65_narrow_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Veluza", "Sonic Edge", self.B65_NARROW, ["ignore_effects"]), [])
+
+    def test_b65_narrow_widened_flagged(self):
+        """只写 any effects 却带 :wr → 连弱抗一起无视（静默加强）"""
+        errs = A.audit_batch63_67("Veluza", "Sonic Edge", self.B65_NARROW,
+                                  ["ignore_effects:wr"])
+        self.assertTrue(any("静默加强" in e for e in errs), errs)
+
+    def test_b65_tag_without_sentence_flagged(self):
+        errs = A.audit_batch63_67("X", "Y", "Draw 2 cards.",
+                                  ["ignore_effects:wr"])
+        self.assertTrue(any("认领越界" in e for e in errs), errs)
+
+    # ---- ④ Kofu 计数源减费 ----
+    def test_b66_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Veluza", "Food Prep", self.B66, [self.KOFU_TAG]), [])
+
+    def test_b66_wrong_counter_flagged(self):
+        errs = A.audit_batch63_67(
+            "Veluza", "Food Prep", self.B66,
+            ["fx:attack_cost:self:less:per:opp_bench"])
+        self.assertTrue(any("own_discard_named:kofu" in e for e in errs), errs)
+
+    def test_b66_tag_without_sentence_flagged(self):
+        errs = A.audit_batch63_67("X", "Y", "Draw 2 cards.", [self.KOFU_TAG])
+        self.assertTrue(any("认领越界" in e for e in errs), errs)
+
+    # ---- ⑤ 能量移动区域 ----
+    def test_b67_jynx_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Jynx", "X", self.B67_JYNX,
+            ["energy_move:1:from:active:to:bench"]), [])
+
+    def test_b67_jynx_faction_flipped_flagged(self):
+        """己方新后备写成 opp_bench → 能量搬到对手场上（阵营反转）"""
+        errs = A.audit_batch63_67(
+            "Jynx", "X", self.B67_JYNX,
+            ["energy_move:1:from:active:to:opp_bench"])
+        self.assertTrue(any("to:bench" in e for e in errs), errs)
+
+    def test_b67_azumarill_ok(self):
+        self.assertEqual(A.audit_batch63_67(
+            "Azumarill ex", "X", self.B67_AZU,
+            ["energy_move:1:from:any:to:active"]), [])
+
+    def test_b67_azumarill_wrong_src_flagged(self):
+        errs = A.audit_batch63_67(
+            "Azumarill ex", "X", self.B67_AZU,
+            ["energy_move:1:from:active:to:active"])
+        self.assertTrue(any("from:any" in e for e in errs), errs)
+
+
+if __name__ == "__main__":
+    unittest.main()

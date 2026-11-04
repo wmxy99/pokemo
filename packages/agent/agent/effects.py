@@ -2019,9 +2019,17 @@ _EN_RESISTANCE_FILTER_RE = re.compile(r"with\s+\{[a-z]\}\s*resistance", re.I)
 # 不能折算成「本回合不能攻击 / 撤退」（那会在错误的时间窗生效）。
 _LOCK_TARGET = (r"(?P<target>this pok[eé]mon|the defending pok[eé]mon|"
                 r"your opponent'?s active pok[eé]mon|that pok[eé]mon)")
+# 第六十三批（2026-11-04）：同一锁有两种动词写法 ——
+#   「… can't use attacks.」（旧，复数名词） / 「… can't attack.」（Floatzel /
+#   Steven's Metang，动词）。只差一个词，漏了后者整段落 rule 兜底。
+# ⚠ 必须用 ``attack\b`` 而不是 ``attack``：否则会把 `can't use attacks` 的
+#   前半截也吞掉（复数 s 不是词边界，故 \b 天然排除），且 `_ATTACK_LOCK_NAMED_RE`
+#   的 ``(?!attacks\b)`` 与这里分工不变（它只管 `can't use <招式名>`）。
+# ⚠ 「can't attack unless …」是**常驻条件**（Team Rocket's Mewtwo ex），不带
+#   「During your next turn」前缀，本正则的前半段天然拒收，绝不能放宽。
 _ATTACK_LOCK_ALL_RE = re.compile(
     r"during your (?P<who>opponent'?s\s+)?next turn,?\s*" + _LOCK_TARGET
-    + r"\s+can'?t use attacks", re.I)
+    + r"\s+can'?t (?:use attacks|attack\b)", re.I)
 _ATTACK_LOCK_NAMED_RE = re.compile(
     r"during your (?P<who>opponent'?s\s+)?next turn,?\s*" + _LOCK_TARGET
     # `that attack` 是**指代前文所选招式**，不是具体招式名 → 交给
@@ -2378,11 +2386,15 @@ def _detect_wr_bypass(text: str) -> tuple:
     """弱点 / 抗性无视 → ``(actions, spans)``
 
     只处理**无条件**的 `This attack's damage isn't affected by …`。
-    两类残留必须如实登记、绝不静默近似：
-
-    * `… or by any effects on …`：引擎没有「无视目标身上效果」层（B5）；
-    * 与「this attack does nothing」失败门同卡时，由调用方另行登记（见
-      `_ATTACK_DOES_NOTHING_RE`），bypass 标签本身仍可精确表达。
+    第六十五批（2026-11-04）之前，`… or by any effects on …` 一律如实登记
+    未建模（当时引擎没有「无视守方效果」层）。现在引擎已有**两档**：
+      · `ignore_effects`      只无视守方身上的**效果**（窄口径，旧句式）
+      · `ignore_effects:wr`   连**弱点/抗性**一并无视（宽口径，本句式）
+    故这里改为产出 `ignore_effects:wr`，且把 span 交给调用方 mask，避免
+    同一句又被 `_EN_MODIFY_RE` 记成「静态规则修改」而整卡被拒收。
+    ⚠ 认领权**只在这里**（`search` 可命中整段中的第二句）；
+      `_detect_static_rules` 不再处理含 Weakness/Resistance 的句式，
+      否则同一句会产出两条 tag。
     """
     t = _norm_apostrophe(text or "")
     m = _WR_BYPASS_RE.search(t)
@@ -2391,7 +2403,7 @@ def _detect_wr_bypass(text: str) -> tuple:
     me = _WR_BYPASS_EFFECTS_RE.search(t)
     if me:
         return [act("rule", None, "any", {
-            "note": "无视目标身上效果（需效果免疫/清除层，B5）"})], [me.span()]
+            "ignore_effects_wr": True})], [me.span()]
     wr = m.group("wr").lower()
     out: list = []
     if "weakness" in wr:
@@ -2671,9 +2683,20 @@ def _energy_move_zone(clause: str, *, dest: bool) -> Optional[str]:
     """能量移动的**源/目标**区域 → 引擎 zone；判不出返回 None
 
     · 源：``active``（this Pokémon）· ``bench``（your Benched）·
-      ``any``（1 of your Pokémon，需选源）· ``opp_active`` · ``opp_any``
-    · 目标：``bench`` · ``active`` · ``any``（another of your）·
+      ``any``（1 of your Pokémon / 1 of your **other** Pokémon，需选源）·
+      ``opp_active`` · ``opp_any``
+    · 目标：``bench``（your Benched / the **new** Benched Pokémon）·
+      ``active``（your Active / this Pokémon）· ``any``（another of your）·
       ``opp_bench``（their Benched）· ``opp_any``（another of their）
+
+    第六十七批（2026-11-04）补齐三个真实卡面别名（此前一律判不出 →
+    整条落「能量移动的源/目标未识别」）：Jynx「… to the new Benched
+    Pokémon」、Azumarill ex「from 1 of your **other** Pokémon to **this**
+    Pokémon」。⚠ 顺序不能乱：`their benched` 必须先于 `benched pok`，
+    否则对手后备会被静默当成己方后备（阵营反转）。
+    ⚠ 「any amount of … Energy」（Forretress / Latios）**故意不认**：
+    引擎 `energy_move:N` 是固定/至多 N，把「任意量」压成 1 张是静默缩小
+    范围；按 C5 保留未建模，等引擎支持 `:all` 形态再做。
     """
     c = _norm_apostrophe(clause or "").lower()
     if dest:
@@ -2681,12 +2704,14 @@ def _energy_move_zone(clause: str, *, dest: bool) -> Optional[str]:
             return "opp_bench"
         if "their pok" in c or "another of their" in c:
             return "opp_any"
-        if "your benched" in c:
+        if "your benched" in c or "benched pok" in c:
             return "bench"
         if "your active" in c:
             return "active"
         if "another of your" in c:
             return "any"
+        if "this pok" in c:
+            return "active"
         return None
     if "this pok" in c:
         return "active"
@@ -2696,6 +2721,8 @@ def _energy_move_zone(clause: str, *, dest: bool) -> Optional[str]:
         return "opp_any"
     if "your benched" in c:
         return "bench"
+    if "1 of your other pok" in c:
+        return "any"
     if "1 of your pok" in c or "your pok" in c:
         return "any"
     return None
@@ -2877,6 +2904,20 @@ _IGNORE_EFFECTS_RE = re.compile(
     r"^this attack's damage isn't affected by any effects on your opponent's "
     r"active pok[eé]mon\.$", re.I)
 
+# 第六十四批（2026-11-04）：对手**自选**洗回牌库（Banette「Cursed Words」）
+#   「Your opponent chooses 3 cards from their hand and shuffles those cards
+#    into their deck.」→ `shuffle_opp_hand:3`
+# 口径：卡面是「**对手**选」⇒ 引擎按随机选（与 `_shuffle_opp_hand` docstring
+# 同源）；**不是** `opp_hand:<op>:<sel>`（那是我方选 ⇒ 确定性默认）。两者反口径。
+_OPP_CHOOSE_SHUFFLE_RE = re.compile(
+    r"^your opponent chooses (?P<n>\d+) cards? from their hand and shuffles "
+    r"those cards into their deck\.$", re.I)
+
+# 第六十五批（2026-11-04）：「无视弱点/抗性 + 无视守方效果」由
+# `_detect_wr_bypass`（见其 docstring）统一认领为 `ignore_effects:wr`。
+# 与 `ignore_effects`（只无视效果、弱抗照常）**反口径**：混用会静默漏掉
+# 一半效果。这里**故意不留** WR 分支，避免同一句产出两条 tag。
+
 
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
@@ -2887,6 +2928,10 @@ def _detect_static_rules(text: str, kind: str) -> list:
       Cost is {C} more.」→ ``attack_cost_up`` + ``retreat_cost_up``
     · 「This attack's damage isn't affected by any effects on your opponent's
       Active Pokémon.」→ ``ignore_effects``
+    · 「Your opponent chooses N cards from their hand and shuffles those
+      cards into their deck.」→ ``shuffle_opp_hand:N``（第六十四批，对手自选）
+    · 「During your next turn, this Pokémon can't attack.」
+      → ``attack_lock:all:turn``（第六十三批，由 `_ATTACK_LOCK_ALL_RE` 处理）
 
     只认**整句**；近似/多句写法一律不认（宁可未建模）。
     """
@@ -2900,6 +2945,12 @@ def _detect_static_rules(text: str, kind: str) -> list:
                                           "retreat_cost_up": 1})]
     if _IGNORE_EFFECTS_RE.match(t):
         return [act("rule", None, "any", {"ignore_effects": True})]
+    # 含 Weakness/Resistance 的宽口径句式**不在这里**认领（交给
+    # `_detect_wr_bypass`，它是 search 级、能命中整段中的第二句）。
+    m = _OPP_CHOOSE_SHUFFLE_RE.match(t)
+    if m:
+        return [act("rule", None, "any",
+                    {"shuffle_opp_hand": int(m.group("n"))})]
     return []
 
 
@@ -4292,7 +4343,7 @@ def _needs_fx(spec: dict) -> bool:
                "energy_move", "discard_opp_random", "shuffle_opp_hand",
                "discard_opp_to", "opp_shuffle_same", "fossil", "borrow",
                "attack_denial", "attack_cost_up", "retreat_cost_up",
-               "ignore_effects", "nullify_if", "shuffle_top",
+               "ignore_effects", "ignore_effects_wr", "nullify_if", "shuffle_top",
                "ko_prize_plus", "on_ko_counter", "on_ko_energy",
                # 第二十五批（2026-10-29）：伤害前阶段（「Before doing damage」）
                "pre_discard_tool", "pre_discard_energy_special",
@@ -8606,6 +8657,9 @@ def to_engine_tags(specs: list) -> dict:
                         tags.append(f"retreat_cost_up:opp:turn:{n2}")
                 elif extra.get("ignore_effects"):
                     tags.append("ignore_effects")
+                elif extra.get("ignore_effects_wr"):
+                    # 第六十五批：连弱点/抗性一起无视（与上面窄口径反义）
+                    tags.append("ignore_effects:wr")
                 elif extra.get("shuffle_top"):
                     # 「Look at the top N cards … put them back in any order」
                     tags.append(f"shuffle_top:{int(extra['shuffle_top'])}"

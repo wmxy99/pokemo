@@ -1,3 +1,62 @@
+## 本轮成果（2026-11-04 · 第六十三~六十七批 · 5 批）
+
+**一句话**：`engine_ready` **1093 → 1102（86.3% → 87.0%）**，池 1078 → **1087**，
+未建模动作条目 **173 → 163**（DB `effects_json.parse.unsupported` 实测口径；
+上节 ~185 为估数）；对账 **40 → 41 类**（新增 `audit_batch63_67`，含 18 个负向自测）；
+全仓测试 **2191 → 2223**（engine 1175 · agent 901 · api 135 · gym 12）；
+CI **8/8 PASS** · **K1 双盲 200 局 0.795 ✅**（`k1_rich.pt`，与上轮同值、无回归）。
+
+| 批次 | 主题 | 落地卡 | 顺带修掉的静默缺陷 |
+|---|---|---|---|
+| 63 | 自身跨回合禁攻 `attack_lock:all:turn`（`can't attack` 与 `can't use attacks` 同义） | 2（Floatzel / Steven's Metang） | 只差一个动词，旧正则只认复数名词 → 封锁整段消失；具名招式封锁若落 `all` 会静默加强，已加负向守卫 |
+| 64 | 对手自选洗回牌库 `shuffle_opp_hand:<n>` | 1（Banette） | 「对手选 ⇒ 引擎随机」与 `opp_hand:*`（我方选 ⇒ 确定性）**反口径**，不可互换；N 必须与卡面一致 |
+| 65 | 无视弱点/抗性 **+** 无视效果 `ignore_effects:wr` | 2（Mega Starmie ex / Cornerstone Mask Ogerpon ex；Iron Crown ex 因另一特性未建模仍如实不收） | 引擎旧 `ignore_effects` 只无视守方**效果**，弱抗照常；复用旧 tag 会静默漏掉一半。两处伤害计算（战斗位 + snipe）同改，未知后缀抛错 |
+| 66 | 按弃牌堆 Kofu 卡数减费 `fx:attack_cost:self:less:per:own_discard_named:kofu` | 2（Crabominable / Veluza「Food Prep」） | 引擎 `_eval_counter` 早有该计数源，缺的只是解析映射；但 `fx_attack_cost._parse_tag` **不接受含冒号的 counter** → 卡进池却一打就抛 ValueError，本批一并修 |
+| 67 | 能量移动区域别名补齐 `energy_move:1:from:<src>:to:<dst>` | 2（Jynx / Azumarill ex） | 「the new Benched Pokémon」/「1 of your other Pokémon」/「to this Pokémon」判不出区域 → 整条作废；`their Benched` 必须先于 `benched pok` 判定，否则阵营反转 |
+
+**五批的共同主题**：又是「**引擎已有能力、解析没接通**」的一轮 —— 5 个族里 4 个零引擎改动，
+唯一真正改引擎的批 65 也只是在既有伤害计算上加一个开关。本轮**主动放弃**了连续两轮
+记为「首要缺口」的「全队 +HP 静态」：见下方决策依据。
+
+**方法论沉淀（四条，都是本轮实证）**：
+1. **引擎能力补齐后，旧的「故意拒绝」必须同步放行**：`_WR_BYPASS_EFFECTS_RE` 当初
+   刻意把「Weakness or Resistance, or by any effects」登记为未建模（那时引擎没有
+   无视效果层）；批 65 补齐引擎后不仅 detector 要改，旧断言
+   `test_effect_bypass_clause_stays_unmodeled` 也必须改成「要求精确落 `:wr`」——
+   否则会把**已实现的能力压回灰名单**，与上轮 Unfair Stamp 是同一类失效。
+2. **反口径 tag 要独立 + 严格校验**：`ignore_effects`（窄）与 `ignore_effects:wr`（宽）
+   只差一个后缀，写反不报错、测试全绿，只是弱抗那一半静默漏掉 / 凭空无视。
+   引擎用共用 `_ignore_effects_flags()` 在两处伤害计算里解析，**未知形态抛 ValueError**，
+   绝不静默当窄口径；`test_pool_tags.py` 守卫同步只允许这两种字面。
+3. **「解析接通了、引擎没跟上」是新失败方向**：批 66 只加一条映射就能产 tag，
+   但 `fx_attack_cost._parse_tag` 把 `parts[5]` 当整个计数源并硬性要求 `len(parts)==8`，
+   `own_discard_named:kofu` 这种**自身含冒号**的计数源会被判「非法 tag」。
+   已改为「从尾部剥离可选 `:name:<k>`，其余整段交给 `_eval_counter`」。
+   → 新计数源必须**同时**验证「解析产 tag」与「引擎能解析该 tag 并打一局」。
+4. **认领权只能有一处**：`_detect_static_rules`（整句 `match`）与
+   `_detect_wr_bypass`（`search`、能命中整段中的第二句）若都认领 WR 句式，会产出
+   **两条** `ignore_effects:wr`；已把认领权统一交给后者，并把 span 交给调用方
+   mask，避免同一句又被 `_EN_MODIFY_RE` 记成「静态规则修改」而整卡被拒收。
+   （对账脚本自身也会错：本轮 `audit_batch63_67` 首跑前先写了 18 个负向自测，
+   覆盖「正确→不报 / 写反→必报」两侧。）
+
+**本轮明确不做的（C5 差异透明）**：
+- **全队 `+HP` 静态**（Ludicolo / Okidogi / Tyrantrum）：引擎 `_refresh_stadium_hp`
+  只在「回合开始 / 场地设置 / 场地移除」重算，而宝可梦上场/离场/换位共约 30 处
+  直接改 `bench` / `active`、无统一入口 —— 只补回合开始会让加成**延迟一回合**、
+  持有者离场后**残留**，是静默错算。按 C5 宁可如实未建模；要做得先收敛出
+  「场上构成变化」的统一钩子。条件式 +HP（`If … {D} Energy … +100 HP`）另按
+  `cards.py bonus_hp` 的既有纪律拒绝（血量上限忽大忽小）。
+- **`any amount` 能量移动**（Forretress / Latios）：引擎 `energy_move:N` 是固定/至多 N，
+  压成 1 张是静默缩小范围；等引擎支持 `:all` 形态再做。
+- **Iron Crown ex**：其 `Cobalt Command` 特性（静态伤害增减）仍无实现 → 整卡不收，
+  即使招式侧的 `ignore_effects:wr` 已可精确建模。
+
+**已知缺口（下一批首要）**：全队 +HP 的统一重算钩子；`energy_move:all`；
+`{ACE SPEC}` 卡牌子类无数据模型；剩余 163 条里「静态/未建模（英文）」仍是最大单堆。
+
+---
+
 ## 本轮成果（2026-11-04 · 第五十八~六十二批 · 5 批）
 
 **一句话**：`engine_ready` **1077 → 1093（85.0% → 86.3%）**，池 1062 → **1078**，

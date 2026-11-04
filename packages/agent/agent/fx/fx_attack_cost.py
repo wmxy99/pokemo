@@ -40,6 +40,10 @@ _COUNTERS = {
     "prizes card your opponent has taken": "opp_prizes_taken",
     "of your opponent's benched pokemon": "opp_bench",
     "of your opponent's benched pokémon": "opp_bench",
+    # 第六十六批（2026-11-04）：「… for each Kofu card in your discard pile」
+    # （Crabominable / Veluza「Food Prep」）。引擎 `_eval_counter` 早已有
+    # `own_discard_named:<key>`（按卡名子串数弃牌堆），缺的只是这一条映射。
+    "kofu card in your discard pile": "own_discard_named:kofu",
 }
 
 

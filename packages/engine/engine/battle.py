@@ -45,6 +45,22 @@ _BUILTIN_COST_TAGS = ("ultra_ball",)
 _DAMAGE_MOD_PREFIXES = ("dmg_plus:", "dmg_set:", "dmg_minus:", "dmg_zero",
                         "ignore_weakness", "ignore_resistance")
 
+# 第六十五批（2026-11-04）：无视效果的**两档反口径**，两处伤害计算共用。
+#   ignore_effects      只无视守方身上的效果（护盾/减伤/道具/场地），弱抗照常
+#   ignore_effects:wr   连印在卡上的弱点/抗性一并无视
+# 未知后缀必须抛错：静默当成窄口径会漏掉弱抗那一半（测试全绿但强度错了）。
+_IGNORE_EFFECTS_FORMS = ("ignore_effects", "ignore_effects:wr")
+
+
+def _ignore_effects_flags(effects) -> tuple:
+    """→ ``(ignore_eff, ignore_wr)``；未知 ``ignore_effects*`` 形态抛 ValueError"""
+    seq = tuple(str(e) for e in (effects or ()))
+    for e in seq:
+        if e.startswith("ignore_effects") and e not in _IGNORE_EFFECTS_FORMS:
+            raise ValueError(f"未识别的 ignore_effects 形态：{e}")
+    return ("ignore_effects" in seq or "ignore_effects:wr" in seq,
+            "ignore_effects:wr" in seq)
+
 # 抛币子效果里的**卡面英文状态词** → 引擎规范状态名（2026-10-29 第二十二批）。
 # 历史数据（`coin:heads:paralyzed`）此前会走到效果派发的「未知 tag」分支被**静默
 # 忽略**（状态永不施加）—— 现在统一在这里归一，解析侧也只产出规范名。
@@ -4148,7 +4164,10 @@ class Battle:
                 # 「This attack's damage isn't affected by any effects on your
                 # opponent's Active Pokémon.」（Koraidon「Shred」）—— 无视的是
                 # **效果**（护盾/减伤/道具/场地），不是弱点抗性（那印在卡上）
-                ignore_eff = "ignore_effects" in atk.effects
+                # 第六十五批：`ignore_effects:wr` 是**宽口径** —— 卡面多写了
+                # 「Weakness or Resistance」，连印在卡上的弱抗也一起无视。
+                # 两者不能混用：用窄口径接宽句式会静默漏掉弱抗那一半。
+                ignore_eff, ignore_wr = _ignore_effects_flags(atk.effects)
                 # 静态修正（S1）：`passive:no_weakness` 让弱点不生效；
                 # 带来源属性的减伤需要攻击方，才能按卡面限定结算
                 static = _static_mods(defender, attacker)
@@ -4156,8 +4175,10 @@ class Battle:
                                      weakness_override=self._weakness_override(
                                          attacker, defender),
                                      ignore_weakness=(mods["ignore_weakness"]
-                                                      or static["no_weakness"]),
-                                     ignore_resistance=mods["ignore_resistance"])
+                                                      or static["no_weakness"]
+                                                      or ignore_wr),
+                                     ignore_resistance=(mods["ignore_resistance"]
+                                                        or ignore_wr))
                 # 「During your next turn, the Defending Pokémon takes N more
                 # damage from attacks (**after** applying Weakness and
                 # Resistance).」（Vibrava / Stunfisk）—— 在弱抗之后、其它减伤与
@@ -6706,15 +6727,18 @@ class Battle:
         此前 `snipe` 对战斗位一律按原始值结算 → 打战斗位时**静默少算/多算**。
         """
         mods = pre_mods or {}
-        ignore_eff = "ignore_effects" in (effects or ())
+        # 第六十五批：snipe 走同一套口径 —— `ignore_effects:wr` 连弱抗一起
+        # 无视（Iron Crown ex「Twin Shotels」打后备时卡面同样写了这句）。
+        # 漏改这里会让战斗位与后备的同一条 tag 表现不一致。
+        ignore_eff, ignore_wr = _ignore_effects_flags(effects)
         static = _static_mods(defender, attacker) if attacker is not None else {}
         dmg = compute_damage(
             attacker, defender, base,
             weakness_override=(self._weakness_override(attacker, defender)
                                if attacker is not None else None),
             ignore_weakness=(bool(mods.get("ignore_weakness"))
-                             or bool(static.get("no_weakness"))),
-            ignore_resistance=bool(mods.get("ignore_resistance")))
+                             or bool(static.get("no_weakness")) or ignore_wr),
+            ignore_resistance=(bool(mods.get("ignore_resistance")) or ignore_wr))
         if ignore_eff:
             return dmg
         if static.get("dmg_reduce"):

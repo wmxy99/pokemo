@@ -8,6 +8,10 @@ tag 形态（逐字解析，未知形态抛 ValueError —— 绝不静默忽略
     fx:attack_cost:opp_basic:<n>:colorless            对手基础宝可梦 +n
     fx:attack_cost:self:less:per:<counter>[:name:<k>]  自身 -n×计数源（可限定招式名）
 
+``<counter>`` 交给 ``battle._eval_counter`` 求值，**可以自带冒号**
+（第六十六批：`own_discard_named:kofu` 按弃牌堆 Kofu 卡数减费）；
+只有末尾的 ``:name:<k>`` 是招式名限定，从尾部剥离，不与计数源混淆。
+
 语义边界：
   · 前一种只在**持有者位于战斗位**时生效（卡面「is in the Active Spot」）；
   · 只作用于**基础宝可梦**（stage == 0）的招式；
@@ -41,16 +45,23 @@ def _parse_tag(tag: str) -> tuple:
         return scope, n, None, None
     if scope == "self":
         # fx:attack_cost:self:less:per:<counter>[:name:<k>]
+        # ⚠ 第六十六批：``<counter>`` **本身可以含冒号**（`_eval_counter` 的
+        #   `own_discard_named:kofu` / `own_discard_has_attack:<key>` 等）。
+        #   旧写法把 `parts[5]` 当整个计数源、并硬性要求 `len(parts)==8`，
+        #   会把这类合法 tag 判成「非法」——卡进池却一打就抛 ValueError。
+        #   改为从尾部剥离**可选**的 `:name:<k>` 后缀，其余整段交给
+        #   `_eval_counter`（它自己对未知计数源抛错，不在本层重复白名单）。
         if len(parts) < 6 or parts[3] != "less" or parts[4] != "per":
             raise ValueError(f"非法 attack_cost tag：{tag}")
-        counter = parts[5]
+        rest = ":".join(parts[5:])
+        key = None
+        if ":name:" in rest:
+            rest, key = rest.rsplit(":name:", 1)
+            if not key:
+                raise ValueError(f"attack_cost 缺少招式名：{tag}")
+        counter = rest
         if not counter:
             raise ValueError(f"attack_cost 缺少计数源：{tag}")
-        key = None
-        if len(parts) > 6:
-            if len(parts) != 8 or parts[6] != "name" or not parts[7]:
-                raise ValueError(f"非法 attack_cost tag：{tag}")
-            key = parts[7]
         return scope, 1, counter, key
     raise ValueError(f"未识别的 attack_cost 范围：{tag}")
 

@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1087,
+      "kept": 1090,
       "by_Energy": 19,
-      "by_Pokemon": 925,
-      "by_Trainer": 143,
+      "by_Pokemon": 926,
+      "by_Trainer": 145,
       "skipped": {
-        "存在未建模项（整卡不收）": 158,
+        "存在未建模项（整卡不收）": 155,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 2,
         "Trainer 不可执行": 5
@@ -878,6 +878,60 @@
       "source_card_id": 31,
       "name_key": "chiyu",
       "uid": "Chi-Yu@TWM 39"
+    },
+    {
+      "name": "Glaceon",
+      "name_zh": "冰伊布",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Eevee",
+      "attacks": [
+        {
+          "name": "Permeating Chill",
+          "cost": {
+            "water": 1
+          },
+          "damage": 30,
+          "effects": [
+            "counters:9"
+          ],
+          "desc": "At the end of your opponent’s next turn, put 9 damage counters on the Defending Pokémon.",
+          "name_zh": "渗骨寒气",
+          "desc_zh": "在对手的下个回合结束时，在战斗宝可梦上放置 9 个伤害指示物。"
+        },
+        {
+          "name": "Icicle Missile",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 70,
+          "effects": [],
+          "desc": "",
+          "name_zh": "冰锥导弹",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "54"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 32,
+      "name_key": "glaceon",
+      "uid": "Glaceon@TWM 54"
     },
     {
       "name": "Froakie",
@@ -46807,6 +46861,23 @@
       "uid": "Antique Plume Fossil@WHT 79"
     },
     {
+      "name": "Energy Recycler",
+      "name_zh": "能量回收器",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "energy_to_deck:any:5",
+      "desc": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck.",
+      "desc_zh": "将你的弃牌堆中最多 5 张基本能量卡洗回你的牌库。",
+      "real": {
+        "set": "DRI",
+        "number": "164"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1139,
+      "uid": "Energy Recycler@DRI 164"
+    },
+    {
       "name": "Iron Defender",
       "name_zh": "铁壁防御",
       "supertype": "Trainer",
@@ -47743,6 +47814,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1212,
       "uid": "Cook@TWM 147"
+    },
+    {
+      "name": "Judge",
+      "name_zh": "裁判",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "shuffle_draw_split:4:4",
+      "desc": "Each player shuffles their hand into their deck and draws 4 cards.",
+      "desc_zh": "每位玩家将手牌洗回牌库并抽 4 张牌。",
+      "real": {
+        "set": "SVI",
+        "number": "176"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1213,
+      "uid": "Judge@SVI 176"
     },
     {
       "name": "Emcee's Hype",

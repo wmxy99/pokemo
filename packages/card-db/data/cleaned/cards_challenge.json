@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-04 14:35:44",
+  "reparsed_at": "2026-11-04 15:57:15",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1102,
+  "engine_ready": 1105,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1102,
-   "engine_approximated": 1087,
-   "engine_unmatched": 165,
+   "zh_backfill": 1105,
+   "engine_approximated": 1090,
+   "engine_unmatched": 162,
    "engine_namekey_mismatch": 22
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 134,
-   "engine_tags": 1422,
-   "unsupported": 163,
+   "errors": 135,
+   "engine_tags": 1425,
+   "unsupported": 160,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1087,
+  "engine_approximated": 1090,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -3464,14 +3464,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Glaceon@TWM 54",
    "parse": {
     "items": [
      {
@@ -3485,25 +3487,19 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（the Defending Pokémon）"
-          }
+          "type": "counters",
+          "amount": 9,
+          "target": "active_opponent"
          }
         ],
         "source_text": "At the end of your opponent’s next turn, put 9 damage counters on the Defending Pokémon."
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（the Defending Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "counters:9"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -3514,25 +3510,19 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（the Defending Pokémon）"
-        }
+        "type": "counters",
+        "amount": 9,
+        "target": "active_opponent"
        }
       ],
       "source_text": "At the end of your opponent’s next turn, put 9 damage counters on the Defending Pokémon."
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（the Defending Pokémon）"
-     }
+    "engine_tags": [
+     "counters:9"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -148545,14 +148535,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的弃牌堆中最多 5 张基本能量卡洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Energy Recycler@DRI 164",
    "parse": {
     "items": [
      {
@@ -148570,23 +148562,24 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "energy_to_deck": {
+            "color": "any",
+            "n": 5
+           }
           }
          }
         ],
-        "source_text": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck."
+        "source_text": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "energy_to_deck:any:5"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -148601,21 +148594,22 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "energy_to_deck": {
+          "color": "any",
+          "n": 5
+         }
         }
        }
       ],
-      "source_text": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck."
+      "source_text": "Shuffle up to 5 Basic Energy cards from your discard pile into your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "energy_to_deck:any:5"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -155989,14 +155983,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Each player shuffles their hand into their deck and draws 4 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "每位玩家将手牌洗回牌库并抽 4 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Judge@SVI 176",
    "parse": {
     "items": [
      {
@@ -156010,27 +156006,31 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "draw",
           "amount": null,
-          "target": "any",
+          "target": "both_split",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "split": [
+            4,
+            4
+           ],
+           "shuffle_both": true
           }
          }
         ],
-        "source_text": "Each player shuffles their hand into their deck and draws 4 cards."
+        "source_text": "Each player shuffles their hand into their deck and draws 4 cards.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：both_split"
+      ],
+      "engine_tags": [
+       "shuffle_draw_split:4:4"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156041,25 +156041,29 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "draw",
         "amount": null,
-        "target": "any",
+        "target": "both_split",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "split": [
+          4,
+          4
+         ],
+         "shuffle_both": true
         }
        }
       ],
-      "source_text": "Each player shuffles their hand into their deck and draws 4 cards."
+      "source_text": "Each player shuffles their hand into their deck and draws 4 cards.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "errors": [
+     "[0] action.target 非法：both_split"
     ],
+    "engine_tags": [
+     "shuffle_draw_split:4:4"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

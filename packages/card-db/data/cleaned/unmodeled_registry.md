@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-04 14:35:45
+- 生成时间：2026-11-04 15:57:15
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **163** 条 · 已映射 tag 1422 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1102 张**
-- 解析层面「无未建模动作」卡：961 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **160** 条 · 已映射 tag 1425 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1105 张**
+- 解析层面「无未建模动作」卡：964 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -29,7 +29,7 @@
 | B4 | type:condition | `condition` | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
 | B4 | type:ability_cost | `ability_cost` | 1 | 1 | 特性发动代价形态未识别（B4） |
-| B5 | S6 | `rule` | 46 | 46 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 44 | 44 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 11 | 11 | 静态/未建模（英文） |
 | B5 | S2 | `rule` | 6 | 6 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
@@ -101,7 +101,7 @@
 
 - `Lunatone`（月石）：Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t
 
-**B5 · S6**（46 条）
+**B5 · S6**（44 条）
 
 - `Shiftry`（狡猾天狗）：Choose 3 of your opponent’s Benched Pokémon. If you do, shuffle all of your opponent’s Benched Pokémon that you didn’t choose, and all cards attached to those P
 - `Milotic`（美纳斯）：Your opponent’s Pokémon in play and all attached cards can’t be put into your opponent’s hand.

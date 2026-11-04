@@ -3100,6 +3100,110 @@ def audit_batch63_67(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---- 第六十八~七十七批（2026-11-04）：五族卡面 ↔ tag 独立复算 ----
+# 正则刻意**重写一遍**，不 import 解析包 —— 复用解析侧的判定等于橡皮图章。
+_B68_EACH_PLAYER = re.compile(
+    r"each player shuffles their hand into their deck and draws (\d+) "
+    r"cards", re.I)
+_B69_HP_PLUS = re.compile(
+    r"the (?:(?P<faction>[a-z][a-z' ]{0,22}?)'s )?pok[eé]mon this card is "
+    r"attached to gets \+(?P<n>\d+)\s*hp", re.I)
+_B70_RECYCLE = re.compile(
+    r"shuffle up to (\d+) basic energy cards from your discard pile into "
+    r"your deck", re.I)
+_B71_CTR_DEFENDING = re.compile(
+    r"put (\d+) damage counters? on the defending pok[eé]mon", re.I)
+_B72_CTR_THIS = re.compile(
+    r"put (\d+) damage counters? on this pok[eé]mon", re.I)
+
+
+def audit_batch68_77(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """第六十八~七十七批五族对账（独立复算，两侧都查：缺 tag 与口径写反）
+
+    ① `shuffle_draw_split:N:N`：双方各洗回手牌各抽 N（Judge）——派发必须在
+       `shuffle_draw:` 之前，否则会被吞成单方洗抽。
+    ② `tool:hp_plus:N`：道具 +HP（Cynthia's Power Weight）——纯加值，不得被
+       「卡名/阵营限定 → 整卡放弃」守卫误杀（此前 4 张 +HP 道具整卡消失）。
+    ③ `energy_to_deck:any:N`：弃牌堆基本能量洗回牌库（Energy Recycler，训练家侧）
+       —— 复用招式侧 Kyogre 的 `_energy_to_deck`；白名单/派发漏接即卡不可执行。
+    ④ `counters:N`：指示物直放 the Defending Pokémon（Glaceon）——指示物不吃
+       弱点/抗性，误走 damage/snipe 会静默多算弱抗。
+    ⑤ `counters:N:scope:self`：指示物直放 this Pokémon（Feraligatr）——放到
+       自己战斗位，落成对手口径是阵营反转。
+    """
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or ""))
+    tags = [str(e) for e in effects]
+
+    m = _B68_EACH_PLAYER.search(d)
+    if m:
+        want = f"shuffle_draw_split:{int(m.group(1))}:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Each player shuffles "
+                        f"… draws {m.group(1)}」应为 `{want}`，实际 "
+                        f"{[t for t in tags if 'shuffle_draw' in t] or '无'}")
+
+    # ② tool:hp_plus:N —— **阵营限定必须拒绝**（引擎 `_tool_value()` 无归属元数据）
+    m = _B69_HP_PLUS.search(d)
+    if m:
+        n = int(m.group("n"))
+        has = any("tool:hp_plus" in t for t in tags)
+        faction = m.group("faction")
+        if faction and has:
+            errs.append(f"{card_name} · {item_name}：卡面是**阵营限定** +HP"
+                        f"（the {faction}'s Pokémon），引擎无持有者归属元数据 → "
+                        "不得落 `tool:hp_plus`（会给任意持有者加血 = 静默加强）")
+        elif not faction and not has:
+            errs.append(f"{card_name} · {item_name}：卡面「… gets +{n} HP」应为 "
+                        f"`tool:hp_plus:{n}`，实际 "
+                        f"{[t for t in tags if 'hp_plus' in t] or '无'}")
+
+    m = _B70_RECYCLE.search(d)
+    if m:
+        want = f"energy_to_deck:any:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「Shuffle up to "
+                        f"{m.group(1)} Basic Energy … into your deck」应为 "
+                        f"`{want}`，实际 "
+                        f"{[t for t in tags if 'energy_to_deck' in t] or '无'}")
+
+    m = _B71_CTR_DEFENDING.search(d)
+    if m:
+        want = f"counters:{int(m.group(1))}"
+        if want not in tags:
+            wrong = [t for t in tags
+                     if t.startswith(("self:", "snipe:", "damage", "counters"))]
+            errs.append(f"{card_name} · {item_name}：卡面「put {m.group(1)} "
+                        f"damage counters on the Defending Pokémon」应为 "
+                        f"`{want}`，实际 {wrong or '无'}"
+                        "（指示物误走 damage/snipe 会静默吃弱抗）")
+
+    # ⑤ counters:N:scope:self —— **复合句必须整条拒绝**（后半段 B4 未建模）
+    m = _B72_CTR_THIS.search(d)
+    if m:
+        n = int(m.group(1))
+        # 允许子串命中（Venture Bomb 的 tails 分支把 `counters:N:scope:self`
+        # 嵌在 `coin_flip:…|tails:…` 里，不是独立 tag）。
+        has = any(f"counters:{n}:scope:self" in t for t in tags)
+        _rest = d[m.end():]
+        compound = bool(re.search(
+            r"\bif you do\b|during this turn|\bthen\b|this attack does", _rest))
+        if compound and has:
+            errs.append(f"{card_name} · {item_name}：卡面「put {n} damage "
+                        "counters on this Pokémon」后接未建模从句（+120 / 按放置"
+                        "数重算）→ 只映射指示物属「部分实现冒充已实现」，应整条" 
+                        "放弃")
+        elif not compound and not has:
+            wrong = [t for t in tags
+                     if "counters" in t
+                     or t.startswith(("self:", "snipe:", "damage"))]
+            errs.append(f"{card_name} · {item_name}：卡面「put {n} damage "
+                        f"counters on this Pokémon」应为 `counters:{n}:scope:self`"
+                        f"，实际 {wrong or '无'}（放自己战斗位却落对手口径 = 阵营反转）")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3157,6 +3261,7 @@ def main() -> int:
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch58_62(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch63_67(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch68_77(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3182,6 +3287,8 @@ def main() -> int:
                                     [_ctag] if _ctag else [],
                                     c.get("play_gate") or None)
             errs += audit_batch63_67(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
+            errs += audit_batch68_77(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
@@ -3223,8 +3330,9 @@ def main() -> int:
           "{ex} 目标筛选/自身能量洗回牌库 · 对手宝可梦洗回牌库 · "
           "奖赏减少/双状态/换位补抽/拉人混乱/弃手重抽/特性发动代价 · "
           "对手弃手牌/撤退费归零/常驻禁打 · "
-          "自身跨回合禁攻/对手自选洗回/无视弱抗两档/Kofu 减费计数源/能量移动区域 "
-          "四十一类对账全部一致")
+          "自身跨回合禁攻/对手自选洗回/无视弱抗两档/Kofu 减费计数源/能量移动区域 · "
+          "双方洗抽/道具+HP/训练家能量洗回/指示物Defending/指示物this "
+          "四十二类对账全部一致")
     return 0
 
 

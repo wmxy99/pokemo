@@ -881,6 +881,17 @@ class Battle:
                 if _zone_energy_available(p, _et, _zn or "any"):
                     for tpos, _fp in _field_iter(p):
                         out.append({**base, "target": tpos})
+            elif tag.startswith("energy_to_deck:"):
+                # 弃牌堆基本能量洗回牌库（第七十批，Energy Recycler）：弃牌堆没有
+                # 基本能量时这张卡打出去只会空转 → 不进合法动作表（同 discard_tool:）。
+                _ed = tag.split(":")
+                _ecolor = _ed[1] if len(_ed) > 1 else "any"
+                if any(isinstance(c, EnergyRef)
+                       and not getattr(c.edef, "is_special", False)
+                       and (_ecolor == "any"
+                            or str(getattr(c.edef, "type", "")) == _ecolor)
+                       for c in p.discard_refs):
+                    out.append(dict(base))
             elif tag.startswith("energy_move:"):
                 # S6 能量移动族：按 from/to 生成可选目标（至多 N，源上须有能量）
                 _ep = tag.split(":")
@@ -2128,6 +2139,13 @@ class Battle:
             # 双方各弃到剩 N（第五十四批，Hand Trimmer）
             _a, _b = self._discard_to_both(int(tag.split(":")[1]))
             placed = f"discard to both: opp {_a} / me {_b}"
+        elif tag.startswith("energy_to_deck:"):
+            # 弃牌堆基本能量洗回牌库（第七十批，Energy Recycler）——复用招式侧
+            # Kyogre「Riptide」的同一 helper；tag 形如 `energy_to_deck:any:5`。
+            _ed = tag.split(":")
+            _color = _ed[1] if len(_ed) > 1 else "any"
+            _raw = _ed[2] if len(_ed) > 2 else "all"
+            placed = f"energy to deck {_energy_to_deck(self, p, _color, _raw)}"
         elif tag.startswith("energy_move:"):
             placed = self._apply_energy_move(tag, None, action)
         elif tag.startswith("bounce:"):

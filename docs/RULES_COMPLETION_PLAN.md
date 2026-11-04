@@ -1,3 +1,59 @@
+## 本轮成果（2026-11-04 · 第六十八~七十七批 · 10 批）
+
+**一句话**：`engine_ready` **1102 → 1105（87.0% → 87.2%）**，池 1087 → **1090**，
+未建模动作条目 **163 → 160**；对账 **41 → 42 类**（新增 `audit_batch68_77`，含 15 个负向自测）；
+全仓测试 **2223 → 2244**（engine 1179 · agent 918 · api 135 · gym 12）；
+CI **8/8 PASS** · **K1 双盲 200 局 0.795 ✅**（`k1_rich.pt`，与上轮同值、无回归）。
+
+| 批次 | 主题 | 落地卡（池内） | 顺带修掉的静默缺陷 / 结论 |
+|---|---|---|---|
+| 68 | 双方洗回手牌各抽 N `shuffle_draw_split:N:N` | 1（Judge） | 派发必须排在 `shuffle_draw:` 之前；只落单方洗抽会让对手那半静默消失 |
+| 69 | 道具 **+HP** `tool:hp_plus:N` | 0（**如实拒绝**） | **关键复核**：`tool:hp_plus` 由引擎 `_tool_value()` 无条件取值，**无持有者归属元数据**；「The Cynthia's / Team Rocket's Pokémon … gets +N HP」落成它会给**任意**持有者加血（静默加强）→ 原有的「阵营限定 → 整卡放弃」守卫是对的，本轮一度误改（`append`→`return`）被 CI 3 个存量测试当场抓回 |
+| 70 | 弃牌堆**基本能量**洗回牌库 `energy_to_deck:any:N`（训练家侧） | 1（Energy Recycler） | 该 tag 此前只在**招式**派发（Kyogre「Riptide」）；训练家侧既不在 `TRAINER_TAGS` 白名单、也不在 `_do_trainer` 派发 → 卡解析出 tag 却永远打不出。本批把 `_energy_to_deck` helper 接进训练家派发 + 白名单，并加合法动作门（弃牌堆无基本能量不进动作表） |
+| 71 | 指示物直放 **the Defending Pokémon** `counters:N` | 1（Glaceon） | 旧 `_detect_counters_on_active` 只认「your opponent's Active」，碰「the Defending」落到通用块，被前缀「At the end of…」误判成条件 → 整条登记未建模（指示物误走 damage 会吃弱抗） |
+| 72 | 指示物直放 **this Pokémon** `counters:N:scope:self` | 0（机制就位，**复合句如实拒绝**） | 引擎 `_apply_counters` 早有 `:scope:self`，本批补解析分支 + `to_engine_tags` 口径；但 Feraligatr / Walking Wake 都是「指示物 + 后半段 B4」的复合句 → 只认**干净单句**，复合句整条放弃（部分映射即「冒充已实现」），并把 `if you do / during this turn / this attack does` 设为硬守卫 |
+| 73 | 指示物直放**对手后备 1 只**（Mismagius） | 0 | **诚实不做**：引擎 `:scope:opp:<n>` 是「战斗位优先」，无「只打后备」范围；且卡面还带「对手战斗位有特殊状态」条件 → 双重不可精确表达 |
+| 74 | 加伤按指示物计数 `dmg_plus:N:per:own_active_counters` | — | **已支持，本批核实**（Duraludon / Scovillain ex 等 8 张），无需改动 |
+| 75 | 对手弃手牌 `discard_opp_random:N` | — | **已支持，本批核实**（Krookodile / Sandile「Tighten Up」），无需改动 |
+| 76 | 整数静态规则 | — | 扫描剩余「静态/未建模」卡：bench 免伤（需持久被动免疫层）、Pokémon 洗回（无 `pokemon_to_deck`）、底部检视、复合弃道具+特殊能量、条件奖赏 —— 均属 B4/B5，**无可精确表达的整数静态规则**，诚实不做 |
+| 77 | 抛币选状态 `status_choose:` | — | **已支持，本批核实**（Cradily「Selective Slime」三选一），无需改动 |
+
+**十批的共同主题**：低垂果实已近枯竭 —— 10 个批次里 **3 个真·落地**（68 / 70 / 71，其中 70 动了引擎派发），
+**2 个机制就位但复合句如实拒绝**（69 / 72），**1 个 B4**（73），**4 个经核实为「引擎早已支持、本批只是锁定不回归」**（74/75/77 + 76 的空扫描）。
+这正是 87% 覆盖率阶段的常态：剩下的卡大多要**新引擎机制**，而不是「解析没接通」。
+
+**方法论沉淀（四条，都是本轮实证）**：
+1. **「解析出 tag」≠「打得出来」**：批 70 的 Energy Recycler 解析出 `energy_to_deck:any:5`，
+   但训练家派发链与白名单都没有它 → 卡在池外「凭空消失」，且对账全绿（因为对账只比卡面↔tag）。
+   → 新 tag 必须**三处同时接**：解析产 tag、引擎派发、白名单放行；缺一处就是静默失效。
+2. **同一 tag 在招式侧与训练家侧是两套派发**：`energy_to_deck` 在 `_apply_attack_effects` 有、
+   在 `_do_trainer` 没有。判定「引擎是否支持某 tag」不能只看 `battle.py` 里出现过一次。
+3. **对账要覆盖卡级训练家 tag**：attacks/abilities 循环看不到卡级 `tag`，因此
+   `audit_batch68_77` 必须同时挂到**攻击/特性循环**与**训练家卡级循环**两处。
+4. **存量测试是纪律的承重墙，不是待更新的噪声**：本轮一度把「阵营限定 +HP」判为「守卫误杀」
+   而改成 `return`（绕过守卫），CI 用 `test_tool_faction_qualifier_still_refused` /
+   `test_tool_with_extra_clause_is_refused` / `test_during_this_turn_rejected` 三个**存量**用例
+   当场抓回。三者的共同语义都是「引擎表达不了 → 宁可整卡不收」，与「低垂果实」正好相反。
+
+**本轮明确不做的（C5 差异透明）**：
+- **Cynthia's Power Weight（+70 HP）**：`The Cynthia's Pokémon this card is attached to gets
+  +70 HP` —— 只给 Cynthia's 持有者加血，引擎 `_tool_value()` 无归属元数据 → 落 tag 会给任意
+  持有者加血（静默加强），如实拒收。
+- **Mismagius「Assassin's Magic」**：`place 6 damage counters on 1 of your opponent's Benched
+  Pokémon` + 「对手战斗位有特殊状态」条件。引擎无「只打后备」范围（`:scope:opp:N` 战斗位优先），
+  条件门也未实现 → 整卡如实不收。
+- **Walking Wake「Undulating Slice」**：`put up to 9 damage counters on this Pokémon` 后接
+  「This attack does 20 damage for each damage counter **you placed in this way**」——
+  伤害要按**本招刚放的指示物数**重算，引擎无「同招内计数回填」→ 如实不收。
+- **Feraligatr「Torrential Heart」**：couters 已建模，但同卡还有「本回合此宝可梦招式 +120」
+  （holder 级静态增伤，非 `team_boost` 的全队口径）→ 整卡如实不收。
+
+**已知缺口（下一批首要）**：`counters` 的「只打后备」范围；同招内指示物计数回填；
+holder 级静态增伤；带持有者归属的 `tool:hp_plus`（需 `cards.py` 增归属元数据）；
+全队 +HP 统一重算钩子；剩余 160 条里「静态/未建模（英文）」仍是最大单堆。
+
+---
+
 ## 本轮成果（2026-11-04 · 第六十三~六十七批 · 5 批）
 
 **一句话**：`engine_ready` **1093 → 1102（86.3% → 87.0%）**，池 1078 → **1087**，

@@ -1607,5 +1607,119 @@ class TestAuditBatch63_67(unittest.TestCase):
         self.assertTrue(any("from:any" in e for e in errs), errs)
 
 
+class TestAuditBatch68_77(unittest.TestCase):
+    """第六十八~七十七批对账的**负向自测**（正确→不报 + 错误→必报）
+
+    ⚠ 69 / 72 是**负向守卫**：阵营限定 +HP 与复合指示物句都属「引擎无法精确
+    表达 → 必须整卡拒收」，所以它们在池里出现**带 tag** 才是错误（会把
+    「只给某阵营加血」放大成「谁都加」、把「部分实现」冒充成「已实现」）。
+    """
+
+    def test_b68_judge_ok(self):
+        self.assertEqual(A.audit_batch68_77(
+            "Judge", "Judge", "Each player shuffles their hand into their "
+            "deck and draws 4 cards.", ["shuffle_draw_split:4:4"]), [])
+
+    def test_b68_judge_missing_flagged(self):
+        errs = A.audit_batch68_77(
+            "Judge", "Judge", "Each player shuffles their hand into their "
+            "deck and draws 4 cards.", [])
+        self.assertTrue(any("shuffle_draw_split:4:4" in e for e in errs), errs)
+
+    # ---- 69：阵营限定 +HP（负向守卫）----
+    def test_b69_faction_tagged_flagged(self):
+        """阵营限定 +HP 落 `tool:hp_plus` → 会给任意持有者加血（静默加强）"""
+        errs = A.audit_batch68_77(
+            "Cynthia's Power Weight", "X",
+            "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
+            ["tool:hp_plus:70"])
+        self.assertTrue(any("阵营限定" in e for e in errs), errs)
+
+    def test_b69_faction_refused_ok(self):
+        """如实拒收（无 tag）→ 不报错"""
+        self.assertEqual(A.audit_batch68_77(
+            "Cynthia's Power Weight", "X",
+            "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
+            []), [])
+
+    def test_b69_plain_tagged_ok(self):
+        """无阵营限定 +HP → tag 正确"""
+        self.assertEqual(A.audit_batch68_77(
+            "Plain Tool", "X",
+            "The Pokémon this card is attached to gets +30 HP.",
+            ["tool:hp_plus:30"]), [])
+
+    def test_b69_plain_missing_flagged(self):
+        errs = A.audit_batch68_77(
+            "Plain Tool", "X",
+            "The Pokémon this card is attached to gets +30 HP.", [])
+        self.assertTrue(any("tool:hp_plus:30" in e for e in errs), errs)
+
+    def test_b70_recycle_ok(self):
+        self.assertEqual(A.audit_batch68_77(
+            "Energy Recycler", "X",
+            "Shuffle up to 5 Basic Energy cards from your discard pile into "
+            "your deck.", ["energy_to_deck:any:5"]), [])
+
+    def test_b70_recycle_missing_flagged(self):
+        errs = A.audit_batch68_77(
+            "Energy Recycler", "X",
+            "Shuffle up to 5 Basic Energy cards from your discard pile into "
+            "your deck.", [])
+        self.assertTrue(any("energy_to_deck:any:5" in e for e in errs), errs)
+
+    def test_b71_counters_defending_ok(self):
+        self.assertEqual(A.audit_batch68_77(
+            "Glaceon", "Permeating Chill",
+            "At the end of your opponent’s next turn, put 9 damage counters "
+            "on the Defending Pokémon.", ["counters:9"]), [])
+
+    def test_b71_counters_defending_wrong_flagged(self):
+        """指示物误走 snipe（会吃弱抗）→ 必须抓出"""
+        errs = A.audit_batch68_77(
+            "Glaceon", "Permeating Chill",
+            "At the end of your opponent’s next turn, put 9 damage counters "
+            "on the Defending Pokémon.", ["snipe:opp_active:90"])
+        self.assertTrue(errs, "指示物误走 snipe 却放行")
+
+    # ---- 72：复合指示物句（负向守卫）----
+    def test_b72_clean_tagged_ok(self):
+        """干净单句 → `:scope:self` 正确"""
+        self.assertEqual(A.audit_batch68_77(
+            "Clean On-This", "X",
+            "Put 5 damage counters on this Pokémon.",
+            ["counters:5:scope:self"]), [])
+
+    def test_b72_clean_missing_flagged(self):
+        errs = A.audit_batch68_77(
+            "Clean On-This", "X",
+            "Put 5 damage counters on this Pokémon.", [])
+        self.assertTrue(any("counters:5:scope:self" in e for e in errs), errs)
+
+    def test_b72_compound_tagged_flagged(self):
+        """复合句（后接 +120）仍落 tag → 部分实现冒充已实现"""
+        errs = A.audit_batch68_77(
+            "Feraligatr", "Torrential Heart",
+            "Once during your turn, you may put 5 damage counters on this "
+            "Pokémon. If you do, during this turn, attacks used by this "
+            "Pokémon do 120 more damage.", ["counters:5:scope:self"])
+        self.assertTrue(any("部分实现冒充已实现" in e for e in errs), errs)
+
+    def test_b72_compound_refused_ok(self):
+        self.assertEqual(A.audit_batch68_77(
+            "Feraligatr", "Torrential Heart",
+            "Once during your turn, you may put 5 damage counters on this "
+            "Pokémon. If you do, during this turn, attacks used by this "
+            "Pokémon do 120 more damage.", []), [])
+
+    def test_b72_embedded_coin_ok(self):
+        """Venture Bomb 的 tails 分支把 scope:self 嵌进 coin_flip → 不算错"""
+        self.assertEqual(A.audit_batch68_77(
+            "Team Rocket's Venture Bomb", "X",
+            "Flip a coin. If tails, put 2 damage counters on this Pokémon.",
+            ["coin_flip:heads:counters:2:scope:opp:1|"
+             "tails:counters:2:scope:self"]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

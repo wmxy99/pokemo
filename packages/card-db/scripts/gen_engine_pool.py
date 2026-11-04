@@ -84,6 +84,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "draw_both:", "opp_shuffle_draw:",
                 # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
                 "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
+                # 第七十批（2026-11-04）：弃牌堆基本能量洗回牌库（Energy Recycler）
+                # —— 复用招式侧 Kyogre「Riptide」的同一 helper `_energy_to_deck`。
+                "energy_to_deck:",
                 "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
                 # 第五十四批：**双方**各弃手牌到剩 N（Hand Trimmer）。
                 # 前缀不被 `discard:` 覆盖（第 8 位是 `_` 不是 `:`），必须显式列出。

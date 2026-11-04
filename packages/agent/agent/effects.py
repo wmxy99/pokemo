@@ -821,6 +821,45 @@ _TC_OPP_ENERGY_TO_HAND = re.compile(
     r"pok[eé]mon into their hand[.]$", re.I)
 
 
+# 「Each player shuffles their hand into their deck and draws N cards.」
+# （Judge / Professor Juniper 类）——双方各洗回手牌、各抽 N 张。引擎
+# `shuffle_draw_split:<mine>:<theirs>` 已支持对称形态（第五十九批），且
+# 派发必须排在 `shuffle_draw:` 之前；本族 `mine==theirs==N`，复用同一 tag。
+_EACH_PLAYER_SHUFFLE_DRAW = re.compile(
+    r"^each player shuffles their hand into their deck and draws (\d+) "
+    r"cards[.]$", re.I)
+
+
+def _detect_each_player_shuffle_draw(text: str) -> list:
+    """双方洗牌各抽 N → ``shuffle_draw_split:N:N``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _EACH_PLAYER_SHUFFLE_DRAW.match(t)
+    if not m:
+        return []
+    n = int(m.group(1))
+    return [act("draw", None, "both_split",
+                {"split": (n, n), "shuffle_both": True})]
+
+
+# 「Shuffle up to N Basic Energy cards from your discard pile into your deck.」
+# （Energy Recycler / Energy Retrieval 类）——把弃牌堆里的**基本能量**洗回牌库。
+# 引擎 `energy_to_deck:<color>:<n>` 支持 `any` 色（第二十八批：Kyogre「Riptide」），
+# 本族 `up to N` 即洗回最多 N 张基本能量，忠实映射到 `energy_to_deck:any:N`。
+_ENERGY_RECYCLE = re.compile(
+    r"^shuffle up to (\d+) basic energy cards from your discard pile into "
+    r"your deck[.]$", re.I)
+
+
+def _detect_energy_recycle(text: str) -> list:
+    """弃牌堆基本能量洗回牌库 → ``energy_to_deck:any:N``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _ENERGY_RECYCLE.match(t)
+    if not m:
+        return []
+    return [act("rule", None, "any",
+                {"energy_to_deck": {"color": "any", "n": int(m.group(1))}})]
+
+
 def _detect_opp_energy_to_hand(text: str) -> list:
     """「对手某只身上的能量回其手牌」→ ``bounce:energy:opp_any:<n>``"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
@@ -3141,6 +3180,18 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _oe:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _oe,
+                "source_text": str(text or ""), "citations": []}
+    # 双方各洗牌抽 N（第六十八批，Judge / Professor Juniper）
+    _epsd = _detect_each_player_shuffle_draw(t)
+    if _epsd:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _epsd,
+                "source_text": str(text or ""), "citations": []}
+    # 弃牌堆基本能量洗回牌库（第七十批，Energy Recycler / Energy Retrieval）
+    _er = _detect_energy_recycle(t)
+    if _er:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _er,
                 "source_text": str(text or ""), "citations": []}
     # 「本回合全队增伤」（第六十批，Premium Power Pro / Black Belt's Training）
     _tbt = _detect_team_boost(t)
@@ -6006,6 +6057,12 @@ def _detect_tool_static(text: str) -> list:
             tail += ":target:ex"
         return [act("tool", int(_m.group("dmg")), "self",
                     {"kind": "dmg_plus", "tail": tail})]
+    # 道具 +HP：「The Pokémon this card is attached to gets +N HP」→ `tool:hp_plus:N`
+    # ⚠ 必须用 `out.append`、**不能 return**：带**卡名/阵营限定**的写法
+    # （「The Cynthia's / Team Rocket's Pokémon … gets +N HP」）只能给**该阵营**
+    # 的持有者加血，而引擎 `_tool_value()` 无持有者归属元数据 → 落
+    # `tool:hp_plus:N` 会给**任意**持有者加血（静默加强）。交给下方
+    # 「卡名/阵营限定 → 整卡放弃」守卫如实拒收，才是唯一正确的处置。
     m = re.search(r"this card is attached to gets \+(\d+)\s*hp", low)
     if m:
         out.append(act("tool", int(m.group(1)), "self", {"kind": "hp_plus"}))
@@ -6436,22 +6493,61 @@ def _detect_counters_on_active(text: str, kind: str) -> list:
         if per:
             extra["per_counter"] = per
         return [act("counters", int(m.group(1)), "active_opponent_bench", extra)]
-    m = re.search(r"(?:put|place) (\d+) damage counters? on your opponent'?s "
-                  r"active pok[eé]mon([^.;,()]{0,48})", low)
-    if not m:
-        return []
-    tail = m.group(2)
-    head = low[:m.start()]
-    if re.search(r"\bif\b|\bwhen\b", head) \
-            or re.search(r"in any way|as you like|choose|instead", tail):
-        return []
-    per = None
-    if re.search(r"for each", tail):
-        per = _counter_from_phrase(tail)
-        if not per:
+    # 「on **your opponent's Active** / **the Defending** Pokémon」（Haunter /
+    # Alakazam / Glaceon「Permeating Chill」）→ 对手战斗位（攻击语境下 Defending
+    # = 对手战斗位，与 `on your opponent's Active` 同口径；指示物不吃弱抗）。
+    # ⚠ 时序「At the end of your opponent's next turn」只是**延迟**，引擎无递延
+    # 指示物机制 —— 按解析侧一贯的「即时结算」约定落 `counters:N`（已在对账中标注）。
+    m = re.search(r"(?:put|place) (\d+) damage counters? on (?:your opponent'?s "
+                  r"active|the defending) pok[eé]mon([^.;,()]{0,48})", low)
+    if m:
+        tail = m.group(2)
+        head = low[:m.start()]
+        if re.search(r"\bif\b|\bwhen\b", head) \
+                or re.search(r"in any way|as you like|choose|instead", tail):
             return []
-    return [act("counters", int(m.group(1)), "active_opponent",
-                {"per_counter": per} if per else {})]
+        per = None
+        if re.search(r"for each", tail):
+            per = _counter_from_phrase(tail)
+            if not per:
+                return []
+        return [act("counters", int(m.group(1)), "active_opponent",
+                    {"per_counter": per} if per else {})]
+    # 「on **this** Pokémon」→ 己方战斗位直放指示物（引擎 `:scope:self`）。
+    # Feraligatr「Torrential Heart」· Team Rocket's Venture Bomb 等。
+    # 与对手分支同口径：仅认无条件 / 可选「for each <计数源>」；带 if/when/任意
+    # 分配/取代/后续动作一律不认。特性侧只认两种固定前缀（每回合一次 / 进化触发）。
+    m = re.search(r"(?:put|place) (\d+) damage counters? on this pok[eé]mon"
+                  r"([^.;,()]{0,60})", low)
+    if m:
+        tail, head = m.group(2), low[:m.start()].strip()
+        if re.search(r"in any way|as you like|choose|instead", tail) \
+                or re.search(r"\bif\b|\bwhen\b|as long as", head):
+            return []
+        if kind == "ability":
+            if not (_ONCE_TURN_COUNTER_HEAD.match(head)
+                    or _EVOLVE_COUNTER_HEAD.match(head)):
+                return []
+        elif re.search(r"\bif\b|\bwhen\b|\bonce\b|checkup|as long as", head):
+            return []
+        # 后续带**未建模从句**（「If you do, during this turn … +120」/
+        # 「This attack does … for each counter placed in this way」）→ 整条放弃：
+        # 只映射指示物会让「部分实现冒充已实现」（Feraligatr / Walking Wake 的
+        # 另一半都是 B4）。`tail` 在标点处截断，故必须看匹配之后的**整段**。
+        rest = low[m.end():]
+        if re.search(r"\bif you do\b|during this turn|\bthen\b|this attack does",
+                     rest):
+            return []
+        per = None
+        if re.search(r"for each", tail):
+            per = _counter_from_phrase(tail)
+            if not per:
+                return []
+        extra = {"counters_scope": "self", "counters_count": 1}
+        if per:
+            extra["per_counter"] = per
+        return [act("counters", int(m.group(1)), "self_active", extra)]
+    return []
 
 
 
@@ -9151,6 +9247,9 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("counters_scope") == "ability":
                     # 双方全场「有特性」的逐个（Cofagrigus，第二十八批）
                     tag += ":scope:ability:all"
+                elif extra.get("counters_scope") == "self":
+                    # 己方战斗位直放指示物（Venture Bomb / Feraligatr，第七十二批）
+                    tag += ":scope:self"
                 if extra.get("selfko"):
                     tag += ":selfko"
                 tags.append(tag)

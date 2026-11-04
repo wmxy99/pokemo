@@ -399,6 +399,10 @@ def parse_effects_pass(cards: list[dict], backend: str = "rule") -> dict:
                           # 它**不是** tag（不是效果动作），是卡的属性，由
                           # `TrainerDef.play_cost` 承载、引擎在派发前执行。
                           "play_cost": m.get("play_cost") or "",
+                          # 打出**前置条件**（2026-11-04 第五十九批）：
+                          # 「only if you have any Tera Pokémon in play」等。
+                          # 与 play_cost 相反 —— 纯条件检查、无状态变化。
+                          "play_gate": m.get("play_gate") or "",
                           "unsupported": m["unsupported"]})
             specs += r["specs"]; errs += r["errors"]
             tags += m["tags"]; unsup += m["unsupported"]

@@ -105,12 +105,18 @@ class TestS6LongTail(unittest.TestCase):
         self.assertEqual(r["tags"], ["status_self:sleep", "heal:30"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_arven_sandwich_still_unmodeled(self):
-        """「If that Pokémon is …」的品牌条件不得被 `from it` 顺手放行"""
+    def test_arven_sandwich_replacement_value(self):
+        """第六十二批：「heal 100 **instead**」是**换值**不是加值
+
+        旧断言要求拒收 —— 当时 heal tag 没有「条件替换值」段。现在落
+        `heal:30:active:alt:100:if_name:arvens`。
+        ⚠ 落成「30 + 100」会多回一倍；落成无条件 `heal:100` 会让非 Arven 卡也回满。
+        """
         r = _tags("Heal 30 damage from your Active Pokémon. If that Pokémon is "
                   "an Arven's Pokémon, heal 100 damage from it instead.",
                   kind="card")
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["heal:30:active:alt:100:if_name:arvens"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_super_potion_discard_chain(self):
         r = _tags("Heal 60 damage from 1 of your Pokémon. If you healed any "

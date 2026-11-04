@@ -236,6 +236,7 @@ class Battle:
         p.supporter_name = ""                     # S3：在场地上判定的支援者卡名
         p.discarded_this_turn = 0                 # v1.4「in this way」按回合重置
         p.discarded_energy_this_turn = 0
+        p.attacks_this_turn = 0                   # 第六十一批：续攻额度按回合重置
         # 回合历史（2026-10-28）：「本回合」滚到「上回合」，供
         # 「during your last turn」类条件（用过某招 / 对手上回合取了几张奖赏）
         p.last_turn_attacks = list(p.turn_attacks)
@@ -635,6 +636,16 @@ class Battle:
             except ValueError:
                 # 代价形态不认识 → 不收（宁可这张卡不可用，也不免费放行）
                 continue
+            # 打出**前置条件**（2026-11-04 第五十九批）：「You can use this card
+            # only if …」。与上面 `play_cost` 相反 —— 这里**没有状态变化**，
+            # 只是能不能打。不满足时该卡不进合法动作表，否则 AI 会反复尝试一张
+            # 必然失败的卡，而「打得出」本身就已是规则错误。
+            # ⚠ 复用既有的 `Battle._play_gate_ok`（`recon:` 那条路也走它）：
+            # 早先只把 gate 塞在 tag 的 `:gate:` 段里，训练家卡级没有统一入口，
+            # 于是同一句卡面在不同族里被实现两遍（一处漏改就静默放行）。
+            if not self._play_gate_ok(
+                    p, getattr(c.tdef, "play_gate", "")):
+                continue
             # 统一带上标识（英文键 name / 中文 name_zh / 展示名 display / tag），
             # 供前端、AI 与「按名称下达指令」（engine.commands.find_action）使用。
             base = {"verb": "trainer", "hand": i,
@@ -653,6 +664,11 @@ class Battle:
                 if opp.bench:
                     for bi in range(len(opp.bench)):
                         out.append({**base, "target": bi})
+            elif tag.startswith("shuffle_draw_split:"):
+                # 双方洗回后**各抽不同张数**（第五十九批，Unfair Stamp）：
+                # 洗回后牌库必有牌，只要不是「手牌空且牌库空」就可用。
+                if p.deck or len(p.hand) > 1:
+                    out.append(dict(base))
             elif tag.startswith("research:") or tag.startswith("shuffle_draw:"):
                 # 抽牌型支援者（Professor's Research / Iono）：需牌库非空
                 if p.deck:
@@ -738,6 +754,11 @@ class Battle:
             # 没有对应分支 → AI 永远选不到这些卡（对局里表现为「摆设」）。
             elif tag.startswith("draw_both:") or tag.startswith("opp_shuffle_draw:"):
                 out.append(dict(base))
+            elif tag.startswith("draw_cond:"):
+                # 条件抽牌（第五十八批）：条件不满足时仍抽 base 张，故只看牌库非空。
+                # ⚠ 不能因「条件不满足」而摘掉 —— 那是把卡变成摆设（卡面没写 only if）。
+                if p.deck:
+                    out.append(dict(base))
             elif tag.startswith("draw_to:") or tag.startswith("draw:"):
                 # 条件式抽牌即使条件不满足也可打出（抽 0 张），但牌库为空时无意义
                 if p.deck:
@@ -751,6 +772,17 @@ class Battle:
                 # 不是范围 token（Wally's Compassion / Super Potion）。
                 if len(_hp) > 2 and _hp[-1] in ("energy", "discard"):
                     _hp = _hp[:-1]
+                # 第六十二批：`need:<cond>` 是**目标前提**（Jumbo Ice Cream 的
+                # 「has 3 or more Energy attached」），不满足时这张卡本来就不能打。
+                if "need" in _hp:
+                    _ni = _hp.index("need")
+                    _ncond = ":".join(_hp[_ni + 1:])
+                    _hp = _hp[:_ni]
+                    try:
+                        if not _eval_condition(self, _ncond):
+                            continue
+                    except ValueError:
+                        continue
                 _scope, _pt = "", None
                 _i = 2
                 while _i < len(_hp):
@@ -825,6 +857,9 @@ class Battle:
                     continue
                 for tpos, _fp in _field_iter(p):
                     out.append({**base, "target": tpos})
+            elif tag.startswith("team_boost:"):
+                # 全队本回合增伤（第六十批）：无目标，手上有就能打
+                out.append(dict(base))
             elif tag.startswith("attach"):
                 _n, _et, _zn = _parse_attach_tag(tag)
                 if _zone_energy_available(p, _et, _zn or "any"):
@@ -1940,6 +1975,11 @@ class Battle:
             p.hand = [x for i, x in enumerate(p.hand) if i == hi]
             self._safe_draw(self.current, n, source="trainer")
             placed = f"discard {len(others)} draw {n}"
+        elif tag.startswith("shuffle_draw_split:"):
+            # 「双方洗回 + 我方 N / 对手 M」（第五十九批，Unfair Stamp）。
+            # 必须排在 `shuffle_draw:` 之前 —— 虽然 `shuffle_draw_split:` 第 15 位
+            # 是 `_`、`startswith("shuffle_draw:")` 不会命中，但按「更具体者先」排。
+            placed = self._trainer_shuffle_draw_split(p, tag, hi)
         elif tag.startswith("shuffle_draw:"):
             # 手牌洗回牌库（不含自身）→ 抽 n
             n = int(tag.split(":")[1])
@@ -1993,6 +2033,11 @@ class Battle:
             placed = f"both draw {n}"
         elif tag.startswith("opp_shuffle_draw:"):
             placed = self._opp_shuffle_draw(tag)
+        elif tag.startswith("draw_cond:"):
+            # 条件抽牌（2026-11-04 第五十八批）。必须排在 `draw:` 之前 ——
+            # 虽然 `draw_cond:` 第 5 位是 `_`，`startswith("draw:")` 不会命中，
+            # 但排列上仍按「更具体者先」，避免以后加 `draw_*` 变体时被吞。
+            placed = self._trainer_draw_cond(p, tag, hi)
         elif tag.startswith("draw_to:"):
             placed = self._trainer_draw_to(p, tag, hi)
         elif tag.startswith("draw:"):
@@ -2046,6 +2091,9 @@ class Battle:
         elif tag.startswith("shuffle_both_coin_draw:"):
             # 双方洗回手牌 + 单次抛币分抽（第四十五批，Harlequin）
             placed = self._trainer_shuffle_both_coin_draw(p, tag, c, action)
+        elif tag.startswith("team_boost:"):
+            # 全队本回合增伤（第六十批，Premium Power Pro / Black Belt's Training）
+            placed = self._trainer_team_boost(p, tag)
         elif tag.startswith("team_shield:"):
             # 全队限时减伤（第四十六批，Iron Defender）
             placed = self._trainer_team_shield(p, tag)
@@ -2277,6 +2325,55 @@ class Battle:
         need = n - (len(p.hand) - 1)
         got = self._safe_draw(self.current, need, source="trainer") if need > 0 else 0
         return f"draw to {n} (drew {got})"
+
+    def _trainer_draw_cond(self, p: PlayerState, tag: str, hi: int) -> str:
+        """条件抽牌（``draw_cond:<keep|shuffle>:<base>:<plus|set>:<n>:if:<cond>``）
+
+        两种**方向相反**的卡面形态（2026-11-04 第五十八批）：
+          · 「Draw 2 cards. Then, if you have 10 or more cards in your hand,
+            draw 2 **more** cards.」（Billy & O'Nare / Emcee's Hype）→ ``plus``
+          · 「Shuffle your hand into your deck. Then, draw 4 cards. If your
+            opponent has 3 or fewer Prize cards remaining, draw 8 cards
+            **instead**.」（Lacey / Lillie's Determination）→ ``set``
+
+        ⚠ 两者只差 ``more`` / ``instead`` 一个词，但落反方向就是静默改强度：
+        ``plus`` 当 ``set`` = 少抽；``set`` 当 ``plus`` = 多抽。解析侧必须按词判定，
+        这里只做「按 tag 执行」，不做任何猜测性兜底。
+
+        洗回手牌时**不含自身** —— 本卡此刻仍在手上（派发末尾才弃置），
+        与 `shuffle_draw:` / `shuffle_both_coin_draw:` 同一口径。
+        """
+        _dp = tag.split(":")
+        if len(_dp) < 7 or _dp[0] != "draw_cond" or _dp[5] != "if":
+            raise ValueError(f"draw_cond tag 非法：{tag}")
+        mode, raw_base, act, raw_n = _dp[1], _dp[2], _dp[3], _dp[4]
+        if mode not in ("keep", "shuffle"):
+            raise ValueError(f"draw_cond 未知模式：{tag}")
+        if act not in ("plus", "set"):
+            raise ValueError(f"draw_cond 未知叠加方式：{tag}")
+        if not raw_base.isdigit() or not raw_n.isdigit():
+            raise ValueError(f"draw_cond 数值非法：{tag}")
+        cond = ":".join(_dp[6:])
+        base, n = int(raw_base), int(raw_n)
+        if mode == "shuffle":
+            others = [c for i, c in enumerate(p.hand) if i != hi]
+            p.deck.extend(others)
+            self.rng.shuffle(p.deck)
+            p.hand = [c for i, c in enumerate(p.hand) if i == hi]
+            self._log("hand_shuffle", {"player": self.current,
+                                       "n": len(others), "side": "self"})
+        hit = _eval_condition(self, cond)
+        if not hit:
+            want = base
+        elif act == "plus":
+            want = base + n
+        else:
+            want = n
+        got = (self._safe_draw(self.current, want, source="trainer")
+               if want > 0 else 0)
+        self._log("draw_cond", {"tag": tag, "cond": cond, "hit": hit,
+                                "want": want, "drew": got})
+        return f"draw_cond {want} (cond={'Y' if hit else 'N'})"
 
     def _trainer_heal(self, p: PlayerState, tag: str, action: dict) -> str:
         """回复（``heal:N[:<scope>][:type:<c>]``），范围语义见 `_apply_heal`"""
@@ -2604,6 +2701,23 @@ class Battle:
         elif scope == "opp_active":
             owner = 1 - self.current
             target = self.players[1 - self.current].active
+        elif scope == "opp_any":
+            # 「Put an Energy attached to **1 of your opponent's Pokémon** into
+            # their hand.」（Chill Teaser Toy SFA 63，第五十九批）——目标是
+            # 对手**任意 1 只**（含后备），不是固定的战斗位。
+            # ⚠ 落成 `opp_active` = 只能拔战斗位；对手能量在后备时效果静默不生效。
+            owner = 1 - self.current
+            op = self.players[owner]
+            pool = ([op.active] if op.active is not None else []) + list(op.bench)
+            if not pool:
+                self._log("no_effect", {"tag": tag, "reason": "对手无宝可梦"})
+                return "no target"
+            with_energy = [fp_ for fp_ in pool if fp_.total_energy() > 0]
+            if not with_energy:
+                self._log("no_effect", {"tag": tag, "reason": "对手无能量"})
+                return "no target"
+            # 确定性默认：战斗位优先（顺序与 `_spread_targets` 一致）
+            target = with_energy[0]
         else:
             raise ValueError(f"未知能量回手范围：{tag}")
         if target is None:
@@ -3140,8 +3254,12 @@ class Battle:
         zone = parts[4]
         if zone not in ("hand", "discard", "deck", "any"):
             raise ValueError(f"attach_each_pick 区域非法：{zone}")
-        scope = parts[6]
-        want_poison = "poison_if_active" in parts[7:]
+        # ⚠ scope 可能**自带冒号**（`bench:type-colorless` = Glass Trumpet 的
+        # 「后备 + 属性」双限定）。用 `parts[6]` 单段取会把后半截丢掉，目标集合
+        # 悄然放宽成「全部后备」—— 静默加强且不报错（第五十九批实测踩到）。
+        _tail = [x for x in parts[6:] if x != "poison_if_active"]
+        want_poison = len(_tail) != len(parts) - 6
+        scope = ":".join(_tail)
         picked = _spread_targets(p, scope)[:mx]      # 至多 N 只，顺序确定
         moved, hit_active = 0, False
         for fp in picked:
@@ -3304,6 +3422,87 @@ class Battle:
             got_opp = self._safe_draw(1 - self.current, theirs,
                                       source="trainer")
         return f"coin {res}: draw {got_mine}/{got_opp}"
+
+    def _trainer_shuffle_draw_split(self, p: PlayerState, tag: str,
+                                    hi: int) -> str:
+        """双方洗回手牌后**各抽不同张数**（``shuffle_draw_split:<mine>:<theirs>``）
+
+        卡面（Unfair Stamp SFA 71）：「Each player shuffles their hand into their
+        deck. Then, you draw 5 cards, and your opponent draws 2 cards.」
+
+        ⚠ 与 `draw_both:N` 差一个量纲 —— 那是「双方**各**抽 N」（同数），本条是
+        「我方 N / 对手 M」。拿 `draw_both` 顶替会静默改掉对手的手牌数，
+        而对局里既没有报错也没有测试会红。
+        自己那张卡此刻仍在手上（派发末尾才弃置），**不**参与洗回（同 `shuffle_draw:`）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) != 3 or not all(x.isdigit() for x in parts[1:]):
+            raise ValueError(f"shuffle_draw_split tag 非法：{tag}")
+        mine, theirs = int(parts[1]), int(parts[2])
+        opp = self.players[1 - self.current]
+        others = [c for i, c in enumerate(p.hand) if i != hi]
+        p.deck.extend(others)
+        p.hand = [c for i, c in enumerate(p.hand) if i == hi]
+        opp_n = len(opp.hand)
+        opp.deck.extend(opp.hand)
+        opp.hand = []
+        self.rng.shuffle(p.deck)
+        self.rng.shuffle(opp.deck)
+        self._log("hand_shuffle", {"player": self.current,
+                                   "n": len(others), "side": "both"})
+        self._log("hand_shuffle", {"player": 1 - self.current,
+                                   "n": opp_n, "side": "both"})
+        got_mine = self._safe_draw(self.current, mine, source="trainer")
+        got_opp = 0
+        if not self.finished:
+            got_opp = self._safe_draw(1 - self.current, theirs,
+                                      source="trainer")
+        return f"shuffle draw {got_mine}/{got_opp}"
+
+    def _trainer_team_boost(self, p: PlayerState, tag: str) -> str:
+        """``team_boost:<n>[:type:<color>][:cat:<c1,c2>]`` —— 全队**本回合**增伤
+
+        卡面（2026-11-04 第六十批）：
+          「During this turn, attacks used by your **{F}** Pokémon do 30 more
+           damage to your opponent's Active Pokémon (before applying Weakness
+           and Resistance).」（Premium Power Pro）
+          「… attacks used by your Pokémon do 40 more damage to your opponent's
+           Active Pokémon **{ex}** …」（Black Belt's Training）
+
+        与既有机制的分工：
+          · `dmg_plus:` 是**这一招自己**的加伤，本条的修正作用于**全队**；
+          · `team_shield` 是「对方回合**减**伤」，本条是「**本回合增**伤」，方向与窗口都相反。
+        记在**玩家**层面：逐只写会漏掉之后上场的宝可梦（同 `team_shield`）。
+
+        ⚠ 到期口径：卡面是「this turn」不是「next turn」—— 只在**施加当回合**有效。
+        照抄减伤的 `until = turn + 2` 会多生效一个回合（对局里看不出来，只多打了伤害）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 2 or not parts[1].isdigit():
+            raise ValueError(f"team_boost tag 非法：{tag}")
+        n = int(parts[1])
+        etype, cats = "", ""
+        i = 2
+        while i < len(parts):
+            if parts[i] == "type" and i + 1 < len(parts):
+                etype = parts[i + 1].lower()
+                i += 2
+                continue
+            if parts[i] == "cat" and i + 1 < len(parts):
+                cats = parts[i + 1].lower()
+                i += 2
+                continue
+            raise ValueError(f"team_boost 未知段：{tag}")
+        if etype and etype not in TYPES:
+            raise ValueError(f"team_boost 未识别的属性：{tag}")
+        p.team_boost_n = n
+        p.team_boost_type = etype
+        p.team_boost_cats = cats
+        p.team_boost_turn = self.turn_counts[self.current]
+        self._log("team_boost", {"player": self.current, "n": n,
+                                 "type": etype or "any",
+                                 "cats": cats or "any"})
+        return f"team boost +{n} ({etype or 'any'}/{cats or 'any'})"
 
     def _trainer_team_shield(self, p: PlayerState, tag: str) -> str:
         """``team_shield:reduce:<n>:type:<color>`` —— 全队限时减伤
@@ -3844,6 +4043,10 @@ class Battle:
             raise ValueError("先手第一回合不可攻击")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
+        # 攻击次数额度（第六十一批）：Festival Lead 让这一招能在一回合里用两次，
+        # 额度用完后必须挡住 —— 否则「续攻」会变成「无限攻」。
+        if p.attacks_this_turn >= self._attack_allowance(p.active):
+            raise ValueError("本回合已用完攻击次数")
         ai = _attack_index_from_action(p.active.pdef.attacks, action)
         if ai is None:
             known = "、".join(
@@ -3883,6 +4086,9 @@ class Battle:
             _log["via"] = p.active.pdef.attacks[ai].name
             _log["borrow_src"] = borrow["src"]
         self._log("attack", _log)
+        # 攻击额度记账（第六十一批）：放在「真的打出去了」之后 —— 前面的
+        # 能量不足 / 目标无效都会抛错，那些不该消耗额度。
+        p.attacks_this_turn += 1
         # 回合历史（2026-10-28）：「during your last turn」类条件需要知道用过哪些招
         p.turn_attacks.append(atk.name)
         if str(attacker.pdef.category or "") == "Ancient":
@@ -4050,11 +4256,42 @@ class Battle:
                 self._resolve_ko(1 - self.current, defender)
         finally:
             self._ko_from_attack = prev_ko_flag
-        if not self.finished:
-            self._end_turn()
+        if self.finished:
+            return {"ok": True, "event": None}
+        # 「If Festival Grounds is in play, this Pokémon may use an attack it has
+        #  twice.」（Festival Lead，第六十一批）—— 用过 1 次后**不结束回合**，
+        # 让玩家还能再攻；额度用完或条件不满足才正常结束。
+        if self._attack_allowance(attacker) > 1 \
+                and p.attacks_this_turn < self._attack_allowance(attacker):
+            self._log("extra_attack", {"player": self.current,
+                                       "from": attacker.name,
+                                       "used": p.attacks_this_turn})
+            return {"ok": True, "event": None}
+        self._end_turn()
         return {"ok": True, "event": None}
 
     # ---------- S3 场地（Stadium，2026-10-27） ----------
+    def _attack_allowance(self, fp) -> int:
+        """本回合该宝可梦允许攻击几次（Festival Lead，第六十一批）
+
+        卡面：「If Festival Grounds is in play, this Pokémon may use an attack it
+        has twice. If the first attack Knocks Out your opponent's Active Pokémon,
+        you may attack again after your opponent chooses a new Active Pokémon.」
+        → 场地在场 **且** 持有该被动 ⇒ 2 次；否则 1 次。
+
+        ⚠ 场地判定用**卡名**：Festival Grounds 的 tag 是
+        `stadium:status_immune:require:energy`，双攻条款在 tag 里没有位置。
+        改成按 tag 判定需要给场地 tag 加段（属另一族的事），这里先用稳定的数据键名
+        —— 卡名是该数据集的主键，不随语言/印刷变化。
+        """
+        if fp is None:
+            return 1
+        if not any(str(ab.tag) == "passive:extra_attack"
+                   for ab in fp.pdef.abilities):
+            return 1
+        name = str((self.stadium or {}).get("name") or "").strip().lower()
+        return 2 if name == "festival grounds" else 1
+
     def _stadium_meta(self) -> dict:
         """当前场地 tag → 结构化效果（`stadium:<kind>:<n>[:stage:<k>|:type:<c>]`）
 
@@ -4898,6 +5135,37 @@ class Battle:
                 out["plus"] += _hit[0]
                 self._log("self_atk_plus_next_applied", {
                     "target": attacker.name, "attack": atk.name, "n": _hit[0]})
+        # 全队**本回合**增伤（2026-11-04 第六十批）：只对**攻击方所属**玩家生效，
+        # 且只在施加当回合（卡面「During this turn」）。属性 / 卡牌子类限定按
+        # 攻击方与防守方分别判定 —— 两个限定是**与**关系，不是或。
+        _tb = self.players[self.current]
+        if _tb.team_boost_n \
+                and _tb.team_boost_turn == self.turn_counts[self.current]:
+            _tb_ok = True
+            if _tb.team_boost_type and \
+                    str(attacker.pdef.ptype).lower() != _tb.team_boost_type:
+                _tb_ok = False
+            if _tb_ok and _tb.team_boost_cats:
+                _ok_cat = False
+                _cdef = str((defender.pdef.category if defender else "")
+                            or "").lower()
+                for _want in (x.strip() for x in _tb.team_boost_cats.split(",")):
+                    if not _want:
+                        continue
+                    if _want == "ex":
+                        # {ex} 同时涵盖 Mega（`is_ex` 对 Mega 也为 True）与
+                        # Tera ex（category 以 "Tera" 开头）——三者都是 ex 卡。
+                        if bool(getattr(defender.pdef, "is_ex", False)) \
+                                or _cdef.startswith("ex") \
+                                or _cdef.startswith("tera"):
+                            _ok_cat = True
+                    elif _want in _cdef:
+                        _ok_cat = True
+                _tb_ok = _ok_cat
+            if _tb_ok:
+                out["plus"] += _tb.team_boost_n
+                self._log("team_boost_applied", {
+                    "target": attacker.name, "n": _tb.team_boost_n})
         return out
 
     def _accum_dmg_plus(self, tag: str, out: dict) -> None:
@@ -7459,6 +7727,13 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
     # 单目标/群体范围语义与 `heal:N` 完全一致，只有「回复量」不同。
     full = len(parts) > 1 and parts[1] == "all"
     amt = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    # 第六十二批（2026-11-04）：条件回复的两个新段
+    #   · `alt:<m>` + `if_name:<key>`：「… heal 100 damage from it **instead**」
+    #     （Arven's Sandwich）—— 目标是具名阵营时改用更大的值，**不是**额外再回一次。
+    #   · `need:<cond>`：把条件写成**目标前提**（Jumbo Ice Cream 的「has 3 or more
+    #     Energy attached」）。不满足时这张卡本来就不该能打，走到这里是调用方漏了
+    #     legals 过滤 —— 回 0，而不是照常回血。
+    alt_n, need_c, name_key = 0, None, None
     scope, ptype = "", None
     i = 2
     while i < len(parts):
@@ -7466,9 +7741,23 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
             ptype = parts[i + 1].lower()
             i += 2
             continue
+        if parts[i] == "alt" and i + 1 < len(parts):
+            alt_n = int(parts[i + 1]) if parts[i + 1].isdigit() else 0
+            i += 2
+            continue
+        if parts[i] == "if_name" and i + 1 < len(parts):
+            name_key = re.sub(r"[^a-z0-9]", "", parts[i + 1].lower())
+            i += 2
+            continue
+        if parts[i] == "need":
+            need_c = ":".join(parts[i + 1:])
+            break
         if parts[i]:
             scope = parts[i]
         i += 1
+    if need_c and not _eval_condition(battle, need_c):
+        battle._log("no_effect", {"tag": tag, "reason": "目标前提不满足"})
+        return 0, 0
 
     def _ok(fp: FieldPokemon) -> bool:
         return not ptype or str(fp.pdef.ptype).lower() == ptype
@@ -7534,7 +7823,13 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
     healed = 0
     for fp in targets:
         before = fp.damage
-        fp.damage = 0 if full else max(0, fp.damage - amt)
+        # 条件替换值（第六十二批）：「If that Pokémon is an Arven's Pokémon,
+        # heal 100 damage from it **instead**」—— instead 是**换值**，不是加值。
+        _amt = amt
+        if alt_n and name_key and name_key in re.sub(
+                r"[^a-z0-9]", "", str(fp.pdef.name or "").lower()):
+            _amt = alt_n
+        fp.damage = 0 if full else max(0, fp.damage - _amt)
         got = before - fp.damage
         healed += got
         if got:
@@ -8247,6 +8542,14 @@ def _spread_targets(p: PlayerState, scope: str) -> list:
                     seen.add(id(fp))
                     out.append(fp)
         return out
+    if scope.startswith("bench:"):
+        # 「your **Benched** {C} Pokémon」（Glass Trumpet SFA 62，第五十九批）=
+        # 后备 ∩ 属性，**两个限定同时成立**。
+        # ⚠ 与裸 `type-<c>` 的区别：那只按属性筛，**含战斗位** —— 用它顶替就会
+        # 把能量附到战斗位（卡面只许后备），静默加强且没有任何报错。
+        sub = scope[len("bench:"):]
+        want = {id(x) for x in _spread_targets(p, sub)}
+        return [fp for fp in p.bench if id(fp) in want]
     if scope.startswith("type-"):
         # `type-lightning` → 「your {L} Pokémon」（Magneton SSP 59）。
         # 按 `pdef.ptype` 判定；属性名认不出时**抛错**（空集合会被当成
@@ -8856,6 +9159,16 @@ _CONDITIONS = {
     # 「If you have any Tera Pokémon on your Bench」（Ho-Oh）
     "own_bench_tera": lambda b, p, o: any(
         str(fp.pdef.category or "").startswith("Tera") for fp in p.bench),
+    # ---- 第五十九批（2026-11-04）：打出前置条件的两个新判定 ----
+    # 「you have any Tera Pokémon **in play**」= 场上任意位置（含后备），
+    # 不是只看后备 —— 与上面 `own_bench_tera` 的区别就在这里。
+    "tera_in_play": lambda b, p, o: any(
+        str(fp.pdef.category or "").startswith("Tera") for fp in p.all_field()),
+    # 「you go second, and only during your first turn」——先手是 index 0
+    # （`Battle.current` 从 0 起交替），后手恒为 1；「first turn」按**该玩家
+    # 自己的**回合计数，不能用 `turn_number`（那是全局计数，后手首回合 = 2）。
+    "went_second_first_turn": lambda b, p, o: (
+        b.current == 1 and b.turn_counts[1] == 1),
     # 「If this Pokémon has any Special Energy attached」（Stoutland）
     "own_active_special_energy": lambda b, p, o: (
         p.active is not None and bool(p.active.senergy)),
@@ -9186,6 +9499,13 @@ def _eval_condition(battle, cond: str) -> bool:
         if not arg.isdigit():
             raise ValueError(f"条件参数非整数：{cond}")
         return o.prizes_left <= int(arg)
+    if name == "opp_prizes_exactly":
+        # 「You can use this card only if your opponent has **exactly** N Prize
+        # cards remaining.」（第五十九批，Briar）⚠ 与上面的 `le` 差一个词：
+        # 写成 `le` 会把「奖赏已少于 N」的残局也放进来（门槛静默放宽）。
+        if not arg.isdigit():
+            raise ValueError(f"条件参数非整数：{cond}")
+        return o.prizes_left == int(arg)
     if name == "own_bench_stage2_type":
         return any(fp.pdef.stage == 2 and str(fp.pdef.ptype) == arg
                    for fp in p.bench)

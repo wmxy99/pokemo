@@ -25,6 +25,7 @@ from agent import effects as E  # noqa: E402
 def _tags(text: str, kind: str = "item") -> dict:
     out = E.to_engine_tags([E.parse_rule(text, kind=kind, name="X")])
     return {"tags": out["tags"],
+            "play_gate": out.get("play_gate", ""),
             "unsupported": [u["reason"] for u in out["unsupported"]]}
 
 
@@ -78,8 +79,14 @@ class TestReconTopPositive(unittest.TestCase):
         self.assertEqual(got["unsupported"], [])
 
     def test_hassel_with_ko_gate(self):
+        """⚠ 第五十九批起，`only if` 句统一由 `_split_play_gate` 剥走并落到
+        `play_gate` 字段（训练家卡级，与 `play_cost` 同一层），不再塞进
+        `recon:` 的 `:gate:` 段 —— 否则同一个门槛有两套实现，改一处漏一处
+        就会静默放行。这里同时锁定 tag 与 play_gate 两侧。
+        """
         got = _tags(HASSEL, kind="supporter")
-        self.assertEqual(got["tags"], ["recon:8:3:any:gate:ko_last_turn"])
+        self.assertEqual(got["tags"], ["recon:8:3:any"])
+        self.assertEqual(got["play_gate"], "own_ko_last_turn")
         self.assertEqual(got["unsupported"], [])
 
     def test_grimsley_bench_bottom_first_turn_gate(self):

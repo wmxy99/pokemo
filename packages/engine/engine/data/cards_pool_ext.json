@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1062,
+      "kept": 1078,
       "by_Energy": 19,
-      "by_Pokemon": 912,
-      "by_Trainer": 131,
+      "by_Pokemon": 916,
+      "by_Trainer": 143,
       "skipped": {
-        "存在未建模项（整卡不收）": 183,
+        "存在未建模项（整卡不收）": 167,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Pokemon 不可执行": 2,
         "Trainer 不可执行": 5
@@ -3384,6 +3384,58 @@
       "uid": "Applin@TWM 17"
     },
     {
+      "name": "Dipplin",
+      "name_zh": "裹蜜虫",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 80,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Applin",
+      "attacks": [
+        {
+          "name": "Do the Wave",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_set:20:per:own_bench"
+          ],
+          "desc": "This attack does 20 damage for each of your Benched Pokémon.",
+          "name_zh": "一起波动",
+          "desc_zh": "你的后备宝可梦每有 1 只，此招式造成 20 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Festival Lead",
+          "name_zh": "庆典领舞",
+          "tag": "passive:extra_attack",
+          "location": "field",
+          "desc": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+          "desc_zh": "若场上有「庆典会场」，则此宝可梦可以使用其拥有的招式 2 次。若第一次招式击倒了对手的战斗宝可梦，则你可以在对手选择新的战斗宝可梦后再次攻击。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "18"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 93,
+      "name_key": "dipplin",
+      "uid": "Dipplin@TWM 18"
+    },
+    {
       "name": "Teal Mask Ogerpon",
       "name_zh": "厄诡椪（碧之面具）",
       "supertype": "Pokemon",
@@ -3653,6 +3705,58 @@
       "source_card_id": 99,
       "name_key": "hearthflamemaskogerponex",
       "uid": "Hearthflame Mask Ogerpon ex@TWM 40"
+    },
+    {
+      "name": "Goldeen",
+      "name_zh": "角金鱼",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 50,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Whirlpool",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 10,
+          "effects": [
+            "coin:heads:discard_energy:1:opp"
+          ],
+          "desc": "Flip a coin. If heads, discard an Energy from your opponent’s Active Pokémon.",
+          "name_zh": "潮旋",
+          "desc_zh": "抛硬币。若为正面，弃置对手的战斗宝可梦身上的 1 个能量。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Festival Lead",
+          "name_zh": "庆典领舞",
+          "tag": "passive:extra_attack",
+          "location": "field",
+          "desc": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+          "desc_zh": "若场上有「庆典会场」，则此宝可梦可以使用其拥有的招式 2 次。若第一次招式击倒了对手的战斗宝可梦，则你可以在对手选择新的战斗宝可梦后再次攻击。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "44"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 100,
+      "name_key": "goldeen",
+      "uid": "Goldeen@TWM 44"
     },
     {
       "name": "Snorunt",
@@ -8893,6 +8997,58 @@
       "uid": "Flareon ex@PRE 14"
     },
     {
+      "name": "Seaking",
+      "name_zh": "金鱼王",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 110,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Goldeen",
+      "attacks": [
+        {
+          "name": "Rapid Draw",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 60,
+          "effects": [
+            "draw:2"
+          ],
+          "desc": "Draw 2 cards.",
+          "name_zh": "快速抽取",
+          "desc_zh": "抽 2 张牌。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Festival Lead",
+          "name_zh": "庆典领舞",
+          "tag": "passive:extra_attack",
+          "location": "field",
+          "desc": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+          "desc_zh": "若场上有「庆典会场」，则此宝可梦可以使用其拥有的招式 2 次。若第一次招式击倒了对手的战斗宝可梦，则你可以在对手选择新的战斗宝可梦后再次攻击。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "PRE",
+        "number": "21"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 240,
+      "name_key": "seaking",
+      "uid": "Seaking@PRE 21"
+    },
+    {
       "name": "Vaporeon ex",
       "name_zh": "水伊布 ex",
       "supertype": "Pokemon",
@@ -9110,6 +9266,58 @@
       "source_card_id": 244,
       "name_key": "jolteonex",
       "uid": "Jolteon ex@PRE 30"
+    },
+    {
+      "name": "Swirlix",
+      "name_zh": "绵绵泡芙",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 50,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Sneaky Placement",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "counters:2:scope:opp:1"
+          ],
+          "desc": "Put 2 damage counters on 1 of your opponent’s Pokémon.",
+          "name_zh": "悄悄放置",
+          "desc_zh": "在对手的 1 只宝可梦上放置 2 个伤害指示物。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Festival Lead",
+          "name_zh": "庆典领舞",
+          "tag": "passive:extra_attack",
+          "location": "field",
+          "desc": "If Festival Grounds is in play, this Pokémon may use an attack it has twice in succession. If the first attack Knocks Out your opponent’s Active Pokémon, you may use an attack again after your opponent chooses a new Active Pokémon.",
+          "desc_zh": "若场上有庆典广场，此宝可梦可以连续 2 次使用其拥有的 1 个招式。若第一个招式击倒了对手的战斗宝可梦，你可以在对手选择新的战斗宝可梦后再次使用招式。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "89"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 247,
+      "name_key": "swirlix",
+      "uid": "Swirlix@TWM 89"
     },
     {
       "name": "Umbreon ex",
@@ -45361,6 +45569,24 @@
       "uid": "Hole-Digging Shovel@POR 74"
     },
     {
+      "name": "Unfair Stamp",
+      "name_zh": "不公平印章",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "shuffle_draw_split:5:2",
+      "desc": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards.",
+      "desc_zh": "只有在对手的上个回合中有你的宝可梦被击倒时，你才可以使用此卡。\n\n每位玩家将其手牌洗回其牌库。然后，你抽 5 张牌，对手抽 2 张牌。",
+      "real": {
+        "set": "TWM",
+        "number": "165"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1080,
+      "play_gate": "own_ko_last_turn",
+      "uid": "Unfair Stamp@TWM 165"
+    },
+    {
       "name": "Hyper Aroma",
       "name_zh": "超强香气",
       "supertype": "Trainer",
@@ -45565,6 +45791,24 @@
       "uid": "Poké Vital A@SFA 62"
     },
     {
+      "name": "Glass Trumpet",
+      "name_zh": "玻璃小号",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "attach_each_pick:2:1:any:discard:target:bench:type-colorless",
+      "desc": "You can use this card only if you have any Tera Pokémon in play.\n\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
+      "desc_zh": "只有场上有你的太晶宝可梦时，你才可以使用此卡。\n\n选择最多 2 只你的后备 {C} 宝可梦，从你的弃牌堆中把 1 张基本能量卡附着于它们各自身上。",
+      "real": {
+        "set": "SCR",
+        "number": "135"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1098,
+      "play_gate": "tera_in_play",
+      "uid": "Glass Trumpet@SCR 135"
+    },
+    {
       "name": "Antique Root Fossil",
       "name_zh": "古代根状化石",
       "supertype": "Trainer",
@@ -45613,6 +45857,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1100,
       "uid": "Energy Search Pro@SSP 176"
+    },
+    {
+      "name": "Call Bell",
+      "name_zh": "呼唤铃",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "search_trainer:1",
+      "desc": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "desc_zh": "只有你后攻，且仅在你的首个回合，你才可以使用此卡。\n\n从牌库中检索 1 张支援者卡，展示它并加入手牌。然后洗牌。",
+      "real": {
+        "set": "SSP",
+        "number": "165"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1101,
+      "play_gate": "went_second_first_turn",
+      "uid": "Call Bell@SSP 165"
     },
     {
       "name": "Meddling Memo",
@@ -45664,6 +45926,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1107,
       "uid": "Scramble Switch@SSP 186"
+    },
+    {
+      "name": "Chill Teaser Toy",
+      "name_zh": "冰凉逗趣玩具",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "bounce:energy:opp_any:1",
+      "desc": "You can use this card only if you go second, and only during your first turn.\nPut an Energy attached to 1 of your opponent’s Pokémon into their hand.",
+      "desc_zh": "只有你后攻，且仅在你的首个回合，你才可以使用此卡。\n将对手的 1 只宝可梦身上附着的 1 个能量放入对手的手牌。",
+      "real": {
+        "set": "SSP",
+        "number": "166"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1108,
+      "play_gate": "went_second_first_turn",
+      "uid": "Chill Teaser Toy@SSP 166"
     },
     {
       "name": "Miracle Headset",
@@ -45904,6 +46184,23 @@
       "uid": "Tera Orb@SSP 189"
     },
     {
+      "name": "Arven's Sandwich",
+      "name_zh": "派帕的三明治",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "heal:30:active:alt:100:if_name:arvens",
+      "desc": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead.",
+      "desc_zh": "回复你的战斗宝可梦的 30 点伤害。若该宝可梦是派帕的宝可梦，则改为回复其 100 点伤害。",
+      "real": {
+        "set": "DRI",
+        "number": "161"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1130,
+      "uid": "Arven's Sandwich@DRI 161"
+    },
+    {
       "name": "Team Rocket's Venture Bomb",
       "name_zh": "火箭队的冒险炸弹",
       "supertype": "Trainer",
@@ -46055,6 +46352,23 @@
       "uid": "Iron Defender@MEG 118"
     },
     {
+      "name": "Premium Power Pro",
+      "name_zh": "高级力量强化",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "team_boost:30:type:fighting",
+      "desc": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+      "desc_zh": "在本回合中，你的 {F} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点和抗性之前）。",
+      "real": {
+        "set": "MEG",
+        "number": "124"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1141,
+      "uid": "Premium Power Pro@MEG 124"
+    },
+    {
       "name": "Fighting Gong",
       "name_zh": "战斗之锣",
       "supertype": "Trainer",
@@ -46121,6 +46435,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1146,
       "uid": "Wondrous Patch@PFL 94"
+    },
+    {
+      "name": "Jumbo Ice Cream",
+      "name_zh": "特大冰淇淋",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "heal:80:active:need:own_active_energy_at_least:3",
+      "desc": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached.",
+      "desc_zh": "回复附着了 3 个或更多能量的你的战斗宝可梦的 80 点伤害。",
+      "real": {
+        "set": "PFL",
+        "number": "91"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1147,
+      "uid": "Jumbo Ice Cream@PFL 91"
     },
     {
       "name": "Blowtorch",
@@ -46548,6 +46879,23 @@
       "uid": "Thick Scale@ASC 211"
     },
     {
+      "name": "Billy & O'Nare",
+      "name_zh": "比利与奈亚",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_cond:keep:2:plus:2:if:own_hand_at_least:10",
+      "desc": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
+      "desc_zh": "抽 2 张牌。然后，若你的手牌为 10 张或更多，再抽 2 张牌。",
+      "real": {
+        "set": "JTG",
+        "number": "142"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1181,
+      "uid": "Billy & O'Nare@JTG 142"
+    },
+    {
       "name": "Boss’s Orders",
       "name_zh": "老大的指令",
       "supertype": "Trainer",
@@ -46672,7 +47020,7 @@
       "name_zh": "哈塞尔",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "recon:8:3:any:gate:ko_last_turn",
+      "tag": "recon:8:3:any",
       "desc": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
       "desc_zh": "仅当你的任意宝可梦在对手的上个回合中被击倒时，才能使用此卡。\n\n查看你牌库上方的 8 张牌，将其中最多 3 张加入手牌。将其他牌洗回你的牌库。",
       "real": {
@@ -46682,6 +47030,7 @@
       "provenance": "dataset-derived",
       "fidelity": "rule-parser-derived",
       "source_card_id": 1193,
+      "play_gate": "own_ko_last_turn",
       "uid": "Hassel@TWM 151"
     },
     {
@@ -46751,6 +47100,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1197,
       "uid": "Xerosic’s Machinations@SFA 64"
+    },
+    {
+      "name": "Lacey",
+      "name_zh": "蕾西",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_cond:shuffle:4:set:8:if:opp_prizes_at_most:3",
+      "desc": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead.",
+      "desc_zh": "将你的手牌洗回你的牌库。然后，抽 4 张牌。若对手的剩余奖赏卡为 3 张或更少，则改为抽 8 张牌。",
+      "real": {
+        "set": "SCR",
+        "number": "139"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1199,
+      "uid": "Lacey@SCR 139"
     },
     {
       "name": "Kofu",
@@ -46873,6 +47239,23 @@
       "uid": "Brock’s Scouting@JTG 146"
     },
     {
+      "name": "Black Belt’s Training",
+      "name_zh": "空手道的锻炼",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "team_boost:40:cat:ex",
+      "desc": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance).",
+      "desc_zh": "本回合中，你的宝可梦使用的招式，对对手的战斗宝可梦{ex}造成的伤害 +40（在计算弱点与抗性之前）。",
+      "real": {
+        "set": "PRE",
+        "number": "96"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1211,
+      "uid": "Black Belt’s Training@PRE 96"
+    },
+    {
       "name": "Cook",
       "name_zh": "厨师",
       "supertype": "Trainer",
@@ -46888,6 +47271,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1212,
       "uid": "Cook@TWM 147"
+    },
+    {
+      "name": "Emcee's Hype",
+      "name_zh": "主持人的造势",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_cond:keep:2:plus:2:if:opp_prizes_at_most:3",
+      "desc": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
+      "desc_zh": "抽 2 张牌。若对手的剩余奖赏卡为 3 张或更少，再抽 2 张牌。",
+      "real": {
+        "set": "DRI",
+        "number": "163"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1214,
+      "uid": "Emcee's Hype@DRI 163"
     },
     {
       "name": "Ethan's Adventure",
@@ -47058,6 +47458,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1226,
       "uid": "Lt. Surge's Bargain@MEG 120"
+    },
+    {
+      "name": "Lillie's Determination",
+      "name_zh": "莉莉艾的决心",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw_cond:shuffle:6:set:8:if:own_prizes_exactly:6",
+      "desc": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead.",
+      "desc_zh": "将你的手牌洗回你的牌库。然后，抽 6 张牌。若你的剩余奖赏卡正好为 6 张，则改为抽 8 张牌。",
+      "real": {
+        "set": "MEG",
+        "number": "119"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1227,
+      "uid": "Lillie's Determination@MEG 119"
     },
     {
       "name": "Acerola's Mischief",

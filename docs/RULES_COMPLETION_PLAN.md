@@ -1,3 +1,47 @@
+## 本轮成果（2026-11-04 · 第五十八~六十二批 · 5 批）
+
+**一句话**：`engine_ready` **1077 → 1093（85.0% → 86.3%）**，池 1062 → **1078**，
+未建模动作条目 190 → **~185**；对账 **40 类全过**（本轮新增 `audit_batch58_62`
+覆盖 batch58–62 的 draw_cond / shuffle_draw_split / play_gate / team_boost /
+heal 双向 / passive:extra_attack 七组新机制，含负向自测）；
+全仓测试 **2137 → 2191**（engine 1133 → 1164 · agent 857 → 880 · api 135 · gym 12）；
+**K1 双盲 200 局 = 0.795 ✅**（`k1_rich.pt`）。
+
+| 批次 | 主题 | 落地卡（池内） | 顺带修掉的静默缺陷 |
+|---|---|---|---|
+| 58 | 训练家前置条件 `play_gate` + 条件抽牌 `draw_cond` | 9（play_gate：Unfair Stamp / Glass Trumpet / Call Bell / Chill Teaser Toy / Hassel；draw_cond：Billy & O'Nare / Lacey / Emcee's Hype / Lillie's Determination） | `play_gate` 复用 `Battle._eval_condition`，未知条件**抛错**而非默认放行；`draw_cond` 正则具名组修复（`int('more')` 崩溃） |
+| 59 | 双方洗牌分抽 `shuffle_draw_split:<mine>:<theirs>` | 1（Unfair Stamp） | 派发必须排在 `shuffle_draw:` 之前，否则被旧分支吞掉 |
+| 60 | 全队增伤 `team_boost:<amt>[:<scope>]`（scope=`type:<色>` / `cat:ex`） | 2（Premium Power Pro / Black Belt's Training） | 对账自身 bug：推导用 `type-fighting`（连字符）但真实 tag 是 `type:fighting`（冒号）→ 误报，已修 |
+| 61 | 条件回复双向 `heal:need:`（指定条件才回血）/ `heal:alt:`（条件名比对才回血） | 2（Jumbo Ice Cream / Arven's Sandwich） | `heal:need` 的「自身 active 能量 ≥ N」判定；`heal:alt` 的 `if_name` 比对 |
+| 62 | 被动额外攻击 `passive:extra_attack`（Festival Lead 类） | 机制就位，当前池 0 张落地（Festival Lead 不在活动池） | 早触发判定走 `_early_trigger_of()` 同源，避免退化成「每回合一次 field 特性」 |
+
+**五批的共同主题**：补齐「训练家卡级 tag / 条件判定」这一类长期缺口——此前引擎侧
+已有 `play_gate` / `draw_cond` / `team_boost` / `heal` 的派发骨架，缺的是解析产出与
+白名单放通。本轮把 6 个新族全部接进「解析 → 派发 → 准入 → 用例（正例+负向守卫）→
+对账 → 度量」六步闭环，并**全部纳入 `audit_batch58_62` 对账**。
+
+**两个必须记下的纪律实证**：
+1. **对账脚本自己也会错（再次印证）**：`audit_batch58_62` 首跑把 Premium Power Pro
+   报成不一致——但根因是**对账推导用连字符 `type-fighting`、而池内真实 tag 是冒号
+   `type:fighting`**。这是「换一套写法重算一遍才是对账全部价值」的又一次实证：
+   对账抓到的这处是**对账脚本自身的 bug**，必须修掉而非绕过。
+2. **`engine_ready` 上升要过 API 验收关**：Unfair Stamp 经本轮 `shuffle_draw_split`
+   + `play_gate` 后**真正可引擎对战**（gate `own_ko_last_turn` 已在 `_CONDITIONS`
+   注册、`shuffle_draw_split` 有派发），故 `engine_ready` 由 False→True 是**正确进展**，
+   不是静默加强。API 测试 `test_deck_import_matches_library_only_card` 原以 Unfair Stamp
+   作「灰名单样例」，现改用仍真实未建模的 `Brilliant Blender`（search+discard 无 tag）。
+   ⚠ 改解析/引擎 tag 后必须重跑 `audit_pool_alignment.py` + `ci_local.py` 8 job +
+   K1 双盲，否则这类「卡从灰名单毕业」会静默打破既有断言。
+
+**已知缺口（下一批首要）**：
+- `passive:extra_attack` 机制已就位但**当前活动池 0 张落地**——Festival Lead 不在
+  `cards_challenge.json` 活动集，需确认是否应纳入或保持未建模。
+- `+HP 全队静态` 仍无实现（Ludicolo / Okidogi / Tyrantrum），卡在
+  `FieldPokemon.max_hp` 拿不到 battle 引用。
+- `{ACE SPEC}` 卡牌子类引擎无数据模型（Genesect 仍如实未建模）。
+
+---
+
 ## 本轮成果（2026-11-04 · 第五十三~五十七批 · 5 批）
 
 **一句话**：`engine_ready` **1061 → 1077（83.7% → 85.0%）**，池 1046 → **1062**，

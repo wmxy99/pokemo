@@ -774,6 +774,211 @@ _TURN1_PERMISSION = re.compile(
     r"your first turn[.]\s*", re.I)
 
 
+# ---- 条件抽牌（2026-11-04 第五十八批）----
+# 两种**方向相反**的句式，只差 `more` / `instead` 一个词：
+#   · 「Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2
+#      **more** cards.」（Billy & O'Nare / Emcee's Hype）→ ``plus``
+#   · 「Shuffle your hand into your deck. Then, draw 4 cards. If your opponent
+#      has 3 or fewer Prize cards remaining, draw 8 cards **instead**.」
+#      （Lacey / Lillie's Determination）→ ``set``
+# 落反方向就是静默改强度：`plus` 当 `set` = 少抽；`set` 当 `plus` = 多抽。
+# 通用分支把这类句子拆成两条（`draw:2` + `draw:2` / `shuffle_draw:4` + `draw:8`），
+# 训练家多 tag ⇒ 整卡不收且不记录原因。
+_TC_DRAW_MORE = re.compile(
+    r"^draw (?P<base>\d+) cards?[.]\s*(?:then,?\s*)?if (?P<cond>[^,]+),\s*"
+    r"draw (?P<more>\d+) more cards?[.]$", re.I)
+_TC_DRAW_INSTEAD = re.compile(
+    r"^shuffle your hand into your deck[.]\s*(?:then,?\s*)?"
+    r"draw (?P<base>\d+) cards?[.]\s*if (?P<cond>[^,]+),\s*"
+    r"draw (?P<alt>\d+) cards? instead[.]$", re.I)
+# 「Each player shuffles their hand into their deck. Then, you draw N cards, and
+#  your opponent draws M cards.」（Unfair Stamp SFA 71，第五十九批）
+# ⚠ 与 `draw_both:N` 差一个量纲：那是「双方**各**抽 N」，本条是「我方 N / 对手 M」。
+# 拿 `draw_both` 顶替 = 对手手牌数静默改变（对局里既无报错也不会红测试）。
+_TC_SHUFFLE_SPLIT = re.compile(
+    r"^each player shuffles their hand into their deck[.]\s*then,?\s*"
+    r"you draw (?P<a>\d+) cards?,? and your opponent draws (?P<b>\d+) "
+    r"cards?[.]$", re.I)
+
+
+def _detect_shuffle_split_draw(text: str) -> list:
+    """「双方洗回手牌，我方抽 N / 对手抽 M」→ 一条 ``shuffle_draw_split``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TC_SHUFFLE_SPLIT.match(t)
+    if not m:
+        return []
+    return [act("draw", None, "both_split",
+                {"split": (int(m.group("a")), int(m.group("b"))),
+                 "shuffle_both": True})]
+
+
+# 「Put an Energy attached to **1 of your opponent's Pokémon** into their hand.」
+# （Chill Teaser Toy SFA 63，第五十九批）——目标是「对手任意 1 只」，**含后备**。
+# ⚠ 落成 `bounce:energy:opp_active` 就只能拔战斗位：对手把能量放后备时整段
+# 效果静默不生效（卡照打、不报错、测试全绿）。
+_TC_OPP_ENERGY_TO_HAND = re.compile(
+    r"^put (?:an|(?P<n>\d+)) energy attached to 1 of your opponent'?s "
+    r"pok[eé]mon into their hand[.]$", re.I)
+
+
+def _detect_opp_energy_to_hand(text: str) -> list:
+    """「对手某只身上的能量回其手牌」→ ``bounce:energy:opp_any:<n>``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TC_OPP_ENERGY_TO_HAND.match(t)
+    if not m:
+        return []
+    n = int(m.group("n")) if m.group("n") else 1
+    return [act("bounce", n, "energy", {"scope": "opp_any", "what": "energy"})]
+
+
+# 「During this turn, attacks used by your {F} Pokémon do 30 more damage to your
+#  opponent's Active Pokémon (before applying Weakness and Resistance).」
+# （Premium Power Pro / Black Belt's Training，第六十批）
+# ⚠ 与 `dmg_plus:` 的分工：那是**这一招自己**的加伤；本条是「本回合内**全队**」
+# 的临时修正。落成 `dmg_plus` 会让「只有这一只」加伤（其余队友少算），
+# 且持续到招式结束而不是整回合。
+_TEAM_BOOST = re.compile(
+    r"^during this turn, attacks used by your (?P<scope>.+?) do (?P<n>\d+) "
+    r"more damage to your opponent'?s active pok[eé]mon"
+    r"(?: (?P<cat>[{]?[a-z]+[}]?))?"
+    r"\s*\(before applying weakness and resistance\)[.]$", re.I)
+
+
+def _detect_team_boost(text: str) -> list:
+    """「本回合全队增伤」→ ``team_boost:<n>[:type:<c>][:cat:<k>]``
+
+    认不出的 scope 一律返回 ``[]``（不认领）—— 半句条件比不建模更危险：
+    「只有 {F} 加伤」若被当成「全队加伤」，每个回合都会多打一截。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TEAM_BOOST.match(t)
+    if not m:
+        return []
+    scope = str(m.group("scope") or "").strip().lower()
+    extra: dict = {"n": int(m.group("n"))}
+    if scope in ("pok\u00e9mon", "pokemon"):
+        pass                                   # 全队，无属性限定
+    else:
+        ms = re.match(r"^\{([a-z])\} pok[eé]mon$", scope)
+        if not ms:
+            return []
+        et = _EN_ENERGY_LETTER.get(str(ms.group(1)).upper())
+        if not et:
+            return []
+        extra["etype"] = et
+    cat = str(m.group("cat") or "").strip().lower()
+    if cat:
+        cat = cat.strip("{}")
+        if cat not in ("ex", "v", "vmax", "vstar"):
+            return []
+        extra["cats"] = cat
+    return [act("team_boost", extra["n"], "team", extra)]
+
+
+# 「If Festival Grounds is in play, this Pokémon may use an attack it has twice.
+#  If the first attack Knocks Out your opponent's Active Pokémon, you may attack
+#  again after your opponent chooses a new Active Pokémon.」
+# （Dipplin / Goldeen / Seaking / Swirlix，第六十一批）
+# ⚠ 这是**被动额度**（每回合能攻几次），不是可发动的特性 —— 落成主动 tag 会让
+# 随机对局报「未知 field tag」，落成普通 `passive:` 则完全不起作用。
+_FESTIVAL_LEAD = re.compile(
+    r"^if festival grounds is in play, this pok[eé]mon may use an attack it has "
+    r"twice(?: in succession)?[.]\s*if the first attack knocks out your "
+    r"opponent'?s active pok[eé]mon, you may (?:attack|use an attack) again "
+    r"after your opponent chooses a new active pok[eé]mon[.]$", re.I)
+
+
+def _detect_extra_attack(text: str) -> list:
+    """「场地在场时本宝可梦可攻击两次」→ ``passive:extra_attack``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if not _FESTIVAL_LEAD.match(t):
+        return []
+    return [act("passive", None, "self", {"kind": "extra_attack"})]
+
+
+# ---- 条件回复（2026-11-04 第六十二批）----
+# 「Heal 80 damage from your Active Pokémon **that has 3 or more Energy
+#  attached**.」（Jumbo Ice Cream）——「that has …」是**目标前提**（不是效果条件）：
+# 不满足时这张卡本来就不能打，落成无条件 `heal:80:active` 会白回一次。
+_HEAL_ENERGY_NEED = re.compile(
+    r"^heal (?P<n>\d+) damage from your active pok[eé]mon that has "
+    r"(?P<k>\d+) or more energy attached[.]$", re.I)
+# 「Heal 30 damage from your Active Pokémon. If that Pokémon is an **Arven's**
+#  Pokémon, heal 100 damage from it **instead**.」（Arven's Sandwich）
+# ⚠ `instead` 是**换值**不是加值；落成「30 + 100」会多回一倍。
+_HEAL_NAME_ALT = re.compile(
+    r"^heal (?P<n>\d+) damage from your active pok[eé]mon[.]\s*if that "
+    r"pok[eé]mon is an? (?P<who>.+?) pok[eé]mon, heal (?P<alt>\d+) damage from "
+    r"it instead[.]$", re.I)
+
+
+def _detect_heal_cond(text: str) -> list:
+    """条件回复 → ``heal:<n>:active[:alt:<m>:if_name:<k>|:need:<cond>]``"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _HEAL_ENERGY_NEED.match(t)
+    if m:
+        return [act("heal", int(m.group("n")), "self", {
+            "heal_scope": "active",
+            "heal_need": f"own_active_energy_at_least:{int(m.group('k'))}"})]
+    m = _HEAL_NAME_ALT.match(t)
+    if m:
+        key = _tag_name_key(m.group("who"))
+        if not key:
+            return []
+        return [act("heal", int(m.group("n")), "self", {
+            "heal_scope": "active", "heal_alt": int(m.group("alt")),
+            "heal_if_name": key})]
+    return []
+
+
+# 条件短语 → 引擎条件键。**只映射引擎确有的键**（`_CONDITION_PARAMS` 里没有的
+# 一律返回 None ⇒ 整句不认领 ⇒ 如实未建模，绝不猜一个近似条件顶上）。
+_DRAW_COND_KEYS = (
+    (re.compile(r"^you have (?P<n>\d+) or more cards in your hand$"),
+     "own_hand_at_least"),
+    (re.compile(r"^your opponent has (?P<n>\d+) or fewer prize cards? "
+                r"remaining$"), "opp_prizes_at_most"),
+    (re.compile(r"^you have exactly (?P<n>\d+) prize cards? remaining$"),
+     "own_prizes_exactly"),
+)
+
+
+def _draw_cond_key(phrase: str):
+    """条件短语 → ``<key>:<n>``；引擎没有该条件时返回 None"""
+    p = re.sub(r"\s+", " ", str(phrase or "").strip().lower())
+    for rx, key in _DRAW_COND_KEYS:
+        m = rx.match(p)
+        if m:
+            return f"{key}:{int(m.group('n'))}"
+    return None
+
+
+def _detect_draw_cond(text: str) -> list:
+    """条件抽牌 → ``draw_cond:<keep|shuffle>:<base>:<plus|set>:<n>:if:<cond>``
+
+    整句认领（``^…$``）：少一句都不叫这个形态 —— 句中残留的其它效果会被
+    本函数静默吞掉，所以宁可整段不认领（退回未建模）。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TC_DRAW_MORE.match(t)
+    if m:
+        cond = _draw_cond_key(m.group("cond"))
+        if not cond:
+            return []
+        return [act("draw", int(m.group("base")), "deck",
+                    {"cond_extra": int(m.group("more")), "cond_add": True,
+                     "cond": cond})]
+    m = _TC_DRAW_INSTEAD.match(t)
+    if m:
+        cond = _draw_cond_key(m.group("cond"))
+        if not cond:
+            return []
+        return [act("draw", int(m.group("base")), "deck",
+                    {"cond_extra": int(m.group("alt")), "cond_add": False,
+                     "cond": cond, "shuffle_hand": True})]
+    return []
+
+
 # ---- 对手手牌弃置族（2026-11-04 第五十四批）----
 # 引擎早已有 `discard_opp_random:N`（对手自选 ⇒ 随机）与 `discard_opp_to:N`
 # （弃到剩 N 张），但**解析侧从来没产出过** —— 4 张卡（Sandile / Krokorok /
@@ -921,6 +1126,68 @@ _ABILITY_COST_SHAPE = re.compile(
     r"|discard_named:[1-9]\d*:[a-z0-9]+"
     r"|discard_(?:self|hand)_energy:[1-9]\d*:[a-z]+"
     r"|hand_bottom:[1-9]\d*)$")
+
+
+# ---- 打出前置条件（2026-11-04 第五十九批）----
+# 卡面统一写法：「You can use this card only if …」。判据值必须是
+# `battle._eval_condition` **确有其键**的条件 —— 引擎里没有的（例如
+# 「你场上有 N's Darmanitan、N's Zoroark {ex}… 这六张全部在场」）一律不认领，
+# 让整卡如实未建模，而不是拿一个近似条件顶上（那会把门槛换成另一个意思）。
+_PLAY_GATE_PATTERNS = (    # 「any of your Pokémon were Knocked Out during your opponent's last turn」
+    (re.compile(r"^you can use this card only if any of your pok[eé]mon were "
+                r"knocked out during your opponent'?s last turn[.]\s*", re.I),
+     "own_ko_last_turn"),
+    # 「you have any Tera Pokémon in play」（含后备 —— 与 `own_bench_tera` 不同）
+    (re.compile(r"^you can use this card only if you have any tera pok[eé]mon "
+                r"in play[.]\s*", re.I), "tera_in_play"),
+    # 「you go second, and only during your first turn」
+    (re.compile(r"^you can use this card only if you go second,? and only "
+                r"during your first turn[.]\s*", re.I),
+     "went_second_first_turn"),
+    # 「your opponent has **exactly** N Prize cards remaining」
+    # ⚠ 不能写成 `opp_prizes_le`：那是「N 张或更少」，残局里也放行 = 门槛放宽。
+    (re.compile(r"^you can use this card only if your opponent has exactly "
+                r"(?P<n>\d+) prize cards? remaining[.]\s*", re.I),
+     "opp_prizes_exactly:{n}"),
+    # 「you have more Prize cards remaining than your opponent」
+    (re.compile(r"^you can use this card only if you have more prize cards? "
+                r"remaining than your opponent[.]\s*", re.I),
+     "own_behind_prizes"),
+)
+
+
+def _split_play_gate(text: str, kind: str) -> tuple:
+    """剥出「打出**前置条件**」句，返回 ``(剩余文本, play_gate)``
+
+    卡面：「You can use this card only if …」。与 `_split_play_cost` 的分工
+    （两者都写成 `only if`，语义相反）：
+      · **代价**（`play_cost`）：要真的付账，手牌少 N 张 —— 有状态变化；
+      · **前置条件**（`play_gate`）：纯条件检查，满足时**什么都不发生**。
+
+    ⚠ 为什么必须**剥掉**：这句留在文本里会被当成主句的一部分，通用分支要么
+    把它读成一个动作（挤掉真正的效果），要么整卡判「未建模」。八张卡
+    （Unfair Stamp / Glass Trumpet / Call Bell / Chill Teaser Toy / Briar /
+    Team Rocket's Archer / Anthea & Concordia / Rosa's Encouragement）
+    此前全部堵在这一句上。
+
+    认不出的形态返回 ``(原文, None)`` —— 由调用方保留拒收，绝不「看着像条件
+    就当条件」，那会把门槛换成另一个意思（例如把 `exactly` 当 `at most`）。
+
+    只认引擎 `_eval_condition` 里**确有其键**的条件（见 `Battle._play_gate_ok`）。
+    """
+    # ⚠ 非训练家 kind **原样返回**（不做撇号归一化）：本函数只在训练家卡上剥句，
+    # 对其它 kind 归一化会改变下游拿到的文本，进而让别的族的整句正则失配
+    # （实测 8 张「This attack's damage isn't affected by …」卡因此掉出 ready）。
+    if kind not in ("item", "supporter", "stadium", "tool"):
+        return str(text or ""), None
+    t = _norm_apostrophe(str(text or ""))
+    for rx, key in _PLAY_GATE_PATTERNS:
+        m = rx.match(t)
+        if not m:
+            continue
+        g = key.format(n=int(m.group("n"))) if "{n}" in key else key
+        return t[m.end():].strip(), g
+    return t, None
 
 
 def _split_play_cost(text: str, kind: str) -> tuple:
@@ -1183,6 +1450,9 @@ _ATTACH_SPREAD_OWNED = re.compile(r"^([a-z\u2019']+)['\u2019]s pok[eé]mon$")
 # 「your {P} Pokémon **and** {M} Pokémon」）—— 两组都能当目标，不是「各附一份」。
 _ATTACH_SPREAD_TYPED = re.compile(
     r"^\{([a-z])\} pok[eé]mon(?: and \{(?P<c2>[a-z])\} pok[eé]mon)?$")
+# 「your **Benched** {C} Pokémon」：后备 + 属性双限定（Glass Trumpet SFA 62）
+_ATTACH_SPREAD_BENCH_TYPED = re.compile(
+    r"^benched \{([a-z])\} pok[eé]mon$")
 
 
 def _spread_scope_of(phrase: str) -> Optional[str]:
@@ -1208,6 +1478,12 @@ def _spread_scope_of(phrase: str) -> Optional[str]:
                 return None
             return f"type-{et}+type-{et2}"     # 并集：两类都能当目标
         return f"type-{et}"
+    # 「your **Benched** {C} Pokémon」（Glass Trumpet）——后备 ∩ 属性，**两个限定
+    # 同时成立**。不能简化成 `type-<c>`（那样含战斗位，会把能量附错地方）。
+    mb = _ATTACH_SPREAD_BENCH_TYPED.match(ph)
+    if mb:
+        et = _EN_ENERGY_LETTER.get(str(mb.group(1)).upper())
+        return f"bench:type-{et}" if et else None
     m = _ATTACH_SPREAD_OWNED.match(ph)
     if m:
         return f"cat-{m.group(1)}"
@@ -1404,6 +1680,44 @@ def _detect_attach_each_pick(t: str) -> Optional[dict]:
             "per": int(m.group(3)) if m.group(3) else 1,
             "etype": et, "zone": "deck", "scope": scope,
             "poison_if_active": bool(m.group("poison"))}
+
+
+# 「Choose up to N of your Benched {C} Pokémon and attach a Basic Energy card
+#  from your **discard pile** to each of them.」（Glass Trumpet SFA 62）
+# 与上面的 `_ATTACH_EACH_PICK` 是**两条不同句式**：那条源是**牌库**且写成
+# 「For each of those Pokémon, search your deck …」；这条源是**弃牌堆**且用
+# 「and attach … to each of them」。共同点是「选出至多 N 只、每只各 1 张」，
+# 所以落到同一个 `attach_each_pick:` tag（张数绑定到被选的那一只）。
+_ATTACH_EACH_PICK_DISCARD = re.compile(
+    r"^choose up to (?P<mx>\d+) of your (?P<scope>.+?) and attach a basic "
+    r"(?:[{](?P<t>[a-z])[}] )?energy card from your discard pile to each of "
+    r"them[.]$", re.I)
+
+
+def _detect_attach_each_pick_discard(t: str) -> Optional[dict]:
+    """整句识别「选至多 N 只，各从**弃牌堆**附 1 张」；认不出返回 None"""
+    m = _ATTACH_EACH_PICK_DISCARD.match(_norm_prose(t))
+    if not m:
+        return None
+    scope = _spread_scope_of(m.group("scope"))
+    if scope is None:
+        return None
+    et = None
+    if m.group("t"):
+        et = _EN_ENERGY_LETTER.get(str(m.group("t")).upper())
+        if et is None:
+            return None
+    return {"max": int(m.group("mx")), "per": 1, "etype": et,
+            "zone": "discard", "scope": scope}
+
+
+# 「Attach up to N Basic Energy cards from your discard pile to **1 of your
+#  Stage N Pokémon**.」（Rosa's Encouragement）——目标有**进化阶段**限定。
+# 通用 `attach:` 只按「任意己方位置」列目标，落上去就是静默加强（卡面只许二阶）。
+# 目标限定层未建模前，整句登记为未建模，不产出会打错效果的 tag。
+_ATTACH_STAGE_LIMIT = re.compile(
+    r"^attach up to (?P<n>\d+) basic energy cards? from your discard pile to "
+    r"1 of your stage (?P<st>\d+) pok[eé]mon[.]$", re.I)
 
 
 def _detect_attach_flip_until(t: str) -> Optional[dict]:
@@ -2757,6 +3071,44 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _od,
                 "source_text": str(text or ""), "citations": []}
+    # 条件抽牌（2026-11-04 第五十八批）：必须排在 `_detect_trainer_compound` 之前
+    # —— 那边只认「弃全部再抽 N」，与本族句式不重叠，但本族条件短语里可能含逗号，
+    # 交给通用分支会被拆成两条。
+    _dc = _detect_draw_cond(t)
+    if _dc:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _dc,
+                "source_text": str(text or ""), "citations": []}
+    # 「双方洗回手牌，我方 N / 对手 M」（第五十九批，Unfair Stamp）
+    _ss = _detect_shuffle_split_draw(t)
+    if _ss:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _ss,
+                "source_text": str(text or ""), "citations": []}
+    # 「对手某只身上的能量回其手牌」（第五十九批，Chill Teaser Toy）
+    _oe = _detect_opp_energy_to_hand(t)
+    if _oe:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _oe,
+                "source_text": str(text or ""), "citations": []}
+    # 「本回合全队增伤」（第六十批，Premium Power Pro / Black Belt's Training）
+    _tbt = _detect_team_boost(t)
+    if _tbt:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _tbt,
+                "source_text": str(text or ""), "citations": []}
+    # 「场地在场时可攻击两次」（第六十一批，Festival Lead）
+    _ea = _detect_extra_attack(t)
+    if _ea:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _ea,
+                "source_text": str(text or ""), "citations": []}
+    # 条件回复（第六十二批，Jumbo Ice Cream / Arven's Sandwich）
+    _hc = _detect_heal_cond(t)
+    if _hc:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _hc,
+                "source_text": str(text or ""), "citations": []}
     # 训练家复合句（2026-11-04 第五十一批）：整句认领成**一条**复合 tag。
     _tc = _detect_trainer_compound(t)
     if _tc:
@@ -3496,6 +3848,28 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                 "conditions": conditions,
                 "actions": [act("attach_each_pick", int(_ap["per"]), "self", _ap)],
                 "source_text": str(text or ""), "citations": []}
+    # 同族但源是**弃牌堆**（Glass Trumpet，2026-11-04 第五十九批）：
+    # 「Choose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card
+    #  from your discard pile to each of them.」
+    # ⚠ 交给通用 `attach:` 分支会落成 `attach:1:discard`（只附 1 张、只给 1 只）
+    # —— 卡面是「至多 2 只**各** 1 张」，少做一半且不报错。
+    _apd = _detect_attach_each_pick_discard(t)
+    if _apd:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions,
+                "actions": [act("attach_each_pick", int(_apd["per"]), "self",
+                                _apd)],
+                "source_text": str(text or ""), "citations": []}
+    # 「… to **1 of your Stage 2 Pokémon**」（Rosa's Encouragement）——目标有限定，
+    # 而通用 `attach:` 只按「任意己方位置」列目标 ⇒ 落成 `attach:2:discard` 就是
+    # 静默加强（卡面只许附给二阶）。目标限定层未建模，如实整句登记。
+    if kind in ("item", "supporter", "stadium", "tool") \
+            and _ATTACH_STAGE_LIMIT.match(_norm_prose(t)):
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions,
+                "actions": [act("rule", None, "any", {
+                    "note": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"})],
+                "source_text": str(text or ""), "citations": []}
 
     # 「Flip N coins. If both of them are heads, … attach …」（Energy Coin，item）：
     # 训练家侧抛币门，门通过后把子效果（`attach:`）交给派发链。
@@ -3988,7 +4362,12 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     # 招式侧也要剥的理由：剥掉后主效果才回到**句首**，能被整句认领式正则
     # （`_TC_RESEARCH` 等 `^…$`）命中；否则会退化成多条散动作。
     _t = _TURN1_PERMISSION.sub("", _t).strip()
-    text, _pcost = _split_play_cost(_t, kind)
+    # 打出**前置条件**（2026-11-04 第五十九批）：「You can use this card only if …」
+    # 必须先于 `_split_play_cost` 剥 —— 两者句式几乎相同（都是 only if），
+    # 但代价句里含 `discard N cards from your hand` 这类**动作**，若不先把纯条件句
+    # 摘走，代价正则会把条件句当成代价解析（反之亦然）。
+    text, _pgate = _split_play_gate(_t, kind)
+    text, _pcost = _split_play_cost(text, kind)
     # 特性发动代价（2026-11-04 第四十九批）：同样**先剥离**再解析（理由同上）。
     text, _acost = _split_ability_cost(text, kind)
     spec = (_parse_rule_en(text, kind=kind, name=name)
@@ -3996,6 +4375,8 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             else _parse_rule_zh(text, kind=kind, name=name))
     if _pcost:
         spec["play_cost"] = _pcost
+    if _pgate:
+        spec["play_gate"] = _pgate
     if _acost:
         spec["ability_cost"] = _acost
     actions = spec.get("actions") or []
@@ -7492,7 +7873,18 @@ def to_engine_tags(specs: list) -> dict:
                                 f"{_eff}:gate:{_gate}")
             elif t == "draw":
                 _cond = extra.get("cond")
-                if extra.get("discard_all"):
+                if extra.get("split"):
+                    # 双方洗回后**各抽不同张数**（第五十九批，Unfair Stamp）
+                    _a, _b = extra["split"]
+                    tags.append(f"shuffle_draw_split:{int(_a)}:{int(_b)}")
+                elif extra.get("cond_extra") is not None:
+                    # 条件抽牌（第五十八批）：`plus` / `set` **不可互换**
+                    _mode = "shuffle" if extra.get("shuffle_hand") else "keep"
+                    _way = "plus" if extra.get("cond_add") else "set"
+                    tags.append(
+                        f"draw_cond:{_mode}:{int(amt or 0)}:{_way}:"
+                        f"{int(extra['cond_extra'])}:if:{_cond}")
+                elif extra.get("discard_all"):
                     # 「Discard your hand and draw N cards.」（第五十一批）
                     # 引擎早就有 `research:N`，但解析侧从来没产出过 —— 以前落成
                     # `discard:all` + `draw:N` 两条，训练家多 tag 直接整卡不收。
@@ -7549,6 +7941,14 @@ def to_engine_tags(specs: list) -> dict:
                     if pt:
                         tail += f":type:{pt}"
                     # `:discard` = 真的回复后弃该目标 1 个能量（Super Potion）
+                    # ⚠ 第六十二批：`alt` / `if_name` / `need` 必须排在 `:discard`
+                    # **之前** —— `_apply_heal` 只把 `parts[-1]` 当尾缀标记。
+                    if extra.get("heal_alt"):
+                        tail += f":alt:{int(extra['heal_alt'])}"
+                    if extra.get("heal_if_name"):
+                        tail += f":if_name:{extra['heal_if_name']}"
+                    if extra.get("heal_need"):
+                        tail += f":need:{extra['heal_need']}"
                     if extra.get("discard_one"):
                         tail += ":discard"
                     tags.append(f"heal:{int(amt)}{tail}")
@@ -8599,7 +8999,13 @@ def to_engine_tags(specs: list) -> dict:
                         {"type": t, "reason": f"受击反应形态未建模（{k}）"})
             elif t == "passive":
                 kind_ = extra.get("kind")
-                if kind_ == "bench_immune":
+                if kind_ == "extra_attack":
+                    # 「If Festival Grounds is in play, this Pokémon may use an
+                    # attack it has twice.」（第六十一批，Festival Lead）
+                    # 是被动**额度**，不是可发动特性 —— 进 legals 会让随机对局
+                    # 报「未知 field tag」。
+                    tags.append("passive:extra_attack")
+                elif kind_ == "bench_immune":
                     tags.append("passive:bench_immune")
                 elif kind_ == "bench_immune_dmg":
                     # Tera 规则「prevent all damage … by attacks」：只挡伤害，不挡效果
@@ -8694,12 +9100,25 @@ def to_engine_tags(specs: list) -> dict:
                 if extra.get("selfko"):
                     tag += ":selfko"
                 tags.append(tag)
+            elif t == "team_boost":
+                # 本回合全队增伤（第六十批）
+                _n = extra.get("n")
+                if not isinstance(_n, int) or _n < 1:
+                    unsupported.append({"type": t,
+                                        "reason": f"增伤值未识别：{_n}"})
+                else:
+                    _tag = f"team_boost:{_n}"
+                    if extra.get("etype"):
+                        _tag += f":type:{extra['etype']}"
+                    if extra.get("cats"):
+                        _tag += f":cat:{extra['cats']}"
+                    tags.append(_tag)
             elif t == "bounce":
                 # 附着能量收回手牌（第二十三批）→ `bounce:energy:<scope>:<n>[:type:<c>]`
                 sc = str(extra.get("scope") or "self")
                 n = int(amt or 1)
                 if (extra.get("what") or "energy") != "energy" \
-                        or sc not in ("self", "opp_active"):
+                        or sc not in ("self", "opp_active", "opp_any"):
                     unsupported.append(
                         {"type": t, "reason": f"回手范围/对象未识别：{sc}"})
                 else:
@@ -8833,6 +9252,17 @@ def to_engine_tags(specs: list) -> dict:
     if _acs and any(not _ABILITY_COST_SHAPE.match(x) for x in _acs):
         unsupported.append({"type": "ability_cost",
                             "reason": f"特性代价形态非法：{_acs}"})
+    # 打出前置条件汇总（2026-11-04 第五十九批）：与 `play_cost` 同一纪律 ——
+    # 多 spec 出现**矛盾**的条件时如实拒绝（取其一 = 静默改变门槛）。
+    _pgs = [str(s0.get("play_gate") or "") for s0 in (specs or [])]
+    _pgs = [x for x in _pgs if x]
+    play_gate = ""
+    if _pgs:
+        if len(set(_pgs)) > 1:
+            unsupported.append({"type": "play_gate",
+                                "reason": f"同一张卡出现多种打出前置条件：{sorted(set(_pgs))}"})
+        else:
+            play_gate = _pgs[0]
         ability_cost = ""
     # 卡面带「in order to use this Ability」但**没抽出代价** → 必须拒收。
     # 这条是**兜底**：代价守卫原先只挂在 status 分支里，`draw:` 类特性带认不出的
@@ -8861,7 +9291,8 @@ def to_engine_tags(specs: list) -> dict:
                 "type": "rule",
                 "reason": "卡面文本未映射为任何可执行动作（需新规则形态，B4）"})
     return {"tags": uniq, "unsupported": unsupported, "notes": notes,
-            "play_cost": play_cost, "ability_cost": ability_cost}
+            "play_cost": play_cost, "ability_cost": ability_cost,
+            "play_gate": play_gate}
 
 
 # ---------------- 黄金集与评测 ----------------

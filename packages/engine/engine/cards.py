@@ -193,6 +193,14 @@ class TrainerDef:
     # 引擎在 `_do_trainer` 派发**之前**执行，顺序与卡面一致（先付账、后效果）；
     # 付不出时该卡不进合法动作表（`_trainer_legals`），而不是打了才发现。
     play_cost: str = ""
+    # 打出**前置条件**（2026-11-04 第五十九批）：卡面
+    #   「You can use this card only if you have any Tera Pokémon in play.」
+    # 与 `play_cost` 的分工（两者都表现为 `only if`，但语义相反）：
+    #   · `play_cost` 要**真的付账**（手牌少 N 张）—— 有状态变化；
+    #   · `play_gate` 只是**条件检查**（满足时什么都不发生）—— 无状态变化。
+    # 把 gate 当 cost 实现 = 白扣玩家的牌；把 cost 当 gate 实现 = 免费。
+    # 形态见 `battle._play_gate_ok`；空串 = 无条件。不满足时该卡不进合法动作表。
+    play_gate: str = ""
 
     @property
     def display(self) -> str:

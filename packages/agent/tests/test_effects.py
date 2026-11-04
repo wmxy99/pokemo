@@ -1433,12 +1433,17 @@ class TestHealScopeParsing(unittest.TestCase):
                        "item")
         self.assertIn("heal:60:active:type:dragon", r["tags"])
 
-    def test_conditional_heal_refused(self):
-        """「that has 3 or more Energy」引擎无该条件 → 必须登记未建模"""
+    def test_conditional_heal_modeled(self):
+        """第六十二批：「that has 3 or more Energy」= **目标前提**（Jumbo Ice Cream）
+
+        旧断言要求拒收 —— 当时 heal tag 没有「前提条件」段。现在落
+        `heal:80:active:need:<cond>`：前提不满足时卡不进合法动作表（而不是照常回血）。
+        """
         r = self._tags("Heal 80 damage from your Active Pok\u00e9mon that has "
                        "3 or more Energy attached.", "item")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["heal:80:active:need:own_active_energy_at_least:3"])
+        self.assertFalse(r["unsupported"])
 
     def test_dependent_followup_modeled(self):
         """Super Potion（2026-10-28 第十二批）：回复 + 「in this way」弃能已可精确表达
@@ -1502,18 +1507,30 @@ class TestDrawCompletenessGuard(unittest.TestCase):
                        "a card.", "ability")
         self.assertEqual(r["tags"], ["draw_both:1"])
 
-    def test_conditional_more_refused(self):
+    def test_conditional_more_modeled(self):
+        """第五十八批：条件**追加**抽牌已可精确表达（Billy & O'Nare）
+
+        旧断言要求拒收 —— 当时引擎没有「先抽 base、满足条件再抽 more」的单 tag；
+        现在走 `draw_cond:<keep|shuffle>:<base>:<plus|set>:<n>:if:<cond>`。
+        ⚠ `more` 与 `instead` 是**相反**方向（追加 vs 换值），所以这里逐字锁定。
+        """
         r = self._tags("Draw 2 cards. Then, if you have 10 or more cards in "
                        "your hand, draw 2 more cards.", "supporter")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["draw_cond:keep:2:plus:2:if:own_hand_at_least:10"])
+        self.assertFalse(r["unsupported"])
 
-    def test_opponent_also_draws_refused(self):
+    def test_opponent_split_draw_modeled(self):
+        """第五十八批：双方洗回后**各抽不同张数**（Unfair Stamp）
+
+        ⚠ 与 `draw_both:N`（双方各抽同数）差一个量纲 —— 旧实现因为「无同数形态」
+        只能拒收；现在落 `shuffle_draw_split:<mine>:<theirs>`。
+        """
         r = self._tags("Each player shuffles their hand into their deck. "
                        "Then, you draw 5 cards, and your opponent draws 2 "
                        "cards.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["shuffle_draw_split:5:2"])
+        self.assertFalse(r["unsupported"])
 
     def test_coin_branch_draw_refused(self):
         r = self._tags("Flip a coin. If heads, draw 2 cards.")

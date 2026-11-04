@@ -57,6 +57,13 @@ TYPE_EN = {
 # 引擎支持的训练家 tag 前缀（与 reallib._SUPPORTED_TRAINER_TAGS 对齐）
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "shuffle_draw", "switch_self", "recover",
+                # 第五十九批（2026-11-04）：双方洗回后**各抽不同张数**
+                # （Unfair Stamp）。⚠ 与 `draw_both:`（双方各抽同数）**不可互换**。
+                "shuffle_draw_split:",
+                # 第六十批（2026-11-04）：全队**本回合**增伤（Premium Power Pro /
+                # Black Belt's Training）。与 `dmg_plus:`（这一招自己）不同量纲 ——
+                # 白名单是过滤，漏写即静默丢弃、卡照样能打。
+                "team_boost:",
                 "discard_search_energy", "search_energy", "candy",
                 "search_pokemon", "search_trainer", "search_any",
                 # 2026-10-27：检索**铺场**（去向是后备，不是入手）
@@ -68,6 +75,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 2026-10-27：训练家/整卡级「非检索类」效果（引擎机能早已存在，
                 # 只是派发链没接）。前缀互不包含：`draw_to:` vs `draw:`、
                 # `discard_search_energy:` vs `discard:` 的第 5/8 位都是 `_`。
+                # 第五十八批（2026-11-04）：条件抽牌（`draw_cond:` 第 5 位是 `_`，
+                # 不会被 `draw:` 覆盖 —— 白名单是**过滤**，漏写即静默丢弃）。
+                "draw_cond:",
                 "draw:", "draw_to:", "heal:", "attach", "gust", "discard:",
                 "mill:",
                 # B3（2026-10-28）：抽牌完整性 / 对手洗回手牌
@@ -450,6 +460,13 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     _pc = str((it or {}).get("play_cost") or "")
     if _pc:
         entry["play_cost"] = _pc
+    # 打出**前置条件**（2026-11-04 第五十九批）：「You can use this card only if
+    # you have any Tera Pokémon in play.」→ `TrainerDef.play_gate`。
+    # ⚠ 与 `play_cost` 一样**不是** tag，白名单管不到 → 必须显式搬运；
+    # 漏搬 = 门槛静默消失（卡变成随时可打），且对局里完全看不出来。
+    _pg = str((it or {}).get("play_gate") or "")
+    if _pg:
+        entry["play_gate"] = _pg
     return entry
 
 

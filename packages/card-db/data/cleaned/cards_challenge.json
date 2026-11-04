@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-04 10:56:13",
+  "reparsed_at": "2026-11-04 11:28:06",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1077,
+  "engine_ready": 1093,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1077,
-   "engine_approximated": 1062,
-   "engine_unmatched": 190,
-   "engine_namekey_mismatch": 24
+   "zh_backfill": 1093,
+   "engine_approximated": 1078,
+   "engine_unmatched": 174,
+   "engine_namekey_mismatch": 23
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 126,
-   "engine_tags": 1399,
-   "unsupported": 190,
+   "errors": 132,
+   "engine_tags": 1412,
+   "unsupported": 173,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1062,
+  "engine_approximated": 1078,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -532,6 +532,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -638,6 +639,7 @@
        "senergy:neo_upper"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -737,6 +739,7 @@
        "senergy:mist"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -836,6 +839,7 @@
        "senergy:legacy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -935,6 +939,7 @@
        "senergy:enriching"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1034,6 +1039,7 @@
        "senergy:spiky"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1134,6 +1140,7 @@
        "senergy:team_rocket"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1233,6 +1240,7 @@
        "senergy:prism"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1334,6 +1342,7 @@
        "senergy:ignition"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1433,6 +1442,7 @@
        "senergy:grow_grass"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1532,6 +1542,7 @@
        "senergy:telepath"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -1631,6 +1642,7 @@
        "senergy:rock_fighting"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -3143,6 +3155,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -4708,6 +4721,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -6668,6 +6682,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -11016,6 +11031,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -12381,14 +12397,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dipplin@TWM 18",
    "parse": {
     "items": [
      {
@@ -12433,30 +12451,28 @@
        {
         "kind": "ability",
         "name": "Festival Lead",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "extra_attack"
           }
          }
         ],
-        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:extra_attack"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -12487,31 +12503,28 @@
      {
       "kind": "ability",
       "name": "Festival Lead",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "extra_attack"
         }
        }
       ],
-      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:20:per:own_bench"
+     "dmg_set:20:per:own_bench",
+     "passive:extra_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -13038,6 +13051,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -13604,6 +13618,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -13737,14 +13752,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Goldeen@TWM 44",
    "parse": {
     "items": [
      {
@@ -13785,30 +13802,28 @@
        {
         "kind": "ability",
         "name": "Festival Lead",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "extra_attack"
           }
          }
         ],
-        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:extra_attack"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -13835,31 +13850,28 @@
      {
       "kind": "ability",
       "name": "Festival Lead",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "extra_attack"
         }
        }
       ],
-      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "coin:heads:discard_energy:1:opp"
+     "coin:heads:discard_energy:1:opp",
+     "passive:extra_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -14960,6 +14972,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -16281,6 +16294,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -16853,6 +16867,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -18307,6 +18322,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -21828,6 +21844,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -22072,6 +22089,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -23159,6 +23177,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -25410,6 +25429,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -27283,6 +27303,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -28012,6 +28033,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -30454,6 +30476,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -33188,6 +33211,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -33616,6 +33640,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -34443,6 +34468,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -34942,6 +34968,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -35059,14 +35086,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Seaking@PRE 21",
    "parse": {
     "items": [
      {
@@ -35101,30 +35130,28 @@
        {
         "kind": "ability",
         "name": "Festival Lead",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "extra_attack"
           }
          }
         ],
-        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:extra_attack"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -35145,31 +35172,28 @@
      {
       "kind": "ability",
       "name": "Festival Lead",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "extra_attack"
         }
        }
       ],
-      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon."
+      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice. If the first attack Knocks Out your opponent’s Active Pokémon, you may attack again after your opponent chooses a new Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "draw:2"
+     "draw:2",
+     "passive:extra_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -35352,6 +35376,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -35725,6 +35750,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -35963,6 +35989,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -36395,6 +36422,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -36513,14 +36541,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Swirlix@TWM 89",
    "parse": {
     "items": [
      {
@@ -36559,30 +36589,28 @@
        {
         "kind": "ability",
         "name": "Festival Lead",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "extra_attack"
           }
          }
         ],
-        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice in succession. If the first attack Knocks Out your opponent’s Active Pokémon, you may use an attack again after your opponent chooses a new Active Pokémon."
+        "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice in succession. If the first attack Knocks Out your opponent’s Active Pokémon, you may use an attack again after your opponent chooses a new Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:extra_attack"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -36607,31 +36635,28 @@
      {
       "kind": "ability",
       "name": "Festival Lead",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "extra_attack"
         }
        }
       ],
-      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice in succession. If the first attack Knocks Out your opponent’s Active Pokémon, you may use an attack again after your opponent chooses a new Active Pokémon."
+      "source_text": "If Festival Grounds is in play, this Pokémon may use an attack it has twice in succession. If the first attack Knocks Out your opponent’s Active Pokémon, you may use an attack again after your opponent chooses a new Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "counters:2:scope:opp:1"
+     "counters:2:scope:opp:1",
+     "passive:extra_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -36790,6 +36815,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -36976,6 +37002,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -45671,6 +45698,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -46244,6 +46272,7 @@
        "passive:bench_immune_dmg"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -142412,6 +142441,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -142514,6 +142544,7 @@
        "mill:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -142597,7 +142628,7 @@
           "target": "self"
          }
         ],
-        "source_text": "Choose 1 of your Basic Pokémon in play. If you have a Stage 2 card in your hand that evolves from that Pokémon, put that card onto the Basic Pokémon to evolve it, skipping the Stage 1. You can’t use this card during your first turn or on a Basic Pokémon that was put into play this turn."
+        "source_text": "Choose 1 of your Basic Pokémon in play. If you have a Stage 2 card in your hand that evolves from that Pokémon, put that card onto the Basic Pokémon to evolve it, skipping the Stage 1. You can't use this card during your first turn or on a Basic Pokémon that was put into play this turn."
        }
       ],
       "errors": [],
@@ -142605,6 +142636,7 @@
        "candy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -142621,7 +142653,7 @@
         "target": "self"
        }
       ],
-      "source_text": "Choose 1 of your Basic Pokémon in play. If you have a Stage 2 card in your hand that evolves from that Pokémon, put that card onto the Basic Pokémon to evolve it, skipping the Stage 1. You can’t use this card during your first turn or on a Basic Pokémon that was put into play this turn."
+      "source_text": "Choose 1 of your Basic Pokémon in play. If you have a Stage 2 card in your hand that evolves from that Pokémon, put that card onto the Basic Pokémon to evolve it, skipping the Stage 1. You can't use this card during your first turn or on a Basic Pokémon that was put into play this turn."
      }
     ],
     "errors": [],
@@ -142656,14 +142688,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有在对手的上个回合中有你的宝可梦被击倒时，你才可以使用此卡。\n\n每位玩家将其手牌洗回其牌库。然后，你抽 5 张牌，对手抽 2 张牌。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Unfair Stamp@TWM 165",
    "parse": {
     "items": [
      {
@@ -142677,38 +142711,32 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "draw",
           "amount": null,
-          "target": "deck",
+          "target": "both_split",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "split": [
+            5,
+            2
+           ],
+           "shuffle_both": true
           }
          }
         ],
-        "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards."
+        "source_text": "Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards.",
+        "citations": [],
+        "play_gate": "own_ko_last_turn"
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：both_split"
+      ],
+      "engine_tags": [
+       "shuffle_draw_split:5:2"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       },
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "own_ko_last_turn",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -142719,37 +142747,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "draw",
         "amount": null,
-        "target": "deck",
+        "target": "both_split",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "split": [
+          5,
+          2
+         ],
+         "shuffle_both": true
         }
        }
       ],
-      "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards."
+      "source_text": "Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 2 cards.",
+      "citations": [],
+      "play_gate": "own_ko_last_turn"
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     },
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "errors": [
+     "[0] action.target 非法：both_split"
     ],
+    "engine_tags": [
+     "shuffle_draw_split:5:2"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -142806,12 +142827,13 @@
           }
          }
         ],
-        "source_text": "Discard a Special Energy from 1 of your opponent’s Pokémon."
+        "source_text": "Discard a Special Energy from 1 of your opponent's Pokémon."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -142836,7 +142858,7 @@
         }
        }
       ],
-      "source_text": "Discard a Special Energy from 1 of your opponent’s Pokémon."
+      "source_text": "Discard a Special Energy from 1 of your opponent's Pokémon."
      }
     ],
     "errors": [],
@@ -142913,6 +142935,7 @@
        "search_pokemon:3:stage:stage1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -142998,7 +143021,7 @@
           }
          }
         ],
-        "source_text": "Search your deck for a Pokémon with the same name as 1 of your opponent’s Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for a Pokémon with the same name as 1 of your opponent's Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -143006,6 +143029,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143025,7 +143049,7 @@
         }
        }
       ],
-      "source_text": "Search your deck for a Pokémon with the same name as 1 of your opponent’s Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for a Pokémon with the same name as 1 of your opponent's Pokémon in play, reveal it, and put it into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -143099,6 +143123,7 @@
        "search_any:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143192,6 +143217,7 @@
        "draw:1:per:own_ancient"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143285,6 +143311,7 @@
        "search_bench:2:basic"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143381,6 +143408,7 @@
        "discard_to_both:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143466,7 +143494,7 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon."
+        "source_text": "Switch in 1 of your opponent's Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon."
        }
       ],
       "errors": [],
@@ -143474,6 +143502,7 @@
        "gust"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143490,7 +143519,7 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon."
+      "source_text": "Switch in 1 of your opponent's Benched Pokémon to the Active Spot. If you do, switch your Active Pokémon with 1 of your Benched Pokémon."
      }
     ],
     "errors": [],
@@ -143564,6 +143593,7 @@
        "attach:1:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143654,6 +143684,7 @@
        "switch_self"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -143734,12 +143765,13 @@
           }
          }
         ],
-        "source_text": "Reveal the top 5 cards of your opponent’s deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck."
+        "source_text": "Reveal the top 5 cards of your opponent's deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -143764,7 +143796,7 @@
         }
        }
       ],
-      "source_text": "Reveal the top 5 cards of your opponent’s deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck."
+      "source_text": "Reveal the top 5 cards of your opponent's deck. You may choose any number of Basic Pokémon you find there and put those Pokémon onto their Bench. Your opponent shuffles the other cards back into their deck."
      }
     ],
     "errors": [],
@@ -143838,6 +143870,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "discard:3",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -143940,6 +143973,7 @@
        "bounce:to_hand:choose"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144041,6 +144075,7 @@
        "recon:7:2:pokemon-grass+energy-grass"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144135,7 +144170,7 @@
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+        "source_text": "Your opponent's Active Pokémon is now Burned and Confused.",
         "citations": []
        }
       ],
@@ -144144,6 +144179,7 @@
        "status_multi:burn+confuse"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144164,7 +144200,7 @@
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+      "source_text": "Your opponent's Active Pokémon is now Burned and Confused.",
       "citations": []
      }
     ],
@@ -144231,7 +144267,7 @@
           }
          }
         ],
-        "source_text": "Heal 150 damage from 1 of your Pokémon.\n\nThis card can’t be put into your hand or deck from the discard pile."
+        "source_text": "Heal 150 damage from 1 of your Pokémon.\n\nThis card can't be put into your hand or deck from the discard pile."
        }
       ],
       "errors": [],
@@ -144239,6 +144275,7 @@
        "heal:150:choose"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144258,7 +144295,7 @@
         }
        }
       ],
-      "source_text": "Heal 150 damage from 1 of your Pokémon.\n\nThis card can’t be put into your hand or deck from the discard pile."
+      "source_text": "Heal 150 damage from 1 of your Pokémon.\n\nThis card can't be put into your hand or deck from the discard pile."
      }
     ],
     "errors": [],
@@ -144332,6 +144369,7 @@
        "recover:1:any"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144386,14 +144424,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you have any Tera Pokémon in play.\n\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有场上有你的太晶宝可梦时，你才可以使用此卡。\n\n选择最多 2 只你的后备 {C} 宝可梦，从你的弃牌堆中把 1 张基本能量卡附着于它们各自身上。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Glass Trumpet@SCR 135",
    "parse": {
     "items": [
      {
@@ -144407,36 +144447,30 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
+          "type": "attach_each_pick",
           "amount": 1,
           "target": "self",
           "extra": {
-           "zone": "discard"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "max": 2,
+           "per": 1,
+           "etype": null,
+           "zone": "discard",
+           "scope": "bench:type-colorless"
           }
          }
         ],
-        "source_text": "You can use this card only if you have any Tera Pokémon in play.\n\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them."
+        "source_text": "Choose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
+        "citations": [],
+        "play_gate": "tera_in_play"
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach:1:discard"
+       "attach_each_pick:2:1:any:discard:target:bench:type-colorless"
       ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "tera_in_play",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -144447,35 +144481,28 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
+        "type": "attach_each_pick",
         "amount": 1,
         "target": "self",
         "extra": {
-         "zone": "discard"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "max": 2,
+         "per": 1,
+         "etype": null,
+         "zone": "discard",
+         "scope": "bench:type-colorless"
         }
        }
       ],
-      "source_text": "You can use this card only if you have any Tera Pokémon in play.\n\nChoose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them."
+      "source_text": "Choose up to 2 of your Benched {C} Pokémon and attach a Basic Energy card from your discard pile to each of them.",
+      "citations": [],
+      "play_gate": "tera_in_play"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "attach:1:discard"
+     "attach_each_pick:2:1:any:discard:target:bench:type-colorless"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -144574,7 +144601,7 @@
           }
          }
         ],
-        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
        }
       ],
       "errors": [],
@@ -144582,6 +144609,7 @@
        "fossil:60:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144622,7 +144650,7 @@
         }
        }
       ],
-      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
      }
     ],
     "errors": [],
@@ -144698,6 +144726,7 @@
        "search_energy:all:distinct"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -144753,14 +144782,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有你后攻，且仅在你的首个回合，你才可以使用此卡。\n\n从牌库中检索 1 张支援者卡，展示它并加入手牌。然后洗牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Call Bell@SSP 165",
    "parse": {
     "items": [
      {
@@ -144780,17 +144811,10 @@
           "extra": {
            "what": "trainer"
           }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-          }
          }
         ],
-        "source_text": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
+        "play_gate": "went_second_first_turn"
        }
       ],
       "errors": [],
@@ -144798,12 +144822,8 @@
        "search_trainer:1"
       ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "went_second_first_turn",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -144820,29 +144840,17 @@
         "extra": {
          "what": "trainer"
         }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
-        }
        }
       ],
-      "source_text": "You can use this card only if you go second, and only during your first turn.\n\nSearch your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "play_gate": "went_second_first_turn"
      }
     ],
     "errors": [],
     "engine_tags": [
      "search_trainer:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -144905,6 +144913,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -145006,6 +145015,7 @@
        "opp_shuffle_draw:same"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145097,7 +145107,7 @@
           }
          }
         ],
-        "source_text": "Discard all Pokémon Tools and Special Energy from all of your opponent’s Pokémon, and discard a Stadium in play."
+        "source_text": "Discard all Pokémon Tools and Special Energy from all of your opponent's Pokémon, and discard a Stadium in play."
        }
       ],
       "errors": [],
@@ -145105,6 +145115,7 @@
        "discard_stadium"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -145137,7 +145148,7 @@
         }
        }
       ],
-      "source_text": "Discard all Pokémon Tools and Special Energy from all of your opponent’s Pokémon, and discard a Stadium in play."
+      "source_text": "Discard all Pokémon Tools and Special Energy from all of your opponent's Pokémon, and discard a Stadium in play."
      }
     ],
     "errors": [],
@@ -145217,6 +145228,7 @@
        "heal:60:active:type:dragon"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145310,6 +145322,7 @@
        "shuffle_top:3:own"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145401,6 +145414,7 @@
        "switch_self"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145452,14 +145466,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you go second, and only during your first turn.\nPut an Energy attached to 1 of your opponent’s Pokémon into their hand.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有你后攻，且仅在你的首个回合，你才可以使用此卡。\n将对手的 1 只宝可梦身上附着的 1 个能量放入对手的手牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Chill Teaser Toy@SSP 166",
    "parse": {
     "items": [
      {
@@ -145473,26 +145489,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "bounce",
+          "amount": 1,
+          "target": "energy",
           "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "scope": "opp_any",
+           "what": "energy"
           }
          }
         ],
-        "source_text": "You can use this card only if you go second, and only during your first turn.\nPut an Energy attached to 1 of your opponent’s Pokémon into their hand."
+        "source_text": "Put an Energy attached to 1 of your opponent's Pokémon into their hand.",
+        "citations": [],
+        "play_gate": "went_second_first_turn"
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：energy"
+      ],
+      "engine_tags": [
+       "bounce:energy:opp_any:1"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "went_second_first_turn",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -145503,25 +145522,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "bounce",
+        "amount": 1,
+        "target": "energy",
         "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "scope": "opp_any",
+         "what": "energy"
         }
        }
       ],
-      "source_text": "You can use this card only if you go second, and only during your first turn.\nPut an Energy attached to 1 of your opponent’s Pokémon into their hand."
+      "source_text": "Put an Energy attached to 1 of your opponent's Pokémon into their hand.",
+      "citations": [],
+      "play_gate": "went_second_first_turn"
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "errors": [
+     "[0] action.target 非法：energy"
     ],
+    "engine_tags": [
+     "bounce:energy:opp_any:1"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -145588,6 +145609,7 @@
        "recover:2:supporter"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145681,6 +145703,7 @@
        "recover:5:combo:pokemon+basic_energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145774,6 +145797,7 @@
        "search_pokemon:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145868,6 +145892,7 @@
        "heal:60:choose:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145955,7 +145980,7 @@
           }
          }
         ],
-        "source_text": "Attach a Basic Energy card from your discard pile to 1 of your Benched N’s Pokémon."
+        "source_text": "Attach a Basic Energy card from your discard pile to 1 of your Benched N's Pokémon."
        }
       ],
       "errors": [],
@@ -145963,6 +145988,7 @@
        "attach:1:discard:target:bench"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -145983,7 +146009,7 @@
         }
        }
       ],
-      "source_text": "Attach a Basic Energy card from your discard pile to 1 of your Benched N’s Pokémon."
+      "source_text": "Attach a Basic Energy card from your discard pile to 1 of your Benched N's Pokémon."
      }
     ],
     "errors": [],
@@ -146053,6 +146079,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -146146,7 +146173,7 @@
           }
          }
         ],
-        "source_text": "Search your deck for up to 2 Basic Hop’s Pokémon and put them onto your Bench. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 2 Basic Hop's Pokémon and put them onto your Bench. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -146154,6 +146181,7 @@
        "search_bench:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146173,7 +146201,7 @@
         }
        }
       ],
-      "source_text": "Search your deck for up to 2 Basic Hop’s Pokémon and put them onto your Bench. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 2 Basic Hop's Pokémon and put them onto your Bench. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -146247,6 +146275,7 @@
        "energy_move:1:from:any:to:any"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146340,6 +146369,7 @@
        "heal:30:choose"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146433,6 +146463,7 @@
        "recover:2:energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146526,6 +146557,7 @@
        "search_energy:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146614,7 +146646,7 @@
           }
          }
         ],
-        "source_text": "Flip a coin. If heads, discard an Energy from 1 of your opponent’s Pokémon."
+        "source_text": "Flip a coin. If heads, discard an Energy from 1 of your opponent's Pokémon."
        }
       ],
       "errors": [],
@@ -146622,6 +146654,7 @@
        "coin:heads:discard_energy:1:opp"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146644,7 +146677,7 @@
         }
        }
       ],
-      "source_text": "Flip a coin. If heads, discard an Energy from 1 of your opponent’s Pokémon."
+      "source_text": "Flip a coin. If heads, discard an Energy from 1 of your opponent's Pokémon."
      }
     ],
     "errors": [],
@@ -146719,6 +146752,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "discard:2",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146821,6 +146855,7 @@
        "recon:7:1:supporter"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146919,6 +146954,7 @@
        "switch_self"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -146998,7 +147034,7 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "Flip a coin. If heads, switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+        "source_text": "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot."
        }
       ],
       "errors": [],
@@ -147006,6 +147042,7 @@
        "gust"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -147022,7 +147059,7 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "Flip a coin. If heads, switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+      "source_text": "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot."
      }
     ],
     "errors": [],
@@ -147096,6 +147133,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -147185,6 +147223,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -147286,6 +147325,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -147375,6 +147415,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -147472,6 +147513,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -147534,14 +147576,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "回复你的战斗宝可梦的 30 点伤害。若该宝可梦是派帕的宝可梦，则改为回复其 100 点伤害。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Arven's Sandwich@DRI 161",
    "parse": {
     "items": [
      {
@@ -147555,26 +147599,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "heal",
+          "amount": 30,
           "target": "self",
           "extra": {
-           "note": "回复范围/限定不可精确表达（B4）"
+           "heal_scope": "active",
+           "heal_alt": 100,
+           "heal_if_name": "arvens"
           }
          }
         ],
-        "source_text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead."
+        "source_text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven's Pokémon, heal 100 damage from it instead.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "heal:30:active:alt:100:if_name:arvens"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "回复范围/限定不可精确表达（B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147585,25 +147630,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "heal",
+        "amount": 30,
         "target": "self",
         "extra": {
-         "note": "回复范围/限定不可精确表达（B4）"
+         "heal_scope": "active",
+         "heal_alt": 100,
+         "heal_if_name": "arvens"
         }
        }
       ],
-      "source_text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven’s Pokémon, heal 100 damage from it instead."
+      "source_text": "Heal 30 damage from your Active Pokémon. If that Pokémon is an Arven's Pokémon, heal 100 damage from it instead.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "回复范围/限定不可精确表达（B4）"
-     }
+    "engine_tags": [
+     "heal:30:active:alt:100:if_name:arvens"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -147660,12 +147705,13 @@
           }
          }
         ],
-        "source_text": "Turn 1 of your opponent’s face-down Prize cards face up and choose a random card from your opponent’s hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize card remains face up for the rest of the game.)"
+        "source_text": "Turn 1 of your opponent's face-down Prize cards face up and choose a random card from your opponent's hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize card remains face up for the rest of the game.)"
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -147690,7 +147736,7 @@
         }
        }
       ],
-      "source_text": "Turn 1 of your opponent’s face-down Prize cards face up and choose a random card from your opponent’s hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize card remains face up for the rest of the game.)"
+      "source_text": "Turn 1 of your opponent's face-down Prize cards face up and choose a random card from your opponent's hand. Your opponent reveals that card. You may have your opponent switch those cards. (That Prize card remains face up for the rest of the game.)"
      }
     ],
     "errors": [],
@@ -147757,12 +147803,13 @@
           }
          }
         ],
-        "source_text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+        "source_text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket's Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -147787,7 +147834,7 @@
         }
        }
       ],
-      "source_text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+      "source_text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket's Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -147859,7 +147906,7 @@
           }
          }
         ],
-        "source_text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon."
+        "source_text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent's Pokémon. If tails, put 2 damage counters on your Active Pokémon."
        }
       ],
       "errors": [],
@@ -147867,6 +147914,7 @@
        "coin_flip:heads:counters:2:scope:opp:1|tails:counters:2:scope:self"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -147889,7 +147937,7 @@
         }
        }
       ],
-      "source_text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent’s Pokémon. If tails, put 2 damage counters on your Active Pokémon."
+      "source_text": "Flip a coin. If heads, put 2 damage counters on 1 of your opponent's Pokémon. If tails, put 2 damage counters on your Active Pokémon."
      }
     ],
     "errors": [],
@@ -147963,6 +148011,7 @@
        "search_trainer:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148060,6 +148109,7 @@
        "coin_gate_attach:2:1:any:deck"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148189,7 +148239,7 @@
           }
          }
         ],
-        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
        }
       ],
       "errors": [],
@@ -148197,6 +148247,7 @@
        "fossil:60:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148237,7 +148288,7 @@
         }
        }
       ],
-      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
      }
     ],
     "errors": [],
@@ -148307,7 +148358,7 @@
           }
          }
         ],
-        "source_text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent’s) and discard them."
+        "source_text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent's) and discard them."
        }
       ],
       "errors": [],
@@ -148315,6 +148366,7 @@
        "discard_tool:2:both"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148337,7 +148389,7 @@
         }
        }
       ],
-      "source_text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent’s) and discard them."
+      "source_text": "Choose up to 2 Pokémon Tools attached to Pokémon (yours or your opponent's) and discard them."
      }
     ],
     "errors": [],
@@ -148441,7 +148493,7 @@
           }
          }
         ],
-        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
        }
       ],
       "errors": [],
@@ -148449,6 +148501,7 @@
        "fossil:60:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148487,7 +148540,7 @@
         }
        }
       ],
-      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
      }
     ],
     "errors": [],
@@ -148558,6 +148611,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -148651,7 +148705,7 @@
           }
          }
         ],
-        "source_text": "During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
+        "source_text": "During your opponent's next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
        }
       ],
       "errors": [
@@ -148661,6 +148715,7 @@
        "team_shield:reduce:30:type:metal"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148680,7 +148735,7 @@
         }
        }
       ],
-      "source_text": "During your opponent’s next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
+      "source_text": "During your opponent's next turn, all of your {M} Pokémon take 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (This includes new Pokémon that come into play.)"
      }
     ],
     "errors": [
@@ -148717,14 +148772,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "在本回合中，你的 {F} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点和抗性之前）。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Premium Power Pro@MEG 124",
    "parse": {
     "items": [
      {
@@ -148738,26 +148795,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "team_boost",
+          "amount": 30,
+          "target": "team",
           "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "n": 30,
+           "etype": "fighting"
           }
          }
         ],
-        "source_text": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：team_boost",
+       "[0] action.target 非法：team"
+      ],
+      "engine_tags": [
+       "team_boost:30:type:fighting"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -148768,25 +148828,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "team_boost",
+        "amount": 30,
+        "target": "team",
         "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "n": 30,
+         "etype": "fighting"
         }
        }
       ],
-      "source_text": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "During this turn, attacks used by your {F} Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：team_boost",
+     "[0] action.target 非法：team"
     ],
+    "engine_tags": [
+     "team_boost:30:type:fighting"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -148853,6 +148915,7 @@
        "search_pokemon:1:type:fighting:stage:basic"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148935,7 +148998,7 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "Switch out your opponent’s Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
+        "source_text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
        }
       ],
       "errors": [],
@@ -148943,6 +149006,7 @@
        "gust"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -148959,7 +149023,7 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "Switch out your opponent’s Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
+      "source_text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
      }
     ],
     "errors": [],
@@ -149028,7 +149092,7 @@
           }
          }
         ],
-        "source_text": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can’t evolve this turn.)"
+        "source_text": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.)"
        }
       ],
       "errors": [],
@@ -149036,6 +149100,7 @@
        "candy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -149065,7 +149130,7 @@
         }
        }
       ],
-      "source_text": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can’t evolve this turn.)"
+      "source_text": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can't evolve this turn.)"
      }
     ],
     "errors": [],
@@ -149144,6 +149209,7 @@
        "search_pokemon:1:stage:evolution"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149239,6 +149305,7 @@
        "attach:1:psychic:discard:target:bench"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149295,14 +149362,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "回复附着了 3 个或更多能量的你的战斗宝可梦的 80 点伤害。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Jumbo Ice Cream@PFL 91",
    "parse": {
     "items": [
      {
@@ -149316,26 +149385,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "heal",
+          "amount": 80,
           "target": "self",
           "extra": {
-           "note": "回复范围/限定不可精确表达（B4）"
+           "heal_scope": "active",
+           "heal_need": "own_active_energy_at_least:3"
           }
          }
         ],
-        "source_text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached."
+        "source_text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "heal:80:active:need:own_active_energy_at_least:3"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "回复范围/限定不可精确表达（B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -149346,25 +149415,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "heal",
+        "amount": 80,
         "target": "self",
         "extra": {
-         "note": "回复范围/限定不可精确表达（B4）"
+         "heal_scope": "active",
+         "heal_need": "own_active_energy_at_least:3"
         }
        }
       ],
-      "source_text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached."
+      "source_text": "Heal 80 damage from your Active Pokémon that has 3 or more Energy attached.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "回复范围/限定不可精确表达（B4）"
-     }
+    "engine_tags": [
+     "heal:80:active:need:own_active_energy_at_least:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -149424,7 +149492,7 @@
           }
          }
         ],
-        "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
+        "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent's Pokémon, or discard a Stadium in play.",
         "citations": [],
         "play_cost": "discard_energy:1:fire"
        }
@@ -149434,6 +149502,7 @@
        "discard_tool_or_senergy:1:opp"
       ],
       "play_cost": "discard_energy:1:fire",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149454,7 +149523,7 @@
         }
        }
       ],
-      "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent’s Pokémon, or discard a Stadium in play.",
+      "source_text": "Discard a Pokémon Tool or Special Energy card from 1 of your opponent's Pokémon, or discard a Stadium in play.",
       "citations": [],
       "play_cost": "discard_energy:1:fire"
      }
@@ -149535,6 +149604,7 @@
        "opp_hand:bottom:energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149665,7 +149735,7 @@
           }
          }
         ],
-        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
        }
       ],
       "errors": [],
@@ -149673,6 +149743,7 @@
        "fossil:60:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149713,7 +149784,7 @@
         }
        }
       ],
-      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
      }
     ],
     "errors": [],
@@ -149819,7 +149890,7 @@
           }
          }
         ],
-        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+        "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
        }
       ],
       "errors": [],
@@ -149827,6 +149898,7 @@
        "fossil:60:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149865,7 +149937,7 @@
         }
        }
       ],
-      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can’t be affected by any Special Conditions and can’t retreat.\n\nAt any time during your turn, you may discard this card from play."
+      "source_text": "Play this card as if it were a 60-HP Basic {C} Pokémon. This card can't be affected by any Special Conditions and can't retreat.\n\nAt any time during your turn, you may discard this card from play."
      }
     ],
     "errors": [],
@@ -149936,7 +150008,7 @@
           }
          }
         ],
-        "source_text": "Search your deck for a Pokémon that doesn’t have a Rule Box, reveal it, and put it into your hand. Then, shuffle your deck. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+        "source_text": "Search your deck for a Pokémon that doesn't have a Rule Box, reveal it, and put it into your hand. Then, shuffle your deck. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
        }
       ],
       "errors": [],
@@ -149944,6 +150016,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -149963,7 +150036,7 @@
         }
        }
       ],
-      "source_text": "Search your deck for a Pokémon that doesn’t have a Rule Box, reveal it, and put it into your hand. Then, shuffle your deck. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+      "source_text": "Search your deck for a Pokémon that doesn't have a Rule Box, reveal it, and put it into your hand. Then, shuffle your deck. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
      }
     ],
     "errors": [],
@@ -150037,6 +150110,7 @@
        "heal:20:active"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150120,12 +150194,13 @@
           }
          }
         ],
-        "source_text": "If the Team Rocket’s Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Team Rocket’s Pokémon is Knocked Out), the Attacking Pokémon is now Asleep."
+        "source_text": "If the Team Rocket's Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Team Rocket's Pokémon is Knocked Out), the Attacking Pokémon is now Asleep."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -150150,7 +150225,7 @@
         }
        }
       ],
-      "source_text": "If the Team Rocket’s Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Team Rocket’s Pokémon is Knocked Out), the Attacking Pokémon is now Asleep."
+      "source_text": "If the Team Rocket's Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Team Rocket's Pokémon is Knocked Out), the Attacking Pokémon is now Asleep."
      }
     ],
     "errors": [],
@@ -150219,7 +150294,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card."
+        "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent's Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card."
        }
       ],
       "errors": [],
@@ -150227,6 +150302,7 @@
        "tool:survive:10"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150246,7 +150322,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent’s Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card."
+      "source_text": "If the Pokémon this card is attached to has full HP and would be Knocked Out by damage from an attack from your opponent's Pokémon, it is not Knocked Out, and its remaining HP becomes 10. Then, discard this card."
      }
     ],
     "errors": [],
@@ -150312,7 +150388,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
+        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
        }
       ],
       "errors": [],
@@ -150320,6 +150396,7 @@
        "tool:on_damaged:draw:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150339,7 +150416,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
+      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), draw 2 cards."
      }
     ],
     "errors": [],
@@ -150406,7 +150483,7 @@
           }
          }
         ],
-        "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C} less. If that Pokémon’s remaining HP is 30 or less, it has no Retreat Cost."
+        "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C} less. If that Pokémon's remaining HP is 30 or less, it has no Retreat Cost."
        }
       ],
       "errors": [],
@@ -150414,6 +150491,7 @@
        "tool:retreat_less:1:lowhp:30"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150434,7 +150512,7 @@
         }
        }
       ],
-      "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C} less. If that Pokémon’s remaining HP is 30 or less, it has no Retreat Cost."
+      "source_text": "The Retreat Cost of the Pokémon this card is attached to is {C} less. If that Pokémon's remaining HP is 30 or less, it has no Retreat Cost."
      }
     ],
     "errors": [],
@@ -150501,7 +150579,7 @@
           }
          }
         ],
-        "source_text": "Attacks used by the Pokémon this card is attached to do 50 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by the Pokémon this card is attached to do 50 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -150509,6 +150587,7 @@
        "tool:dmg_plus:50:target:ex"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150529,7 +150608,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by the Pokémon this card is attached to do 50 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by the Pokémon this card is attached to do 50 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -150603,6 +150682,7 @@
        "tool:hp_plus:100"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150686,12 +150766,13 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent’s Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
+        "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -150716,7 +150797,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent’s Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
+      "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
      }
     ],
     "errors": [],
@@ -150785,7 +150866,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), move an Energy from the Attacking Pokémon to 1 of your opponent’s Benched Pokémon."
+        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), move an Energy from the Attacking Pokémon to 1 of your opponent's Benched Pokémon."
        }
       ],
       "errors": [],
@@ -150793,6 +150874,7 @@
        "tool:on_damaged:move_energy:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150812,7 +150894,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), move an Energy from the Attacking Pokémon to 1 of your opponent’s Benched Pokémon."
+      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), move an Energy from the Attacking Pokémon to 1 of your opponent's Benched Pokémon."
      }
     ],
     "errors": [],
@@ -150879,7 +150961,7 @@
           }
          }
         ],
-        "source_text": "Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -150887,6 +150969,7 @@
        "tool:dmg_plus:40:holder:status:poison"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -150907,7 +150990,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by the Poisoned Pokémon this card is attached to do 40 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -150979,6 +151062,7 @@
        "attach:1:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151066,7 +151150,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
+        "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
        }
       ],
       "errors": [],
@@ -151074,6 +151158,7 @@
        "tool:dmg_reduce:60:from:type:psychic:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151095,7 +151180,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
+      "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's {P} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
      }
     ],
     "errors": [],
@@ -151162,7 +151247,7 @@
           }
          }
         ],
-        "source_text": "When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.)"
+        "source_text": "When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.)"
        }
       ],
       "errors": [],
@@ -151170,6 +151255,7 @@
        "tool:cost_less:1:tera"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151190,7 +151276,7 @@
         }
        }
       ],
-      "source_text": "When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.)"
+      "source_text": "When the Tera Pokémon this card is attached to uses an attack, that attack costs 1 Energy less. (The Energy can be of any type.)"
      }
     ],
     "errors": [],
@@ -151265,6 +151351,7 @@
        "tool:retreat_plus:1:both"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151353,7 +151440,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card."
+        "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card."
        }
       ],
       "errors": [],
@@ -151361,6 +151448,7 @@
        "tool:on_damaged:counter:120:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151382,7 +151470,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card."
+      "source_text": "If the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), put 12 damage counters on the Attacking Pokémon. If you placed any damage counters in this way, discard this card."
      }
     ],
     "errors": [],
@@ -151457,6 +151545,7 @@
        "tool:cost_less:1:behind"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151541,7 +151630,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck."
+        "source_text": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -151549,6 +151638,7 @@
        "search_any:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151568,7 +151658,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck."
+      "source_text": "If the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, search your deck for up to 3 cards and put them into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -151636,7 +151726,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
+        "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
        }
       ],
       "errors": [],
@@ -151644,6 +151734,7 @@
        "tool:dmg_reduce:60:from:type:dragon:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -151665,7 +151756,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent’s {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
+      "source_text": "If the Pokémon this card is attached to is damaged by an attack from your opponent's {N} Pokémon, it takes 60 less damage (after applying Weakness and Resistance), and discard this card."
      }
     ],
     "errors": [],
@@ -151729,12 +151820,13 @@
           }
          }
         ],
-        "source_text": "Attacks used by the Hop’s Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by the Hop's Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151759,7 +151851,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by the Hop’s Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by the Hop's Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -151826,12 +151918,13 @@
           }
          }
         ],
-        "source_text": "If the Lillie’s Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, that player takes 1 fewer Prize card."
+        "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151856,7 +151949,7 @@
         }
        }
       ],
-      "source_text": "If the Lillie’s Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, that player takes 1 fewer Prize card."
+      "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card."
      }
     ],
     "errors": [],
@@ -151923,12 +152016,13 @@
           }
          }
         ],
-        "source_text": "The Cynthia’s Pokémon this card is attached to gets +70 HP."
+        "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -151953,7 +152047,7 @@
         }
        }
       ],
-      "source_text": "The Cynthia’s Pokémon this card is attached to gets +70 HP."
+      "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP."
      }
     ],
     "errors": [],
@@ -152030,6 +152124,7 @@
        "tool:retreat_less:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152116,7 +152211,7 @@
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to doesn’t have a Rule Box, the attacks it uses do 30 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance). (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+        "source_text": "If the Pokémon this card is attached to doesn't have a Rule Box, the attacks it uses do 30 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance). (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
        }
       ],
       "errors": [],
@@ -152124,6 +152219,7 @@
        "tool:dmg_plus:30:holder:no_rule_box:target:ex"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152144,7 +152240,7 @@
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to doesn’t have a Rule Box, the attacks it uses do 30 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance). (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+      "source_text": "If the Pokémon this card is attached to doesn't have a Rule Box, the attacks it uses do 30 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance). (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
      }
     ],
     "errors": [],
@@ -152211,7 +152307,7 @@
           }
          }
         ],
-        "source_text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon."
+        "source_text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon."
        }
       ],
       "errors": [],
@@ -152219,6 +152315,7 @@
        "tool:on_damaged:counter:40:holder:type:darkness"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152239,7 +152336,7 @@
         }
        }
       ],
-      "source_text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon."
+      "source_text": "If the {D} Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), place 4 damage counters on the Attacking Pokémon."
      }
     ],
     "errors": [],
@@ -152306,7 +152403,7 @@
           }
          }
         ],
-        "source_text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent’s Pokémon that have an Ability (after applying Weakness and Resistance)."
+        "source_text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent's Pokémon that have an Ability (after applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -152314,6 +152411,7 @@
        "tool:dmg_reduce:30:from:ability"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152334,7 +152432,7 @@
         }
        }
       ],
-      "source_text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent’s Pokémon that have an Ability (after applying Weakness and Resistance)."
+      "source_text": "The Pokémon this card is attached to takes 30 less damage from attacks from your opponent's Pokémon that have an Ability (after applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -152401,7 +152499,7 @@
           }
          }
         ],
-        "source_text": "Attacks used by the Pikachu {ex} this card is attached to do 50 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by the Pikachu {ex} this card is attached to do 50 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -152409,6 +152507,7 @@
        "tool:dmg_plus:50:holder:name:pikachu:target:ex"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152429,7 +152528,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by the Pikachu {ex} this card is attached to do 50 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by the Pikachu {ex} this card is attached to do 50 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -152502,7 +152601,7 @@
           }
          }
         ],
-        "source_text": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent’s {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance)."
+        "source_text": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent's {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -152510,6 +152609,7 @@
        "tool:dmg_reduce:50:from:type:grass,fire,water,lightning:holder:type:dragon"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152536,7 +152636,7 @@
         }
        }
       ],
-      "source_text": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent’s {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance)."
+      "source_text": "The {N} Pokémon this card is attached to takes 50 less damage from attacks from your opponent's {G}, {R}, {W}, or {L} Pokémon (after applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -152653,6 +152753,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -152735,14 +152836,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抽 2 张牌。然后，若你的手牌为 10 张或更多，再抽 2 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Billy & O'Nare@JTG 142",
    "parse": {
     "items": [
      {
@@ -152756,26 +152859,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "draw",
+          "amount": 2,
           "target": "deck",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+           "cond_extra": 2,
+           "cond_add": true,
+           "cond": "own_hand_at_least:10"
           }
          }
         ],
-        "source_text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards."
+        "source_text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "draw_cond:keep:2:plus:2:if:own_hand_at_least:10"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -152786,25 +152890,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "draw",
+        "amount": 2,
         "target": "deck",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+         "cond_extra": 2,
+         "cond_add": true,
+         "cond": "own_hand_at_least:10"
         }
        }
       ],
-      "source_text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards."
+      "source_text": "Draw 2 cards. Then, if you have 10 or more cards in your hand, draw 2 more cards.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     }
+    "engine_tags": [
+     "draw_cond:keep:2:plus:2:if:own_hand_at_least:10"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -152860,7 +152964,7 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+        "source_text": "Switch in 1 of your opponent's Benched Pokémon to the Active Spot."
        }
       ],
       "errors": [],
@@ -152868,6 +152972,7 @@
        "gust"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -152884,7 +152989,7 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "Switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+      "source_text": "Switch in 1 of your opponent's Benched Pokémon to the Active Spot."
      }
     ],
     "errors": [],
@@ -152958,6 +153063,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153043,7 +153149,7 @@
           }
          }
         ],
-        "source_text": "Put up to 3 in any combination of Pokémon that don’t have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+        "source_text": "Put up to 3 in any combination of Pokémon that don't have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
        }
       ],
       "errors": [],
@@ -153051,6 +153157,7 @@
        "recover:3:combo:no_rule_pokemon+basic_energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153070,7 +153177,7 @@
         }
        }
       ],
-      "source_text": "Put up to 3 in any combination of Pokémon that don’t have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
+      "source_text": "Put up to 3 in any combination of Pokémon that don't have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)"
      }
     ],
     "errors": [],
@@ -153152,6 +153259,7 @@
        "recon:6:2:any:rest:discard"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153258,6 +153366,7 @@
        "opp_hand:discard:item:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153348,7 +153457,7 @@
           }
          }
         ],
-        "source_text": "Draw a card for each of your opponent’s Benched Pokémon.",
+        "source_text": "Draw a card for each of your opponent's Benched Pokémon.",
         "play_cost": "discard:1"
        }
       ],
@@ -153357,6 +153466,7 @@
        "draw:1:per:opp_bench"
       ],
       "play_cost": "discard:1",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153376,7 +153486,7 @@
         }
        }
       ],
-      "source_text": "Draw a card for each of your opponent’s Benched Pokémon.",
+      "source_text": "Draw a card for each of your opponent's Benched Pokémon.",
       "play_cost": "discard:1"
      }
     ],
@@ -153447,6 +153557,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "search",
@@ -153552,6 +153663,7 @@
        "candy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153647,6 +153759,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -153743,7 +153856,7 @@
           }
          }
         ],
-        "source_text": "Choose 1:\n\n• Switch your Active Pokémon with 1 of your Benched Pokémon.\n• During this turn, attacks used by your Pokémon do 30 more damage to your opponent’s Active Pokémon {ex} and Active Pokémon {V} (before applying Weakness and Resistance)."
+        "source_text": "Choose 1:\n\n• Switch your Active Pokémon with 1 of your Benched Pokémon.\n• During this turn, attacks used by your Pokémon do 30 more damage to your opponent's Active Pokémon {ex} and Active Pokémon {V} (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -153751,6 +153864,7 @@
        "switch_self"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -153780,7 +153894,7 @@
         }
        }
       ],
-      "source_text": "Choose 1:\n\n• Switch your Active Pokémon with 1 of your Benched Pokémon.\n• During this turn, attacks used by your Pokémon do 30 more damage to your opponent’s Active Pokémon {ex} and Active Pokémon {V} (before applying Weakness and Resistance)."
+      "source_text": "Choose 1:\n\n• Switch your Active Pokémon with 1 of your Benched Pokémon.\n• During this turn, attacks used by your Pokémon do 30 more damage to your opponent's Active Pokémon {ex} and Active Pokémon {V} (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -153860,6 +153974,7 @@
        "research:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -153947,21 +154062,23 @@
            "sel": "any",
            "dest": "hand",
            "rest": "shuffle",
-           "gate": "ko_last_turn"
+           "gate": null
           }
          }
         ],
-        "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
-        "citations": []
+        "source_text": "Look at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+        "citations": [],
+        "play_gate": "own_ko_last_turn"
        }
       ],
       "errors": [
        "[0] action.type 非法：recon"
       ],
       "engine_tags": [
-       "recon:8:3:any:gate:ko_last_turn"
+       "recon:8:3:any"
       ],
       "play_cost": "",
+      "play_gate": "own_ko_last_turn",
       "unsupported": []
      }
     ],
@@ -153982,19 +154099,20 @@
          "sel": "any",
          "dest": "hand",
          "rest": "shuffle",
-         "gate": "ko_last_turn"
+         "gate": null
         }
        }
       ],
-      "source_text": "You can use this card only if any of your Pokémon were Knocked Out during your opponent’s last turn.\n\nLook at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
-      "citations": []
+      "source_text": "Look at the top 8 cards of your deck and put up to 3 of them into your hand. Shuffle the other cards back into your deck.",
+      "citations": [],
+      "play_gate": "own_ko_last_turn"
      }
     ],
     "errors": [
      "[0] action.type 非法：recon"
     ],
     "engine_tags": [
-     "recon:8:3:any:gate:ko_last_turn"
+     "recon:8:3:any"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -154063,6 +154181,7 @@
        "search_trainer:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154162,6 +154281,7 @@
        "attach_each_pick:2:1:darkness:deck:target:type-darkness:poison_if_active"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154261,6 +154381,7 @@
        "search_any:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154354,6 +154475,7 @@
        "discard_opp_to:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154448,6 +154570,7 @@
        "search_energy:2:distinct"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154503,14 +154626,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的手牌洗回你的牌库。然后，抽 4 张牌。若对手的剩余奖赏卡为 3 张或更少，则改为抽 8 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lacey@SCR 139",
    "parse": {
     "items": [
      {
@@ -154524,26 +154649,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "draw",
+          "amount": 4,
           "target": "deck",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+           "cond_extra": 8,
+           "cond_add": false,
+           "cond": "opp_prizes_at_most:3",
+           "shuffle_hand": true
           }
          }
         ],
-        "source_text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead."
+        "source_text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "draw_cond:shuffle:4:set:8:if:opp_prizes_at_most:3"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -154554,25 +154681,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "draw",
+        "amount": 4,
         "target": "deck",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+         "cond_extra": 8,
+         "cond_add": false,
+         "cond": "opp_prizes_at_most:3",
+         "shuffle_hand": true
         }
        }
       ],
-      "source_text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead."
+      "source_text": "Shuffle your hand into your deck. Then, draw 4 cards. If your opponent has 3 or fewer Prize cards remaining, draw 8 cards instead.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     }
+    "engine_tags": [
+     "draw_cond:shuffle:4:set:8:if:opp_prizes_at_most:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -154628,7 +154756,7 @@
           "target": "deck"
          }
         ],
-        "source_text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can’t put 2 cards from your hand on the bottom of your deck, you can’t use this card.)"
+        "source_text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)"
        }
       ],
       "errors": [],
@@ -154636,6 +154764,7 @@
        "draw:4"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154652,7 +154781,7 @@
         "target": "deck"
        }
       ],
-      "source_text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can’t put 2 cards from your hand on the bottom of your deck, you can’t use this card.)"
+      "source_text": "Put 2 cards from your hand on the bottom of your deck in any order. If you put 2 cards on the bottom of your deck in this way, draw 4 cards. (If you can't put 2 cards from your hand on the bottom of your deck, you can't use this card.)"
      }
     ],
     "errors": [],
@@ -154712,20 +154841,22 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "note": "静态/未建模（英文）"
           }
          }
         ],
-        "source_text": "You can use this card only if your opponent has exactly 2 Prize cards remaining.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card."
+        "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
+        "play_gate": "opp_prizes_exactly:2"
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "opp_prizes_exactly:2",
       "unsupported": [
        {
         "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+        "reason": "静态/未建模（英文）"
        }
       ]
      }
@@ -154742,11 +154873,12 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "note": "静态/未建模（英文）"
         }
        }
       ],
-      "source_text": "You can use this card only if your opponent has exactly 2 Prize cards remaining.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card."
+      "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
+      "play_gate": "opp_prizes_exactly:2"
      }
     ],
     "errors": [],
@@ -154754,7 +154886,7 @@
     "unsupported": [
      {
       "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+      "reason": "静态/未建模（英文）"
      }
     ],
     "generated_by": "rule",
@@ -154831,6 +154963,7 @@
        "recon:7:2:pokemon+trainer@each"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -154933,6 +155066,7 @@
        "switch_draw_to:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155019,7 +155153,7 @@
           }
          }
         ],
-        "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+        "source_text": "Switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
         "citations": []
        }
       ],
@@ -155028,6 +155162,7 @@
        "gust_confuse"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155047,7 +155182,7 @@
         }
        }
       ],
-      "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+      "source_text": "Switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
       "citations": []
      }
     ],
@@ -155122,6 +155257,7 @@
        "search_pokemon:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155222,6 +155358,7 @@
        "search_pokemon:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155327,6 +155464,7 @@
        "draw:4"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155436,6 +155574,7 @@
        "draw_to:6"
       ],
       "play_cost": "discard:1",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155520,12 +155659,13 @@
           }
          }
         ],
-        "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon."
+        "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155550,7 +155690,7 @@
         }
        }
       ],
-      "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon."
+      "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."
      }
     ],
     "errors": [],
@@ -155627,6 +155767,7 @@
        "search_pokemon:2:stage:basic"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155681,14 +155822,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "本回合中，你的宝可梦使用的招式，对对手的战斗宝可梦{ex}造成的伤害 +40（在计算弱点与抗性之前）。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Black Belt’s Training@PRE 96",
    "parse": {
     "items": [
      {
@@ -155702,26 +155845,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "team_boost",
+          "amount": 40,
+          "target": "team",
           "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "n": 40,
+           "cats": "ex"
           }
          }
         ],
-        "source_text": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+        "source_text": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance).",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：team_boost",
+       "[0] action.target 非法：team"
+      ],
+      "engine_tags": [
+       "team_boost:40:cat:ex"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -155732,25 +155878,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "team_boost",
+        "amount": 40,
+        "target": "team",
         "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "n": 40,
+         "cats": "ex"
         }
        }
       ],
-      "source_text": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent’s Active Pokémon {ex} (before applying Weakness and Resistance)."
+      "source_text": "During this turn, attacks used by your Pokémon do 40 more damage to your opponent's Active Pokémon {ex} (before applying Weakness and Resistance).",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：team_boost",
+     "[0] action.target 非法：team"
     ],
+    "engine_tags": [
+     "team_boost:40:cat:ex"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -155817,6 +155965,7 @@
        "heal:70:active"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -155906,6 +156055,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -155968,14 +156118,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抽 2 张牌。若对手的剩余奖赏卡为 3 张或更少，再抽 2 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Emcee's Hype@DRI 163",
    "parse": {
     "items": [
      {
@@ -155989,26 +156141,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "draw",
+          "amount": 2,
           "target": "deck",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+           "cond_extra": 2,
+           "cond_add": true,
+           "cond": "opp_prizes_at_most:3"
           }
          }
         ],
-        "source_text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards."
+        "source_text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "draw_cond:keep:2:plus:2:if:opp_prizes_at_most:3"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156019,25 +156172,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "draw",
+        "amount": 2,
         "target": "deck",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+         "cond_extra": 2,
+         "cond_add": true,
+         "cond": "opp_prizes_at_most:3"
         }
        }
       ],
-      "source_text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards."
+      "source_text": "Draw 2 cards. If your opponent has 3 or fewer Prize cards remaining, draw 2 more cards.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     }
+    "engine_tags": [
+     "draw_cond:keep:2:plus:2:if:opp_prizes_at_most:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156096,7 +156249,7 @@
           }
          }
         ],
-        "source_text": "Search your deck for up to 3 in any combination of Ethan’s Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 in any combination of Ethan's Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -156104,6 +156257,7 @@
        "search_pokemon:3:type:fire"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156123,7 +156277,7 @@
         }
        }
       ],
-      "source_text": "Search your deck for up to 3 in any combination of Ethan’s Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 in any combination of Ethan's Pokémon and Basic {R} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -156187,12 +156341,13 @@
           }
          }
         ],
-        "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket’s Pokémon, draw cards until you have 8 cards in your hand instead."
+        "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -156217,7 +156372,7 @@
         }
        }
       ],
-      "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket’s Pokémon, draw cards until you have 8 cards in your hand instead."
+      "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead."
      }
     ],
     "errors": [],
@@ -156292,12 +156447,13 @@
           }
          }
         ],
-        "source_text": "You can use this card only if any of your Team Rocket’s Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
+        "source_text": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -156334,7 +156490,7 @@
         }
        }
       ],
-      "source_text": "You can use this card only if any of your Team Rocket’s Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
+      "source_text": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
      }
     ],
     "errors": [],
@@ -156404,7 +156560,7 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "Switch your Active Team Rocket’s Pokémon with 1 of your Benched Team Rocket’s Pokémon. If you do, switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+        "source_text": "Switch your Active Team Rocket's Pokémon with 1 of your Benched Team Rocket's Pokémon. If you do, switch in 1 of your opponent's Benched Pokémon to the Active Spot."
        }
       ],
       "errors": [],
@@ -156412,6 +156568,7 @@
        "gust"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156428,7 +156585,7 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "Switch your Active Team Rocket’s Pokémon with 1 of your Benched Team Rocket’s Pokémon. If you do, switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+      "source_text": "Switch your Active Team Rocket's Pokémon with 1 of your Benched Team Rocket's Pokémon. If you do, switch in 1 of your opponent's Benched Pokémon to the Active Spot."
      }
     ],
     "errors": [],
@@ -156502,6 +156659,7 @@
        "search_trainer:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156587,7 +156745,7 @@
           }
          }
         ],
-        "source_text": "Search your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -156595,6 +156753,7 @@
        "search_pokemon:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156614,7 +156773,7 @@
         }
        }
       ],
-      "source_text": "Search your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],
@@ -156688,6 +156847,7 @@
        "energy_move:2:from:bench:to:active"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156781,6 +156941,7 @@
        "heal:40:all"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156869,7 +157030,7 @@
           }
          }
         ],
-        "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
+        "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
        }
       ],
       "errors": [
@@ -156880,6 +157041,7 @@
        "shuffle_both_coin_draw:5:3:3:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -156902,7 +157064,7 @@
         }
        }
       ],
-      "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
+      "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
      }
     ],
     "errors": [
@@ -156976,6 +157138,7 @@
        "draw:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157066,6 +157229,7 @@
        "search_pokemon:1:stage:evolution"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157156,6 +157320,7 @@
        "draw:4"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157207,14 +157372,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的手牌洗回你的牌库。然后，抽 6 张牌。若你的剩余奖赏卡正好为 6 张，则改为抽 8 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lillie's Determination@MEG 119",
    "parse": {
     "items": [
      {
@@ -157228,26 +157395,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "draw",
+          "amount": 6,
           "target": "deck",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+           "cond_extra": 8,
+           "cond_add": false,
+           "cond": "own_prizes_exactly:6",
+           "shuffle_hand": true
           }
          }
         ],
-        "source_text": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead."
+        "source_text": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "draw_cond:shuffle:6:set:8:if:own_prizes_exactly:6"
+      ],
       "play_cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       }
-      ]
+      "play_gate": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -157258,25 +157427,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "draw",
+        "amount": 6,
         "target": "deck",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
+         "cond_extra": 8,
+         "cond_add": false,
+         "cond": "own_prizes_exactly:6",
+         "shuffle_hand": true
         }
        }
       ],
-      "source_text": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead."
+      "source_text": "Shuffle your hand into your deck. Then, draw 6 cards. If you have exactly 6 Prize cards remaining, draw 8 cards instead.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     }
+    "engine_tags": [
+     "draw_cond:shuffle:6:set:8:if:own_prizes_exactly:6"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -157338,7 +157508,7 @@
           }
          }
         ],
-        "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent’s Pokémon {ex}."
+        "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent's next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent's Pokémon {ex}."
        }
       ],
       "errors": [
@@ -157348,6 +157518,7 @@
        "shield_choose:prevent_all:from:ex:effects:gate:opp_prizes_le:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157370,7 +157541,7 @@
         }
        }
       ],
-      "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent’s next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent’s Pokémon {ex}."
+      "source_text": "You can use this card only if your opponent has 2 or fewer Prize cards remaining.\n\nChoose 1 of your Pokémon in play. During your opponent's next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent's Pokémon {ex}."
      }
     ],
     "errors": [
@@ -157448,6 +157619,7 @@
        "heal:all:mega:energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157540,7 +157712,7 @@
           }
          }
         ],
-        "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
+        "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can't use this card during your first turn.",
         "citations": []
        }
       ],
@@ -157551,6 +157723,7 @@
        "recon:7:1:pokemon-darkness:dest:bench:rest:bottom:gate:not_first_turn"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157575,7 +157748,7 @@
         }
        }
       ],
-      "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can’t use this card during your first turn.",
+      "source_text": "Look at the top 7 cards of your deck and put a {D} Pokémon you find there onto your Bench. Shuffle the other cards and put them on the bottom of your deck. You can't use this card during your first turn.",
       "citations": []
      }
     ],
@@ -157652,6 +157825,7 @@
        "search_pokemon:1:stage:basic"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157745,6 +157919,7 @@
        "search_energy:7:type:fire"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157839,6 +158014,7 @@
        "search_pokemon:4:type:lightning"
       ],
       "play_cost": "discard:1",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -157923,12 +158099,13 @@
           }
          }
         ],
-        "source_text": "You can use this card only if you have N’s Darmanitan, N’s Zoroark {ex}, N’s Vanilluxe, N’s Klinklang, N’s Reshiram, and N’s Zekrom in play.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your N’s Pokémon, take 3 more Prize cards."
+        "source_text": "You can use this card only if you have N's Darmanitan, N's Zoroark {ex}, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play.\n\nDuring this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -157953,7 +158130,7 @@
         }
        }
       ],
-      "source_text": "You can use this card only if you have N’s Darmanitan, N’s Zoroark {ex}, N’s Vanilluxe, N’s Klinklang, N’s Reshiram, and N’s Zekrom in play.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your N’s Pokémon, take 3 more Prize cards."
+      "source_text": "You can use this card only if you have N's Darmanitan, N's Zoroark {ex}, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play.\n\nDuring this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards."
      }
     ],
     "errors": [],
@@ -158039,6 +158216,7 @@
        "recon:6:1:basic_energy:dest:attach"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158138,6 +158316,7 @@
        "draw:3"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158224,6 +158403,7 @@
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -158325,6 +158505,7 @@
        "recover:4:combo:pokemon+basic_energy:type:fighting"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158416,7 +158597,7 @@
           }
          }
         ],
-        "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can’t draw any cards in this way, you can’t use this card.)"
+        "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)"
        }
       ],
       "errors": [],
@@ -158424,6 +158605,7 @@
        "draw_to:5"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -158456,7 +158638,7 @@
         }
        }
       ],
-      "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can’t draw any cards in this way, you can’t use this card.)"
+      "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)"
      }
     ],
     "errors": [],
@@ -158517,34 +158699,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "attach",
-          "amount": 2,
-          "target": "self",
-          "extra": {
-           "zone": "discard"
-          }
-         },
-         {
           "type": "rule",
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "note": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
           }
          }
         ],
-        "source_text": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon."
+        "source_text": "Attach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
+        "citations": [],
+        "play_gate": "own_behind_prizes"
        }
       ],
       "errors": [],
-      "engine_tags": [
-       "attach:2:discard"
-      ],
+      "engine_tags": [],
       "play_cost": "",
+      "play_gate": "own_behind_prizes",
       "unsupported": [
        {
         "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+        "reason": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
        }
       ]
      }
@@ -158557,33 +158732,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "attach",
-        "amount": 2,
-        "target": "self",
-        "extra": {
-         "zone": "discard"
-        }
-       },
-       {
         "type": "rule",
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "note": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
         }
        }
       ],
-      "source_text": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon."
+      "source_text": "Attach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
+      "citations": [],
+      "play_gate": "own_behind_prizes"
      }
     ],
     "errors": [],
-    "engine_tags": [
-     "attach:2:discard"
-    ],
+    "engine_tags": [],
     "unsupported": [
      {
       "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
+      "reason": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
      }
     ],
     "generated_by": "rule",
@@ -158653,6 +158820,7 @@
        "heal:150:choose:type:psychic"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158741,7 +158909,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
+        "source_text": "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
        }
       ],
       "errors": [],
@@ -158749,6 +158917,7 @@
        "stadium:use:heal_all:10:require:supporter"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158770,7 +158939,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
+      "source_text": "Once during each player's turn, if they played a Supporter card from their hand this turn, they may heal 10 damage from each of their Pokémon."
      }
     ],
     "errors": [],
@@ -158837,7 +159006,7 @@
           }
          }
         ],
-        "source_text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-{D} Pokémon (both yours and your opponent’s)."
+        "source_text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-{D} Pokémon (both yours and your opponent's)."
        }
       ],
       "errors": [],
@@ -158845,6 +159014,7 @@
        "stadium:poison_extra:20:type:darkness"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158865,7 +159035,7 @@
         }
        }
       ],
-      "source_text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-{D} Pokémon (both yours and your opponent’s)."
+      "source_text": "During Pokémon Checkup, put 2 more damage counters on each Poisoned non-{D} Pokémon (both yours and your opponent's)."
      }
     ],
     "errors": [],
@@ -158932,7 +159102,7 @@
           }
          }
         ],
-        "source_text": "{M} Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance)."
+        "source_text": "{M} Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -158940,6 +159110,7 @@
        "stadium:dmg_reduce:30:type:metal"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -158960,7 +159131,7 @@
         }
        }
       ],
-      "source_text": "{M} Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance)."
+      "source_text": "{M} Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -159027,7 +159198,7 @@
           }
          }
         ],
-        "source_text": "Each Pokémon that has any Energy attached (both yours and your opponent’s) recovers from all Special Conditions and can’t be affected by any Special Conditions."
+        "source_text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."
        }
       ],
       "errors": [],
@@ -159035,6 +159206,7 @@
        "stadium:status_immune:require:energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159055,7 +159227,7 @@
         }
        }
       ],
-      "source_text": "Each Pokémon that has any Energy attached (both yours and your opponent’s) recovers from all Special Conditions and can’t be affected by any Special Conditions."
+      "source_text": "Each Pokémon that has any Energy attached (both yours and your opponent's) recovers from all Special Conditions and can't be affected by any Special Conditions."
      }
     ],
     "errors": [],
@@ -159121,7 +159293,7 @@
           }
          }
         ],
-        "source_text": "Pokémon Tools attached to each Pokémon (both yours and your opponent’s) have no effect."
+        "source_text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect."
        }
       ],
       "errors": [],
@@ -159129,6 +159301,7 @@
        "stadium:no_tool_effect"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159148,7 +159321,7 @@
         }
        }
       ],
-      "source_text": "Pokémon Tools attached to each Pokémon (both yours and your opponent’s) have no effect."
+      "source_text": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect."
      }
     ],
     "errors": [],
@@ -159216,7 +159389,7 @@
           }
          }
         ],
-        "source_text": "Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)\n\nThis card can’t be put into your hand or deck from the discard pile."
+        "source_text": "Prevent all damage done to Pokémon that don't have a Rule Box (both yours and your opponent's) by attacks from the opponent's Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)\n\nThis card can't be put into your hand or deck from the discard pile."
        }
       ],
       "errors": [],
@@ -159224,6 +159397,7 @@
        "stadium:dmg_immune:box:none:from:rulebox"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159245,7 +159419,7 @@
         }
        }
       ],
-      "source_text": "Prevent all damage done to Pokémon that don’t have a Rule Box (both yours and your opponent’s) by attacks from the opponent’s Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)\n\nThis card can’t be put into your hand or deck from the discard pile."
+      "source_text": "Prevent all damage done to Pokémon that don't have a Rule Box (both yours and your opponent's) by attacks from the opponent's Pokémon {ex} and Pokémon {V}. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)\n\nThis card can't be put into your hand or deck from the discard pile."
      }
     ],
     "errors": [],
@@ -159312,7 +159486,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may put a card from their hand on top of their deck."
+        "source_text": "Once during each player's turn, that player may put a card from their hand on top of their deck."
        }
       ],
       "errors": [],
@@ -159320,6 +159494,7 @@
        "stadium:use:top_deck"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159340,7 +159515,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may put a card from their hand on top of their deck."
+      "source_text": "Once during each player's turn, that player may put a card from their hand on top of their deck."
      }
     ],
     "errors": [],
@@ -159408,7 +159583,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolved in this way, that player may search their deck for a Stage 2 Pokémon that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, that player shuffles their deck. (Players can’t e"
+        "source_text": "Once during each player's turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolved in this way, that player may search their deck for a Stage 2 Pokémon that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, that player shuffles their deck. (Players can't e"
        }
       ],
       "errors": [],
@@ -159416,6 +159591,7 @@
        "stadium:use:evolve_from_deck:chain:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159437,7 +159613,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolved in this way, that player may search their deck for a Stage 2 Pokémon that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, that player shuffles their deck. (Players can’t e"
+      "source_text": "Once during each player's turn, that player may search their deck for a Stage 1 Pokémon that evolves from 1 of their Basic Pokémon and put it onto that Pokémon to evolve it. If that Pokémon was evolved in this way, that player may search their deck for a Stage 2 Pokémon that evolves from that Pokémon and put it onto that Pokémon to evolve it. Then, that player shuffles their deck. (Players can't e"
      }
     ],
     "errors": [],
@@ -159514,6 +159690,7 @@
        "stadium:bench_limit:8:require:tera"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159603,7 +159780,7 @@
           }
          }
         ],
-        "source_text": "Each Basic Pokémon in play (both yours and your opponent’s) gets +30 HP."
+        "source_text": "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP."
        }
       ],
       "errors": [],
@@ -159611,6 +159788,7 @@
        "stadium:hp_plus:30:stage:0"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159631,7 +159809,7 @@
         }
        }
       ],
-      "source_text": "Each Basic Pokémon in play (both yours and your opponent’s) gets +30 HP."
+      "source_text": "Each Basic Pokémon in play (both yours and your opponent's) gets +30 HP."
      }
     ],
     "errors": [],
@@ -159698,7 +159876,7 @@
           }
          }
         ],
-        "source_text": "Each Stage 2 Pokémon in play (both yours and your opponent’s) gets -30 HP."
+        "source_text": "Each Stage 2 Pokémon in play (both yours and your opponent's) gets -30 HP."
        }
       ],
       "errors": [],
@@ -159706,6 +159884,7 @@
        "stadium:hp_plus:-30:stage:2"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159726,7 +159905,7 @@
         }
        }
       ],
-      "source_text": "Each Stage 2 Pokémon in play (both yours and your opponent’s) gets -30 HP."
+      "source_text": "Each Stage 2 Pokémon in play (both yours and your opponent's) gets -30 HP."
      }
     ],
     "errors": [],
@@ -159793,7 +159972,7 @@
           }
          }
         ],
-        "source_text": "N’s Pokémon in play (both yours and your opponent’s) have no Retreat Cost."
+        "source_text": "N's Pokémon in play (both yours and your opponent's) have no Retreat Cost."
        }
       ],
       "errors": [],
@@ -159801,6 +159980,7 @@
        "stadium:no_retreat:faction:ns"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159821,7 +160001,7 @@
         }
        }
       ],
-      "source_text": "N’s Pokémon in play (both yours and your opponent’s) have no Retreat Cost."
+      "source_text": "N's Pokémon in play (both yours and your opponent's) have no Retreat Cost."
      }
     ],
     "errors": [],
@@ -159889,7 +160069,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand."
+        "source_text": "Once during each player's turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand."
        }
       ],
       "errors": [],
@@ -159897,6 +160077,7 @@
        "stadium:use:recover_energy:2:type:lightning"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -159918,7 +160099,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand."
+      "source_text": "Once during each player's turn, that player may put up to 2 Basic {L} Energy cards from their discard pile into their hand."
      }
     ],
     "errors": [],
@@ -159985,7 +160166,7 @@
           }
          }
         ],
-        "source_text": "Attacks used by Hop’s Pokémon (both yours and your opponent’s) do 30 more damage to the opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -159993,6 +160174,7 @@
        "stadium:attack_plus:30:faction:hops"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160013,7 +160195,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by Hop’s Pokémon (both yours and your opponent’s) do 30 more damage to the opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by Hop's Pokémon (both yours and your opponent's) do 30 more damage to the opponent's Active Pokémon (before applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -160080,7 +160262,7 @@
           }
          }
         ],
-        "source_text": "{C} Pokémon in play (both yours and your opponent’s) have no Abilities.",
+        "source_text": "{C} Pokémon in play (both yours and your opponent's) have no Abilities.",
         "fx_family": "ability_block"
        }
       ],
@@ -160089,6 +160271,7 @@
        "stadium:ability_block:colorless"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160109,7 +160292,7 @@
         }
        }
       ],
-      "source_text": "{C} Pokémon in play (both yours and your opponent’s) have no Abilities.",
+      "source_text": "{C} Pokémon in play (both yours and your opponent's) have no Abilities.",
       "fx_family": "ability_block"
      }
     ],
@@ -160179,7 +160362,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
+        "source_text": "Once during each player's turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
        }
       ],
       "errors": [],
@@ -160187,6 +160370,7 @@
        "stadium:use:draw:2:require:supporter_name:name:teamrocket"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160209,7 +160393,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
+      "source_text": "Once during each player's turn, if they played a Supporter card that has \"Team Rocket\" in its name from their hand this turn, they may draw 2 cards."
      }
     ],
     "errors": [],
@@ -160276,7 +160460,7 @@
           }
          }
         ],
-        "source_text": "Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance)."
+        "source_text": "Steven's Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance)."
        }
       ],
       "errors": [],
@@ -160284,6 +160468,7 @@
        "stadium:dmg_reduce:30:faction:stevens"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160304,7 +160489,7 @@
         }
        }
       ],
-      "source_text": "Steven’s Pokémon (both yours and your opponent’s) take 30 less damage from attacks from the opponent’s Pokémon (after applying Weakness and Resistance)."
+      "source_text": "Steven's Pokémon (both yours and your opponent's) take 30 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance)."
      }
     ],
     "errors": [],
@@ -160372,7 +160557,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
+        "source_text": "Once during each player's turn, that player may search their deck for a Marnie's Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
        }
       ],
       "errors": [],
@@ -160380,6 +160565,7 @@
        "stadium:use:search_name:1:name:marnie"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160401,7 +160587,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may search their deck for a Marnie’s Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
+      "source_text": "Once during each player's turn, that player may search their deck for a Marnie's Pokémon, reveal it, and put it into their hand. Then, that player shuffles their deck."
      }
     ],
     "errors": [],
@@ -160476,6 +160662,7 @@
        "stadium:on_bench_basic:20:type:darkness"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160563,7 +160750,7 @@
           }
          }
         ],
-        "source_text": "Each player’s {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn."
+        "source_text": "Each player's {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn."
        }
       ],
       "errors": [],
@@ -160571,6 +160758,7 @@
        "stadium:evolve_same_turn:type:grass"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160591,7 +160779,7 @@
         }
        }
       ],
-      "source_text": "Each player’s {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn."
+      "source_text": "Each player's {G} Pokémon can evolve into {G} Pokémon during the turn they play those Pokémon, except during their first turn."
      }
     ],
     "errors": [],
@@ -160659,7 +160847,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon."
+        "source_text": "Once during each player's turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon."
        }
       ],
       "errors": [],
@@ -160667,6 +160855,7 @@
        "stadium:use:switch_typed:type:water"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160688,7 +160877,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon."
+      "source_text": "Once during each player's turn, that player may switch their Active {W} Pokémon with 1 of their Benched {W} Pokémon."
      }
     ],
     "errors": [],
@@ -160757,7 +160946,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play."
+        "source_text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play."
        }
       ],
       "errors": [],
@@ -160765,6 +160954,7 @@
        "stadium:use:draw_to_count:1:type:psychic:cost:discard_energy"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160787,7 +160977,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play."
+      "source_text": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have {P} Pokémon in play."
      }
     ],
     "errors": [],
@@ -160853,7 +161043,7 @@
           }
          }
         ],
-        "source_text": "Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent’s) by effects of attacks and Abilities from the opponent’s Pokémon. (Damage from attacks is still taken.)"
+        "source_text": "Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent's) by effects of attacks and Abilities from the opponent's Pokémon. (Damage from attacks is still taken.)"
        }
       ],
       "errors": [],
@@ -160861,6 +161051,7 @@
        "stadium:no_bench_counters"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -160880,7 +161071,7 @@
         }
        }
       ],
-      "source_text": "Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent’s) by effects of attacks and Abilities from the opponent’s Pokémon. (Damage from attacks is still taken.)"
+      "source_text": "Prevent all damage counters from being placed on Benched Pokémon (both yours and your opponent's) by effects of attacks and Abilities from the opponent's Pokémon. (Damage from attacks is still taken.)"
      }
     ],
     "errors": [],
@@ -160944,12 +161135,13 @@
           }
          }
         ],
-        "source_text": "Confused Pokémon (both yours and your opponent’s) don’t recover from that Special Condition when they evolve or devolve."
+        "source_text": "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -160974,7 +161166,7 @@
         }
        }
       ],
-      "source_text": "Confused Pokémon (both yours and your opponent’s) don’t recover from that Special Condition when they evolve or devolve."
+      "source_text": "Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve."
      }
     ],
     "errors": [],
@@ -161041,12 +161233,13 @@
           }
          }
         ],
-        "source_text": "Attacks used by each Tera Pokémon in play (both yours and your opponent’s) cost {C} more."
+        "source_text": "Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost {C} more."
        }
       ],
       "errors": [],
       "engine_tags": [],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": [
        {
         "type": "rule",
@@ -161071,7 +161264,7 @@
         }
        }
       ],
-      "source_text": "Attacks used by each Tera Pokémon in play (both yours and your opponent’s) cost {C} more."
+      "source_text": "Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost {C} more."
      }
     ],
     "errors": [],
@@ -161142,7 +161335,7 @@
           }
          }
         ],
-        "source_text": "Once during each player’s turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends."
+        "source_text": "Once during each player's turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends."
        }
       ],
       "errors": [],
@@ -161150,6 +161343,7 @@
        "stadium:use:search_basic_bench:1:end:1"
       ],
       "play_cost": "",
+      "play_gate": "",
       "unsupported": []
      }
     ],
@@ -161171,7 +161365,7 @@
         }
        }
       ],
-      "source_text": "Once during each player’s turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends."
+      "source_text": "Once during each player's turn, that player may search their deck for a Basic Pokémon and put it onto their Bench. Then, that player shuffles their deck. If a player searches their deck in this way, their turn ends."
      }
     ],
     "errors": [],

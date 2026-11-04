@@ -68,6 +68,24 @@ class PlayerState:
     team_shield_n: int = 0
     team_shield_type: str = ""
     team_shield_until: int = 0
+    # ---- 全队限时增伤（2026-11-04 第六十批）----
+    # 「During **this turn**, attacks used by your {F} Pokémon do 30 more damage
+    #  to your opponent's Active Pokémon (before applying Weakness and
+    #  Resistance).」（Premium Power Pro / Black Belt's Training）
+    # 与 `team_shield_*` 对称：那边是「对方回合的减伤」，这边是「**本回合**的增伤」。
+    # 到期口径与减伤**不同**：卡面写的是「this turn」而不是「next turn」，
+    # 因此只在**施加当回合**有效（`team_boost_turn == 当前回合序号`），
+    # 用 `until = turn + 2` 会多生效一个回合（对局里看不出来，只多打了伤害）。
+    team_boost_n: int = 0
+    team_boost_type: str = ""
+    team_boost_cats: str = ""      # 逗号分隔的卡牌子类（ex / v …）
+    team_boost_turn: int = 0
+    # ---- 本回合已攻击次数（2026-11-04 第六十一批）----
+    # 引擎原本不需要这个计数：攻击必然结束回合，所以「每回合一次」是结构性成立的。
+    # Festival Lead（「If Festival Grounds is in play, this Pokémon may use an
+    # attack it has twice.」）打破了这个前提 —— 必须显式记账，否则「续攻」与
+    # 「无限攻」只差一个判断。
+    attacks_this_turn: int = 0
 
     # ---- 便捷查询 ----
     @property

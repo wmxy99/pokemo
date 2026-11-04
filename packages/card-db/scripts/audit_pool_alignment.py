@@ -2836,6 +2836,145 @@ def audit_batch54(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ----------------------------------------------------------------------------
+# 第五十八~六十二批：新增机制的对账（第四十一类）
+#   覆盖 draw_cond / shuffle_draw_split / team_boost / heal:need: / heal:alt: /
+#        play_gate / passive:extra_attack
+# 重点抓「方向写反 / 量纲错 / 范围漏」三类静默加强。
+# ⚠ 每条检查都**先确认 tag 已在池中**（或文本有特定句式），再比对——不在池中的
+#   卡（如 Choose-1 双选项、Kieran）不会被误报。
+# ----------------------------------------------------------------------------
+_DRAW_COND_RE = re.compile(
+    r"draw (?P<base>\d+) cards\.?\s*(then, )?if (?P<who>you|your opponent) "
+    r"(?:has|have) (?:(?P<ex>\d+) exactly |(?P<n>\d+) or (?P<cmp>more|fewer) ).*?"
+    r"draw (?P<extra>\d+) (?P<direction>more|instead) cards", re.I)
+_SHUFFLE_SPLIT_RE = re.compile(
+    r"you draw (\d+) cards?,? and your opponent draws (\d+) cards", re.I)
+_TEAM_BOOST_RE = re.compile(r"do (\d+) more damage", re.I)
+_HEAL_RE = re.compile(r"heal (\d+) damage from your active pok[eé]mon", re.I)
+_HEAL_NEED_RE = re.compile(r"that has (\d+) or more energy attached", re.I)
+_HEAL_ALT_RE = re.compile(
+    r"if that pok[eé]mon is an (.+?) pok[eé]mon, heal (\d+) damage .* instead", re.I)
+_PLAY_GATE_OK = {"opp_ko_last_turn", "tera_in_play", "went_second_first_turn",
+                 "own_behind_prizes", "own_ko_last_turn"}
+
+
+def _draw_cond_key(m) -> str | None:
+    if m.group("ex"):
+        return (f"own_prizes_exactly:{m.group('ex')}" if m.group("who") == "you"
+                else f"opp_prizes_exactly:{m.group('ex')}")
+    who, num, cmp_ = m.group("who"), m.group("n"), m.group("cmp")
+    if cmp_ == "more":
+        return (f"own_hand_at_least:{num}" if who == "you"
+                else f"opp_hand_at_least:{num}")
+    return (f"own_prizes_at_most:{num}" if who == "you"
+            else f"opp_prizes_at_most:{num}")
+
+
+def audit_batch58_62(card_name: str, item_name: str, desc: str,
+                     effects: list, play_gate: str | None = None) -> list:
+    errs: list = []
+    d = _norm(PAREN.sub(" ", desc or ""))
+    tags = [str(e) for e in effects]
+
+    # ① draw_cond：keep/shuffle 与 plus/set 方向
+    if any(t.startswith("draw_cond:") for t in tags):
+        m = _DRAW_COND_RE.search(d)
+        if not m:
+            return errs          # 文本形态不在已识别范围 → 不误报
+        base, extra = int(m.group("base")), int(m.group("extra"))
+        direction = "plus" if m.group("direction") == "more" else "set"
+        shuffle = "shuffle" if "shuffle your hand into your deck" in d else "keep"
+        cond = _draw_cond_key(m)
+        if cond is None:
+            return errs
+        want = f"draw_cond:{shuffle}:{base}:{direction}:{extra}:if:{cond}"
+        if want not in tags:
+            have = [t for t in tags if t.startswith("draw_cond:")]
+            flipped = (f"draw_cond:{shuffle}:{base}:"
+                       f"{'set' if direction == 'plus' else 'plus'}:{extra}:if:{cond}")
+            hint = "（疑似 plus↔set 方向写反）" if flipped in tags else ""
+            errs.append(f"{card_name} · {item_name}：卡面「draw {base} … "
+                        f"draw {extra} {direction}」应为 `{want}`，实际 "
+                        f"{have or '无'}{hint}")
+
+    # ② shuffle_draw_split：双方各抽不同张数
+    if any(t.startswith("shuffle_draw_split:") for t in tags):
+        m = _SHUFFLE_SPLIT_RE.search(d)
+        if m:
+            want = f"shuffle_draw_split:{m.group(1)}:{m.group(2)}"
+            if want not in tags:
+                errs.append(f"{card_name} · {item_name}：卡面「you draw "
+                            f"{m.group(1)} / opponent {m.group(2)}」应为 "
+                            f"`{want}`，实际 "
+                            f"{[t for t in tags if 'shuffle_draw' in t] or '无'}")
+
+    # ③ team_boost：本回合全队增伤（量 + 范围）
+    if any(t.startswith("team_boost:") for t in tags):
+        m = _TEAM_BOOST_RE.search(d)
+        if m:
+            amt = int(m.group(1))
+            scope = "all"
+            if "{ex}" in d and "{v}" in d:
+                scope = "cat:ex+v"
+            elif "{ex}" in d:
+                scope = "cat:ex"
+            else:
+                lt = re.search(r"your \{(\w)\} pok[eé]mon", d)
+                if lt:
+                    scope = f"type:{_ENERGY_LETTER.get(lt.group(1).upper(), lt.group(1).lower())}"
+            # tag 里 all 不写前缀；其余必须精确
+            want = f"team_boost:{amt}:{scope}" if scope != "all" else \
+                f"team_boost:{amt}"
+            if want not in tags:
+                errs.append(f"{card_name} · {item_name}：卡面「do {amt} more "
+                            f"damage」范围应为 `{scope}`，实际 "
+                            f"{[t for t in tags if t.startswith('team_boost')] or '无'}")
+
+    # ④ heal:need: / heal:alt: 两种相反方向
+    if any(t.startswith("heal:") for t in tags):
+        m = _HEAL_RE.search(d)
+        if m:
+            amt = int(m.group(1))
+            mn = _HEAL_NEED_RE.search(d)
+            if mn:
+                want = f"heal:{amt}:active:need:own_active_energy_at_least:{mn.group(1)}"
+                if want not in tags:
+                    errs.append(f"{card_name} · {item_name}：卡面「heal {amt} … "
+                                f"that has {mn.group(1)} or more Energy」应为 "
+                                f"`{want}`，实际 "
+                                f"{[t for t in tags if t.startswith('heal')] or '无'}"
+                                "（need 落成无条件/alt 都会改强度）")
+            ma = _HEAL_ALT_RE.search(d)
+            if ma:
+                key = _name_key(ma.group(1))
+                want = f"heal:{amt}:active:alt:{ma.group(2)}:if_name:{key}"
+                if want not in tags:
+                    errs.append(f"{card_name} · {item_name}：卡面「heal {amt} … if "
+                                f"that Pokémon is {ma.group(1)}, heal "
+                                f"{ma.group(2)} instead」应为 `{want}`，实际 "
+                                f"{[t for t in tags if t.startswith('heal')] or '无'}"
+                                "（alt 落成加值=多回一倍，落成无条件=非本卡也回满）")
+
+    # ⑤ play_gate 形状校验（card-level 字段）
+    if play_gate:
+        if play_gate not in _PLAY_GATE_OK and \
+                not re.match(r"opp_prizes_exactly:\d+", play_gate):
+            errs.append(f"{card_name} · {item_name}：play_gate=`{play_gate}` "
+                        "不是已识别的门槛形态")
+        if "you can use this card only if" not in d:
+            errs.append(f"{card_name} · {item_name}：有 play_gate=`{play_gate}` "
+                        "但卡面没有「You can use this card only if …」"
+                        "（门槛静默消失 = 任何时机都能打）")
+
+    # ⑥ passive:extra_attack（Festival Lead）
+    if "festival grounds is in play" in d and "passive:extra_attack" not in tags:
+        errs.append(f"{card_name} · {item_name}：卡面「If Festival Grounds is in "
+                    "play, this Pokémon may use an attack it has twice」应落 "
+                    "`passive:extra_attack`，实际无（续攻能力丢失）")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -2891,6 +3030,7 @@ def main() -> int:
                 errs += audit_shuffle_opp_pokemon(c["name"], it.get("name"),
                                                   desc, eff)
                 errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch58_62(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -2912,6 +3052,9 @@ def main() -> int:
                                   [_ctag] if _ctag else [])
             errs += audit_batch54(c["name"], c["name"], _cdesc,
                                   [_ctag] if _ctag else [])
+            errs += audit_batch58_62(c["name"], c["name"], _cdesc,
+                                    [_ctag] if _ctag else [],
+                                    c.get("play_gate") or None)
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:

@@ -498,6 +498,51 @@ class TestF3Battle(unittest.TestCase):
                         json={"deck_a_id": d["id"], "deck_b": "fire"})
         self.assertIn(r.status_code, (400, 422), r.text)
 
+    def test_printing_uid_selects_exact_printing(self):
+        """「数量 卡名 SET 编号」→ 按**印刷 uid**精确选卡（同名不同印刷可分别使用）"""
+        from apps.api.app import decks as deck_mod
+        h = user_headers()
+        text = "\n".join(["4 Dreepy TWM 128", "4 Dusknoir SIT 70",
+                          "4 Dusclops SFA 19", "8 Basic Psychic Energy SVE 5"])
+        r = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "印刷选择用例"})
+        self.assertEqual(r.status_code, 200, r.text)
+        d = r.json()
+        self.assertTrue(d["ok"], d.get("errors"))
+        rows = {e["name"]: e for e in d["parsed"]}
+        self.assertEqual(rows["Dusknoir"]["uid"], "Dusknoir@SIT 70")
+        self.assertEqual(rows["Dusclops"]["uid"], "Dusclops@SFA 19")
+        deck = deck_mod.build_engine_deck(d["id"])
+        dusk = [c for c in deck if getattr(getattr(c, "pdef", None),
+                                           "name", "") == "Dusknoir"][0]
+        self.assertEqual(dusk.pdef.abilities[0].tag, "cursed:130",
+                         "必须执行 SIT 70 的 Cursed Blast 手牌特性")
+
+    def test_name_only_defaults_to_newest_printing(self):
+        """未写印刷 → 卡名默认取数据集最新印刷（SFA 20 = counters:13）"""
+        from apps.api.app import decks as deck_mod
+        h = user_headers()
+        text = "\n".join(["4 Dreepy", "4 Dusknoir",
+                          "8 Basic Psychic Energy"])
+        d = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "默认印刷用例"}).json()
+        self.assertTrue(d["ok"], d.get("errors"))
+        deck = deck_mod.build_engine_deck(d["id"])
+        dusk = [c for c in deck if getattr(getattr(c, "pdef", None),
+                                           "name", "") == "Dusknoir"][0]
+        self.assertEqual(dusk.pdef.abilities[0].tag,
+                         "counters:13:scope:opp:1:selfko")
+
+    def test_same_name_limit_aggregates_across_printings(self):
+        """同名上限按**卡名**合计：不同印刷不能绕过 4 张"""
+        h = user_headers()
+        text = "\n".join(["4 Dreepy TWM 128", "4 Dusknoir SIT 70",
+                          "1 Dusknoir SFA 20", "8 Basic Psychic Energy"])
+        d = client.post("/decks/import", headers=h,
+                        json={"text": text, "name": "同名上限用例"}).json()
+        self.assertFalse(d["ok"])
+        self.assertTrue(any("同名上限" in e for e in d["errors"]), d["errors"])
+
 
 class TestPoolMatrix(unittest.TestCase):
     """F7：卡组池批量任务 → cells → 统计矩阵聚合"""
@@ -1474,7 +1519,7 @@ class TestCardLibrary(unittest.TestCase):
         h = user_headers()
         text = "\n".join([
             "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",
-            "4 Unfair Stamp", "4 Hyper Aroma", "8 Basic {P} Energy",
+            "4 Brilliant Blender", "4 Hyper Aroma", "8 Basic {P} Energy",
             "8 Basic {R} Energy", "4 好朋友宝芬", "4 高级球", "4 破坏之锤",
             "2 老大的指令", "3 博士的研究", "4 奇树", "2 神奇糖果",
             "4 Night Stretcher", "4 Counter Catcher",
@@ -1483,9 +1528,9 @@ class TestCardLibrary(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         j = r.json()
         by = {e["name"]: e for e in j["parsed"]}
-        self.assertTrue(by["Unfair Stamp"]["matched"], "卡库独有卡应被识别")
-        self.assertFalse(by["Unfair Stamp"]["meta"]["engine_ready"])
-        self.assertEqual(by["Unfair Stamp"]["meta"]["source"], "card-db")
+        self.assertTrue(by["Brilliant Blender"]["matched"], "卡库独有卡应被识别")
+        self.assertFalse(by["Brilliant Blender"]["meta"]["engine_ready"])
+        self.assertEqual(by["Brilliant Blender"]["meta"]["source"], "card-db")
         self.assertTrue(any("引擎未实现卡" in w for w in j["warnings"]), j["warnings"])
         # engine_ready 统计不再恒等于总数（此前的漏算已修）
         self.assertGreater(j["summary"]["not_implemented"], 0)
@@ -1566,7 +1611,8 @@ class TestLLMAdminConfig(unittest.TestCase):
     def test_config_shape(self):
         d = client.get("/admin/llm/config", headers=self.admin).json()
         self.assertIn(d["source"], ("runtime", "env", "none"))
-        self.assertGreaterEqual(len(d["presets"]), 5)
+        self.assertEqual([x["id"] for x in d["presets"]], ["deepseek"],
+                         "当前阶段仅开放 DeepSeek 预设")
         self.assertIn("compliance", d)
         self.assertIn("local_only", d["compliance"])
         self.assertTrue(all({"id", "label", "base", "model"} <= set(x)

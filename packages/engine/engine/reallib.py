@@ -202,7 +202,11 @@ def _build_card(entry: dict):
                               fossil_pdef=_fossil_def(entry))
         return TrainerDef(entry["tag"], kind=entry.get("kind", "item"),
                           name=entry["name"], name_zh=entry.get("name_zh", ""),
-                          play_cost=entry.get("play_cost", ""))
+                          play_cost=entry.get("play_cost", ""),
+                          # 打出前置条件（第五十九批）：「only if you have any
+                          # Tera Pokémon in play」等。与 play_cost 相反 ——
+                          # 纯条件检查、无状态变化。
+                          play_gate=entry.get("play_gate", ""))
     if st == "Energy":
         return EnergyDef(entry.get("type", "colorless"), name=entry["name"],
                          name_zh=entry.get("name_zh", ""),

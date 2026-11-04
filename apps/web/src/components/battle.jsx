@@ -1,7 +1,7 @@
 import React from 'react'
 import { VERBS, verbLabel } from '../verbs.js'
 import { disp } from '../names.js'
-import { splitSequence, sequenceTip } from '../sequences.js'
+import { splitSequence } from '../sequences.js'
 import { t } from '../i18n.js'
 import { HandFan, FieldPokemon } from './card.jsx'
 
@@ -155,7 +155,7 @@ export function SeedBar({ seed, onCopied }) {
  * 支持 datalist 自动补全（候选来自引擎 command_catalog，与合法动作同源）；
  * 歧义时展示候选供点选（绝不静默替玩家选目标）。
  */
-export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatched, error }) {
+export function CommandBar({ commands = [], disabled, busy, onSubmit, error }) {
   const [text, setText] = React.useState('')
   const listId = React.useMemo(
     () => 'cmd-list-' + Math.random().toString(36).slice(2, 8), [])
@@ -181,9 +181,9 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
       <form className="row" onSubmit={(e) => { e.preventDefault(); submit() }}>
         <label htmlFor="cmd-in" className="sm">指令输入</label>
         <input id="cmd-in" list={listId} value={text} disabled={disabled || busy}
-          placeholder="中文招式名 / 卡名，如「幻影俯冲」「高级球」「附能量到后备1」"
+          placeholder="招式名 / 卡名"
           onChange={(e) => setText(e.target.value)}
-          aria-describedby="cmd-hint" style={{ flex: 1, minWidth: 180 }} />
+          style={{ flex: 1, minWidth: 180 }} />
         <datalist id={listId}>
           {commands.map((c, i) => <option key={i} value={c.label} />)}
         </datalist>
@@ -191,20 +191,12 @@ export function CommandBar({ commands = [], disabled, busy, onSubmit, lastMatche
           执行
         </button>
       </form>
-      <p id="cmd-hint" className="sm muted" style={{ margin: '4px 0 0' }}>
-        可直接输入中文指令；也可从下方候选点选（与合法动作一一对应）
-        {lastMatched ? ` · 上次：${lastMatched}` : ''}
-        <br />{sequenceTip()}
-      </p>
       {isSeq && (
         <p className="sm" style={{ margin: '4px 6px 0' }} aria-live="polite">
           将按顺序执行 <b className="mono">{steps.length}</b> 步：
           {steps.map((x, i) => (
             <span key={i} className="seq-step">{i > 0 ? ' → ' : ''}{x}</span>
           ))}
-          <span className="sm muted">
-            （回合移交对手或某步失败即停止；实际解析以引擎为准）
-          </span>
         </p>
       )}
       <div className="cmd-chips" role="group" aria-label="可用指令">

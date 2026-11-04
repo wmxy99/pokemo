@@ -8,7 +8,6 @@ import { CommentaryPanel } from '../components/commentary.jsx'
 import { actionContext } from '../names.js'
 import { planForHand, passAction, describeActionTarget, isFieldTarget, targetSide } from '../plays.js'
 import { flyCard, floatText, fieldSlotEl, handCardEl } from '../anim.js'
-import { KvTable } from '../components/stats.jsx'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 
 const K3_MS = 2000   // K3 兜底下限：>2s 禁用动作 + 提示（UI 规范 §4.1.1）
@@ -18,7 +17,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 export default function BattlePage({ onMsg, onGoDecks }) {
   const [deckA, setDeckA] = useState('lightning')
   const [deckB, setDeckB] = useState('fire')
-  const [presets, setPresets] = useState([])
   const [myDecks, setMyDecks] = useState([])
   const [aiIters, setAiIters] = useState(0)
   const [state, setState] = useState(null)
@@ -27,7 +25,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const [slow, setSlow] = useState(false)
   const [err, setErr] = useState(null)
   const [commands, setCommands] = useState([])     // 引擎指令清单（中文）
-  const [lastMatched, setLastMatched] = useState(null)
   const [cmdErr, setCmdErr] = useState(null)       // 指令解析失败（含歧义候选）
   const [zoomCard, setZoomCard] = useState(null)   // 详情大卡（点不可用的牌 / 场上卡）
   const [hitName, setHitName] = useState(null)     // 本回合受伤的宝可梦（抖动提示）
@@ -39,7 +36,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   const slowTimer = useRef(null)
 
   useEffect(() => {
-    api.deckPresets().then((r) => setPresets(r.presets || [])).catch(() => {})
     api.myDecks().then((r) => setMyDecks(r.decks || [])).catch(() => {})
   }, [])
 
@@ -106,7 +102,7 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       // 开局若 AI 先手，把它的动作逐帧放出来（先展示第一帧，避免「先闪终局再回退」）
       setState({ ...r, view: (steps[0] && steps[0].view) || r.view })
       setLog([]); setCommands(r.commands || [])
-      setLastMatched(null); setCmdErr(null)
+      setCmdErr(null)
       setPending(null); setSelHand(-1); setZoomCard(null)
       setReplaying(false); setHitName(null); setFramedReplay(false)
       prevDmg.current = new Map()   // 新对局必须清空战损基线，否则会出现错误伤害数
@@ -208,7 +204,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       const before = state.view
       const r = await api.actCommand(state.id, text)
       setCommands(r.commands || [])
-      setLastMatched(r.matched || text)
       const ctx = actionContext(before)
       // 组合指令：逐步记录（单步时 steps 长度为 1，展示一致）
       const steps = r.steps || []
@@ -307,20 +302,12 @@ export default function BattlePage({ onMsg, onGoDecks }) {
     setZoomCard(card)
   }
 
-  const info = view ? [
-    ['回合 / 阶段', `${view.turn} · ${view.phase}`],
-    ['我方奖赏 / 牌库', `${view.me_state?.prizes_left ?? '-'} / ${view.me_state?.deck_count ?? '-'}`],
-    ['对手奖赏 / 牌库', `${view.opp_state?.prizes_left ?? '-'} / ${view.opp_state?.deck_count ?? '-'}`],
-    ['我方弃牌', view.me_state?.discard_count ?? '-'],
-    ['合法动作数', legal.length],
-  ] : []
-
   return (
     <div className="grid battle">
-      {/* 左：配置 + 预设对手池 */}
+      {/* 左：对局配置 */}
       <div className="card">
         <h3>对局配置</h3>
-        <label htmlFor="dx">我方卡组（AI 代理你的卡组）</label>
+        <label htmlFor="dx">我方卡组</label>
         <select id="dx" value={deckA} onChange={(e) => setDeckA(e.target.value)}>
           {DECKS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
           {myDecks.filter((d) => d.valid).map((d) => (
@@ -347,23 +334,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
           </button>
           {state && <SeedBar seed={state.seed} onCopied={(s) => onMsg(`已复制 seed ${s}`)} />}
         </div>
-
-        <h3 style={{ marginTop: 16 }}>预设对手池 <span className="pill sm">真实 60 张卡表</span></h3>
-        <div className="preset-row">
-          {presets.map((p) => (
-            <button key={p.id} className={`preset ${deckB === p.id ? 'on' : ''}`}
-              title={`${p.note}｜60 卡真实卡表（可执行 ${(p.executable_rate * 100).toFixed(1)}%，占位 ${p.replaced.length} 类）`}
-              onClick={() => { setDeckB(p.id); onMsg(`对手已设为 ${p.label}`) }}>
-              <b>{p.id} · {p.label}</b>
-              <small className="muted">{p.note}</small>
-              <small className="muted mono">
-                60 卡 · 可执行 {(p.executable_rate * 100).toFixed(1)}%
-                {p.replaced.length > 0 && ` · 占位 ${p.replaced.reduce((s, r) => s + r.count, 0)} 张`}
-              </small>
-            </button>
-          ))}
-          {presets.length === 0 && <span className="sm muted">预设加载中…</span>}
-        </div>
       </div>
 
       {/* 中：棋盘 + 动作 + 日志 */}
@@ -376,30 +346,26 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         </h3>
 
         {err && <ErrBar code={err.code} message={err.message} onRetry={() => create()} />}
-        {slow && <div className="alert warn" role="alert">决策超过 {K3_MS / 1000}s，仍在计算（K3 兜底：可将 AI 强度调低）</div>}
+        {slow && <div className="alert warn" role="alert">决策超过 {K3_MS / 1000}s，仍在计算</div>}
 
         {!view && !busy && (
-          <EmptyState text={t('empty.battle')} cta="去导入卡组" onCta={onGoDecks} />
+          <EmptyState text={t('empty.battle')} cta="去编排卡组" onCta={onGoDecks} />
         )}
 
         {view && (<>
           {replaying && (
             <div className="replay-bar" role="status" aria-live="polite">
               <i className="dot" aria-hidden="true" />
-              对手正在行动 —— 逐个动作回放中（回放结束前你的操作会暂时锁定）
+              对手正在行动 —— 逐个动作回放中
             </div>
           )}
 
           {pending && (
             <div className="target-bar" role="region" aria-label="选择目标">
               <b className="sm">选择目标：</b>
-              {listedTargets.length === 0 && (
-                <span className="sm muted">点击场上高亮的卡牌即可完成</span>
-              )}
               {listedTargets.map((t, i) => (
                 <button key={i} className="chip-btn" onClick={() => doTarget(t)}>{t.label}</button>
               ))}
-              <span className="sm muted">（也可点击手牌改选其它牌）</span>
               <button className="ghost sm"
                 onClick={() => { setPending(null); setSelHand(-1) }}>取消</button>
             </div>
@@ -413,13 +379,14 @@ export default function BattlePage({ onMsg, onGoDecks }) {
               legal={legal} highlightPos={myHighlight} dimOthers={!!pending} />
           </div>
 
-          <p className="sm muted" style={{ margin: '4px 2px' }}>
-            <b>直接点手牌出牌</b>：能出的牌带绿色角标，单击立即执行；
-            需要指定对象的（进化 / 附能量 / 拉对手后备 / 手牌特性）会提示你点选场上高亮的目标，
-            高亮的正是这张牌**实际会作用到**的那只宝可梦。
-            点击不可用的牌或场上的牌可查看完整卡面（自绘示意图，不使用官方卡图 · 合规 C1/C5）。
-          </p>
           <CardZoom card={zoomCard} onClose={() => setZoomCard(null)} />
+        </>)}
+      </div>
+
+      {/* 右：操作区（出牌提示 / 结束回合 / 指令输入 / 合法动作 / 解说 / 回合日志） */}
+      <div className="card">
+        <h3>对战操作</h3>
+        {view && (<>
           {/* 结束回合：真实对战的节奏锚点，放在最显眼处 */}
           {pass && (
             <div className="row" style={{ marginTop: 12 }}>
@@ -427,19 +394,18 @@ export default function BattlePage({ onMsg, onGoDecks }) {
                 onClick={() => act(pass)}>
                 结束回合（交给对手）
               </button>
-              <span className="sm muted">也可直接点上方手牌出牌</span>
             </div>
           )}
 
           {/* 指令输入与完整动作表：作为备选入口收起，主交互是「点牌出牌」 */}
           <details className="cmd-drawer">
-            <summary>指令输入（可选：直接输入中文招式名 / 卡名）</summary>
+            <summary>指令输入</summary>
             <CommandBar commands={commands} disabled={finished} busy={busy}
-              onSubmit={submitCommand} lastMatched={lastMatched} error={cmdErr} />
+              onSubmit={submitCommand} error={cmdErr} />
           </details>
 
           <details className="cmd-drawer">
-            <summary>全部合法动作（{legal.length} 项，可点牌出牌的备选入口）</summary>
+            <summary>全部合法动作（{legal.length} 项）</summary>
             <ActionPanel legal={legal} disabled={busy || finished} busy={busy}
               ctx={actionContext(view)}
               onAct={act}
@@ -448,20 +414,6 @@ export default function BattlePage({ onMsg, onGoDecks }) {
           <CommentaryPanel battleId={state.id} turn={view.turn} onMsg={onMsg} />
           <TurnLog lines={log} />
         </>)}
-      </div>
-
-      {/* 右：信息 + 说明 */}
-      <div className="card">
-        <h3>对局信息</h3>
-        {view ? <KvTable rows={info} /> : <p className="sm muted">开始对局后显示奖赏/牌库/弃牌与合法动作数。</p>}
-        <h3 style={{ marginTop: 12 }}>规则要点</h3>
-        <ul className="sm muted" style={{ paddingLeft: 18 }}>
-          <li>{t('tip.legal')}</li>
-          <li>只显示我方手牌 —— 对手手牌数量可见、内容不可见</li>
-          <li>同一 seed 可复现同一对局，便于复盘与公平比较</li>
-          <li>K3 兜底：决策 &gt; 2s 提示，必要时降级 argmax（引擎侧策略）</li>
-          <li>对局会话驻留服务内存，服务重启后需重开</li>
-        </ul>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import {
   trainerDesc, abilityDesc, statusLabel, cardKind, isTrainerCard,
 } from '../cardtext.js'
 import { handUsable } from '../plays.js'
+import { cardArtUri } from '../cardart.jsx'
 
 /**
  * 卡牌可视化组件（自绘卡面 · 不使用任何官方卡图 —— 合规 C1/C5）
@@ -80,7 +81,7 @@ function PokemonFace({ c, size, dmg = 0, used = [] }) {
         </span>
       </div>
 
-      <div className="cf-art" style={{ background: bg }} aria-hidden="true">
+      <div className="cf-art" style={{ backgroundColor: bg, backgroundImage: `url("${cardArtUri(c)}")` }} aria-hidden="true">
         <span className="cf-art-glyph" style={{ color: fg }}>{typeLabel(c.ptype)}</span>
         <div className="cf-badges">
           <TypeBadge ptype={c.ptype} stage={c.stage} ex={c.ex} size={size} />
@@ -142,7 +143,7 @@ function EnergyFace({ c, size }) {
       <div className="cf-head" style={{ background: `linear-gradient(90deg, ${bg}, #fff)` }}>
         <span className="cf-name">{c.display || c.name_zh || c.name}</span>
       </div>
-      <div className="cf-art big" style={{ background: bg }} aria-hidden="true">
+      <div className="cf-art big" style={{ backgroundColor: bg, backgroundImage: `url("${cardArtUri(c)}")` }} aria-hidden="true">
         <span className="cf-art-glyph" style={{ color: fg }}>{typeLabel(c.etype)}</span>
         {size === 'zoom' && <span className="cf-evo">基本能量</span>}
       </div>
@@ -167,7 +168,7 @@ function TrainerFace({ c, size }) {
       <div className="cf-head" style={{ background: 'linear-gradient(90deg,#E2E8F0,#fff)' }}>
         <span className="cf-name">{c.display || c.name_zh || c.name}</span>
       </div>
-      <div className="cf-art" style={{ background: '#F1F5F9' }} aria-hidden="true">
+      <div className="cf-art" style={{ backgroundImage: `url("${cardArtUri(c)}")` }} aria-hidden="true">
         <span className="cf-art-glyph trainer">{kind}</span>
         {c.tag === 'unsupported' && <span className="cf-warnmark">未建模</span>}
       </div>
@@ -304,7 +305,7 @@ export function CardZoom({ card, onClose }) {
             </>
           )}
           <p className="sm muted" style={{ marginTop: 10 }}>
-            卡面为自绘示意图，不使用官方卡图（合规 C1/C5）。效果说明为自述转写。
+            卡面为程序生成的原创美术（非官方、不含官方形象），效果说明为自述转写。
           </p>
           <button className="ghost sm" onClick={onClose}>关闭</button>
         </div>

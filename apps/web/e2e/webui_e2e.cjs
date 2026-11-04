@@ -60,8 +60,8 @@ const log = (name, ok, extra = {}) => { steps.push({ name, ok, ...extra }) }
   }))
   log('注册/登录', registered && logged.token && logged.hasLogout, logged)
 
-  // 2) 卡组管理：粘贴 + 校验
-  await click('nav.main button', '卡组管理')
+  // 2) 卡组与卡库：粘贴 + 校验（默认落在「我的卡组」标签）
+  await click('nav.main button', '卡组与卡库')
   await sleep(800)
   await page.evaluate((txt) => {
     const ta = document.querySelector('textarea#dt')
@@ -80,7 +80,7 @@ const log = (name, ok, extra = {}) => { steps.push({ name, ok, ...extra }) }
   })
   log('卡表解析校验', /通过|可对战/.test(importRes), { importRes })
 
-  // 3) 对战页：选「我的」卡组 → 建局
+  // 3) 对战页：选「我的」卡组 → 建局（默认落在「单局对战」标签）
   await click('nav.main button', '对战')
   await sleep(1200)
   const picked = await page.evaluate(() => {

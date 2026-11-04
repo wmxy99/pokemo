@@ -5,7 +5,7 @@ import { Pill, Spinner, ErrBar } from '../components/ui.jsx'
 /**
  * 后台 · 云端模型配置（admin）
  *
- * 能力：可视化配置 OpenAI 兼容端点（base/model/key/timeout）→ 保存即生效
+ * 能力：配置 DeepSeek（base 固定、model/key/timeout 可设）→ 保存即生效
  * （后台配置优先于环境变量，无需重启）；提供连通性测试与合规状态展示。
  *
  * 合规要点（与 /compliance 6.2 同源，页面上必须如实呈现）：
@@ -20,12 +20,16 @@ const SOURCE_TONE = {
   none: { text: '未配置', tone: 'muted' },
 }
 
+// 当前阶段仅接 DeepSeek；外发主机白名单在后端 privacy.ALLOWED_EXTERNAL_HOSTS 同步
+const DEEPSEEK = { base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' }
+
 export function ModelConfigPage({ onMsg, authed }) {
   const [cfg, setCfg] = useState(null)
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [consent, setConsent] = useState(false)
   const [form, setForm] = useState({
-    base: '', model: '', key: '', timeout: 60, preset: '',
+    base: DEEPSEEK.base, model: DEEPSEEK.model, key: '', timeout: 60,
   })
   const [test, setTest] = useState(null)
   const [load, setLoad] = useState(true)
@@ -36,12 +40,12 @@ export function ModelConfigPage({ onMsg, authed }) {
       const d = await api.llmConfig()
       setCfg(d)
       setErr(null)
-      // 表单初值：优先后台已保存值，其次环境变量
+      // 当前阶段端点固定为 DeepSeek；模型名可沿用已保存值
       const s = d.saved || {}
       setForm((f) => ({
         ...f,
-        base: s.base || d.env?.base || '',
-        model: s.model || d.env?.model || '',
+        base: DEEPSEEK.base,
+        model: s.model || DEEPSEEK.model,
         timeout: Number(s.timeout || d.effective?.timeout || 60),
         key: '',
       }))
@@ -54,7 +58,6 @@ export function ModelConfigPage({ onMsg, authed }) {
   useEffect(() => { refresh() }, [])
 
   const localOnly = !!cfg?.compliance?.local_only
-  const presets = cfg?.presets || []
   const externalNow = useMemo(() => {
     const b = (form.base || '').toLowerCase()
     if (!b) return false
@@ -62,13 +65,11 @@ export function ModelConfigPage({ onMsg, authed }) {
   }, [form.base])
   const blocked = localOnly && externalNow
 
-  function applyPreset(id) {
-    const p = presets.find((x) => x.id === id)
-    if (!p) return
-    setForm((f) => ({ ...f, preset: id, base: p.base, model: p.model }))
-  }
-
   async function save() {
+    if (!consent) {
+      onMsg?.('请先勾选外发合规确认', 'err')
+      return
+    }
     if (blocked) {
       onMsg?.('本地化部署已启用，禁止保存外部端点', 'err')
       return
@@ -76,7 +77,7 @@ export function ModelConfigPage({ onMsg, authed }) {
     setBusy(true)
     try {
       const r = await api.llmSave({
-        base: form.base.trim(), model: form.model.trim(),
+        base: DEEPSEEK.base, model: form.model.trim() || DEEPSEEK.model,
         key: form.key, timeout: Number(form.timeout) || 60,
       })
       onMsg?.(`已保存并即时生效（来源：${r.source}）`)
@@ -129,11 +130,6 @@ export function ModelConfigPage({ onMsg, authed }) {
           {cfg?.effective?.external === false && <Pill tone="ok">本机/内网端点</Pill>}
           {cfg?.effective?.external === true && <Pill tone="warn">外部端点（数据将外发）</Pill>}
         </h3>
-        <p className="sm muted">
-          OpenAI 兼容端点（DeepSeek / 通义 / Kimi / OpenAI / 自建 vLLM / Ollama 均可）。
-          保存后**立即生效，无需重启**；未配置后台时回退环境变量。
-          生效范围：<b>K2 卡牌效果解析</b> 与 <b>对战解说</b>。
-        </p>
         {load && <Spinner label="读取配置…" />}
         {err && <ErrBar code={err.code} message={err.message} onRetry={refresh} />}
       </section>
@@ -142,40 +138,22 @@ export function ModelConfigPage({ onMsg, authed }) {
         <div className="alert warn" role="status" style={{ marginBottom: 14 }}>
           <b>已启用本地化部署（POKELAB_LOCAL_ONLY=1）</b>：数据不出本地，
           <b>禁止保存外部云端端点</b>；仅可配置本机/内网端点（自建 vLLM / Ollama 等）。
-          如需使用云端模型，请先关闭该开关。
         </div>
       )}
 
       <section className="card" style={{ marginBottom: 14 }}>
-        <h3>接入配置</h3>
-        <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-          <span className="sm muted">预设：</span>
-          <select value={form.preset} onChange={(e) => applyPreset(e.target.value)}
-            aria-label="预设供应商">
-            <option value="">（选择预设一键填充）</option>
-            {presets.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
-          {form.preset && (
-            <span className="sm muted">
-              {presets.find((p) => p.id === form.preset)?.note}
-            </span>
-          )}
-        </div>
-
+        <h3>接入配置 <Pill tone="brand">DeepSeek</Pill></h3>
         <div className="kv-form">
           <label htmlFor="llm-base">端点 base_url</label>
-          <input id="llm-base" value={form.base} placeholder="https://api.deepseek.com/v1"
-            onChange={(e) => setForm({ ...form, base: e.target.value })} />
+          <input id="llm-base" value={DEEPSEEK.base} readOnly />
           <label htmlFor="llm-model">模型名</label>
-          <input id="llm-model" value={form.model} placeholder="deepseek-chat"
+          <input id="llm-model" value={form.model} placeholder={DEEPSEEK.model}
             onChange={(e) => setForm({ ...form, model: e.target.value })} />
           <label htmlFor="llm-key">API Key</label>
           <input id="llm-key" type="password" value={form.key}
             placeholder={cfg?.saved?.key_hint
               ? `已保存（${cfg.saved.key_hint}）· 留空表示不修改`
-              : '自建服务可留空'}
+              : 'sk-…'}
             onChange={(e) => setForm({ ...form, key: e.target.value })} />
           <label htmlFor="llm-timeout">超时（秒）</label>
           <input id="llm-timeout" type="number" min="5" max="600" value={form.timeout}
@@ -189,8 +167,24 @@ export function ModelConfigPage({ onMsg, authed }) {
           </div>
         )}
 
+        <div className="alert ok" role="status" style={{ marginTop: 12 }}>
+          <b>数据外发合规</b>
+          <ul className="sm" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+            <li>只允许发往 <code className="mono">api.deepseek.com</code>，且强制 HTTPS；其他外部主机一律拒绝。</li>
+            <li>外发前对邮箱、手机号、证件号、卡号、密钥、本地路径与账号等做脱敏，只发送占位符。</li>
+            <li>外部调用强制写审计（端点 / 模型 / 字符数 / 脱敏计数），不记录原文，不可关闭。</li>
+            <li>API Key 加密入库，页面仅回显尾 4 位；不发送用户账号与登录信息。</li>
+          </ul>
+        </div>
+        <label className="row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
+          <input type="checkbox" checked={consent}
+            onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+          <span className="sm">我确认：外发内容仅含脱敏后的卡牌与对局文本，且已阅读上述合规说明。</span>
+        </label>
+
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="primary" onClick={save} disabled={busy || blocked}>
+          <button className="primary" onClick={save}
+            disabled={busy || blocked || !consent}>
             {busy ? '处理中…' : '保存并生效'}
           </button>
           <button className="ghost" onClick={runTest} disabled={busy}>连通性测试</button>
@@ -221,7 +215,7 @@ export function ModelConfigPage({ onMsg, authed }) {
       </section>
 
       <section className="card">
-        <h3>合规状态 <span className="pill sm">与合规声明页同源</span></h3>
+        <h3>合规状态 <span className="pill sm">与机器可读声明同源</span></h3>
         <table className="tbl">
           <tbody>
             <tr>
@@ -232,6 +226,17 @@ export function ModelConfigPage({ onMsg, authed }) {
                 </Pill>
                 <div className="sm muted">开关：<code className="mono">
                   {cfg?.compliance?.local_only_env || 'POKELAB_LOCAL_ONLY=1'}</code></div>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">外发范围</th>
+              <td>
+                <Pill tone="ok">仅 DeepSeek · 强制 HTTPS</Pill>
+                <div className="sm muted">
+                  白名单：<code className="mono">
+                    {(cfg?.compliance?.allowed_external_hosts || ['api.deepseek.com']).join(' · ')}
+                  </code> · 其他外部主机在保存与实际调用处均被拒绝
+                </div>
               </td>
             </tr>
             <tr>
@@ -247,8 +252,8 @@ export function ModelConfigPage({ onMsg, authed }) {
             <tr>
               <th scope="row">外发脱敏 + 审计</th>
               <td>
-                <Pill tone={cfg?.compliance?.audit_enabled ? 'ok' : 'warn'}>
-                  {cfg?.compliance?.audit_enabled ? '审计已开启' : '审计已关闭'}
+                <Pill tone="ok">
+                  审计强制开启（外部外发）
                 </Pill>
                 <div className="sm muted">
                   审计文件：<code className="mono">{cfg?.compliance?.audit_log}</code> ·
@@ -259,9 +264,9 @@ export function ModelConfigPage({ onMsg, authed }) {
             <tr>
               <th scope="row">生效范围</th>
               <td className="sm">
-                K2 卡牌效果解析（<code className="mono">/cards/{'{id}'}</code> 的
+                卡牌效果解析（<code className="mono">/cards/{'{id}'}</code> 的
                 effects_parsed）· 对战解说（<code className="mono">
-                POST /battles/{'{id}'}/commentary</code>，带 AI 生成标识 C4）
+                POST /battles/{'{id}'}/commentary</code>，带 AI 生成标识）
               </td>
             </tr>
           </tbody>

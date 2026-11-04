@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { Pill, StatCard, Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
+import { CardArt } from '../cardart.jsx'
 
 /** 能量/属性代码 → 中文展示（与引擎 energy 代码同源） */
 const ENERGY_LABEL = {
@@ -56,19 +57,22 @@ function CardDetail({ card, onClose }) {
   if (!card) return null
   return (
     <div className="card" style={{ marginTop: 12 }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
+        <CardArt card={card} className="lib-hero" />
+        <div style={{ flex: 1, minWidth: 220 }}>
           <h3 style={{ margin: 0 }}>
             {card.display}
             {card.name_zh && <span className="sm muted"> · {card.name}</span>}
             {card.engine_ready
               ? <Pill tone="ok" title="引擎已建模，可直接用于对战">可对战</Pill>
               : <Pill tone="warn" title="卡库已收录，引擎未建模（可浏览/组卡，不可对战）">未建模</Pill>}
+            <Pill tone="muted" title="程序生成的原创卡面艺术，非官方卡图">原创卡面</Pill>
           </h3>
           <p className="sm muted" style={{ margin: '4px 0 0' }}>
             {card.series} · {card.number}
             {card.name_ja ? ` · ${card.name_ja}` : ''}
-            {card.library?.rule ? ` · ${card.library.rule}` : ''}
+            {(card.library?.rule_zh || card.library?.rule)
+              ? ` · ${card.library?.rule_zh || card.library?.rule}` : ''}
             {card.library?.category ? ` · ${card.library.category}` : ''}
           </p>
         </div>
@@ -93,10 +97,12 @@ function CardDetail({ card, onClose }) {
           {card.abilities.map((a, i) => (
             <div key={i} className="move-block">
               <div className="move-head">
-                <b>{a.name || '（未命名）'}</b>
+                <b title={a.name}>{a.name_zh || a.name || '（未命名）'}</b>
                 <Pill tone="info">特性</Pill>
               </div>
-              <p className="sm" style={{ margin: '4px 0 0' }}>{a.effect || '—'}</p>
+              <p className="sm" style={{ margin: '4px 0 0' }}>
+                {a.effect_zh || a.effect || '—'}
+              </p>
             </div>
           ))}
         </>
@@ -109,7 +115,7 @@ function CardDetail({ card, onClose }) {
             <div key={i} className="move-block">
               <div className="move-head">
                 <EnergyChips cost={a.cost} />
-                <b>{a.name || '（未命名）'}</b>
+                <b title={a.name}>{a.name_zh || a.name || '（未命名）'}</b>
                 {a.damage != null && (
                   <span className="mono">
                     {a.damage}{a.damage_kind === 'multiplier' ? '×' : ''}
@@ -117,7 +123,11 @@ function CardDetail({ card, onClose }) {
                   </span>
                 )}
               </div>
-              {a.effect && <p className="sm" style={{ margin: '4px 0 0' }}>{a.effect}</p>}
+              {(a.effect_zh || a.effect) && (
+                <p className="sm" style={{ margin: '4px 0 0' }}>
+                  {a.effect_zh || a.effect}
+                </p>
+              )}
             </div>
           ))}
         </>
@@ -127,7 +137,7 @@ function CardDetail({ card, onClose }) {
         <div className="card-img-wrap">
           <img src={card.image_url} alt={card.display} className="card-img" loading="lazy" />
           <p className="sm muted" style={{ margin: '4px 0 0' }}>
-            图像版权归 Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 所有（合规 6.1）
+            图像版权归 Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 所有
           </p>
         </div>
       )}
@@ -151,12 +161,14 @@ function CardDetail({ card, onClose }) {
         </>
       )}
 
-      {card.rules_text && (
+      {(card.rules_text_zh || card.library?.rules_text_zh || card.rules_text) && (
         <>
           <h4 style={{ margin: '12px 0 4px' }}>
             {card.supertype === 'Pokemon' ? '其他文本 / 规则' : '卡牌效果'}
           </h4>
-          <p className="sm" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{card.rules_text}</p>
+          <p className="sm" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+            {card.rules_text_zh || card.library?.rules_text_zh || card.rules_text}
+          </p>
         </>
       )}
       <p className="sm muted" style={{ marginTop: 10 }}>
@@ -242,17 +254,17 @@ export default function LibraryPage({ onMsg }) {
       )}
 
       <p className="sm muted" style={{ margin: '8px 0 0' }}>
-        <b>合规提示</b>：卡牌名称 / 规则文本 / 图像依合规 6.1 使用，版权归
+        <b>版权说明</b>：卡牌名称、规则文本与图像仅用于研究与演示，版权归
         Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 所有；
         本项目为非官方、非商业的社区研究项目，与权利方无关联。
-        「<b>AI 解析</b>」标记的内容由机器/AI 自动生成，仅供研究参考，以官方规则为准。
+        「<b>AI 解析</b>」标记的内容由机器自动生成，仅供研究参考，请以官方规则为准。
         {stats?.ai_notice ? ` ${stats.ai_notice}` : ''}
       </p>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div className="row filter-row">
           <label htmlFor="lib-q" className="sm">搜索</label>
-          <input id="lib-q" value={q} placeholder="卡名（中/英/日，忽略标点）如 多龙 / dragapult"
+          <input id="lib-q" value={q} placeholder="卡名（中 / 英 / 日）"
             onChange={(e) => setQ(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
           <label htmlFor="lib-st" className="sm">超类型</label>
           <select id="lib-st" value={supertype} onChange={(e) => setSupertype(e.target.value)}>
@@ -295,7 +307,6 @@ export default function LibraryPage({ onMsg }) {
         </div>
         <p className="sm muted" style={{ margin: '6px 0 0' }}>
           共 <b className="mono">{total}</b> 张 · 第 <b className="mono">{page}</b>/<b className="mono">{pages}</b> 页
-          · <b>未建模</b>的卡可浏览与组卡，但**不可对战**（引擎未实现，C5 差异透明）
         </p>
       </div>
 
@@ -303,11 +314,13 @@ export default function LibraryPage({ onMsg }) {
 
       <div className="card" style={{ marginTop: 10 }}>
         {items.length === 0 && !busy
-          ? <EmptyState text="没有匹配的卡（试试放宽筛选或换关键词）" />
+          ? <EmptyState text="没有匹配的卡" />
           : (
+            <div className="tbl-scroll">
             <table className="tbl">
               <thead>
                 <tr>
+                  <th scope="col">卡面</th>
                   <th scope="col">卡名</th>
                   <th scope="col">系列</th>
                   <th scope="col">类型</th>
@@ -321,6 +334,7 @@ export default function LibraryPage({ onMsg }) {
               <tbody>
                 {items.map((c) => (
                   <tr key={c.id}>
+                    <td><CardArt card={c} className="lib-thumb" /></td>
                     <td>
                       <b>{c.display}</b>
                       {c.name_zh && <span className="sm muted"> · {c.name}</span>}
@@ -345,6 +359,7 @@ export default function LibraryPage({ onMsg }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}>
           <button className="ghost sm" disabled={page <= 1}

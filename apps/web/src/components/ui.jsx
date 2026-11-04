@@ -60,6 +60,18 @@ export function SsePill({ state }) {
   )
 }
 
+/** 页内分段标签：同一导航入口下的子页面切换（保留各子页面的挂载状态） */
+export function SegTabs({ items, value, onChange, label }) {
+  return (
+    <div className="seg-tabs" role="tablist" aria-label={label}>
+      {items.map((it) => (
+        <button key={it.v} role="tab" aria-selected={value === it.v}
+          onClick={() => onChange(it.v)}>{it.label}</button>
+      ))}
+    </div>
+  )
+}
+
 export function ErrBar({ code, message, onRetry, retryLabel }) {
   return (
     <div className="alert err" role="alert">

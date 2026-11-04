@@ -150,8 +150,11 @@ def _privacy_impl() -> dict:
             "desensitize_before_send": True,
             "rules": status.get("desensitize_rules", []),
             "audit_enabled": status.get("audit_enabled"),
+            "audit_forced_for_external": status.get("audit_forced_for_external", True),
             "audit_log": status.get("audit_log"),
             "audit_content": "仅端点/模型/字符数/脱敏计数，不记录原文",
+            "external_allowlist": status.get("allowed_external_hosts", []),
+            "require_https": True,
             # v1.2：云端模型端点可由**后台可视化配置**（admin）
             "endpoint_config": {
                 "supported": True,

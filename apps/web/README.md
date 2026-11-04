@@ -22,22 +22,18 @@ npm run build
 
 | 页面 | 规范出处 | 关键实现 |
 |---|---|---|
-| 对战 | UI §4.1.1 / PRD F5 | 三列 300/1fr/300；`legal_actions` 1:1 动作面板（SVG 图标，禁 emoji）；HP 血条绿满/红低；回合日志 `role=log`；seed 复制；K3 >2s 兜底提示；`<900px` 动作面板置底 sticky；**我方/对手可选 F3 已导入卡组**（deck_id 参战） |
-| 批量对战 | UI §4.1.2 / F6 + F7 | 模式切换 **单对位 / 卡组池矩阵**（多选卡组池 × 每对位局数，直出 F7 矩阵）；配额条（≤500/并发≤2/日≤10）；乐观 ETA；**SSE 实时进度（EventSource，异常回退轮询）**；二次确认取消（保留已完成 K4）；cells 对位表 + 报告导出 |
-| 统计报告 | UI §4.1.3 / F7 | KPI（含**卡组池任务/矩阵对位数**）+ **胜率矩阵热力图**（底色=胜率、饱和度=样本量、行/列聚合、图例、`tabIndex` 键盘可达 + `aria-label`）+ 导出条 CSV/MD/JSON/复制 + MD 预览 + `Unofficial community data` |
-| 卡组管理 | UI §4.1.4 / F3 | mono textarea 导入 → 校验（60/同名4/含基础，逐条错误）+ 三色 pill + 我的卡组表（可**直接用于对战**）+ **预设 A1–A4 真实卡表（点开看逐卡 `可映射/近似/占位`）** + 起手 1,000 次模拟 |
-| 后台仪表盘 M6 | UI §4.2.1 | 三 KPI + **K1–K4 看门狗表**（诚实标注 K1 未达成）+ 近 7 日 sparkline + F16 导出（beta 置灰） |
-| 后台 RL 训练 | UI §4.2.6 / M2 | 真实 `/train/jobs` 监控：提交/状态/**SSE 实时日志与曲线 + 连接状态灯**/取消 + 冲 70% 手册折叠区 |
-| 后台用户管理 M5 | UI §4.2.2 / F13 | 用户/角色/日配额表格 + 角色切换（admin）；越权隔离提示文案 |
+| 对战（含批量） | UI §4.1.1–4.1.2 / PRD F5–F7 | 页内分段标签切换「单局对战 / 批量对战」。单局：三列 300/1fr/300；`legal_actions` 1:1 动作面板（SVG 图标，禁 emoji）；HP 血条绿满/红低；回合日志 `role=log`；seed 复制；K3 >2s 兜底提示；`<900px` 动作面板置底 sticky。批量：配额条（≤500/并发≤2/日≤10）、乐观 ETA、**SSE 实时进度**、二次确认取消（保留已完成 K4）、cells 对位表 + 报告导出 |
+| 卡组与卡库 | UI §4.1.4 / §3.7 / PRD F2–F3 | 页内分段标签切换「我的卡组 / 卡库」。卡组：**自由编排**（搜索卡库 → 加减张数 → 60 张 / 同名 4 张 / 基础宝可梦校验）+ 我的卡组表 + 起手 1,000 次模拟。卡库：统计条 + 多维筛选 + 分页表格 + 详情面板（招式/特性/弱点/规则文本） |
+| 后台 RL 训练 | UI §4.2.6 / M2 + M6 | 原仪表盘并入本页：关键指标（累计对局 / 批量任务 / 平均回合 / 训练任务）+ 近 7 日批量任务可视化；下方为真实 `/train/jobs` 监控：提交/状态/**SSE 实时日志与曲线 + 连接状态灯**/取消 + 冲 70% 手册折叠区 |
 
 ## 3. 组件库（src/components）
 
 | 文件 | 组件 |
 |---|---|
-| `ui.jsx` | Spinner · Pill · StatusBadge · ErrBar · EmptyState · StatCard · LogBlock · CopyButton · Toast/useToasts |
+| `ui.jsx` | Spinner · Pill · StatusBadge · SegTabs · ErrBar · EmptyState · StatCard · LogBlock · CopyButton · Toast/useToasts |
 | `battle.jsx` | VerbIcon（SVG）· PokeChip 52×64/40×50 · HPRow（progressbar）· Zone · ActionPanel · TurnLog · SeedBar |
-| `stats.jsx` | WinrateMatrix · ExportBar · KvTable |
 | `tasks.jsx` | TaskCard（进度/ETA/取消确认）· TaskTable · QuotaHint |
+| `cardart.jsx` | `cardArtUri` / `CardArt`：按类别·属性·编号确定性生成原创 SVG 卡面（离线、零外链、同一张卡稳定复现） |
 | `verbs.js` / `i18n.js` | 动词表（与引擎同源，F8.2）· i18n 键位（F14，中文为主 + EN 键） |
 | `sse.js` | `openJobStream`：EventSource 封装（心跳看门狗 + 游标 sessionStorage 续传 + 失败降级轮询）· `SSE_STATE` 文案映射 |
 
@@ -90,8 +86,8 @@ npm run build
 
 - 统计条：总量 / 宝可梦 / 训练家 / 能量 / 招式总数 / **引擎覆盖率**；
 - 筛选：搜索（中英日，忽略标点）+ 超类型 + 属性 + 子类型 + 系列 + 引擎可用性 + 排序；
-- 表格：卡名（中文优先，英文副标）/ 系列编号 / 类型 / 属性筹码 / HP / 招式数 / 引擎徽标；
-- 详情面板：招式（**能量筹码 + 伤害 + 效果文本**）、特性、弱点/抗性/撤退、其他规则文本；
+- 表格：卡面缩略图（程序生成原创美术）/ 卡名（中文优先，英文副标）/ 系列编号 / 类型 / 属性筹码 / HP / 招式数 / 引擎徽标；
+- 详情面板：**原创卡面大图** + 招式（**能量筹码 + 伤害 + 效果文本**）、特性、弱点/抗性/撤退、其他规则文本；
 - 分页 30 条/页；`未建模` 徽标如实标注不可对战的卡（C5 差异透明）。
 
 ### 3.8 合规展示（6.1 / 6.2）

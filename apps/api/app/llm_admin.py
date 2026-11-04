@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -38,26 +39,11 @@ K_MODEL = "llm.model"
 K_KEY = "llm.key"
 K_TIMEOUT = "llm.timeout"
 
-# 预设供应商模板（OpenAI 兼容端点；管理员可一键填充后自行修改）
+# 预设供应商（当前阶段只接 DeepSeek：外发主机白名单同步在 privacy.ALLOWED_EXTERNAL_HOSTS）
 PRESETS = [
     {"id": "deepseek", "label": "DeepSeek",
      "base": "https://api.deepseek.com/v1", "model": "deepseek-chat",
      "note": "国内直连、中文效果好；需 API Key。K2 效果解析默认推荐。"},
-    {"id": "qwen", "label": "通义千问（DashScope 兼容模式）",
-     "base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-     "model": "qwen-plus", "note": "阿里云百炼；需 API Key。"},
-    {"id": "kimi", "label": "月之暗面 Kimi",
-     "base": "https://api.moonshot.cn/v1", "model": "moonshot-v1-8k",
-     "note": "长上下文；需 API Key。"},
-    {"id": "openai", "label": "OpenAI",
-     "base": "https://api.openai.com/v1", "model": "gpt-4o-mini",
-     "note": "需可访问境外网络与 API Key。"},
-    {"id": "vllm", "label": "自建 vLLM（本机/内网）",
-     "base": "http://127.0.0.1:8000/v1", "model": "local-model",
-     "note": "数据不出本地；本地模式下仍可用。"},
-    {"id": "ollama", "label": "Ollama（本机）",
-     "base": "http://127.0.0.1:11434/v1", "model": "qwen2.5:7b",
-     "note": "数据不出本地；本地模式下仍可用。"},
 ]
 
 
@@ -122,10 +108,13 @@ def _compliance_state() -> dict:
         "local_only": privacy.local_only(),
         "local_only_env": "POKELAB_LOCAL_ONLY=1",
         "audit_enabled": privacy.audit_enabled(),
+        "audit_forced_for_external": privacy.external_audit_forced(),
+        "allowed_external_hosts": sorted(privacy.ALLOWED_EXTERNAL_HOSTS),
         "audit_log": str(privacy.audit_path()),
         "encryption": crypto.status(),
         "config_source": llmclient.source(),
-        "note": ("本地模式下仅允许本机/内网端点；所有外发经脱敏并写审计（不含原文）"),
+        "note": ("本地模式下仅允许本机/内网端点；外部外发仅允许 DeepSeek 且必须 HTTPS；"
+                 "所有外发经脱敏并强制写审计（不含原文）"),
     }
 
 
@@ -184,6 +173,16 @@ def put_config(req: LLMConfigReq,
         raise HTTPException(
             403, "已启用本地化部署（POKELAB_LOCAL_ONLY=1），禁止配置外部云端"
                  "端点；如需使用云端模型请先关闭该开关（或改为本机/内网端点）")
+    # 1b) 外部外发白名单 + 强制 HTTPS（确保数据只到 DeepSeek、且不明文传输）
+    if external:
+        host = (urlparse(base).hostname or "").lower()
+        if not base.startswith("https://"):
+            raise HTTPException(422, "外部端点必须使用 HTTPS，拒绝明文外发")
+        allowed = sorted(privacy.ALLOWED_EXTERNAL_HOSTS)
+        if host not in privacy.ALLOWED_EXTERNAL_HOSTS:
+            raise HTTPException(
+                422, f"外发主机 {host} 不在白名单内：当前仅允许 "
+                     f"{' / '.join(allowed)}（DeepSeek）")
     # 2) 密钥处理：留空=沿用已存；显式提供则无条件加密
     if req.key:
         enc = crypto.encrypt_secret(req.key)

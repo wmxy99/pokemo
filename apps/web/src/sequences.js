@@ -64,8 +64,3 @@ export function splitSequence(text) {
 export function isSequence(text) {
   return splitSequence(text).length > 1
 }
-
-/** 组句提示文案 */
-export function sequenceTip() {
-  return '可用「然后 / 接着 / 再 / ;」串联多步，如「附能量到后备1 然后结束回合」'
-}

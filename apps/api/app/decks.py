@@ -78,8 +78,9 @@ def _pool() -> dict:
             sys.path.insert(0, str(p))
     out: dict = {}
 
-    def _put_pokemon(name, pdef, source, engine_ready=True, note=""):
-        out[name.lower()] = {
+    def _put_pokemon(name, pdef, source, engine_ready=True, note="",
+                     uid=None, printing=None):
+        _meta = {
             "kind": "pokemon", "name": name,
             "name_zh": getattr(pdef, "name_zh", ""),
             "display": getattr(pdef, "display", name),
@@ -87,35 +88,50 @@ def _pool() -> dict:
             "is_ex": bool(getattr(pdef, "is_ex", False)),
             "hp": getattr(pdef, "hp", None),
             "is_basic": getattr(pdef, "stage", 0) == 0,
-            "engine_ready": engine_ready, "note": note, "source": source}
-        _POOL_OBJ[name.lower()] = pdef
+            "engine_ready": engine_ready, "note": note, "source": source,
+            "uid": uid or name, "printing": printing or {}}
+        out[(uid or name).lower()] = _meta
+        _POOL_OBJ[(uid or name).lower()] = pdef
 
-    # 1) 真实卡池（M1 · engine/data/cards_real.json，卡名优先）
+    # 1) 真实卡池（M1 · engine/data/cards_real.json + 扩展池）
+    #    **按印刷 uid 建索引**（2026-10-29 第二十一批）：同名不同印刷可共存，
+    #    卡组用 uid 精确选卡；只写卡名时落到「首选印刷」（数据集最新）。
     try:
         from engine import reallib
-        for name, item in reallib.catalog().items():
+        for uid, item in reallib.printings().items():
             cdef, meta = item["def"], item["meta"]
+            pr = item.get("printing") or {}
             if meta.get("supertype") == "Pokemon":
-                _put_pokemon(name, cdef, "real-pool",
+                _put_pokemon(item["name"], cdef, "real-pool",
                              engine_ready=not item["unsupported"],
-                             note=item["reason"])
+                             note=item["reason"], uid=uid, printing=pr)
             elif meta.get("supertype") == "Energy":
-                out[name.lower()] = {"kind": "energy", "name": name,
-                                     "name_zh": getattr(cdef, "name_zh", ""),
-                                     "display": getattr(cdef, "display", name),
-                                     "is_basic": False, "is_basic_energy": True,
-                                     "engine_ready": True, "source": "real-pool"}
-                _POOL_OBJ[name.lower()] = cdef
+                out[uid.lower()] = {"kind": "energy", "name": item["name"],
+                                    "name_zh": getattr(cdef, "name_zh", ""),
+                                    "display": getattr(cdef, "display", item["name"]),
+                                    "is_basic": False, "is_basic_energy": True,
+                                    "engine_ready": True, "source": "real-pool",
+                                    "uid": uid, "printing": pr}
+                _POOL_OBJ[uid.lower()] = cdef
             else:                                    # Trainer
                 tag = getattr(cdef, "tag", "")
-                out[name.lower()] = {"kind": "trainer", "name": name,
-                                     "name_zh": getattr(cdef, "name_zh", ""),
-                                     "display": getattr(cdef, "display", name),
-                                     "is_basic": False, "tag": tag,
-                                     "engine_ready": tag != "unsupported",
-                                     "note": item["reason"],
-                                     "source": "real-pool"}
-                _POOL_OBJ[name.lower()] = cdef
+                out[uid.lower()] = {"kind": "trainer", "name": item["name"],
+                                    "name_zh": getattr(cdef, "name_zh", ""),
+                                    "display": getattr(cdef, "display", item["name"]),
+                                    "is_basic": False, "tag": tag,
+                                    "engine_ready": tag != "unsupported",
+                                    "note": item["reason"],
+                                    "source": "real-pool",
+                                    "uid": uid, "printing": pr}
+                _POOL_OBJ[uid.lower()] = cdef
+        # 卡名别名 → 首选印刷（旧接口/未指定印刷的卡表仍按卡名可直接用）
+        for name, item in reallib.catalog().items():
+            k = name.lower()
+            if k not in out:
+                src = out.get(item["uid"].lower())
+                if src:
+                    out[k] = {**src, "via": "name-alias", "canonical": name}
+                    _POOL_OBJ[k] = _POOL_OBJ.get(item["uid"].lower())
     except Exception:
         pass
 
@@ -206,7 +222,11 @@ def _pool() -> dict:
     except Exception:
         pass
     # 4) 中文别名索引：让「粘贴中文卡表」也能命中（数据键仍为英文）
+    #    ⚠ 跳过印刷 uid（含 `@`）：中文名只指向**首选印刷**的卡名别名，避免同名多印刷时
+    #    中文输入随机落到某一印刷。
     for key, meta in list(out.items()):
+        if "@" in key:
+            continue
         zh = meta.get("name_zh")
         if zh and zh not in out:
             out[zh] = {**meta, "via": "zh-alias", "canonical": meta.get("name")}
@@ -216,6 +236,25 @@ def _pool() -> dict:
 
 
 # ---------------- 解析与校验 ----------------
+def _resolve_entry(e: dict) -> tuple:
+    """卡组行 → (meta, 引擎卡对象)
+
+    优先按**印刷 uid**（同名不同印刷可精确选择），未写/未收录时回退卡名
+    （= 首选印刷，见 `reallib.catalog`）。
+    """
+    pool = _pool()
+    uid = str(e.get("uid") or "").lower()
+    if uid:
+        m, o = pool.get(uid), _POOL_OBJ.get(uid)
+        if m is not None and o is not None:
+            return m, o
+    raw = e.get("name") or ""
+    for k in ((e.get("canonical") or raw).lower(), raw.strip()):
+        if k and k in pool:
+            return pool[k], _POOL_OBJ.get(k)
+    return None, None
+
+
 def _parse(text: str) -> tuple[list, list]:
     """→ (entries, errors)：entries = {count,name,set,num,url,meta,matched}"""
     entries, errs = [], []
@@ -247,10 +286,18 @@ def _parse(text: str) -> tuple[list, list]:
     pool = _pool()
     for e in entries:
         raw = e["name"]
-        meta = (pool.get(raw.lower()) or pool.get(raw.strip())
+        # 「数量 卡名 SET 编号」→ 先按**印刷 uid**精确匹配（同名多印刷可用）
+        uid = None
+        if e.get("set") and e.get("num"):
+            uid = (f"{raw}@{str(e['set']).strip().upper()} "
+                   f"{str(e['num']).strip()}")
+        meta = ((pool.get(uid.lower()) if uid else None)
+                or pool.get(raw.lower()) or pool.get(raw.strip())
                 or pool.get(_norm_key(raw)))
         e["matched"] = bool(meta)
         e["meta"] = meta
+        # 实际采用的印刷（未写印刷/该印刷未收录 → 首选印刷），供对战重建使用
+        e["uid"] = (meta or {}).get("uid")
         if meta:
             # canonical = 英文数据键（同名上限等按它合并计数）；display = 中文展示名
             e["canonical"] = meta.get("name")
@@ -351,7 +398,7 @@ def _fallback_energy_type(cards: list) -> str:
     """占位能量属性：取卡组内出现最多的一种能量属性（缺省无色）"""
     kinds = Counter()
     for e in cards or []:
-        m = (_pool().get((e.get("name") or "").lower()) or {})
+        m = (_resolve_entry(e)[0] or {})
         if m.get("kind") == "energy" and m.get("name"):
             nm = m["name"].lower()
             for t in ("psychic", "fire", "grass", "darkness", "water",
@@ -367,14 +414,12 @@ def deck_build_report(did: str) -> dict:
     d = store.get_deck(did)
     if not d:
         raise ValueError(f"卡组 {did} 不存在")
-    pool = _pool()
     replaced, missing = [], []
     total = playable = 0
     for e in d.get("cards") or []:
         n = int(e.get("count") or 0)
         total += n
-        raw = e.get("name") or ""
-        m = pool.get((e.get("canonical") or raw).lower()) or pool.get(raw.strip())
+        m = _resolve_entry(e)[0]
         if m is None:
             missing.append({"name": e.get("name"), "count": n,
                             "reason": "卡池未收录"})
@@ -402,7 +447,6 @@ def build_engine_deck(did: str) -> list:
     d = store.get_deck(did)
     if not d:
         raise ValueError(f"卡组 {did} 不存在")
-    pool = _pool()
     cards = d.get("cards") or []
     fb_type = _fallback_energy_type(cards)
     from engine.cards import EnergyDef
@@ -412,10 +456,7 @@ def build_engine_deck(did: str) -> list:
     deck: list = []
     missing: list = []
     for e in cards:
-        raw = e.get("name") or ""
-        key = (e.get("canonical") or raw).lower()
-        meta = pool.get(key) or pool.get(raw.strip())
-        obj = _POOL_OBJ.get(key) or _POOL_OBJ.get(raw.strip())
+        meta, obj = _resolve_entry(e)
         n = int(e.get("count") or 0)
         if meta is None or obj is None:
             missing.append(e.get("name") or "?")
@@ -574,8 +615,12 @@ def export_deck(did: str, p: Principal = Depends(current_user),
     for e in d["cards"] or []:
         nm = ((e.get("display") or e.get("name")) if lang == "zh"
               else (e.get("canonical") or e.get("name")))
-        if e.get("set") and e.get("num"):
-            lines.append(f"{e['count']} {nm} {e['set']} {e['num']}")
+        # 优先导出**实际采用的印刷**（uid 解析结果），保证往返后仍是同一印刷
+        pr = (e.get("meta") or {}).get("printing") or {}
+        pset = pr.get("set") or e.get("set")
+        pnum = pr.get("number") or e.get("num")
+        if pset and pnum:
+            lines.append(f"{e['count']} {nm} {pset} {pnum}")
         else:
             lines.append(f"{e['count']} {nm}")
     return {"deck_id": did, "name": d["name"], "lang": lang,

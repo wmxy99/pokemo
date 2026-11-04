@@ -51,18 +51,11 @@ export function CommentaryPanel({ battleId, turn, onMsg }) {
         </div>
       )}
 
-      {!res && !err && (
-        <p className="sm muted" style={{ margin: '6px 0 0' }}>
-          点击「生成解说」：用当前局面与最近事件生成一段中文解说。
-          未配置云端模型时自动使用离线模板（功能不阻断）。
-        </p>
-      )}
-
       {res && (
         <>
           {/* C4：AI 生成标识（固定展示，不可隐藏） */}
           <div className="row" style={{ marginTop: 8 }}>
-            <span className="pill pill-brand" title="合规 C4：AI 生成内容须显著标识">
+            <span className="pill pill-brand" title="AI 生成内容已显著标识">
               AI 生成
             </span>
             <span className="pill pill-muted">来源：{sourceText(res)}</span>

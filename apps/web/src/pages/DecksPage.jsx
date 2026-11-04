@@ -1,86 +1,165 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
-import { Pill, ErrBar, EmptyState, LogBlock, Spinner } from '../components/ui.jsx'
+import { Pill, ErrBar, LogBlock, Spinner } from '../components/ui.jsx'
+import { CardArt } from '../cardart.jsx'
 
-// 中文卡表（推荐）：卡名可用中文，系列/编号可省略；英文规范名同样支持
-const SAMPLE_ZH = `4 多龙梅西亚
-4 多龙奇
-3 多龙巴鲁托ex
-2 夜巡灵
-1 彷徨夜灵
-1 黑夜魔灵
-2 愿增猿
-1 含羞苞
-1 土龙弟弟
-1 土龙节节
-1 喵喵ex
-1 吉雉鸡ex
-4 好朋友宝芬
-4 高级球
-3 破坏之锤
-2 老大的指令
-2 反攻捕捉器
-3 博士的研究
-2 奇树
-1 夜之担架
-2 大地之器
-2 神奇糖果
-8 基本超能量
-5 基本火能量`
+const DECK_SIZE = 60
+const MAX_COPIES = 4
+const PAGE_SIZE = 24
 
-// 英文规范名（Limitless 原始格式，与官方/社区文本互通）
-const SAMPLE_EN = `4 Dreepy TWM 128
-4 Drakloak TWM 129
-3 Dragapult ex TWM 130
-2 Duskull SIT 68
-1 Dusclops SIT 69
-1 Dusknoir SIT 70
-4 Buddy-Buddy Poffin TEF 144
-4 Ultra Ball SVI 196
-2 Professor's Research SVI 189
-2 Boss's Orders PAL 172
-8 Basic Psychic Energy SVE 5
-5 Basic Fire Energy SVE 2`
+const isBasicEnergy = (c) => c.supertype === 'Energy' && (
+  /basic/i.test(c.subtype || '') || /basic|基本/i.test(`${c.name || ''} ${c.display || ''}`)
+)
+const isBasicPokemon = (c) => c.supertype === 'Pokemon' && /basic/i.test(c.subtype || '')
 
-const SAMPLE = SAMPLE_ZH
+// 印刷身份键（与后端 `<卡名>@<SET> <number>` 同规则）：同名不同印刷可分别编排
+function uidOf(c) {
+  const set = String(c.series || '').trim().toUpperCase()
+  const num = String(c.number || '').trim()
+  return set && num ? `${c.name}@${set} ${num}` : c.name
+}
+function printingLabel(c) {
+  const set = String(c.series || '').trim().toUpperCase()
+  const num = String(c.number || '').trim()
+  return set && num ? `${set} ${num}` : ''
+}
+
+function cardView(c) {
+  return {
+    id: c.id,
+    name: c.name,
+    uid: uidOf(c),
+    series: c.series,
+    number: c.number,
+    display: c.display || c.name_zh || c.name,
+    supertype: c.supertype,
+    subtype: c.subtype,
+    types: c.types,
+    hp: c.hp,
+    engine_ready: c.engine_ready,
+  }
+}
 
 export default function DecksPage({ onMsg, onGoBattle }) {
-  const [text, setText] = useState('')
-  const [name, setName] = useState('我的卡组')
-  const [res, setRes] = useState(null)
-  const [decks, setDecks] = useState([])
-  const [presets, setPresets] = useState([])
-  const [pd, setPd] = useState(null)              // 预设逐卡详情（M1）
-  const [openingRes, setOpeningRes] = useState(null)
+  const [name, setName] = useState('新卡组')
+  const [selected, setSelected] = useState([])
+  const [q, setQ] = useState('')
+  const [supertype, setSupertype] = useState('')
+  const [onlyReady, setOnlyReady] = useState(true)
+  const [page, setPage] = useState(1)
+  const [data, setData] = useState(null)
+  const [searchBusy, setSearchBusy] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const [res, setRes] = useState(null)
+  const [decks, setDecks] = useState([])
+  const [openingRes, setOpeningRes] = useState(null)
 
   async function load() {
-    try {
-      setDecks((await api.myDecks()).decks || [])
-      setPresets((await api.deckPresets()).presets || [])
-    } catch { /* 忽略 */ }
+    try { setDecks((await api.myDecks()).decks || []) } catch { /* 忽略 */ }
   }
   useEffect(() => { load() }, [])
 
-  async function loadPreset(id) {
-    onMsg(`加载预设 ${id} 逐卡映射…`)
-    try {
-      setPd(await api.deckPresetDetail(id))
-    } catch (e) {
-      setErr({ code: e.status || 'ERR', message: e.message })
-    }
+  useEffect(() => {
+    let alive = true
+    const tm = setTimeout(() => {
+      setSearchBusy(true)
+      api.libraryCards({
+        q, supertype, page, page_size: PAGE_SIZE, sort: 'name',
+        engine_ready: onlyReady ? true : undefined,
+      })
+        .then((r) => { if (alive) setData(r) })
+        .catch((e) => { if (alive) setErr({ code: e.status || 'ERR', message: e.message }) })
+        .finally(() => { if (alive) setSearchBusy(false) })
+    }, 260)
+    return () => { alive = false; clearTimeout(tm) }
+  }, [q, supertype, onlyReady, page])
+  useEffect(() => { setPage(1) }, [q, supertype, onlyReady])
+
+  const total = selected.reduce((s, e) => s + e.count, 0)
+  const basicCount = selected.filter(isBasicPokemon).reduce((s, e) => s + e.count, 0)
+  // 同名上限按**卡名**合计（不同印刷不能绕过 4 张上限）
+  const countOf = (c) => {
+    const e = selected.find((x) => x.uid === uidOf(c))
+    return e ? e.count : 0
   }
 
-  async function doImport() {
-    setBusy(true); setErr(null); setOpeningRes(null)
+  function addCard(c) {
+    const v = cardView(c)
+    setSelected((sel) => {
+      const totalNow = sel.reduce((s, e) => s + e.count, 0)
+      if (totalNow >= DECK_SIZE) return sel
+      const i = sel.findIndex((e) => e.uid === v.uid)
+      const cur = i >= 0 ? sel[i].count : 0
+      const max = isBasicEnergy(v) ? DECK_SIZE : MAX_COPIES
+      const sameName = sel.filter((e) => e.name === v.name)
+        .reduce((s, e) => s + e.count, 0)
+      if (cur >= max || sameName >= max) return sel
+      if (i >= 0) {
+        const next = [...sel]
+        next[i] = { ...next[i], count: next[i].count + 1 }
+        return next
+      }
+      return [...sel, { ...v, count: 1 }]
+    })
+  }
+
+  function changeCount(uid, delta) {
+    setSelected((sel) => {
+      const i = sel.findIndex((e) => e.uid === uid)
+      if (i < 0) return sel
+      const e = sel[i]
+      const next = e.count + delta
+      const max = isBasicEnergy(e) ? DECK_SIZE : MAX_COPIES
+      const sameName = sel.filter((x) => x.name === e.name)
+        .reduce((s, x) => s + x.count, 0)
+      const totalNow = sel.reduce((s, x) => s + x.count, 0)
+      if (next > max || (delta > 0 && sameName >= max) ||
+          (delta > 0 && totalNow >= DECK_SIZE)) return sel
+      if (next <= 0) return sel.filter((x) => x.uid !== uid)
+      const out = [...sel]
+      out[i] = { ...e, count: next }
+      return out
+    })
+  }
+
+  async function saveDeck() {
+    if (!selected.length) { onMsg('卡组为空', 'err'); return }
+    setBusy(true); setErr(null); setRes(null)
     try {
-      const r = await api.importDeck(text, name)
+      // 写入印刷（`数量 卡名 SET 编号`）：同名多印刷时后端按 uid 精确重建
+      const text = selected.map((e) => (e.series && e.number
+        ? `${e.count} ${e.name} ${String(e.series).toUpperCase()} ${e.number}`
+        : `${e.count} ${e.name}`)).join('\n')
+      const r = await api.importDeck(text, name.trim() || '新卡组')
       setRes(r)
-      onMsg(r.ok ? '解析通过 ✅' : '校验未通过（见错误清单）', r.ok ? 'ok' : 'err')
-      load()
+      onMsg(r.ok ? '卡组已保存' : '卡组校验未通过', r.ok ? 'ok' : 'err')
+      if (r.ok) load()
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) } finally { setBusy(false) }
+  }
+
+  async function editDeck(id) {
+    try {
+      const d = await api.getDeck(id)
+      setName(d.name || '我的卡组')
+      setSelected((d.cards || []).map((e) => {
+        const pr = e.meta?.printing || {}
+        return {
+          name: e.name,
+          uid: e.uid || e.meta?.uid || e.name,
+          series: pr.set || '',
+          number: pr.number || '',
+          display: e.display || e.meta?.name_zh || e.name,
+          supertype: e.meta?.supertype,
+          subtype: e.meta?.subtype,
+          types: e.meta?.types,
+          count: e.count,
+        }
+      }))
+      setRes(null); setOpeningRes(null)
+      onMsg('已载入到编排区')
+    } catch (e) { onMsg(e.message, 'err') }
   }
 
   async function doOpening(id) {
@@ -92,39 +171,112 @@ export default function DecksPage({ onMsg, onGoBattle }) {
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) } finally { setBusy(false) }
   }
 
+  const items = data?.items || []
+  const pages = data?.pages || 1
   const tone = res ? (res.ok ? (res.warnings.length ? 'warn' : 'ok') : 'brand') : null
+
   return (
     <div className="grid cols-2">
       <div className="card">
-        <h3>导入卡组
-          <span className="pill sm">支持中文卡名 · `数量 卡名 [系列 编号]`</span></h3>
+        <h3>编排卡组
+          <Pill tone={total === DECK_SIZE ? 'ok' : 'warn'}>{total} / {DECK_SIZE} 张</Pill>
+        </h3>
         <label htmlFor="dn">卡组名称</label>
         <input id="dn" value={name} onChange={(e) => setName(e.target.value)} style={{ width: '100%' }} />
-        <label htmlFor="dt">卡表（粘贴；mono 字体）</label>
-        <textarea id="dt" className="mono" rows={10} value={text}
-          placeholder={SAMPLE} onChange={(e) => setText(e.target.value)}
-          style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 10, padding: 10 }} />
-        <div className="row" style={{ marginTop: 10 }}>
-          <button className="primary" disabled={busy || !text.trim()} onClick={doImport}>
-            {busy ? <Spinner label="校验中…" /> : t('btn.parse')}
-          </button>
-          <button className="ghost" onClick={() => setText(SAMPLE_ZH)}>填入中文示例</button>
-          <button className="ghost" onClick={() => setText(SAMPLE_EN)}>填入英文示例</button>
-          <button className="ghost" onClick={() => { setText(''); setRes(null) }}>清空</button>
+
+        <div className="deck-builder">
+          <div className="deck-search">
+            <div className="row filter-row">
+              <input aria-label="搜索卡牌" value={q} placeholder="搜索卡名（中 / 英 / 日）"
+                onChange={(e) => setQ(e.target.value)} style={{ flex: 1, minWidth: 140 }} />
+              <select aria-label="超类型" value={supertype} onChange={(e) => setSupertype(e.target.value)}>
+                <option value="">全部类型</option>
+                <option value="Pokemon">宝可梦</option>
+                <option value="Trainer">训练家</option>
+                <option value="Energy">能量</option>
+              </select>
+            </div>
+            <label className="row" style={{ marginTop: 6 }}>
+              <input type="checkbox" checked={onlyReady} onChange={(e) => setOnlyReady(e.target.checked)} />
+              <span className="sm">仅显示可对战卡</span>
+              {searchBusy && <Spinner label="搜索中…" />}
+            </label>
+
+            <div className="deck-results">
+              {items.map((c) => {
+                const n = countOf(c)
+                const max = isBasicEnergy(c) ? DECK_SIZE : MAX_COPIES
+                const disabled = total >= DECK_SIZE || n >= max
+                return (
+                  <div key={c.id} className="deck-result">
+                    <CardArt card={c} className="deck-thumb" />
+                    <div className="meta">
+                      <b title={c.name}>{c.display}</b>
+                      <span className="sm muted">
+                        {c.supertype === 'Pokemon' ? '宝可梦' : c.supertype === 'Trainer' ? '训练家' : '能量'}
+                        {c.subtype ? ` · ${c.subtype}` : ''}{c.hp ? ` · HP ${c.hp}` : ''}
+                        {printingLabel(c) ? ` · ${printingLabel(c)}` : ''}
+                      </span>
+                    </div>
+                    {!c.engine_ready && <Pill tone="warn">未建模</Pill>}
+                    <button className="ghost sm" disabled={disabled} onClick={() => addCard(c)}>
+                      {n > 0 ? `+1 · ${n}` : '添加'}
+                    </button>
+                  </div>
+                )
+              })}
+              {!searchBusy && items.length === 0 && <p className="sm muted">没有匹配的卡</p>}
+            </div>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
+              <button className="ghost sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+              <span className="sm muted mono">{page} / {pages}</span>
+              <button className="ghost sm" disabled={page >= pages} onClick={() => setPage((p) => Math.min(pages, p + 1))}>下一页</button>
+            </div>
+          </div>
+
+          <div className="deck-selected">
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <b>已选 {selected.length} 种</b>
+              <button className="ghost sm" onClick={() => { setSelected([]); setRes(null) }}>清空</button>
+            </div>
+            <div className="deck-list">
+              {selected.map((e) => (
+                <div key={e.uid} className="deck-row">
+                  <CardArt card={e} className="deck-thumb" />
+                  <div className="meta">
+                    <b title={e.name}>{e.display}</b>
+                    <span className="sm muted">
+                      {e.count} 张{printingLabel(e) ? ` · ${printingLabel(e)}` : ''}
+                    </span>
+                  </div>
+                  <div className="stepper">
+                    <button aria-label={`减少 ${e.display}`} onClick={() => changeCount(e.uid, -1)}>−</button>
+                    <span className="mono">{e.count}</span>
+                    <button aria-label={`增加 ${e.display}`} onClick={() => changeCount(e.uid, 1)}>＋</button>
+                  </div>
+                </div>
+              ))}
+              {selected.length === 0 && <p className="sm muted">左侧搜索并添加卡牌</p>}
+            </div>
+            <div className="deck-summary">
+              <Pill tone={basicCount > 0 ? 'ok' : 'warn'}>基础宝可梦 {basicCount}</Pill>
+              <Pill tone={total === DECK_SIZE ? 'ok' : 'warn'}>还需 {Math.max(0, DECK_SIZE - total)} 张</Pill>
+            </div>
+          </div>
         </div>
-        <p className="sm muted">
-          校验规则：60 张上限 · 同名不超过 4 张（基本能量豁免）· 必须包含基础宝可梦；
-          未收录的卡会进入灰名单并标记「不可对战」，差异如实展示。
-          <br />卡名既可用<b>中文</b>（多龙巴鲁托ex / 高级球 / 基本超能量），也可用<b>英文规范名</b>
-          （Dragapult ex / Ultra Ball）；中英混写同一张卡按同一张合并计数。
-        </p>
-        {err && <ErrBar code={err.code} message={err.message} onRetry={doImport} />}
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="primary" disabled={busy || total === 0} onClick={saveDeck}>
+            {busy ? <Spinner label="保存中…" /> : '保存卡组'}
+          </button>
+        </div>
+        {err && <ErrBar code={err.code} message={err.message} onRetry={saveDeck} />}
 
         {res && (
           <div className="import-result">
             <div className="row">
               <Pill tone={tone}>
-                {res.ok ? (res.warnings.length ? '⚠ 通过（有告警）' : '✓ 校验通过') : '✗ 校验未通过'}
+                {res.ok ? (res.warnings.length ? '通过（有告警）' : '校验通过') : '校验未通过'}
               </Pill>
               <Pill tone={res.summary.battle_ready ? 'ok' : 'brand'}>
                 可对战：{res.summary.battle_ready ? '是' : '否'}
@@ -134,53 +286,11 @@ export default function DecksPage({ onMsg, onGoBattle }) {
               {res.summary.unknown > 0 && <Pill tone="warn">未收录 {res.summary.unknown}</Pill>}
             </div>
             {res.errors.length > 0 && (
-              <ul className="err-list">{res.errors.map((x, i) => <li key={i} className="sm">✗ {x}</li>)}</ul>
+              <ul className="err-list">{res.errors.map((x, i) => <li key={i} className="sm">{x}</li>)}</ul>
             )}
             {res.warnings.length > 0 && (
-              <ul className="warn-list">{res.warnings.map((x, i) => <li key={i} className="sm">⚠ {x}</li>)}</ul>
+              <ul className="warn-list">{res.warnings.map((x, i) => <li key={i} className="sm">{x}</li>)}</ul>
             )}
-            {res.parsed?.length > 0 && (
-              <details style={{ marginTop: 8 }}>
-                <summary className="sm">
-                  解析明细（{res.parsed.length} 行 · 中文卡名自动归一到英文数据键）
-                </summary>
-                <table className="tbl">
-                  <thead><tr>
-                    <th scope="col">张数</th>
-                    <th scope="col">卡名（展示）</th>
-                    <th scope="col">数据键</th>
-                    <th scope="col">输入</th>
-                    <th scope="col">状态</th>
-                  </tr></thead>
-                  <tbody>
-                    {res.parsed.map((e, i) => (
-                      <tr key={i}>
-                        <td className="mono">{e.count}</td>
-                        <td>{e.display || e.name}
-                          {e.display && e.display !== e.name && (
-                            <span className="sm muted"> · {e.name}</span>)}
-                        </td>
-                        <td className="mono sm">{e.canonical || '—'}</td>
-                        <td className="sm">{e.input_lang === 'zh' ? '中文' : 'EN'}</td>
-                        <td className="sm">
-                          {!e.matched ? <Pill tone="warn">未收录</Pill>
-                            : (e.meta?.engine_ready === false
-                              ? <Pill tone="warn">占位</Pill>
-                              : <Pill tone="ok">可对战</Pill>)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </details>
-            )}
-            <div className="row" style={{ marginTop: 8 }}>
-              <button className="ghost sm" onClick={() => doOpening(res.id)}>{t('btn.opening')}</button>
-              <button className="ghost sm" onClick={() => api.exportDeck(res.id, 'zh').then((r) => { setText(r.text); onMsg('已导出中文卡表（可直接再导入）') })}>导出中文</button>
-              <button className="ghost sm" onClick={() => api.exportDeck(res.id, 'en').then((r) => { setText(r.text); onMsg('已导出英文规范名（Limitless 互通）') })}>导出英文</button>
-              <button className="ghost sm" onClick={() => api.importDeck(text, name + ' 副本').then((r) => { setRes(r); load(); onMsg(r.ok ? '副本已保存' : '副本存在校验错误') })}>存为副本</button>
-              {res.ok && <button className="primary sm" onClick={onGoBattle}>去对战</button>}
-            </div>
           </div>
         )}
 
@@ -198,93 +308,28 @@ export default function DecksPage({ onMsg, onGoBattle }) {
 
       <div className="card">
         <h3>我的卡组</h3>
-        <table className="tbl">
-          <thead><tr><th scope="col">名称</th><th scope="col">张数</th><th scope="col">校验</th><th scope="col">操作</th></tr></thead>
-          <tbody>
-            {decks.map((d) => (
-              <tr key={d.id}>
-                <td>{d.name}<div className="sm muted mono">{d.id}</div></td>
-                <td className="mono">{d.summary?.total ?? '—'}</td>
-                <td>{d.valid ? <Pill tone="ok">通过</Pill> : <Pill tone="brand">未通过</Pill>}</td>
-                <td>
-                  <button className="pill sm" onClick={() => api.exportDeck(d.id, 'zh').then((r) => { setText(r.text); onMsg('已载入中文卡表到编辑区') })}>载入</button>
-                  <button className="pill sm" style={{ marginLeft: 6 }} onClick={() => doOpening(d.id)}>起手</button>
-                </td>
-              </tr>
-            ))}
-            {decks.length === 0 && <tr><td colSpan="4" className="muted sm">{t('empty.decks')}</td></tr>}
-          </tbody>
-        </table>
-
-        <h3 style={{ marginTop: 16 }}>预设对手池 <span className="pill sm">真实 60 张卡表</span></h3>
-        <div className="preset-row">
-          {presets.map((p) => (
-            <button key={p.id} className={`preset ${pd && pd.id === p.id ? 'on' : ''}`}
-              title={`${p.note}｜点击查看逐卡映射（60 卡真实卡表）`}
-              onClick={() => loadPreset(p.id)}>
-              <b>{p.id} · {p.label}</b>
-              <small className="muted">{p.note}</small>
-              <small className="muted mono">
-                60 卡 · 映射 {(p.executable_rate * 100).toFixed(1)}%
-                {p.replaced.length > 0 && ` · 引擎占位 ${p.replaced.reduce((s, r) => s + r.count, 0)} 张`}
-              </small>
-            </button>
-          ))}
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead><tr><th scope="col">名称</th><th scope="col">张数</th><th scope="col">校验</th><th scope="col">操作</th></tr></thead>
+            <tbody>
+              {decks.map((d) => (
+                <tr key={d.id}>
+                  <td>{d.name}<div className="sm muted mono">{d.id}</div></td>
+                  <td className="mono">{d.summary?.total ?? '—'}</td>
+                  <td>{d.valid ? <Pill tone="ok">通过</Pill> : <Pill tone="brand">未通过</Pill>}</td>
+                  <td>
+                    <button className="pill sm" onClick={() => editDeck(d.id)}>编辑</button>
+                    <button className="pill sm" style={{ marginLeft: 6 }} onClick={() => doOpening(d.id)}>起手</button>
+                    {d.valid && (
+                      <button className="pill sm" style={{ marginLeft: 6 }} onClick={onGoBattle}>对战</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {decks.length === 0 && <tr><td colSpan="4" className="muted sm">{t('empty.decks')}</td></tr>}
+            </tbody>
+          </table>
         </div>
-        <p className="sm muted">
-          {presets.length
-            ? '真实卡名 + 引擎映射数值。点开可查看逐卡状态：可映射 / 近似 / 占位，差异如实展示。'
-            : '加载中…'}
-        </p>
-
-        {pd && (
-          <div className="card" style={{ marginTop: 12 }}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <b>{pd.id} · {pd.label} <span className="pill sm">{pd.cards.length} 种 / {pd.coverage.total} 张</span></b>
-              <div className="row">
-                <Pill tone={pd.coverage.executable_rate >= 0.9 ? 'ok' : 'warn'}>
-                  可执行 {(pd.coverage.executable_rate * 100).toFixed(1)}%
-                </Pill>
-                <button className="ghost sm" onClick={onGoBattle}>用此卡组对战</button>
-                <button className="ghost sm" onClick={() => setPd(null)}>收起</button>
-              </div>
-            </div>
-            <div className="row sm muted" style={{ marginTop: 6 }}>
-              <span>定位：{pd.role || '—'}</span><span>·</span><span>{pd.style}</span>
-            </div>
-            {pd.coverage.replaced.length > 0 && (
-              <p className="sm" style={{ color: 'var(--brand-deep)' }}>
-                引擎未实现（对战时以基础能量占位，共 {pd.coverage.replaced.reduce((s, r) => s + r.count, 0)} 张）：
-                {pd.coverage.replaced.map((r) => `${r.name}×${r.count}`).join('、')}
-              </p>)}
-            {pd.coverage.approximated.length > 0 && (
-              <p className="sm muted">
-                近似实现（特性未落地，招式保留）：{pd.coverage.approximated.map((r) => `${r.name}×${r.count}`).join('、')}
-              </p>)}
-            <table className="tbl" style={{ marginTop: 8 }}>
-              <thead><tr>
-                <th scope="col">张数</th><th scope="col">卡名</th>
-                <th scope="col">类型</th><th scope="col">引擎状态</th>
-              </tr></thead>
-              <tbody>
-                {pd.cards.map((c, i) => (
-                  <tr key={i}>
-                    <td className="mono">{c.count}</td>
-                    <td>{c.display || c.name_zh || c.name}
-                      {c.display && c.display !== c.name && (
-                        <span className="sm muted"> · {c.name}</span>)}</td>
-                    <td className="sm muted">{c.engine || '—'}</td>
-                    <td>
-                      <Pill tone={c.status === 'mapped' ? 'ok' : c.status === 'approximated' ? 'warn' : 'brand'}>
-                        {c.status === 'mapped' ? '可映射' : c.status === 'approximated' ? '近似' : '占位'}
-                      </Pill>
-                      {c.note && <span className="sm muted"> {c.note.slice(0, 42)}</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>)}
       </div>
     </div>
   )

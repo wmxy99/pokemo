@@ -126,9 +126,9 @@ export const DECKS = [
   { id: 'lightning', label: '雷电演示卡组' },
   { id: 'fire', label: '火系演示卡组' },
   { id: 'psychic', label: '超能演示卡组' },
-  { id: 'ability_demo', label: '特性演示卡组' },
+  { id: 'ability', label: '特性演示卡组' },
   { id: 'grass', label: '草系演示卡组' },
-  { id: 'status_demo', label: '状态流演示卡组' },
+  { id: 'status', label: '状态流演示卡组' },
 ]
 
 export function shortDeck(id) {
@@ -136,8 +136,8 @@ export function shortDeck(id) {
     A1: '多龙巴鲁托ex/黑夜魔灵', A2: '多龙巴鲁托ex/火焰鸡ex',
     A3: 'N的索罗亚克ex', A4: '基础盒',
     draco: '龙系进化演示', lightning: '雷电演示', fire: '火系演示',
-    psychic: '超能演示', ability_demo: '特性演示', grass: '草系演示',
-    status_demo: '状态流演示',
+    psychic: '超能演示', ability: '特性演示', grass: '草系演示',
+    status: '状态流演示',
   }
   return m[id] || id
 }

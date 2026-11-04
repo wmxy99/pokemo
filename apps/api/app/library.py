@@ -157,6 +157,7 @@ def _detail(c: dict) -> dict:
     out = dict(_brief(c))
     out.update({
         "rules_text": c["rules_text"],
+        "rules_text_zh": c["library"].get("rules_text_zh") or "",
         "attacks": c["attacks"],
         "abilities": c["abilities"],
         "library": c["library"],
@@ -208,7 +209,8 @@ def list_cards(q: str = Query("", description="卡名关键字（中/英/日，�
     def hit(c: dict) -> bool:
         if kw:
             hay = {_norm_key(c["name"]), _norm_key(c["name_zh"]),
-                   _norm_key(c["name_ja"]), c["name_key"]}
+                   _norm_key(c["name_ja"]), c["name_key"],
+                   _norm_key(c["library"].get("rules_text_zh") or "")}
             if not any(kw in h for h in hay if h):
                 return False
         if st and c["supertype"] != st:

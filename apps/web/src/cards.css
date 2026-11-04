@@ -12,10 +12,10 @@
   aspect-ratio: 63 / 88;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 4px 12px rgba(15, 23, 42, .04);
   font-size: 11px;
   line-height: 1.25;
   container-type: inline-size;
@@ -40,13 +40,28 @@
 .cf-dmg { font-style: normal; font-size: 10px; background: #B91C1C; color: #fff;
   border-radius: 999px; padding: 0 4px; margin-left: 2px; }
 
-/* ---- 卡面区（自绘：属性色底 + 属性汉字 + 徽标） ----
+/* ---- 程序生成的原创卡面美术（卡库缩略图 / 详情大图） ---- */
+.card-art { background-size: cover; background-position: center; background-repeat: no-repeat;
+  background-color: #1E293B; border: 1px solid var(--line-2); border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.lib-thumb { width: 40px; height: 56px; flex: 0 0 auto; border-radius: 6px; }
+.preset-art { width: 30px; height: 42px; border-radius: 5px; }
+.lib-hero { width: 150px; height: 210px; flex: 0 0 auto; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.20); }
+@media (max-width: 640px) { .lib-hero { width: 96px; height: 134px; } }
+
+/* ---- 卡面区（自绘：原创美术 + 属性徽标） ----
    固定占卡高 34%（真实卡牌的艺术区比例），剩余空间留给招式区，避免出现大片空白 */
 .cf-art { position: relative; flex: 0 0 34%; min-height: 34px; display: grid; place-items: center;
-  border-bottom: 1px solid var(--line-2); overflow: hidden; }
+  border-bottom: 1px solid var(--line-2); overflow: hidden;
+  background-size: cover; background-position: center; background-repeat: no-repeat; }
+.cf-art::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(15,23,42,.20)); }
 .cf-art.big .cf-art-glyph { font-size: 30px; }
-.cf-art-glyph { font-size: 24px; font-weight: 800; opacity: .5; letter-spacing: .05em; }
-.cf-art-glyph.trainer { font-size: 15px; color: #475569; opacity: .6; }
+.cf-art-glyph { position: relative; z-index: 1; font-size: 24px; font-weight: 800; opacity: .78;
+  letter-spacing: .05em; color: #fff; text-shadow: 0 1px 6px rgba(15,23,42,.55); }
+.cf-art-glyph.trainer { font-size: 15px; color: #fff; opacity: .8; }
+.cf-badge, .cf-badges, .cf-evo, .cf-warnmark, .cf-hpbar { z-index: 2; }
 .cf-badges { position: absolute; top: 3px; left: 3px; display: flex; flex-direction: column; gap: 2px; }
 .cf-badge { display: inline-flex; align-items: center; gap: 3px; border: 1px solid;
   border-radius: 999px; padding: 0 5px; font-size: 9px; font-weight: 700; background: #fff; }
@@ -109,7 +124,7 @@
 .st-confused { color: #BE185D; border-color: #FBCFE8; background: #FDF2F8; }
 
 /* ---- 尺寸变体 ---- */
-.cf.zoom { width: 236px; font-size: 13px; border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, .22); }
+.cf.zoom { width: 246px; font-size: 13px; border-radius: 16px; box-shadow: 0 18px 44px rgba(15, 23, 42, .26); }
 .cf.zoom .cf-name { font-size: 14px; }
 .cf.zoom .cf-hp { font-size: 15px; }
 .cf.zoom .cf-art-glyph { font-size: 46px; }
@@ -170,13 +185,13 @@
 .field-slot.hit .cf { border-color: #B91C1C; box-shadow: 0 0 0 2px rgba(185, 28, 28, .22); }
 
 /* ---- 详情浮层 ---- */
-.zoom-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, .55);
-  display: grid; place-items: center; z-index: 80; padding: 20px; }
-.zoom-body { display: flex; gap: 18px; background: #fff; border-radius: 14px; padding: 16px;
+.zoom-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, .52);
+  backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 80; padding: 20px; }
+.zoom-body { display: flex; gap: 20px; background: #fff; border-radius: 18px; padding: 18px;
   max-width: 720px; width: 100%; max-height: 88vh; overflow: auto;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, .35); }
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .36); }
 .zoom-side { flex: 1; min-width: 0; }
-.zoom-side h4 { margin: 0 0 8px; font-size: 17px; }
+.zoom-side h4 { margin: 0 0 10px; font-size: 18px; letter-spacing: -.01em; }
 .zoom-side h5 { margin: 12px 0 4px; font-size: 12px; color: var(--muted);
   text-transform: uppercase; letter-spacing: .08em; }
 .zoom-side p { margin: 2px 0; font-size: 12.5px; color: var(--ink-2); }
@@ -194,8 +209,8 @@
 .table-bench { flex: 1; min-width: 200px; }
 .bench-list-cards { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .field-slot { position: relative; }
-.side-opp .zone { background: linear-gradient(180deg, #FFF7F7, #fff); }
-.side-me .zone { background: linear-gradient(180deg, #F8FAFF, #fff); }
+.side-opp .zone { background: linear-gradient(180deg, #FFF8F8, #fff 70%); }
+.side-me .zone { background: linear-gradient(180deg, #F8FAFF, #fff 70%); }
 
 /* 卡牌被抽到/打出时的入场节奏（多张依次略延迟，像逐张发牌） */
 .bench-list-cards .field-slot:nth-child(2) { animation-delay: .04s; }
@@ -228,10 +243,11 @@
 .target-bar b { color: #991B1B; }
 
 /* 折叠入口（指令输入 / 全部合法动作）—— 主交互是点牌出牌，这两个是备选 */
-.cmd-drawer { margin-top: 10px; padding: 6px 10px; border: 1px solid var(--line-2);
-  border-radius: 10px; background: #FCFCFD; }
-.cmd-drawer > summary { cursor: pointer; font-size: 12px; color: var(--muted);
-  list-style: none; min-height: 24px; }
+.cmd-drawer { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line-2);
+  border-radius: 12px; background: #FBFBFC; transition: background .15s,border-color .15s }
+.cmd-drawer > summary { cursor: pointer; font-size: 12px; color: var(--ink-2);
+  list-style: none; min-height: 26px; font-weight: 600 }
+.cmd-drawer > summary:hover { color: var(--brand-deep) }
 .cmd-drawer > summary::-webkit-details-marker { display: none; }
 .cmd-drawer > summary::before { content: "▸ "; }
 .cmd-drawer[open] > summary::before { content: "▾ "; }

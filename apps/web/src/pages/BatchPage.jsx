@@ -93,7 +93,7 @@ export default function BatchPage({ onMsg }) {
   async function cancel(id) {
     try {
       await api.cancelBatch(id)
-      onMsg('已请求取消（保留已完成局，K4）', 'ok')
+      onMsg('已请求取消（保留已完成局）', 'ok')
       setDetail((d) => d && { ...d, status: 'cancelling' })
       refresh()
     } catch (e) { onMsg('取消失败：' + e.message, 'err') }
@@ -153,7 +153,7 @@ export default function BatchPage({ onMsg }) {
                 onChange={(e) => setSeed(e.target.value)} style={{ width: 150 }} /></div>
           </div>
         </>) : (<>
-          <label>我方卡组池（多选，最多 6）</label>
+          <label>我方卡组池</label>
           <div className="preset-row">
             {deckOptions.map((d) => (
               <button key={d.id} className={`preset ${poolA.includes(d.id) ? 'on' : ''}`}
@@ -162,7 +162,7 @@ export default function BatchPage({ onMsg }) {
               </button>
             ))}
           </div>
-          <label style={{ marginTop: 10 }}>对手卡组池（多选，最多 6）</label>
+          <label style={{ marginTop: 10 }}>对手卡组池</label>
           <div className="preset-row">
             {deckOptions.map((d) => (
               <button key={d.id} className={`preset ${poolB.includes(d.id) ? 'on' : ''}`}
@@ -184,7 +184,6 @@ export default function BatchPage({ onMsg }) {
           </div>
         </>)}
 
-        <p className="sm muted">先后手由引擎按 seed 交替决定，以消除先手优势对胜率的干扰；正式验收建议使用 200 局样本。</p>
         <div className="row">
           <button className="primary" disabled={busy} onClick={submit}>{t('btn.submit')}</button>
           <button className="ghost" onClick={() => {
@@ -215,7 +214,7 @@ export default function BatchPage({ onMsg }) {
               <span className="sm mono">{p.done}/{p.n}（{pct}%）</span>
               {p.pair && <span className="sm muted">当前对位：{p.pair}</span>}
             </div>
-          </>) : <p className="sm muted">等待调度…（乐观 ETA 将在 1s 内出现）</p>}
+          </>) : <p className="sm muted">等待调度…</p>}
           {detail.result && !cells.length && (
             <div className="row sm">
               <Pill>A 胜率 <b className="mono">{detail.result.win_rate_a ?? '—'}</b></Pill>

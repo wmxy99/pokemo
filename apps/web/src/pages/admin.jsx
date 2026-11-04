@@ -6,23 +6,17 @@ import { openJobStream } from '../sse.js'
 
 /**
  * 后台页面（UI 规范 §4.2）
- * - DashboardPage（M6）：三 KPI + K1–K4 看门狗 + 近 7 日任务 + 导出（F16 预留，标灰 beta）
- * - TrainingPage（M2/RL）：训练任务提交/监控/日志/取消
- * - UsersPage（M5/F13）：admin 用户与角色（越权提示文案）
+ * - TrainingPage（M2/RL）：数据总览 + 训练任务提交/监控/日志/取消
+ * - ModelConfigPage：见 ModelConfig.jsx
  */
 
-const STATUS_TONE = { pass: 'ok', warn: 'warn', fail: 'brand', unknown: 'muted' }
-
-export function DashboardPage({ onMsg }) {
+/** 数据总览：原仪表盘内嵌到 RL 训练页（KPI / 近 7 日） */
+function TrainingOverview({ jobs = [] }) {
   const [sum, setSum] = useState(null)
-  const [wd, setWd] = useState(null)
-  const [users, setUsers] = useState(null)
   const [err, setErr] = useState(null)
 
   useEffect(() => {
     api.statsSummary().then(setSum).catch((e) => setErr({ code: e.status || 'ERR', message: e.message }))
-    api.watchdog().then(setWd).catch(() => {})
-    api.adminUsers().then((r) => setUsers(r.users)).catch(() => setUsers(null))
   }, [])
 
   const k = sum?.kpi || {}
@@ -35,30 +29,10 @@ export function DashboardPage({ onMsg }) {
         <h3>关键指标概览</h3>
         <div className="stats">
           <StatCard n={k.total_games ?? '—'} label="累计对局（本人）" />
-          <StatCard n={users ? users.length : '—'} label="注册用户" />
           <StatCard n={k.tasks ?? '—'} label="已完成批量任务" />
+          <StatCard n={k.avg_turns ?? '—'} label="批量平均回合" />
+          <StatCard n={jobs.length} label="训练任务" />
         </div>
-      </div>
-
-      <div className="card">
-        <h3>K1–K4 看门狗 <Pill tone="muted">按实测值判定，未达标会如实标注</Pill></h3>
-        <table className="tbl">
-          <thead><tr><th scope="col">指标</th><th scope="col">阈值</th><th scope="col">当前</th><th scope="col">状态</th></tr></thead>
-          <tbody>
-            {(wd?.rows || []).map((r) => (
-              <tr key={r.id}>
-                <td><b className="mono">{r.id}</b> {r.name}</td>
-                <td className="sm mono">{r.threshold}</td>
-                <td className="sm mono">{r.current}</td>
-                <td><Pill tone={STATUS_TONE[r.status]}>{r.status}</Pill></td>
-              </tr>
-            ))}
-            {!wd && <tr><td colSpan="4" className="muted sm">加载中…</td></tr>}
-          </tbody>
-        </table>
-        {wd?.k1_detail && (
-          <LogBlock max={90} lines={`K1 来源：${wd.k1_detail.tag} · win_rate=${wd.k1_detail.value} · n=${wd.k1_detail.n}\n${wd.k1_detail.note}`} />
-        )}
       </div>
 
       <div className="card">
@@ -128,7 +102,9 @@ export function TrainingPage({ onMsg, authed }) {
 
   const curve = (detail?.result?.curve || []).map((c) => `${c.at}  win=${c.win_rate}`).join('\n')
   return (
-    <div className="grid cols-2">
+    <div className="grid" style={{ gap: 16 }}>
+      <TrainingOverview jobs={jobs} />
+      <div className="grid cols-2">
       <div className="card">
         <h3>RL 训练任务（PPO 课程） <Pill>BC → vs 基线 → 冻结快照 → MCTS 蒸馏</Pill></h3>
         {!authed && <div className="alert warn" role="alert">训练管理需要登录账号：未登录提交会被拒绝（403）。</div>}
@@ -176,7 +152,7 @@ export function TrainingPage({ onMsg, authed }) {
 
       <div className="card">
         <h3>监控 {detail && <span className="pill sm mono">{detail.id} · {detail.status}</span>}</h3>
-        {!detail && <p className="sm muted">从左侧启动，或点下方任务查看日志/曲线。</p>}
+        {!detail && <p className="sm muted">暂无任务</p>}
         {detail && (<>
           <div className="row">
             {detail.status === 'running' && (<>
@@ -194,43 +170,7 @@ export function TrainingPage({ onMsg, authed }) {
         <h3>训练任务列表</h3>
         <TaskTable jobs={jobs} onView={(j) => api.trainStatus(j.id).then(setDetail)} />
       </div>
-    </div>
-  )
-}
-
-export function UsersPage() {
-  const [users, setUsers] = useState(null)
-  const [err, setErr] = useState(null)
-  async function load() {
-    try { setUsers((await api.adminUsers()).users) }
-    catch (e) { setErr({ code: e.status, message: e.message }) }
-  }
-  useEffect(() => { load() }, [])
-  return (
-    <div className="card">
-      <h3>用户管理
-        <Pill>登录鉴权 + 资源按所有者隔离，越权访问会被拒绝</Pill></h3>
-      {err && <ErrBar code={err.code} message={err.message} onRetry={load} />}
-      <table className="tbl">
-        <thead><tr><th scope="col">用户</th><th scope="col">角色</th><th scope="col">日配额</th><th scope="col">创建时间</th><th scope="col">操作</th></tr></thead>
-        <tbody>
-          {(users || []).map((u) => (
-            <tr key={u.name}>
-              <td className="mono">{u.name}</td>
-              <td><Pill tone={u.role === 'admin' ? 'brand' : 'muted'}>{u.role}</Pill></td>
-              <td className="mono">{u.quota_day}/10</td>
-              <td className="sm muted mono">{u.created ? new Date(u.created * 1000).toLocaleString() : '—'}</td>
-              <td>
-                <button className="pill sm" onClick={() => api.adminSetRole(u.name, u.role === 'admin' ? 'user' : 'admin').then(load)}>
-                  设为{u.role === 'admin' ? 'user' : 'admin'}
-                </button>
-              </td>
-            </tr>
-          ))}
-          {users === null && <tr><td colSpan="5" className="muted sm">需 admin 权限（首个注册者自动为 admin）</td></tr>}
-        </tbody>
-      </table>
-      <p className="sm muted">封禁记录：P1+ 待补（不在 P0 范围）。</p>
+      </div>
     </div>
   )
 }

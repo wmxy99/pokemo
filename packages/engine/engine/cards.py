@@ -75,6 +75,12 @@ class AbilityDef:
     location: str = "field"       # field | hand
     desc: str = ""                # 兼容保留（历史数据此字段为中文）
     name_zh: str = ""             # 中文展示名
+    # 发动代价（2026-11-04 第四十九批）：卡面「You must <代价> in order to use
+    # this Ability.」—— 与 `TrainerDef.play_cost` 同性质，**不是 tag**：代价不是
+    # 效果，做成 tag 会挤掉主效果，而且执行顺序会跑到效果之后。
+    # 形态见 `battle._parse_ability_cost`：discard / discard_named /
+    # discard_self_energy / discard_hand_energy / hand_bottom。
+    cost: str = ""
     desc_zh: str = ""             # 中文效果文本（自述转写）
 
     @property

@@ -1523,7 +1523,10 @@ class TestActionOrdering(unittest.TestCase):
 
     def test_discard_before_draw(self):
         tags = self._tags("Discard your hand and draw 5 cards.")["tags"]
-        self.assertEqual(tags, ["discard:all", "draw:5"])
+        # 第五十一批**决策变更**：训练家只认**一个**卡级 tag，原来拆成
+        # `discard:all` + `draw:5` 两条会被建池整卡拒收（且不记录原因）。
+        # 现在合并成引擎早有的 `research:N`（弃全部手牌再抽 N）。
+        self.assertEqual(tags, ["research:5"])
 
     def test_draw_before_discard_when_text_says_so(self):
         tags = self._tags("Draw 2 cards. Then, discard 2 cards from your "
@@ -1685,13 +1688,19 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertNotIn("confuse", r["tags"])
         self.assertTrue(r["unsupported"])
 
-    def test_ability_cost_rejected(self):
-        """卡面带「in order to use this Ability」代价 → 引擎无代价结算，拒"""
+    def test_ability_cost_mapped(self):
+        """**决策反转**（2026-11-04 第四十九批）：带着代价的特性现在可建模
+
+        当时拒收的理由是「引擎无代价结算」—— 直接放通等于**免费发动**，是对的。
+        第四十九批补上了 `AbilityDef.cost`（付账在效果**之前**、付不出不进合法
+        动作表），于是这条从「必须未建模」变成「必须建模」，且代价要跟着走。
+        """
         r = self._tags("You must discard a Basic {R} Energy card from your hand "
                        "in order to use this Ability. Once during your turn, you "
                        "may make your opponent's Active Pok\u00e9mon Burned.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["burn"])
+        self.assertEqual(r["ability_cost"], "discard_hand_energy:1:fire")
+        self.assertEqual(r["unsupported"], [])
 
     def test_evolve_trigger_status_wrapped(self):
         """2026-10-28 第十批：进化触发的状态特性已可建模（包裹 `evolve_act:`）

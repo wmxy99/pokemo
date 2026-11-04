@@ -91,6 +91,13 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 2026-11-02 第三十九批：选 N 只各附（Janine's Secret Art）
                 # 与训练家抛币门（Energy Coin）
                 "attach_each_pick:", "coin_gate_attach:",
+                # 第五十批：道具形态的奖赏减少（Lillie's Pearl）
+                "ko_prize_minus:",
+                # 第五十一批：训练家复合句（一条 tag 承载两个动作）——
+                # `status_multi:` 多状态 / `switch_draw_to:` 换位+抽 /
+                # `gust_confuse` 拉后备+混乱。训练家只认一个卡级 tag，
+                # 拆成两条会被整卡拒收（此前 9 张训练家因此静默消失）。
+                "status_multi:", "switch_draw_to:", "gust_confuse",
                 # 2026-11-03 第四十四批：同一枚币的双分支（Venture Bomb）
                 # `coin_flip:heads:<a>|tails:<b>` —— 训练家侧抛一次后派发
                 "coin_flip:",
@@ -109,6 +116,13 @@ ATTACK_TAG_PREFIXES = (
     "ignore_weakness",
     "ignore_resistance",
     "coin:", "coin_each:", "coin_all:", "coin_until_tails:", "shield:", "evolve_from_deck", "mill:",
+    # 第五十二批（2026-11-04）：**补白** —— 解析早已产出、引擎也早已支持，
+    # 但白名单漏了前缀，等于这些机制从未可用：
+    #   · `research:`  招式侧「弃全部手牌再抽 N」（Raging Bolt ex「Burst Roar」）
+    "research:",
+    # 第五十一批：招式侧多状态（「is now Burned and Confused」）——
+    # 此前只落第一个状态，第二个被**静默丢掉**（5 个招式受影响）。
+    "status_multi:",
     # 跨回合锁定（2026-10-27）：攻击封锁 / 撤退封锁 / 手牌禁打
     "attack_lock:", "retreat_lock:", "play_lock:",
     # 招式侧全牌库检索（2026-10-27）——语义与特性侧一致（检索入手）。
@@ -181,6 +195,13 @@ ATTACK_TAG_PREFIXES = (
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
 ABILITY_TAG_PREFIXES = (
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
+    # 第四十九批（2026-11-04）：**补白** —— 特性侧「draw cards until you have N」
+    # （Quaquaval「Up-Tempo」/ Iono's Kilowattrel「Flashing Draw」）。引擎早在
+    # `_do_ability` 里有该派发，但白名单只写了 `draw:`，`draw_to:` 一直被**静默丢弃**
+    # （`startswith("draw:")` 不匹配 `draw_to:`，第 5 位是 `_` 不是 `:`）。
+    "draw_to:",
+    # 第五十二批：特性侧磨牌（Durant ex）与拉后备（Meowstic「Beckoning Tail」）
+    "mill:", "gust",
     # 特性侧自由分配附着（2026-10-30 第三十三批；2026-11-02 起解析侧开始产出）：
     # 引擎在 `_do_ability` 里排在 `attach_energy:` 之前。当前来源是 Magneton SSP 59
     # （场上主动特性 + `:selfko`）；进化触发形态仍需 `evolve_act:` 包装，未产出。
@@ -191,6 +212,9 @@ ABILITY_TAG_PREFIXES = (
     # 第三十九批：Steven's Metagross ex 的「X-Boot」是 field 特性
     "attach_spread_multi:",
     "ko_draw:", "evolve_attach:", "weak_change:", "passive:", "status_self:",
+    # 第五十批（2026-11-04）：被击倒时**对手少拿**奖赏卡（Shedinja / Mega Gengar /
+    # Munkidori）。与 `ko_prize_plus:`（多拿、挂在取奖赏方）方向相反，不可混用。
+    "ko_prize_minus:",
     # 特性侧**全牌库检索**（2026-09-22）：与 recon（检视牌库顶 N 取 1）语义不同
     "search_pokemon:", "search_trainer:", "search_any:", "search_energy:",
     # 特性回复（2026-10-27）：范围语义见 battle._apply_heal
@@ -308,6 +332,9 @@ def build_pokemon(card: dict, items: dict, name_key: str) -> Optional[dict]:
             "location": loc,
             "desc": ab.get("effect") or "",
             "desc_zh": ab.get("effect_zh") or "",
+            # 发动代价（2026-11-04 第四十九批）：「You must … in order to use
+            # this Ability.」—— 由解析链剥句得到，引擎在效果**之前**支付。
+            "cost": str((it or {}).get("cost") or ""),
         })
     if not attacks and not abilities:
         return None

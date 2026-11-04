@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-04 09:27:59",
+  "reparsed_at": "2026-11-04 10:16:26",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1045,
+  "engine_ready": 1061,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1045,
-   "engine_approximated": 1030,
-   "engine_unmatched": 222,
-   "engine_namekey_mismatch": 34
+   "zh_backfill": 1061,
+   "engine_approximated": 1046,
+   "engine_unmatched": 206,
+   "engine_namekey_mismatch": 30
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 125,
-   "engine_tags": 1381,
-   "unsupported": 209,
+   "engine_tags": 1383,
+   "unsupported": 206,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1030,
+  "engine_approximated": 1046,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -2759,6 +2759,7 @@
       "engine_tags": [
        "passive:bench_immune"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -4064,6 +4065,7 @@
       "engine_tags": [
        "recon:1:1:any:dest:discard:rest:none"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -4236,6 +4238,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -5388,6 +5391,7 @@
       "engine_tags": [
        "fx:attack_cost:self:less:per:opp_prizes_taken:name:bloodmoon"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -6050,6 +6054,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -7247,6 +7252,7 @@
       "engine_tags": [
        "fx:ability_block:flutter_mane"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -7385,6 +7391,7 @@
       "engine_tags": [
        "passive:prev_attacks"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -8180,26 +8187,21 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": null,
-          "target": "hand",
-          "extra": {
-           "all": true
-          }
-         },
-         {
           "type": "draw",
           "amount": 6,
-          "target": "deck"
+          "target": "deck",
+          "extra": {
+           "discard_all": true
+          }
          }
         ],
-        "source_text": "Discard your hand and draw 6 cards."
+        "source_text": "Discard your hand and draw 6 cards.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard:all",
-       "draw:6"
+       "research:6"
       ],
       "unsupported": []
      },
@@ -8247,20 +8249,16 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": null,
-        "target": "hand",
-        "extra": {
-         "all": true
-        }
-       },
-       {
         "type": "draw",
         "amount": 6,
-        "target": "deck"
+        "target": "deck",
+        "extra": {
+         "discard_all": true
+        }
        }
       ],
-      "source_text": "Discard your hand and draw 6 cards."
+      "source_text": "Discard your hand and draw 6 cards.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -8289,8 +8287,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard:all",
-     "draw:6",
+     "research:6",
      "dmg_set:70:per:own_discarded_this_turn"
     ],
     "unsupported": [],
@@ -8639,6 +8636,7 @@
        "draw:3",
        "bounce:shuffle_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -9395,6 +9393,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -9662,6 +9661,7 @@
       "engine_tags": [
        "passive:dmg_immune:team_bench:effects"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -9832,6 +9832,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -10357,6 +10358,7 @@
       "engine_tags": [
        "fx:attack_cost:self:less:per:opp_bench"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -10537,6 +10539,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -10694,6 +10697,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -10982,6 +10986,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:basic_ex"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -11494,6 +11499,7 @@
       "engine_tags": [
        "recon:4:all:basic_energy-metal:dest:attach_spread:rest:shuffle_bottom"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -11999,6 +12005,7 @@
       "engine_tags": [
        "search_any:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -12443,6 +12450,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -13000,6 +13008,7 @@
        "attach_energy:1:grass:hand",
        "draw:1"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -13361,6 +13370,7 @@
       "engine_tags": [
        "draw_both:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -13792,6 +13802,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -14083,6 +14094,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -14321,6 +14333,7 @@
       "engine_tags": [
        "passive:checkup_spread:10:ability_all:except:froslass"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -14565,6 +14578,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": [
        {
         "type": "search",
@@ -14729,6 +14743,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -15110,6 +15125,7 @@
       "engine_tags": [
        "bounce:shuffle_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -15523,6 +15539,7 @@
       "engine_tags": [
        "move_damage:3"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -16076,6 +16093,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -16233,6 +16251,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:has_ability"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -16458,6 +16477,7 @@
       "engine_tags": [
        "on_damaged:status:burn"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -16672,6 +16692,7 @@
       "engine_tags": [
        "recon:2"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -16974,6 +16995,7 @@
       "engine_tags": [
        "recon:6"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -17127,6 +17149,7 @@
       "engine_tags": [
        "attach_energy:1:deck"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -17477,6 +17500,7 @@
       "engine_tags": [
        "energy_move:1:from:any:to:any"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -17649,6 +17673,7 @@
       "engine_tags": [
        "fx:static_dmg:add:50:self_vs_ability"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -18572,6 +18597,7 @@
       "engine_tags": [
        "counters:5:scope:opp:1:selfko"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -18736,6 +18762,7 @@
       "engine_tags": [
        "counters:13:scope:opp:1:selfko"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -19084,6 +19111,7 @@
       "engine_tags": [
        "attach_energy:2:fighting:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -19658,14 +19686,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Munkidori ex@SFA 37",
    "parse": {
     "items": [
      {
@@ -19707,29 +19737,29 @@
        {
         "kind": "ability",
         "name": "Oh No You Don’t",
-        "trigger": "on_knockout",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "ko_prize",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "n": 1,
+           "if_named": "pecharunt"
           }
          }
         ],
-        "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card."
+        "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "ko_prize_minus:1:if_named:pecharunt"
+      ],
+      "cost": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -19755,33 +19785,31 @@
      {
       "kind": "ability",
       "name": "Oh No You Don’t",
-      "trigger": "on_knockout",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "ko_prize",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "n": 1,
+         "if_named": "pecharunt"
         }
        }
       ],
-      "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card."
+      "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card.",
+      "citations": []
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:name:turn:Dirty Headbutt"
+     "attack_lock:name:turn:Dirty Headbutt",
+     "ko_prize_minus:1:if_named:pecharunt"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -19912,6 +19940,7 @@
       "engine_tags": [
        "draw:3:if:own_ko_last_turn"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -20102,6 +20131,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -20262,6 +20292,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -20553,6 +20584,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -20993,6 +21025,7 @@
       "engine_tags": [
        "coin:heads:status_choose:burn+confuse+poison"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -21375,6 +21408,7 @@
       "engine_tags": [
        "attach_energy:1:grass:hand"
       ],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -22210,6 +22244,7 @@
       "engine_tags": [
        "fx:static_dmg:add:30:team_vs_evolution"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -22360,6 +22395,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -22592,6 +22628,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:min:200"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -22756,6 +22793,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -23979,6 +24017,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -24411,6 +24450,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -24819,6 +24859,7 @@
       "engine_tags": [
        "evolve_act:search_trainer:2"
       ],
+      "cost": "",
       "unsupported": [
        {
         "type": "condition",
@@ -24973,6 +25014,7 @@
       "engine_tags": [
        "search_pokemon:3:type:colorless:hp:100"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -25142,6 +25184,7 @@
       "engine_tags": [
        "fx:team_reduce:60:basic:colorless:other:bouffalant:nonstack"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -26055,6 +26098,7 @@
       "engine_tags": [
        "on_damaged:counter:30"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -26205,14 +26249,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Quaquaval@SSP 52",
    "parse": {
     "items": [
      {
@@ -26248,13 +26294,15 @@
           }
          }
         ],
-        "source_text": "You must put a card from your hand on the bottom of your deck in order to use this Ability. Once during your turn, you may draw cards until you have 5 cards in your hand."
+        "source_text": "Once during your turn, you may draw cards until you have 5 cards in your hand.",
+        "ability_cost": "hand_bottom:1"
        }
       ],
       "errors": [],
       "engine_tags": [
        "draw_to:5"
       ],
+      "cost": "hand_bottom:1",
       "unsupported": []
      }
     ],
@@ -26288,7 +26336,8 @@
         }
        }
       ],
-      "source_text": "You must put a card from your hand on the bottom of your deck in order to use this Ability. Once during your turn, you may draw cards until you have 5 cards in your hand."
+      "source_text": "Once during your turn, you may draw cards until you have 5 cards in your hand.",
+      "ability_cost": "hand_bottom:1"
      }
     ],
     "errors": [],
@@ -26521,6 +26570,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -27436,6 +27486,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -28643,14 +28694,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Durant ex@SSP 4",
    "parse": {
     "items": [
      {
@@ -28710,6 +28763,7 @@
       "engine_tags": [
        "mill:1:opp"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -29260,6 +29314,7 @@
       "engine_tags": [
        "fx:static_dmg:add:10:team_evolution_type:fire"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -29411,6 +29466,7 @@
       "engine_tags": [
        "fx:effect_immune:attack:self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -29701,6 +29757,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -29982,6 +30039,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:tera:effects"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -30201,6 +30259,7 @@
       "engine_tags": [
        "discard_stadium"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -30362,6 +30421,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -30558,6 +30618,7 @@
       "engine_tags": [
        "attach_spread:3:any:discard:target:type-lightning:selfko"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -31049,6 +31110,7 @@
       "engine_tags": [
        "ko_prize_plus:1:coin"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -31854,14 +31916,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Meowstic@SSP 85",
    "parse": {
     "items": [
      {
@@ -31886,13 +31950,15 @@
           "target": "active_opponent_bench"
          }
         ],
-        "source_text": "You must discard a Chill Teaser Toy card from your hand in order to use this Ability. Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+        "source_text": "Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
+        "ability_cost": "discard_named:1:chillteasertoy"
        }
       ],
       "errors": [],
       "engine_tags": [
        "gust"
       ],
+      "cost": "discard_named:1:chillteasertoy",
       "unsupported": []
      }
     ],
@@ -31915,7 +31981,8 @@
         "target": "active_opponent_bench"
        }
       ],
-      "source_text": "You must discard a Chill Teaser Toy card from your hand in order to use this Ability. Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot."
+      "source_text": "Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
+      "ability_cost": "discard_named:1:chillteasertoy"
      }
     ],
     "errors": [],
@@ -32549,6 +32616,7 @@
       "engine_tags": [
        "fx:ability_block:gastrodon"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -33324,6 +33392,7 @@
       "engine_tags": [
        "passive:checkup_plus:poison:50:side:opp:active_only"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -33735,6 +33804,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -34674,6 +34744,7 @@
       "engine_tags": [
        "evolve_act:heal:all:active:type:grass|discard_energy:all:if_prev"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -35049,6 +35120,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -36506,6 +36578,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -36870,6 +36943,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -37039,6 +37113,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -37604,6 +37679,7 @@
       "engine_tags": [
        "on_ko:counter:60"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -37777,6 +37853,7 @@
       "engine_tags": [
        "passive:checkup_plus:burn:30:side:opp"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -38236,6 +38313,7 @@
       "engine_tags": [
        "burn"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -38540,6 +38618,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -39318,6 +39397,7 @@
       "engine_tags": [
        "attach_energy:1:lightning:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -39535,14 +39615,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Iono’s Kilowattrel@JTG 55",
    "parse": {
     "items": [
      {
@@ -39562,14 +39644,6 @@
         ],
         "actions": [
          {
-          "type": "discard",
-          "amount": 1,
-          "target": "self",
-          "extra": {
-           "card_type": "energy"
-          }
-         },
-         {
           "type": "draw",
           "amount": null,
           "target": "deck",
@@ -39586,14 +39660,15 @@
           }
          }
         ],
-        "source_text": "You must discard a Basic {L} Energy from this Pokémon in order to use this Ability. Once during your turn, you may draw cards until you have 6 cards in your hand."
+        "source_text": "Once during your turn, you may draw cards until you have 6 cards in your hand.",
+        "ability_cost": "discard_self_energy:1:lightning"
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard_energy:1",
        "draw_to:6"
       ],
+      "cost": "discard_self_energy:1:lightning",
       "unsupported": []
      }
     ],
@@ -39611,14 +39686,6 @@
       ],
       "actions": [
        {
-        "type": "discard",
-        "amount": 1,
-        "target": "self",
-        "extra": {
-         "card_type": "energy"
-        }
-       },
-       {
         "type": "draw",
         "amount": null,
         "target": "deck",
@@ -39635,12 +39702,12 @@
         }
        }
       ],
-      "source_text": "You must discard a Basic {L} Energy from this Pokémon in order to use this Ability. Once during your turn, you may draw cards until you have 6 cards in your hand."
+      "source_text": "Once during your turn, you may draw cards until you have 6 cards in your hand.",
+      "ability_cost": "discard_self_energy:1:lightning"
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:1",
      "draw_to:6"
     ],
     "unsupported": [],
@@ -39760,6 +39827,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -40517,6 +40585,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -41040,6 +41109,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -41578,6 +41648,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -42059,6 +42130,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -42398,13 +42470,15 @@
           "target": "deck"
          }
         ],
-        "source_text": "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 2 cards."
+        "source_text": "Once during your turn, you may draw 2 cards.",
+        "ability_cost": "discard:1"
        }
       ],
       "errors": [],
       "engine_tags": [
        "draw:2"
       ],
+      "cost": "discard:1",
       "unsupported": []
      }
     ],
@@ -42444,7 +42518,8 @@
         "target": "deck"
        }
       ],
-      "source_text": "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 2 cards."
+      "source_text": "Once during your turn, you may draw 2 cards.",
+      "ability_cost": "discard:1"
      }
     ],
     "errors": [],
@@ -42957,6 +43032,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -44078,6 +44154,7 @@
       "engine_tags": [
        "fx:static_dmg:add:30:team_name:hops:nonstack"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -44757,6 +44834,7 @@
       "engine_tags": [
        "evolve_act:gust"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -45383,6 +45461,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -45776,6 +45855,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -46377,6 +46457,7 @@
       "engine_tags": [
        "fx:static_dmg:add:20:team_type:grass,fire"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -46685,6 +46766,7 @@
       "engine_tags": [
        "attach_energy:1:discard"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -47138,6 +47220,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:ex"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -48308,6 +48391,7 @@
       "engine_tags": [
        "attach_energy:3:grass:deck"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -48502,6 +48586,7 @@
       "engine_tags": [
        "fx:static_dmg:add:30:team_name:cynthias"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -48625,6 +48710,7 @@
       "engine_tags": [
        "passive:dmg_immune:team_bench:no_rule_box"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -48912,6 +48998,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:ex"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -49717,6 +49804,7 @@
       "engine_tags": [
        "draw:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -49951,6 +50039,7 @@
       "engine_tags": [
        "search_any:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -50285,6 +50374,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -50474,6 +50564,7 @@
       "engine_tags": [
        "attach_energy:2:fire:hand:target:bench"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -50789,6 +50880,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -51143,6 +51235,7 @@
       "engine_tags": [
        "passive:bench_immune"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -53534,6 +53627,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -53956,6 +54050,7 @@
       "engine_tags": [
        "passive:dmg_reduce:30"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -55153,6 +55248,7 @@
       "engine_tags": [
        "evolve_act:recover:2:any"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -56167,6 +56263,7 @@
       "engine_tags": [
        "attach_energy:1:discard"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -57101,16 +57198,18 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "burn"
+           "status": "burn",
+           "status2": "confuse"
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Burned and Confused."
+        "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "status_multi:burn+confuse"
       ],
       "unsupported": []
      },
@@ -57155,11 +57254,13 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "burn"
+         "status": "burn",
+         "status2": "confuse"
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Burned and Confused."
+      "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -57181,7 +57282,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "burn",
+     "status_multi:burn+confuse",
      "discard_energy:1"
     ],
     "unsupported": [],
@@ -57898,6 +57999,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -58154,6 +58256,7 @@
       "engine_tags": [
        "on_ko:energy_to_hand:water"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -59143,6 +59246,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -59705,6 +59809,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -60154,6 +60259,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -60806,6 +60912,7 @@
       "engine_tags": [
        "move_damage:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -61200,6 +61307,7 @@
       "engine_tags": [
        "fx:static_dmg:add:120:self_if_damage:2"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -61620,6 +61728,7 @@
       "engine_tags": [
        "passive:checkup_spread:20:opp_basic:active_only"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -62510,6 +62619,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -63506,6 +63616,7 @@
       "engine_tags": [
        "evolve_act:counters:2:scope:opp:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -63666,6 +63777,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -64128,6 +64240,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -66070,14 +66183,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Porygon-Z@DRI 155",
    "parse": {
     "items": [
      {
@@ -66132,24 +66247,20 @@
         ],
         "actions": [
          {
-          "type": "discard",
-          "amount": 2,
-          "target": "hand"
-         },
-         {
           "type": "draw",
           "amount": 1,
           "target": "deck"
          }
         ],
-        "source_text": "You must discard 2 cards from your hand in order to use this Ability. Once during your turn, you may draw a card."
+        "source_text": "Once during your turn, you may draw a card.",
+        "ability_cost": "discard:2"
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard:2",
        "draw:1"
       ],
+      "cost": "discard:2",
       "unsupported": []
      }
     ],
@@ -66191,23 +66302,18 @@
       ],
       "actions": [
        {
-        "type": "discard",
-        "amount": 2,
-        "target": "hand"
-       },
-       {
         "type": "draw",
         "amount": 1,
         "target": "deck"
        }
       ],
-      "source_text": "You must discard 2 cards from your hand in order to use this Ability. Once during your turn, you may draw a card."
+      "source_text": "Once during your turn, you may draw a card.",
+      "ability_cost": "discard:2"
      }
     ],
     "errors": [],
     "engine_tags": [
      "dmg_set:20:per:own_discard_named_supporter:teamrocket",
-     "discard:2",
      "draw:1"
     ],
     "unsupported": [],
@@ -66798,6 +66904,7 @@
       "engine_tags": [
        "fx:static_dmg:add:20:team"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -67481,6 +67588,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -68661,14 +68769,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Volcarona@BLK 16",
    "parse": {
     "items": [
      {
@@ -68696,17 +68806,16 @@
           }
          }
         ],
-        "source_text": "You must discard a Basic {R} Energy card from your hand in order to use this Ability. Once during your turn, you may make your opponent’s Active Pokémon Burned."
+        "source_text": "Once during your turn, you may make your opponent’s Active Pokémon Burned.",
+        "ability_cost": "discard_hand_energy:1:fire"
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "status",
-        "reason": "特性发动代价未建模（B4）"
-       }
-      ]
+      "engine_tags": [
+       "burn"
+      ],
+      "cost": "discard_hand_energy:1:fire",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -68731,17 +68840,15 @@
         }
        }
       ],
-      "source_text": "You must discard a Basic {R} Energy card from your hand in order to use this Ability. Once during your turn, you may make your opponent’s Active Pokémon Burned."
+      "source_text": "Once during your turn, you may make your opponent’s Active Pokémon Burned.",
+      "ability_cost": "discard_hand_energy:1:fire"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "status",
-      "reason": "特性发动代价未建模（B4）"
-     }
+    "engine_tags": [
+     "burn"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -69580,6 +69687,7 @@
       "engine_tags": [
        "passive:dmg_immune:self:from:special_energy:effects"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -69727,6 +69835,7 @@
       "engine_tags": [
        "bounce:discard_to_bench:1:hp:70"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -70657,6 +70766,7 @@
       "engine_tags": [
        "attach_energy:1:lightning:discard:target:bench"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -72552,6 +72662,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -73172,6 +73283,7 @@
       "engine_tags": [
        "passive:hp_plus:40"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -73591,6 +73703,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -74171,6 +74284,7 @@
       "engine_tags": [
        "on_damaged:status:poison"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -74767,6 +74881,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -75462,6 +75577,7 @@
       "engine_tags": [
        "search_pokemon:2:type:metal:stage:evolution"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -76851,6 +76967,7 @@
       "engine_tags": [
        "heal:20:active"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -77612,6 +77729,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -78168,6 +78286,7 @@
       "engine_tags": [
        "attach_energy:1:fire:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -78947,6 +79066,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -81514,6 +81634,7 @@
       "engine_tags": [
        "opp_shuffle_draw:3"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -81797,6 +81918,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -82612,6 +82734,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "evolve",
@@ -83280,14 +83403,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Scrafty@WHT 58",
    "parse": {
     "items": [
      {
@@ -83304,13 +83429,27 @@
           "type": "damage",
           "amount": 60,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "each",
+           "counter": "own_field_type_darkness",
+           "sub": "dmg_set",
+           "sub_amount": 60
+          }
          }
         ],
         "source_text": "Flip a coin for each {D} Pokémon you have in play. This attack does 60 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_each:own_field_type_darkness:heads:dmg_set:60"
+      ],
       "unsupported": []
      }
     ],
@@ -83325,13 +83464,27 @@
         "type": "damage",
         "amount": 60,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "each",
+         "counter": "own_field_type_darkness",
+         "sub": "dmg_set",
+         "sub_amount": 60
+        }
        }
       ],
       "source_text": "Flip a coin for each {D} Pokémon you have in play. This attack does 60 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_each:own_field_type_darkness:heads:dmg_set:60"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -84213,6 +84366,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -84783,6 +84937,7 @@
       "engine_tags": [
        "fx:team_reduce:20:energy:metal"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -85945,6 +86100,7 @@
       "engine_tags": [
        "passive:dmg_reduce:30"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -86748,6 +86904,7 @@
       "engine_tags": [
        "fx:team_reduce:30:faction:stevens:source_bench:nonstack"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -87181,6 +87338,7 @@
       "engine_tags": [
        "attach_spread_multi:1:psychic:1:metal:deck:target:type-psychic+type-metal"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -87976,6 +88134,7 @@
       "engine_tags": [
        "evolve_act:attach_spread:5:darkness:deck:target:cat-marnie"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -88426,6 +88585,7 @@
       "engine_tags": [
        "energy_move:1:type:grass:from:any:to:any"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -90243,6 +90403,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -91095,6 +91256,7 @@
       "engine_tags": [
        "evolve_act:gust"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -91190,16 +91352,14 @@
     }
    ],
    "other_text": null,
-   "engine_ready": true,
+   "engine_ready": false,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "approximated",
-   "engine_note": "由解析链自动生成（非人工逐卡校对）",
+   "engine_status": "unmatched",
+   "engine_note": "引擎卡池未收录",
    "other_text_zh": "",
    "rule_zh": "",
-   "engine_match": "set:number",
-   "engine_uid": "Lunatone@MEG 74",
    "parse": {
     "items": [
      {
@@ -91231,7 +91391,13 @@
       "engine_tags": [
        "draw:3"
       ],
-      "unsupported": []
+      "cost": "",
+      "unsupported": [
+       {
+        "type": "ability_cost",
+        "reason": "特性发动代价形态未识别（B4）"
+       }
+      ]
      }
     ],
     "specs": [
@@ -91260,7 +91426,12 @@
     "engine_tags": [
      "draw:3"
     ],
-    "unsupported": [],
+    "unsupported": [
+     {
+      "type": "ability_cost",
+      "reason": "特性发动代价形态未识别（B4）"
+     }
+    ],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -92422,6 +92593,7 @@
       "engine_tags": [
        "fx:static_dmg:add:30:team_type:fighting"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -92886,6 +93058,7 @@
       "engine_tags": [
        "on_damaged:counter:10"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -94051,6 +94224,7 @@
       "engine_tags": [
        "evolve_act:coin:heads:discard_energy:1:opp"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -94907,6 +95081,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -95484,6 +95659,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -95615,6 +95791,7 @@
       "engine_tags": [
        "heal:30:choose"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -95813,6 +95990,7 @@
       "engine_tags": [
        "evolve_act:search_bench:1:name:shedinja"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -96139,6 +96317,7 @@
       "engine_tags": [
        "fx:static_dmg:sub:30:opp_active"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -97276,6 +97455,7 @@
       "engine_tags": [
        "attach_energy:2:water:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -99419,6 +99599,7 @@
       "engine_tags": [
        "evolve_act:draw:2"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -99557,6 +99738,7 @@
       "engine_tags": [
        "evolve_act:draw:3"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -100193,14 +100375,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Shedinja@MEG 61",
    "parse": {
     "items": [
      {
@@ -100245,29 +100429,29 @@
        {
         "kind": "ability",
         "name": "Fragile Husk",
-        "trigger": "on_knockout",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "ko_prize",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "n": "all",
+           "from_ex": true
           }
          }
         ],
-        "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, your opponent can’t take any Prize cards for it."
+        "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, your opponent can’t take any Prize cards for it.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "ko_prize_minus:all:from_ex"
+      ],
+      "cost": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -100298,31 +100482,29 @@
      {
       "kind": "ability",
       "name": "Fragile Husk",
-      "trigger": "on_knockout",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "ko_prize",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "n": "all",
+         "from_ex": true
         }
        }
       ],
-      "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, your opponent can’t take any Prize cards for it."
+      "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, your opponent can’t take any Prize cards for it.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:20:per:opp_active_counters"
+     "dmg_set:20:per:opp_active_counters",
+     "ko_prize_minus:all:from_ex"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -100537,6 +100719,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -101264,6 +101447,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -101430,6 +101614,7 @@
       "engine_tags": [
        "draw:2"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -102623,6 +102808,7 @@
       "engine_tags": [
        "passive:dmg_reduce:30"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -103185,14 +103371,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Gengar ex@PFL 56",
    "parse": {
     "items": [
      {
@@ -103230,29 +103418,30 @@
        {
         "kind": "ability",
         "name": "Shadowy Concealment",
-        "trigger": "on_knockout",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "ko_prize",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "n": 1,
+           "from_ex": true,
+           "team": "darkness"
           }
          }
         ],
-        "source_text": "If 1 of your {D} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, that player takes 1 fewer Prize card. The effect of Shadowy Concealment doesn’t stack."
+        "source_text": "If 1 of your {D} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, that player takes 1 fewer Prize card. The effect of Shadowy Concealment doesn’t stack.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "ko_prize_minus:1:from_ex:team_darkness"
+      ],
+      "cost": "",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -103276,31 +103465,30 @@
      {
       "kind": "ability",
       "name": "Shadowy Concealment",
-      "trigger": "on_knockout",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "ko_prize",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "n": 1,
+         "from_ex": true,
+         "team": "darkness"
         }
        }
       ],
-      "source_text": "If 1 of your {D} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, that player takes 1 fewer Prize card. The effect of Shadowy Concealment doesn’t stack."
+      "source_text": "If 1 of your {D} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, that player takes 1 fewer Prize card. The effect of Shadowy Concealment doesn’t stack.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "energy_move:1:from:active:to:bench"
+     "energy_move:1:from:active:to:bench",
+     "ko_prize_minus:1:from_ex:team_darkness"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -104230,16 +104418,18 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "sleep"
+           "status": "sleep",
+           "status2": "poison"
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "sleep"
+       "status_multi:sleep+poison"
       ],
       "unsupported": []
      },
@@ -104285,11 +104475,13 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "sleep"
+         "status": "sleep",
+         "status2": "poison"
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -104312,7 +104504,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "sleep",
+     "status_multi:sleep+poison",
      "dmg_plus:120:if:healed_this_turn"
     ],
     "unsupported": [],
@@ -104746,6 +104938,7 @@
       "engine_tags": [
        "heal:60:choose"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -105251,6 +105444,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -106031,6 +106225,7 @@
       "engine_tags": [
        "attach_energy:1:fire:hand:target:bench"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -106529,6 +106724,7 @@
       "engine_tags": [
        "passive:dmg_reduce:30:from:type:fire,water"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -107464,6 +107660,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -108197,6 +108394,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -108833,6 +109031,7 @@
       "engine_tags": [
        "evolve_act:confuse"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -109556,6 +109755,7 @@
        "evolve_act:mill:2:opp",
        "on_ko:replay_evolve_act"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -110147,6 +110347,7 @@
       "engine_tags": [
        "fx:static_dmg:add:120:self_if_mega_type:darkness"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -110656,6 +110857,7 @@
       "engine_tags": [
        "attach_energy:1:darkness:deck:target:bench_type:darkness:counters:20"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -110810,6 +111012,7 @@
       "engine_tags": [
        "fx:effect_immune:attack:self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -112377,6 +112580,7 @@
       "engine_tags": [
        "switch_self:if:own_mega_in_play"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -112836,6 +113040,7 @@
       "engine_tags": [
        "evolve_act:search_bench:1:name:silcoon+cascoon"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -113232,16 +113437,18 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "sleep"
+           "status": "sleep",
+           "status2": "poison"
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "sleep"
+       "status_multi:sleep+poison"
       ],
       "unsupported": []
      },
@@ -113279,6 +113486,7 @@
       "engine_tags": [
        "coin:heads:bounce:energy:opp_active:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -113294,11 +113502,13 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "sleep"
+         "status": "sleep",
+         "status2": "poison"
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+      "citations": []
      },
      {
       "kind": "ability",
@@ -113328,7 +113538,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "sleep",
+     "status_multi:sleep+poison",
      "coin:heads:bounce:energy:opp_active:1"
     ],
     "unsupported": [],
@@ -113535,6 +113745,7 @@
       "engine_tags": [
        "on_damaged:status:burn"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -113821,6 +114032,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -113973,6 +114185,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -114880,6 +115093,7 @@
       "engine_tags": [
        "draw_both:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -115541,14 +115755,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Heliolisk@ASC 64",
    "parse": {
     "items": [
      {
@@ -115565,13 +115781,27 @@
           "type": "damage",
           "amount": 70,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "each",
+           "counter": "own_active_energy",
+           "sub": "dmg_set",
+           "sub_amount": 70
+          }
          }
         ],
         "source_text": "Flip a coin for each Energy attached to this Pokémon. This attack does 70 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_each:own_active_energy:heads:dmg_set:70"
+      ],
       "unsupported": []
      },
      {
@@ -115606,6 +115836,7 @@
       "engine_tags": [
        "attach_energy:2:lightning:deck"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -115620,6 +115851,18 @@
         "type": "damage",
         "amount": 70,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "each",
+         "counter": "own_active_energy",
+         "sub": "dmg_set",
+         "sub_amount": 70
+        }
        }
       ],
       "source_text": "Flip a coin for each Energy attached to this Pokémon. This attack does 70 damage for each heads."
@@ -115650,6 +115893,7 @@
     ],
     "errors": [],
     "engine_tags": [
+     "coin_each:own_active_energy:heads:dmg_set:70",
      "attach_energy:2:lightning:deck"
     ],
     "unsupported": [],
@@ -117205,6 +117449,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -117702,6 +117947,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -118975,6 +119221,7 @@
       "engine_tags": [
        "on_damaged:counter:50"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -119279,6 +119526,7 @@
       "engine_tags": [
        "search_any:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -119653,6 +119901,7 @@
       "engine_tags": [
        "fx:static_dmg:add:30:self_per_prize"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -119848,6 +120097,7 @@
       "engine_tags": [
        "search_pokemon:1:stage:evolution"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -120003,6 +120253,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -120961,16 +121212,18 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "sleep"
+           "status": "sleep",
+           "status2": "poison"
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+        "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "sleep"
+       "status_multi:sleep+poison"
       ],
       "unsupported": []
      },
@@ -121006,6 +121259,7 @@
       "engine_tags": [
        "heal:30:all"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -121021,11 +121275,13 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "sleep"
+         "status": "sleep",
+         "status2": "poison"
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned."
+      "source_text": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
+      "citations": []
      },
      {
       "kind": "ability",
@@ -121053,7 +121309,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "sleep",
+     "status_multi:sleep+poison",
      "heal:30:all"
     ],
     "unsupported": [],
@@ -121503,6 +121759,7 @@
       "engine_tags": [
        "search_pokemon:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -122574,6 +122831,7 @@
       "engine_tags": [
        "switch_self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -126958,6 +127216,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -127556,6 +127815,7 @@
       "engine_tags": [
        "evolve_act:heal:all:evolved|discard_energy:all:evolved:if_prev"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -127939,6 +128199,7 @@
       "engine_tags": [
        "passive:coin_prevent:darkness"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -128694,6 +128955,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -131069,6 +131331,7 @@
       "engine_tags": [
        "on_damaged:counter_per:2:metal"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -131232,6 +131495,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -131625,14 +131889,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Larry's Dudunsparce ex@ASC 164",
    "parse": {
     "items": [
      {
@@ -131649,13 +131915,27 @@
           "type": "damage",
           "amount": 80,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "each",
+           "counter": "own_active_energy",
+           "sub": "dmg_set",
+           "sub_amount": 80
+          }
          }
         ],
         "source_text": "Flip a coin for each Energy attached to this Pokémon. This attack does 80 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_each:own_active_energy:heads:dmg_set:80"
+      ],
       "unsupported": []
      }
     ],
@@ -131670,13 +131950,27 @@
         "type": "damage",
         "amount": 80,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "each",
+         "counter": "own_active_energy",
+         "sub": "dmg_set",
+         "sub_amount": 80
+        }
        }
       ],
       "source_text": "Flip a coin for each Energy attached to this Pokémon. This attack does 80 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_each:own_active_energy:heads:dmg_set:80"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -133202,6 +133496,7 @@
       "engine_tags": [
        "attach_energy:1:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -134396,6 +134691,7 @@
       "engine_tags": [
        "opp_shuffle_draw:4:if_hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -134845,6 +135141,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -135046,6 +135343,7 @@
       "engine_tags": [
        "discard_opp_random:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -135433,6 +135731,7 @@
       "engine_tags": [
        "on_damaged:discard_energy:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -135636,6 +135935,7 @@
       "engine_tags": [
        "energy_move:1:type:water:from:bench:to:active"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -136133,6 +136433,7 @@
       "engine_tags": [
        "fx:team_reduce:50:energy:water:nonstack"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -136244,14 +136545,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Volcanion@POR 25",
    "parse": {
     "items": [
      {
@@ -136268,13 +136571,27 @@
           "type": "damage",
           "amount": 90,
           "target": "active_opponent"
+         },
+         {
+          "type": "coin_flip",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "side": "heads",
+           "mode": "each",
+           "counter": "own_active_energy_water",
+           "sub": "dmg_set",
+           "sub_amount": 90
+          }
          }
         ],
         "source_text": "Flip a coin for each {W} Energy attached to this Pokémon. This attack does 90 damage for each heads."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_each:own_active_energy_water:heads:dmg_set:90"
+      ],
       "unsupported": []
      }
     ],
@@ -136289,13 +136606,27 @@
         "type": "damage",
         "amount": 90,
         "target": "active_opponent"
+       },
+       {
+        "type": "coin_flip",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "side": "heads",
+         "mode": "each",
+         "counter": "own_active_energy_water",
+         "sub": "dmg_set",
+         "sub_amount": 90
+        }
        }
       ],
       "source_text": "Flip a coin for each {W} Energy attached to this Pokémon. This attack does 90 damage for each heads."
      }
     ],
     "errors": [],
-    "engine_tags": [],
+    "engine_tags": [
+     "coin_each:own_active_energy_water:heads:dmg_set:90"
+    ],
     "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
@@ -136510,6 +136841,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -137159,6 +137491,7 @@
       "engine_tags": [
        "fx:effect_immune:ability:self"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -137893,6 +138226,7 @@
       "engine_tags": [
        "search_energy:2:type:psychic"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -138764,6 +139098,7 @@
       "engine_tags": [
        "attach_energy:1:fighting:hand"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -139038,6 +139373,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -139715,6 +140051,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -141391,6 +141728,7 @@
       "engine_tags": [
        "search_trainer:1"
       ],
+      "cost": "",
       "unsupported": []
      }
     ],
@@ -143805,14 +144143,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "对手的战斗宝可梦现在处于灼伤和混乱状态。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Dangerous Laser@SFA 58",
    "parse": {
     "items": [
      {
@@ -143830,16 +144170,18 @@
           "amount": null,
           "target": "active_opponent",
           "extra": {
-           "status": "burn"
+           "status": "burn",
+           "status2": "confuse"
           }
          }
         ],
-        "source_text": "Your opponent’s Active Pokémon is now Burned and Confused."
+        "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "burn"
+       "status_multi:burn+confuse"
       ],
       "play_cost": "",
       "unsupported": []
@@ -143857,16 +144199,18 @@
         "amount": null,
         "target": "active_opponent",
         "extra": {
-         "status": "burn"
+         "status": "burn",
+         "status2": "confuse"
         }
        }
       ],
-      "source_text": "Your opponent’s Active Pokémon is now Burned and Confused."
+      "source_text": "Your opponent’s Active Pokémon is now Burned and Confused.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "burn"
+     "status_multi:burn+confuse"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -144246,6 +144590,7 @@
       "engine_tags": [
        "fx:attack_cost:opp_basic:1:colorless"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -147860,6 +148205,7 @@
       "engine_tags": [
        "fx:effect_immune:attack:self"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -148111,6 +148457,7 @@
       "engine_tags": [
        "passive:bench_immune_dmg"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -149334,6 +149681,7 @@
       "engine_tags": [
        "fx:static_dmg:sub:30:opp_active"
       ],
+      "cost": "",
       "unsupported": []
      },
      {
@@ -149482,6 +149830,7 @@
       ],
       "errors": [],
       "engine_tags": [],
+      "cost": "",
       "unsupported": [
        {
         "type": "rule",
@@ -153511,14 +153860,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "若你先攻，你可以在你的第一个回合中使用此卡。\n\n弃置你的手牌并抽 5 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Carmine@TWM 145",
    "parse": {
     "items": [
      {
@@ -153532,26 +153883,21 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": null,
-          "target": "hand",
-          "extra": {
-           "all": true
-          }
-         },
-         {
           "type": "draw",
           "amount": 5,
-          "target": "deck"
+          "target": "deck",
+          "extra": {
+           "discard_all": true
+          }
          }
         ],
-        "source_text": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards."
+        "source_text": "Discard your hand and draw 5 cards.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard:all",
-       "draw:5"
+       "research:5"
       ],
       "play_cost": "",
       "unsupported": []
@@ -153565,26 +153911,21 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": null,
-        "target": "hand",
-        "extra": {
-         "all": true
-        }
-       },
-       {
         "type": "draw",
         "amount": 5,
-        "target": "deck"
+        "target": "deck",
+        "extra": {
+         "discard_all": true
+        }
        }
       ],
-      "source_text": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards."
+      "source_text": "Discard your hand and draw 5 cards.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard:all",
-     "draw:5"
+     "research:5"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -154592,14 +154933,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的战斗宝可梦与你的 1 只后备宝可梦互换。若你如此做，抽牌直到你的手牌为 5 张。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Surfer@SSP 187",
    "parse": {
     "items": [
      {
@@ -154615,24 +154958,19 @@
          {
           "type": "switch",
           "amount": null,
-          "target": "self"
-         },
-         {
-          "type": "draw",
-          "amount": null,
-          "target": "deck",
+          "target": "self",
           "extra": {
-           "to_hand_size": 5
+           "draw_to": 5
           }
          }
         ],
-        "source_text": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand."
+        "source_text": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "switch_self",
-       "draw_to:5"
+       "switch_draw_to:5"
       ],
       "play_cost": "",
       "unsupported": []
@@ -154648,24 +154986,19 @@
        {
         "type": "switch",
         "amount": null,
-        "target": "self"
-       },
-       {
-        "type": "draw",
-        "amount": null,
-        "target": "deck",
+        "target": "self",
         "extra": {
-         "to_hand_size": 5
+         "draw_to": 5
         }
        }
       ],
-      "source_text": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand."
+      "source_text": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "switch_self",
-     "draw_to:5"
+     "switch_draw_to:5"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -154695,14 +155028,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将对手的 1 只后备基础宝可梦换入战斗区。若你如此做，新的战斗宝可梦现在处于混乱状态。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lisia’s Appeal@SSP 179",
    "parse": {
     "items": [
      {
@@ -154718,24 +155053,19 @@
          {
           "type": "switch",
           "amount": null,
-          "target": "active_opponent_bench"
-         },
-         {
-          "type": "status",
-          "amount": null,
           "target": "active_opponent",
           "extra": {
            "status": "confuse"
           }
          }
         ],
-        "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused."
+        "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "gust",
-       "confuse"
+       "gust_confuse"
       ],
       "play_cost": "",
       "unsupported": []
@@ -154751,24 +155081,19 @@
        {
         "type": "switch",
         "amount": null,
-        "target": "active_opponent_bench"
-       },
-       {
-        "type": "status",
-        "amount": null,
         "target": "active_opponent",
         "extra": {
          "status": "confuse"
         }
        }
       ],
-      "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused."
+      "source_text": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "gust",
-     "confuse"
+     "gust_confuse"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -156302,7 +156627,7 @@
           }
          }
         ],
-        "source_text": "If you go first, you may use this card during your first turn.\n\nSearch your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+        "source_text": "Search your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
        }
       ],
       "errors": [],
@@ -156329,7 +156654,7 @@
         }
        }
       ],
-      "source_text": "If you go first, you may use this card during your first turn.\n\nSearch your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+      "source_text": "Search your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
      }
     ],
     "errors": [],

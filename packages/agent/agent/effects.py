@@ -69,7 +69,9 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 "attach_flip_until", "coin_gate_attach",
                 # 2026-11-02 第四十批：「Flip a coin until you get tails」的
                 # **非伤害**子效果（磨对手牌库 / 弃对手手牌 / 任意卡检索）
-                "until_tails")
+                "until_tails",
+                # 2026-11-04 第五十批：被击倒时的奖赏卡减少（含同队与道具）
+                "ko_prize")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
@@ -647,6 +649,201 @@ _PLAY_COST_ENERGY = re.compile(
     r"^you can use this card only if you discard "
     r"(?:(?P<n>\d+)|another|an?)\s+(?:other\s+)?basic\s+\{(?P<c>[a-z])\}\s+"
     r"energy cards?\s+from\s+your\s+hand[.]\s*", re.I)
+
+
+# ---- 特性发动代价（2026-11-04 第四十九批）----
+# 卡面：「**You must** <代价> **in order to use this Ability.** Once during your
+# turn, you may …」—— 前半句是**代价**（有状态变化），后半句才是效果。
+# ⚠ 与 gate 的区别见记忆纪律：代价必须真的扣掉；当 gate 实现 = 免费发动。
+# ⚠ 必须**先剥句**再解析：留在文本里会被通用 discard 分支读成一个动作，
+# 挤掉主效果 tag（特性只认一个 tag），且执行顺序会跑到效果之后。
+_ABILITY_COST_RE = re.compile(
+    r"^you must (?P<clause>.+?) in order to use this ability[.]\s*", re.I)
+_ABILITY_COST_ENERGY_SELF = re.compile(
+    r"^discard (?:a|an) basic \{([a-z])\} energy(?: card)? from this pok[eé]mon$",
+    re.I)
+_ABILITY_COST_ENERGY_HAND = re.compile(
+    r"^discard (?:a|an) basic \{([a-z])\} energy card from your hand$", re.I)
+_ABILITY_COST_NAMED = re.compile(
+    r"^discard (?:a|an) (?P<name>.+?) card from your hand$", re.I)
+_ABILITY_COST_CARDS = re.compile(
+    r"^discard (?:(?P<n>\d+)|an?|another) cards? from your hand$", re.I)
+_ABILITY_COST_HAND_BOTTOM = re.compile(
+    r"^put (?:a|(?P<n>\d+)) cards? from your hand on the bottom of your deck$",
+    re.I)
+
+
+# ---- 「对手少拿奖赏卡」族（2026-11-04 第五十批）----
+# 卡面四种写法，差别全在**条件**上：
+#   · Shedinja「Fragile Husk」    本只被对手 {ex} 招式击倒 → 对手**一张也不拿**
+#   · Mega Gengar ex「Shadowy…」 己方 **{D}** 宝可梦被 {ex} 击倒 → 少拿 1 张（同队）
+#   · Munkidori ex「Oh No You Don't」本只被击倒 **且** 场上有 Pecharunt ex → 少拿 1 张
+#   · Lillie's Pearl（道具）      所附宝可梦被击倒 → 少拿 1 张
+# ⚠ 这与「多拿奖赏」（`ko_prize_plus:`）不是同一条路径：多拿挂在**取奖赏方**、
+# 少拿挂在**被击倒方**（含同队与道具）。方向搞反 = 奖赏数反向变化。
+_KO_PRIZE_MINUS = re.compile(
+    r"^if (?P<subj>this pok[eé]mon"
+    r"|1 of your \{([a-z])\} pok[eé]mon"
+    # 道具写法：「the Lillie's Pokémon this card is attached to」= 持有者本身
+    r"|the .+? this card is attached to"
+    r") is knocked out "
+    r"by damage from an attack from your opponent'?s pok[eé]mon(?P<ex> \{ex\})?"
+    r"(?:, and if you have any (?P<named>.+?) in play)?, "
+    r"(?:your opponent|that player) "
+    r"(?P<what>takes? 1 fewer prize cards?|can'?t take any prize cards?)"
+    r"(?: for it)?[.]?$", re.I)
+
+
+def _detect_ko_prize_minus(text: str, kind: str) -> list:
+    """「对手少拿 N 张奖赏卡」→ ``ko_prize`` 动作（第五十批）
+
+    只收**四种已确认条件组合**；其余写法（别的数量、别的条件）一律不认领 ——
+    奖赏数是胜负量纲，估错比不建模危险得多。
+    """
+    if kind not in ("ability", "tool"):
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    # 「The effect of <Name> doesn't stack.」是**叠加限制**而非条件：引擎本来就不
+    # 叠加同类钩子（`_ko_prize_reduction` 取 max），剥掉再匹配不影响语义。
+    t = re.sub(r"\s*the effect of .+? doesn'?t stack[.]?$", "", t, flags=re.I)
+    m = _KO_PRIZE_MINUS.match(t)
+    if not m:
+        return []
+    what = m.group("what").lower()
+    n = "all" if what.startswith("can") else 1
+    extra = {"n": n}
+    if m.group("ex"):
+        extra["from_ex"] = True
+    team_color = None
+    if m.group(2):
+        # 「1 of your {D} Pokémon」= **同队**判定（特性可能挂在没被击倒的那只身上）
+        team_color = _EN_ENERGY_LETTER.get(m.group(2).upper())
+        if team_color is None:
+            return []
+        extra["team"] = team_color
+    if m.group("named"):
+        # 「any Pecharunt {ex} in play」—— `{ex}` 是**卡面标记**不是卡名的一部分，
+        # 归一化前必须剥掉，否则键变成 `pecharuntex`，按卡名匹配永远不成立。
+        key = _tag_name_key(re.sub(r"\s*\{[^}]*\}", "",
+                                   m.group("named")))
+        if not key:
+            return []
+        extra["if_named"] = key
+    return [act("ko_prize", None, "self", extra)]
+
+
+# ---- 训练家复合句（2026-11-04 第五十一批）----
+# 训练家卡**只认一个卡级 tag**（`build_trainer`）。这些句子被通用分支拆成两条
+# （`discard:all`+`draw:5` / `switch_self`+`draw_to:5` / `gust`+`confuse`）→
+# 建池判「多 tag」→ **整卡不收，而且没有任何理由记录**（9 张训练家因此静默消失）。
+# 解法：整句认领成一条复合 tag（引擎侧有对应实现）。
+_TC_MULTI_STATUS = re.compile(
+    r"^your opponent'?s active pok[eé]mon is now "
+    r"(?P<a>asleep|burned|confused|paralyzed|poisoned) and "
+    r"(?P<b>asleep|burned|confused|paralyzed|poisoned)[.]$", re.I)
+_TC_RESEARCH = re.compile(r"^discard your hand and draw (?P<n>\d+) cards?[.]$", re.I)
+_TC_SWITCH_DRAW = re.compile(
+    r"^switch your active pok[eé]mon with 1 of your benched pok[eé]mon[.] "
+    r"if you do, draw cards until you have (?P<n>\d+) cards? in your hand[.]$",
+    re.I)
+_TC_GUST_STATUS = re.compile(
+    r"^switch in 1 of your opponent'?s benched (?:basic )?pok[eé]mon to the "
+    r"active spot[.] if you do, the new active pok[eé]mon is now "
+    r"(?P<st>confused|poisoned|burned|asleep|paralyzed)[.]$", re.I)
+# 「If you go first, you may use this card during your first turn.」（Carmine）——
+# 这是**许可**（放宽回合限制），不是效果也不是代价。引擎本来就不限制支援者
+# 首回合使用，故整句剥掉；留着会被读成条件，把主效果挤掉。
+_TURN1_PERMISSION = re.compile(
+    r"^if you go first, you may use this card during your first turn[.]\s*", re.I)
+
+
+def _detect_trainer_compound(text: str) -> list:
+    """训练家「一句话两个动作」→ **一条**复合动作（第五十一批）
+
+    已实现四式（卡面原型见各正则）：
+      · 多状态「is now Burned and Confused」→ ``status`` + ``status2``
+        （⚠ 此前只落 `burn`，`confuse` 被**静默丢掉**）
+      · 「Discard your hand and draw N cards.」→ ``draw`` + ``discard_all``
+      · 「Switch … with 1 of your Benched … If you do, draw until N」→ ``switch`` + ``draw_to``
+      · 「Switch in 1 of your opponent's Benched … is now Confused」→ ``switch`` + ``status``
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TC_MULTI_STATUS.match(t)
+    if m:
+        # ⚠ `re.I` 只影响匹配、**不改捕获的大小写**（"Burned" 原样返回），
+        # 必须显式 lower —— 否则查不到映射、静默返回 []（本批实测踩到）。
+        a = _STATUS_WORD_TO_TAG.get(str(m.group("a")).lower())
+        b = _STATUS_WORD_TO_TAG.get(str(m.group("b")).lower())
+        if a and b and a != b:
+            return [act("status", None, "active_opponent",
+                        {"status": a, "status2": b})]
+        return []
+    m = _TC_RESEARCH.match(t)
+    if m:
+        return [act("draw", int(m.group("n")), "deck", {"discard_all": True})]
+    m = _TC_SWITCH_DRAW.match(t)
+    if m:
+        return [act("switch", None, "self", {"draw_to": int(m.group("n"))})]
+    m = _TC_GUST_STATUS.match(t)
+    if m:
+        st = _STATUS_WORD_TO_TAG.get(str(m.group("st")).lower())
+        if st:
+            return [act("switch", None, "active_opponent", {"status": st})]
+    return []
+
+
+def _split_ability_cost(text: str, kind: str) -> tuple:
+    """剥出特性发动代价句 → ``(剩余文本, ability_cost)``
+
+    认不出的形态返回 ``(原文, None)`` —— 由调用方保留「代价未建模」的拒收，
+    绝不当成「无代价」（那会让一张要付账的特性变成免费发动）。
+
+    形态（与 `battle._parse_ability_cost` 一一对应）：
+      ``hand_bottom:1``            手牌 1 张放牌库底（Quaquaval）
+      ``discard_named:1:<key>``    弃 1 张具名卡（Meowstic「Chill Teaser Toy」）
+      ``discard_self_energy:1:<c>`` 弃**自身身上** 1 个基本能量（Kilowattrel）
+      ``discard_hand_energy:1:<c>`` 弃**手牌** 1 张基本能量（Volcarona）
+      ``discard:<n>``              弃 n 张手牌（Porygon-Z）
+    """
+    t = str(text or "")
+    if kind != "ability":
+        return t, None
+    m = _ABILITY_COST_RE.match(t)
+    if not m:
+        return t, None
+    clause = re.sub(r"\s+", " ", _norm_apostrophe(m.group("clause"))).strip()
+    rest = t[m.end():].strip()
+    # ⚠ 能量代价的两条**先判**：「from this Pokémon」与「from your hand」是
+    # 两个不同的弃置来源，写反就是「拔自家场上能量」vs「弃手牌」（方向反了）。
+    mm = _ABILITY_COST_ENERGY_SELF.match(clause)
+    if mm:
+        color = _EN_ENERGY_LETTER.get(mm.group(1).upper())
+        return (rest, f"discard_self_energy:1:{color}") if color else (t, None)
+    mm = _ABILITY_COST_ENERGY_HAND.match(clause)
+    if mm:
+        color = _EN_ENERGY_LETTER.get(mm.group(1).upper())
+        return (rest, f"discard_hand_energy:1:{color}") if color else (t, None)
+    mm = _ABILITY_COST_HAND_BOTTOM.match(clause)
+    if mm:
+        n = int(mm.group("n")) if mm.group("n") else 1
+        return (rest, f"hand_bottom:{n}") if n >= 1 else (t, None)
+    mm = _ABILITY_COST_CARDS.match(clause)
+    if mm:
+        n = int(mm.group("n")) if mm.group("n") else 1
+        return (rest, f"discard:{n}") if n >= 1 else (t, None)
+    mm = _ABILITY_COST_NAMED.match(clause)
+    if mm:
+        key = _tag_name_key(mm.group("name"))
+        return (rest, f"discard_named:1:{key}") if key else (t, None)
+    return t, None
+
+
+# 特性代价的合法形态（与 `battle._parse_ability_cost` 对齐）
+_ABILITY_COST_SHAPE = re.compile(
+    r"^(?:discard:[1-9]\d*"
+    r"|discard_named:[1-9]\d*:[a-z0-9]+"
+    r"|discard_(?:self|hand)_energy:[1-9]\d*:[a-z]+"
+    r"|hand_bottom:[1-9]\d*)$")
 
 
 def _split_play_cost(text: str, kind: str) -> tuple:
@@ -2477,6 +2674,19 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _pick_evo,
                 "source_text": str(text or ""), "citations": []}
+    # 训练家复合句（2026-11-04 第五十一批）：整句认领成**一条**复合 tag。
+    _tc = _detect_trainer_compound(t)
+    if _tc:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _tc,
+                "source_text": str(text or ""), "citations": []}
+    # 「对手少拿奖赏卡」（2026-11-04 第五十批）：带条件的奖赏修正，整段认领。
+    # 通用分支会把它读成「静态规则」占位（该族此前 4 张全部未建模）。
+    _kpm = _detect_ko_prize_minus(t, kind)
+    if _kpm:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _kpm,
+                "source_text": str(text or ""), "citations": []}
     # 「Flip a coin until you get tails」+ **非伤害**子效果（2026-11-02 第四十批）：
     # 张数结算时才知道，通用 mill / 检索分支会把它们折成常数（Tyrantrum 被折成
     # `mill:1:opp`）或直接不产出（Houndstone / Gholdengo 静默丢卡）。
@@ -3679,12 +3889,21 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     # 代价不是「效果」，不进 actions；它挂在 spec 的 `play_cost` 上，由
     # `to_engine_tags` 汇总到卡级、`TrainerDef.play_cost` 承载、引擎在派发
     # **之前**执行（顺序：付账 → 效果）。
-    text, _pcost = _split_play_cost(str(text or ""), kind)
+    # 「If you go first, you may use this card during your first turn.」（第五十一批）
+    # 是**许可**不是效果、也不是代价 → 剥掉；留着会被读成条件并挤掉主效果。
+    _t = str(text or "")
+    if kind in ("item", "supporter", "stadium", "tool"):
+        _t = _TURN1_PERMISSION.sub("", _t).strip()
+    text, _pcost = _split_play_cost(_t, kind)
+    # 特性发动代价（2026-11-04 第四十九批）：同样**先剥离**再解析（理由同上）。
+    text, _acost = _split_ability_cost(text, kind)
     spec = (_parse_rule_en(text, kind=kind, name=name)
             if text and not _CJK_RE.search(str(text))
             else _parse_rule_zh(text, kind=kind, name=name))
     if _pcost:
         spec["play_cost"] = _pcost
+    if _acost:
+        spec["ability_cost"] = _acost
     actions = spec.get("actions") or []
     # 被击倒 / 进化触发的整段认领（2026-10-28 第十批）：不得再走修正器后置识别，
     # 否则「in this way」后续会被重复识别成无条件动作。
@@ -3903,6 +4122,44 @@ _SHUFFLE_BOTH_COIN_DRAW_RE = re.compile(
     r"flip\s+a\s+coin\.\s*if\s+heads,\s*you\s+draw\s+(\d+)\s+cards?,\s*and\s+your\s+"
     r"opponent\s+draws\s+(\d+)\s+cards?\.\s*if\s+tails,\s*you\s+draw\s+(\d+)\s+"
     r"cards?,\s*and\s+your\s+opponent\s+draws\s+(\d+)\s+cards?", re.I)
+# 「Flip a coin **for each** X」（2026-11-04 第四十八批）—— 币数**本身**由计数源
+# 决定。卡面三种写法：
+#   · 「for each Energy attached to this Pokémon」（Heliolisk / Dudunsparce ex）
+#   · 「for each {W} Energy attached to this Pokémon」（Volcanion）
+#   · 「for each {D} Pokémon you have in play」（Scrafty）
+# ⚠ 必须**先于** `_COIN_PER_SIDE_RE`：后者只认「Flip N coins」，遇到这条会
+# 把 `(\d+)?` 留空 → 当成 **1 枚币**，也就是把「7 个能量 = 7 枚币」静默压成
+# 「1 枚币」。更糟的是它只产出 damage 动作、**既没有 tag 也没有 unsupported**
+# → 整卡在登记表里只剩一个 `unmatched`，看不出缺什么。
+_COIN_EACH_SRC = re.compile(
+    r"^flip a coin for each (?P<src>"
+    r"\{[a-z]\} energy attached to this pok[eé]mon"
+    r"|\{[a-z]\} pok[eé]mon you have in play"
+    r"|energy attached to this pok[eé]mon"
+    r")[.] this attack does (?P<n>\d+) (?P<more>more )?damage for each heads[.]$",
+    re.I)
+
+
+def _coin_each_src_of(src: str, norm: str) -> Optional[str]:
+    """「for each X」短语 → 计数源名；认不出返回 None（绝不猜）
+
+    ``own_active_energy`` 的语义是「**出招者**身上的能量」——卡面写的是
+    「attached to **this** Pokémon」，不是「全队」。用 `own_all_energy`
+    会多算其它宝可梦的能量（静默加强）。
+    """
+    low = str(src or "").lower()
+    if low.startswith("energy attached"):
+        return "own_active_energy"
+    m = re.match(r"^\{([a-z])\} energy attached", low)
+    if m:
+        color = _EN_ENERGY_LETTER.get(m.group(1).upper())
+        return f"own_active_energy_{color}" if color else None
+    m = re.match(r"^\{([a-z])\} pok[eé]mon you have in play", low)
+    if m:
+        color = _EN_ENERGY_LETTER.get(m.group(1).upper())
+        # ⚠ 下划线不用冒号：见 `_eval_counter` 里 `own_field_type_<color>` 的说明
+        return f"own_field_type_{color}" if color else None
+    return None
 # 「Flip N coins. This attack does M more damage for each heads.」（v1.4）
 # 语义 = 抛 N 枚、每个正面重复一次加伤 → coin_each:N:heads:dmg_plus:M
 # 注意：卡面在 "Flip N coins." 与 "This attack does…" 之间**有句号**，
@@ -6241,6 +6498,20 @@ def _detect_coin(text: str, low: str) -> list:
                         "sub": "dmg_plus" if m_until.group(2) else "dmg_set",
                         "sub_amount": int(m_until.group(1))}))
         return out
+    # 「Flip a coin **for each** X」（2026-11-04 第四十八批）：币数由计数源决定。
+    # 必须排在 `_COIN_PER_SIDE_RE` 之前 —— 后者会把「for each Energy attached…」
+    # 当成 **1 枚币**（`(\d+)?` 留空），静默把「7 个能量 = 7 枚币」压成 1 枚。
+    _norm_t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    _mc = _COIN_EACH_SRC.match(_norm_t)
+    if _mc:
+        _src = _coin_each_src_of(_mc.group("src"), _norm_t)
+        if _src:
+            out.append(act("coin_flip", None, "active_opponent",
+                           {"side": "heads", "mode": "each",
+                            "counter": _src,
+                            "sub": "dmg_plus" if _mc.group("more") else "dmg_set",
+                            "sub_amount": int(_mc.group("n"))}))
+            return out
     # 「Flip N coins … for each heads/tails」优先（否则会被 each 分支吞掉）
     mps = _COIN_PER_SIDE_RE.search(text)
     if mps:
@@ -7009,15 +7280,26 @@ def to_engine_tags(specs: list) -> dict:
                 _src = str(s.get("source_text") or "")
                 if st not in ENGINE_STATUS_TAGS:
                     unsupported.append({"type": t, "reason": f"未知状态 {st}"})
+                elif extra.get("status2"):
+                    # 「is now Burned **and** Confused」（第五十一批）：此前只落第一个
+                    # 状态，第二个被**静默丢掉**（Dangerous Laser 只挂烧伤）。
+                    _b = extra.get("status2")
+                    if _b not in ENGINE_STATUS_TAGS:
+                        unsupported.append({"type": t,
+                                            "reason": f"未知状态 {_b}"})
+                    else:
+                        tags.append(f"status_multi:{st}+{_b}")
                 elif tgt == "self":
                     # 「This Pokémon is now Asleep/Confused/Poisoned」= **施术者自己**
                     # 陷入状态。引擎用 `status_self:<s>` 精确作用于出招者，
                     # 与恒作用于对手战斗位的裸状态 tag 严格区分。
                     tags.append(f"status_self:{st}")
                 elif kind == "ability" and re.search(
-                        r"in order to use this ability", _src, re.I):
-                    # 卡面带发动代价（弃手牌能量等），引擎特性侧无代价结算 →
-                    # 直接放通等于免除代价（Volcarona 实测）。
+                        r"in order to use this ability", _src, re.I) \
+                        and not s.get("ability_cost"):
+                    # 卡面带发动代价，但**代价句形态没认出来** → 引擎侧无账可付，
+                    # 直接放通等于免除代价（Volcarona 实测）。认出来的形态已转成
+                    # `ability_cost` 字段（第四十九批），不再走这里。
                     unsupported.append(
                         {"type": t, "reason": "特性发动代价未建模（B4）"})
                 else:
@@ -7073,7 +7355,12 @@ def to_engine_tags(specs: list) -> dict:
                                 f"{_eff}:gate:{_gate}")
             elif t == "draw":
                 _cond = extra.get("cond")
-                if extra.get("each_player"):
+                if extra.get("discard_all"):
+                    # 「Discard your hand and draw N cards.」（第五十一批）
+                    # 引擎早就有 `research:N`，但解析侧从来没产出过 —— 以前落成
+                    # `discard:all` + `draw:N` 两条，训练家多 tag 直接整卡不收。
+                    tags.append(f"research:{int(amt or 1)}")
+                elif extra.get("each_player"):
                     # B3：双方同抽（Chandelure「Alluring Light」）
                     tags.append(f"draw_both:{int(amt or 1)}")
                 elif extra.get("shuffle_opp"):
@@ -7201,7 +7488,19 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     tags.append(f"move_damage:{int(amt)}")
             elif t == "switch":
-                if tgt == "self":
+                if extra.get("draw_to") is not None:
+                    # 「Switch … If you do, draw cards until you have N」（Surfer）
+                    tags.append(f"switch_draw_to:{int(extra['draw_to'])}")
+                elif extra.get("status"):
+                    # 「Switch in 1 of your opponent's Benched … is now Confused」
+                    _st2 = str(extra["status"])
+                    if _st2 != "confuse":
+                        unsupported.append(
+                            {"type": t,
+                             "reason": f"换位后施加的状态未建模：{_st2}"})
+                    else:
+                        tags.append("gust_confuse")
+                elif tgt == "self":
                     # B3：后备特性自换位（Linoone「Excited Dash」）需要「场上已有
                     # Mega Evolution Pokémon {ex}」这一前置条件 —— 条件必须进 tag，
                     # 否则特性在没有任何 Mega 的卡组里也能白换位。
@@ -7393,6 +7692,23 @@ def to_engine_tags(specs: list) -> dict:
                 else:
                     tags.append(f"coin_gate_attach:{_coins}:{_n}:"
                                 f"{extra.get('etype') or 'any'}:{_zone}")
+            elif t == "ko_prize":
+                # 「对手少拿 N 张奖赏卡」（2026-11-04 第五十批）：
+                # `ko_prize_minus:<n|all>[:from_ex][:team_<color>][:if_named:<key>]`
+                # ⚠ 与 `ko_prize_plus:`（多拿，挂在取奖赏方）方向相反。
+                _n = extra.get("n")
+                if _n not in ("all", 1, 2, 3):
+                    unsupported.append({"type": t,
+                                        "reason": f"奖赏减少张数未识别：{_n}"})
+                else:
+                    _tag = f"ko_prize_minus:{_n}"
+                    if extra.get("from_ex"):
+                        _tag += ":from_ex"
+                    if extra.get("team"):
+                        _tag += f":team_{extra['team']}"
+                    if extra.get("if_named"):
+                        _tag += f":if_named:{extra['if_named']}"
+                    tags.append(_tag)
             elif t == "until_tails":
                 # 「Flip a coin until you get tails」+ 非伤害子效果（2026-11-02 第四十批）：
                 # `coin_until_tails:mill:opp` / `:shuffle_opp_hand` / `:search:any`
@@ -8358,8 +8674,43 @@ def to_engine_tags(specs: list) -> dict:
                                 "reason": f"同一张卡出现多种打出代价：{sorted(set(_pcs))}"})
         else:
             play_cost = _pcs[0]
+    # 特性发动代价（2026-11-04 第四十九批）：同一只宝可梦的**多个特性**各有各的
+    # 代价，所以这里不做「多值冲突」判断 —— 每个特性条目各自携带自己的 cost。
+    _acs = [str(s0.get("ability_cost") or "") for s0 in (specs or [])]
+    _acs = [x for x in _acs if x]
+    ability_cost = _acs[0] if _acs else ""
+    if _acs and any(not _ABILITY_COST_SHAPE.match(x) for x in _acs):
+        unsupported.append({"type": "ability_cost",
+                            "reason": f"特性代价形态非法：{_acs}"})
+        ability_cost = ""
+    # 卡面带「in order to use this Ability」但**没抽出代价** → 必须拒收。
+    # 这条是**兜底**：代价守卫原先只挂在 status 分支里，`draw:` 类特性带认不出的
+    # 代价时会**静默免费发动**（第四十九批实测）。
+    if not ability_cost and not unsupported:
+        _needs_cost = any(
+            re.search(r"in order to use this ability",
+                      str(s0.get("source_text") or ""), re.I)
+            for s0 in (specs or []))
+        if _needs_cost:
+            unsupported.append({"type": "ability_cost",
+                                "reason": "特性发动代价形态未识别（B4）"})
+    # 「有文本、零 tag、零理由」= 静默丢卡（2026-11-04 第四十八批）。
+    # 卡池准入规则是「有效果文本但无 tag → 整卡不收」，但**不记录原因** ——
+    # 于是这类卡在 `unmodeled_registry` 里只剩一个 `unmatched`，看不出到底缺
+    # 什么机制（本轮实测 20 张，其中 4 张是「Flip a coin for each …」，
+    # 其余也各自缺一条具体规则）。补一条兜底登记，让「沉默」变成「显式待办」。
+    if not uniq and not unsupported:
+        # ⚠ 只在「**一个动作都没解析出来**」时才登记：`damage` 类动作由招式的
+        # damage 字段承载、本身不产 tag（提示词 few-shot 例 5 就是这种合法解析），
+        # 一律按「未映射」判死会把正确结果误杀。
+        _no_actions = not any((s0.get("actions") or []) for s0 in (specs or []))
+        _txts = [str(s0.get("source_text") or "").strip() for s0 in (specs or [])]
+        if _no_actions and any(_txts):
+            unsupported.append({
+                "type": "rule",
+                "reason": "卡面文本未映射为任何可执行动作（需新规则形态，B4）"})
     return {"tags": uniq, "unsupported": unsupported, "notes": notes,
-            "play_cost": play_cost}
+            "play_cost": play_cost, "ability_cost": ability_cost}
 
 
 # ---------------- 黄金集与评测 ----------------

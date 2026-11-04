@@ -371,6 +371,10 @@ def parse_effects_pass(cards: list[dict], backend: str = "rule") -> dict:
             items.append({"target": "ability", "name": ab.get("name"),
                           "specs": r["specs"], "errors": r["errors"],
                           "engine_tags": m["tags"],
+                          # 发动代价（2026-11-04 第四十九批）：「You must …
+                          # in order to use this Ability.」—— 卡的属性而非效果，
+                          # 由 `AbilityDef.cost` 承载、引擎在效果之前支付。
+                          "cost": m.get("ability_cost") or "",
                           "unsupported": m["unsupported"]})
             specs += r["specs"]; errs += r["errors"]
             tags += m["tags"]; unsup += m["unsupported"]

@@ -427,10 +427,17 @@ class Battle:
                 # 静态封印（「场上的宝可梦没有特性」等，效果族提供）
                 if families.ability_blocked(self, fp, ab):
                     continue
+                # 发动代价付不出 → 不可发动（2026-11-04 第四十九批）。放在这里而不是
+                # 等 `_do_ability` 抛错：否则 AI 会把「打不出的动作」当成合法动作。
+                if getattr(ab, "cost", "") and not _ability_cost_ok(p, fp, ab.cost):
+                    continue
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
                 if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
                                       "evolve_act:", "passive:", "on_damaged:",
-                                      "on_ko:", "ko_prize_plus:")):
+                                      "on_ko:", "ko_prize_plus:",
+                                      # 第五十批：被击倒时的奖赏减少也是**被动**钩子
+                                      # （在 `_resolve_ko` 里读），不可主动发动。
+                                      "ko_prize_minus:")):
                     continue
                 # 效果族纯静态钩子（无 act 一次性动作，如 ability_blocked）→ 被动，
                 # 不进合法动作表（封锁由结算路径在 ability_blocked 自动施加）
@@ -467,6 +474,9 @@ class Battle:
                 if ab.tag.startswith(("discard_opp_random:", "shuffle_opp_hand:")):
                     if not opp.hand:
                         continue
+                if ab.tag.startswith("gust") and not opp.bench:
+                    # 特性侧拉后备（第五十二批，Meowstic「Beckoning Tail」）
+                    continue
                 if ab.tag.startswith("discard_opp_to:"):
                     if len(opp.hand) <= int(ab.tag.split(":")[1]):
                         continue
@@ -650,6 +660,18 @@ class Battle:
             elif tag == "switch_self":
                 # 自换位（Switch）：需有后备
                 for bi in range(len(p.bench)):
+                    out.append({**base, "target": bi})
+            elif tag.startswith("switch_draw_to:"):
+                # 「换位并抽到 N」（第五十一批，Surfer）：同样需要后备
+                for bi in range(len(p.bench)):
+                    out.append({**base, "target": bi})
+            elif tag.startswith("status_multi:"):
+                # 多状态（Dangerous Laser）：无目标，对手有战斗位即可
+                if opp.active is not None and not opp.active.is_ko:
+                    out.append(dict(base))
+            elif tag == "gust_confuse":
+                # 拉对手后备 + 混乱（Lisia's Appeal）：候选与 gust 相同
+                for bi in range(len(opp.bench)):
                     out.append({**base, "target": bi})
             elif tag.startswith("opp_hand:"):
                 # 对手手牌操作（2026-10-30 第三十二批）：对手手里**没有**符合
@@ -1339,6 +1361,10 @@ class Battle:
             if name in fp.ability_used:
                 raise ValueError("该特性本回合已发动")
             fp.ability_used.add(name)
+            # 发动代价（2026-11-04 第四十九批）：**先付账再结算效果**。
+            # 顺序反了会变成「先看效果、付不出也照发」（静默加强）。
+            if getattr(ab, "cost", ""):
+                self._pay_ability_cost(p, fp, ab.cost, action)
             if tag.startswith("recon:"):
                 _rspec = _parse_recon_tag(tag)
                 if not _rspec["legacy"]:
@@ -1400,6 +1426,35 @@ class Battle:
                                      "from": fp.name, "out": old.name,
                                      "in": p.active.name, "forced": True,
                                      "side": "ability"})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("mill:"):
+                # 特性侧磨牌（第五十二批，Durant ex「Sudden Shearing」）：
+                # 与训练家/招式侧同一实现，不另写一份。
+                detail = self._trainer_mill(tag)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("gust"):
+                # 特性侧把对手后备拉为战斗位（第五十二批，Meowstic）
+                _opp = self.players[1 - self.current]
+                detail = self._trainer_boss(_opp, int(action.get("target", 0)))
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("draw_to:"):
+                # 「draw cards until you have N cards in your hand」（第四十九批）。
+                # ⚠ 与训练家侧的 `_trainer_draw_to` 差一张：训练家卡此刻**还在手上**
+                # （`need = N - (len(hand) - 1)`），特性没有这张消耗，直接按手牌数算。
+                target_n = int(tag.split(":")[1])
+                need = max(0, target_n - len(p.hand))
+                if need and not p.deck:
+                    raise ValueError("牌库为空")
+                got = (self._safe_draw(self.current, need, source="ability")
+                       if need else 0)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name,
+                                      "detail": f"draw_to {target_n}",
+                                      "drew": got})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("draw:"):
                 # 每回合一次抽 n（`draw:N` / `draw:per:<counter>` / `draw:N:if:<cond>`）
@@ -1944,6 +1999,23 @@ class Battle:
             placed = self._trainer_draw(p, tag)
         elif tag.startswith("heal:"):
             placed = self._trainer_heal(p, tag, action)
+        elif tag == "gust_confuse":
+            # 拉对手后备 + 新战斗位混乱（第五十一批，Lisia's Appeal）。
+            # 必须排在 `startswith("gust")` 之前 —— 否则会被它吞掉，混乱静默丢失。
+            placed = self._trainer_boss(opp, int(action.get("target", 0)))
+            if opp.active is not None:
+                opp.active.status.add("confuse")
+            placed += " + confuse"
+        elif tag.startswith("status_multi:"):
+            placed = self._trainer_status_multi(opp, tag)
+        elif tag.startswith("switch_draw_to:"):
+            placed = self._trainer_switch(p, int(action.get("target", 0)))
+            _n = int(tag.split(":")[1])
+            # 训练家卡此刻**还在手上**，抽到 N 的口径要减掉它自己（同 draw_to）
+            _need = max(0, _n - (len(p.hand) - 1))
+            _got = (self._safe_draw(self.current, _need, source="trainer")
+                    if _need else 0)
+            placed += f" + draw {_got}"
         elif tag.startswith("gust"):
             placed = self._trainer_boss(opp, int(action.get("target", 0)))
         elif tag.startswith("attach_spread:"):
@@ -2079,6 +2151,76 @@ class Battle:
             dropped.append(_card_label(p.hand[i]))
             self._to_discard(p, p.hand.pop(i))
         return f"cost discard {len(dropped)} ({', '.join(dropped)})"
+
+    def _pay_ability_cost(self, p: PlayerState, fp: FieldPokemon, pc: str,
+                          action: dict) -> str:
+        """支付特性发动代价（2026-11-04 第四十九批）—— 在效果**之前**调用
+
+        缺省选择与其它「任意 N 张」同口径（从手牌末尾往前、具名卡按手牌顺序），
+        可用 ``action['cost_cards']`` 显式指定下标（非法一律抛错，绝不悄悄换牌）。
+
+        ⚠ 付不出时抛错而不是静默跳过：静默跳过 = 免费发动，是这类机制最危险的
+        形态。合法动作表在 `_ability_legals` 里已先行过滤，正常路径不会走到这里。
+        """
+        spec = _parse_ability_cost(pc)
+        if spec is None:
+            return ""
+        if not _ability_cost_ok(p, fp, pc):
+            raise ValueError(f"特性代价付不出：{pc}")
+        op, n, arg = spec
+        dropped: list = []
+        if op in ("discard", "hand_bottom"):
+            cands = list(range(len(p.hand)))
+            raw = action.get("cost_cards")
+            if raw is None:
+                picks = cands[::-1][:n]
+            else:
+                picks = [raw] if isinstance(raw, int) else list(raw)
+                for i in picks:
+                    if not isinstance(i, int) or i not in cands:
+                        raise ValueError(f"特性代价的 cost_cards 非法：{raw}")
+                if len(set(picks)) != len(picks) or len(picks) != n:
+                    raise ValueError(f"特性代价需 {n} 张，cost_cards 给了 {len(picks)} 张")
+            for i in sorted(picks, reverse=True):
+                card = p.hand.pop(i)
+                dropped.append(_card_label(card))
+                if op == "discard":
+                    self._to_discard(p, card)
+                else:
+                    p.deck.insert(0, card)      # 「bottom of your deck」= 列表头
+            self._log("ability_cost", {"player": self.current, "op": op,
+                                       "n": len(dropped), "cards": dropped})
+            return f"cost {op} {len(dropped)}"
+        if op == "discard_named":
+            idxs = _named_hand_cards(p, str(arg))[:n]
+            for i in sorted(idxs, reverse=True):
+                dropped.append(_card_label(p.hand[i]))
+                self._to_discard(p, p.hand.pop(i))
+            self._log("ability_cost", {"player": self.current, "op": op,
+                                       "n": len(dropped), "cards": dropped})
+            return f"cost discard {len(dropped)}"
+        if op == "discard_hand_energy":
+            idxs = [i for i, c in enumerate(p.hand)
+                    if isinstance(c, EnergyRef)
+                    and not getattr(c.edef, "is_special", False)
+                    and str(c.edef.type) == arg][:n]
+            for i in sorted(idxs, reverse=True):
+                dropped.append(_card_label(p.hand[i]))
+                self._to_discard(p, p.hand.pop(i))
+            self._log("ability_cost", {"player": self.current, "op": op,
+                                       "n": len(dropped), "cards": dropped})
+            return f"cost discard {len(dropped)} energy"
+        if op == "discard_self_energy":
+            for _ in range(n):
+                fp.energy[str(arg)] -= 1
+                if fp.energy[str(arg)] <= 0:
+                    fp.energy.pop(str(arg), None)
+                self._to_discard(p, EnergyRef(EnergyDef(str(arg))))
+                dropped.append(str(arg))
+            self._log("ability_cost", {"player": self.current, "op": op,
+                                       "from": fp.name, "n": len(dropped)})
+            return f"cost discard {n} {arg} energy from self"
+        raise ValueError(f"未知特性代价形态：{pc}")
 
     def _trainer_draw(self, p: PlayerState, tag: str) -> str:
         """训练家/整卡级抽牌（``draw:N[:per:<counter>][:if:<cond>]``）"""
@@ -3445,6 +3587,31 @@ class Battle:
             return "heads: discard 1 energy"
         return "tails: no effect"
 
+    def _trainer_status_multi(self, opp: PlayerState, tag: str) -> str:
+        """训练家多状态（``status_multi:<a>+<b>``，第五十一批 · Dangerous Laser）
+
+        卡面「Your opponent's Active Pokémon is now Burned **and** Confused.」——
+        此前只落第一个状态，第二个被**静默丢掉**（卡能打、测试不红）。
+        免疫判定与招式侧同口径（`_status_blocked` / 化石卡 / Festival Grounds）。
+        """
+        parts = str(tag).split(":", 1)[1].split("+")
+        applied = []
+        if opp.active is None or opp.active.is_ko:
+            return ""
+        if self._status_blocked(opp.active):
+            self._log("blocked", {"target": opp.active.name,
+                                  "by": "status_immune"})
+            return "no effect"
+        for st in parts:
+            if st not in STATUSES:
+                raise ValueError(f"未知状态：{st}")
+            opp.active.status.add(st)
+            applied.append(st)
+        self._log("status", {"player": 1 - self.current,
+                             "target": opp.active.name,
+                             "status": "+".join(applied)})
+        return f"status {'+'.join(applied)}"
+
     def _trainer_boss(self, opp: PlayerState, bi: int) -> str:
         """将对手 1 只后备拉为 active（换位）"""
         if not opp.bench or bi >= len(opp.bench):
@@ -4802,6 +4969,11 @@ class Battle:
             if hits:
                 self._apply_coin_sub(attacker, "|".join(plain), out,
                                      repeat=hits)
+            elif any(x.startswith("dmg_set:") for x in plain):
+                # 全反面 + 「does N damage for each heads」→ 伤害必须是 **0**。
+                # 不调用的话 `mods["set"]` 保持 None，引擎会回落到印刷伤害
+                # （第四十八批实测 31 个招式在全反面时打出满伤）。
+                self._apply_coin_sub(attacker, "|".join(plain), out, repeat=0)
             if conds:
                 heads = hits if side == "heads" else max(0, n - hits)
                 for cond in conds:
@@ -4921,7 +5093,11 @@ class Battle:
         if sub.startswith("dmg_set:"):
             # set 语义不是「重复叠加」：coin_each 命中 N 枚 → 基础伤害 = N × 命中数。
             # 必须放在循环外，否则 repeat 次循环会变成 N × repeat²。
-            out["set"] = (out["set"] or 0) + self._dmg_set_value(sub) * max(1, repeat)
+            # ⚠ `repeat` 可以是 **0**（全反面）：2026-11-04 第四十八批修 —— 此前
+            # 这里写 `max(1, repeat)` 且 coin_each 只在命中时才调用，于是「Flip 3
+            # coins, 30 damage for each heads」在 0 正面时回落到印刷伤害 30
+            # （应为 0），实测 31 个招式受影响。
+            out["set"] = (out["set"] or 0) + self._dmg_set_value(sub) * max(0, repeat)
             return
         for _ in range(max(1, repeat)):
             for one in str(sub).split("|"):
@@ -5349,6 +5525,27 @@ class Battle:
                 self._log("status", {"player": self.current,
                                      "target": attacker.name, "status": st,
                                      "side": "self"})
+            elif tag.startswith("status_multi:"):
+                # 招式侧多状态（第五十一批）：「is now Burned **and** Confused」。
+                # ⚠ 此前只落第一个状态，第二个被静默丢掉（5 个招式受影响）。
+                if opp.active is not None and not opp.active.is_ko:
+                    if _opp_blocked(opp.active):
+                        self._log("blocked", {"target": opp.active.name,
+                                              "by": "prevent_all"})
+                        continue
+                    if self._status_blocked(opp.active):
+                        self._log("blocked", {"target": opp.active.name,
+                                              "by": "status_immune"})
+                        continue
+                    _ap = []
+                    for _st0 in str(tag).split(":", 1)[1].split("+"):
+                        if _st0 not in STATUSES:
+                            raise ValueError(f"未知状态：{_st0}")
+                        opp.active.status.add(_st0)
+                        _ap.append(_st0)
+                    self._log("status", {"player": 1 - self.current,
+                                         "target": opp.active.name,
+                                         "status": "+".join(_ap)})
             elif tag in ("poison", "burn", "sleep", "paralyze", "confuse"):
                 if opp.active is not None and not opp.active.is_ko:
                     if _opp_blocked(opp.active):
@@ -5604,6 +5801,18 @@ class Battle:
                     moved += 1
                 self._log("mill", {"player": victim, "n": moved,
                                    "left": len(vp.deck)})
+            elif tag.startswith("research:"):
+                # 招式侧「Discard your hand and draw N cards」（第五十二批，
+                # Raging Bolt ex「Burst Roar」）—— 与训练家侧同语义：弃**全部**
+                # 手牌再抽 N（招式本身不在手牌里，无需排除自己）。
+                _n = int(tag.split(":")[1])
+                _dropped = len(p.hand)
+                for _c0 in list(p.hand):
+                    self._to_discard(p, _c0)
+                p.hand.clear()
+                _got = self._safe_draw(self.current, _n, source="attack")
+                self._log("research", {"player": self.current,
+                                       "discard": _dropped, "draw": _got})
             elif tag.startswith("shuffle_top:"):
                 # 「Look at the top N cards … put them back in any order」
                 # （Team Rocket's Dottler）—— 只重排**顺序**，不移动任何卡。
@@ -6618,6 +6827,9 @@ class Battle:
             give = 1
         # 效果族奖赏卡修正（「你的对手少拿 1 张奖赏卡」/「多拿 1 张」）
         give = max(0, give + families.prize_delta(self, opp, fp))
+        # 被击倒方的「少拿」钩子（2026-11-04 第五十批）：Shedinja / Mega Gengar /
+        # Munkidori / Lillie's Pearl。放在 bonus 之前算——先扣减少、再多拿。
+        give = max(0, give - self._ko_prize_reduction(owner, fp))
         # 特殊能量修正（Legacy Energy）：仅限「被对手招式伤害击倒」，每局一次
         if self._ko_from_attack:
             give = max(0, give + special_energy.prize_delta(self, fp))
@@ -6693,6 +6905,66 @@ class Battle:
                                             "from": holder.name, "n": n})
                 return n
         return 0
+
+    def _ko_prize_reduction(self, owner: int, fp: FieldPokemon) -> int:
+        """被击倒方的「对手**少拿**奖赏卡」钩子 → 减少张数（第五十批）
+
+        卡面四种形态（差别全在条件，见 `agent/effects._KO_PRIZE_MINUS`）：
+          · ``ko_prize_minus:all:from_ex``              一张也不给（Shedinja）
+          · ``ko_prize_minus:1:from_ex:team_darkness``  同队 {D} 被击倒（Mega Gengar）
+          · ``ko_prize_minus:1:if_named:pecharunt``     且场上有该卡（Munkidori）
+          · ``ko_prize_minus:1``                        道具所附宝可梦（Lillie's Pearl）
+
+        ⚠ 与 `_ko_prize_bonus` 方向相反、挂载方也不同：那边挂在**取奖赏方**，
+        这边挂在**被击倒方**（含同队与道具）。同一条 `_resolve_ko` 里两者都要算。
+        """
+        p = self.players[owner]
+        attacker = (self.players[1 - owner].active
+                    if self._ko_from_attack else None)
+        # Mega 的 `is_ex` 同样为 True —— 卡面写「Pokémon {ex}」时它也算
+        from_ex = bool(attacker is not None
+                       and getattr(attacker.pdef, "is_ex", False))
+
+        def _eval(tag: str) -> int:
+            parts = str(tag).split(":")
+            raw = parts[1] if len(parts) > 1 else ""
+            conds = parts[2:]
+            if "from_ex" in conds and not from_ex:
+                return 0
+            if any(c.startswith("team_") for c in conds):
+                # 「1 of your {X} Pokémon」= 同队判定：被击倒的那只必须是指定属性
+                color = next(c[len("team_"):] for c in conds
+                             if c.startswith("team_"))
+                if str(fp.pdef.ptype).lower() != color:
+                    return 0
+            if "if_named" in conds:
+                i = conds.index("if_named")
+                key = conds[i + 1] if len(conds) > i + 1 else ""
+                if not key or not any(
+                        key in _name_key(x.pdef.name) for x in p.all_field()):
+                    return 0
+            if raw == "all":
+                return 10 ** 6            # 「can't take any Prize cards」
+            return int(raw) if raw.isdigit() else 0
+
+        best = 0
+        for ab in fp.pdef.abilities:
+            t = str(getattr(ab, "tag", "") or "")
+            if t.startswith("ko_prize_minus:"):
+                best = max(best, _eval(t))
+        # 同队形态（`team_*`）：特性可能挂在**没被击倒**的那只身上
+        for other in p.all_field():
+            if other is None or other is fp:
+                continue
+            for ab in other.pdef.abilities:
+                t = str(getattr(ab, "tag", "") or "")
+                if t.startswith("ko_prize_minus:") and "team_" in t:
+                    best = max(best, _eval(t))
+        # 道具形态：所附宝可梦被击倒（道具不在场时它已经进弃牌堆了）
+        tool = "" if getattr(fp, "tool_disabled", False) else str(fp.tool or "")
+        if tool.startswith("ko_prize_minus:"):
+            best = max(best, _eval(tool))
+        return best
 
     def _trigger_ko_abilities(self, owner: int, fp: FieldPokemon,
                               was_active: bool,
@@ -7650,6 +7922,91 @@ def _opp_hand_one(ref, alt: str) -> bool:
 def _opp_hand_matches(ref, sel: str) -> bool:
     base = str(sel or "any").split("@")[0]
     return any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt)
+
+
+def _parse_ability_cost(pc: str):
+    """解析 ``AbilityDef.cost`` → ``(op, n, arg)`` | None
+
+    卡面原型（2026-11-04 第四十九批）：「**You must** <代价> **in order to use
+    this Ability.**」——代价必须真的付掉，当 gate 实现就是**免费发动**。
+
+    形态：
+      · ``discard:<n>``               弃 n 张手牌（Porygon-Z「Reconstitute」）
+      · ``discard_named:<n>:<key>``   弃 n 张**具名**手牌（Meowstic：Chill Teaser Toy）
+      · ``discard_self_energy:<n>:<c>`` 弃**自身身上** n 个**基本**能量（Kilowattrel）
+      · ``discard_hand_energy:<n>:<c>`` 弃**手牌** n 张**基本**能量（Volcarona）
+      · ``hand_bottom:<n>``           手牌 n 张放牌库底（Quaquaval）
+
+    ⚠ 两个能量形态**不可互换**：`self_energy` 动的是场上能量、`hand_energy`
+    动的是手牌。卡面写「from this Pokémon」却按手牌付账 = 静默少付/多付。
+    ⚠ 特殊能量**不是**合法代价（卡面写 Basic）。
+
+    未知形态**抛错**（不静默当作无代价）。
+    """
+    s = str(pc or "").strip()
+    if not s:
+        return None
+    parts = s.split(":")
+    op = parts[0]
+    if op in ("discard", "hand_bottom") and len(parts) >= 2 and parts[1].isdigit():
+        n = int(parts[1])
+        if n < 1:
+            raise ValueError(f"特性代价张数非法：{pc}")
+        return (op, n, None)
+    if op in ("discard_self_energy", "discard_hand_energy") \
+            and len(parts) >= 3 and parts[1].isdigit():
+        n = int(parts[1])
+        et = str(parts[2] or "")
+        if n < 1 or not et:
+            raise ValueError(f"特性代价形态非法：{pc}")
+        return (op, n, et)
+    if op == "discard_named" and len(parts) >= 3 and parts[1].isdigit():
+        n = int(parts[1])
+        key = ":".join(parts[2:])
+        if n < 1 or not key:
+            raise ValueError(f"特性代价形态非法：{pc}")
+        return (op, n, key)
+    raise ValueError(f"未知特性代价形态：{pc}")
+
+
+def _named_hand_cards(p, key: str) -> list:
+    """手牌里卡名（归一化）**包含** key 的下标（`_name_key` 与解析侧同规则）"""
+    out = []
+    for i, c in enumerate(p.hand):
+        label = ""
+        if isinstance(c, TrainerRef):
+            label = str(getattr(c.tdef, "name", "") or "")
+        elif isinstance(c, PokeRef):
+            label = str(getattr(c.pdef, "name", "") or "")
+        elif isinstance(c, EnergyRef):
+            label = str(getattr(c.edef, "name", "") or "")
+        if key and key in _name_key(label):
+            out.append(i)
+    return out
+
+
+def _ability_cost_ok(p, fp, pc: str) -> bool:
+    """特性代价付得出吗（付不出 → 该特性**不进合法动作表**）"""
+    spec = _parse_ability_cost(pc)
+    if spec is None:
+        return True
+    op, n, arg = spec
+    if op == "discard":
+        return len(p.hand) >= n
+    if op == "hand_bottom":
+        return len(p.hand) >= n
+    if op == "discard_named":
+        return len(_named_hand_cards(p, str(arg))) >= n
+    if op == "discard_hand_energy":
+        return sum(1 for c in p.hand
+                   if isinstance(c, EnergyRef)
+                   and not getattr(c.edef, "is_special", False)
+                   and str(c.edef.type) == arg) >= n
+    if op == "discard_self_energy":
+        # ⚠ 只数 `fp.energy`（**基本**能量）。用 `energy_of` / `total_energy`
+        # 会把特殊能量算进来 —— 卡面写的是 Basic，特殊能量不能当代价。
+        return int(fp.energy.get(str(arg), 0)) >= n
+    raise ValueError(f"未知特性代价形态：{pc}")
 
 
 def _parse_play_cost(pc: str):
@@ -8676,6 +9033,20 @@ def _eval_counter(battle, counter: str) -> int:
             raise ValueError(f"未知宝可梦属性 {color}（{counter}）")
         return sum(fp.energy_of_type(color) for fp in p.all_field()
                    if key and key in _name_key(fp.pdef.name))
+    # ---- 第四十八批（2026-11-04）：按**属性**数在场宝可梦 ----
+    # 「Flip a coin for each {D} Pokémon you have in play」（Scrafty WHT 58）——
+    # 数的是**只数**、且限定属性。用 `own_field`（全队只数）会多算别的属性，
+    # 用 `own_all_energy` 更是完全不同的量纲（能量 vs 只数）。
+    # ⚠ 计数源名用**下划线**不用冒号：`coin_each:<counter>:<side>:<sub>` 里
+    # counter 是中间段，带冒号会被 `split(":", 3)` 截断（`own_field_type` 而丢掉
+    # 属性 → 「未知计数源」）。冒号形态保留给 `per:<counter>` 收尾的位置使用。
+    m = re.match(r"^own_field_type[:_]([a-z]+)$", counter)
+    if m:
+        color = m.group(1)
+        if color not in TYPES:
+            # 属性拼错会让币数静默变 0（整招归零）—— 必须抛错
+            raise ValueError(f"未知宝可梦属性 {color}（{counter}）")
+        return sum(1 for fp in p.all_field() if str(fp.pdef.ptype) == color)
     fn = _COUNTERS.get(counter)
     if fn is not None:
         p = battle.players[battle.current]

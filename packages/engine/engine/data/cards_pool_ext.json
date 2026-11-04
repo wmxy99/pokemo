@@ -11,15 +11,15 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1030,
+      "kept": 1046,
       "by_Energy": 19,
-      "by_Pokemon": 885,
-      "by_Trainer": 126,
+      "by_Pokemon": 897,
+      "by_Trainer": 130,
       "skipped": {
-        "存在未建模项（整卡不收）": 202,
+        "存在未建模项（整卡不收）": 199,
         "人工卡池已有同一印刷（人工优先）": 15,
-        "Pokemon 不可执行": 11,
-        "Trainer 不可执行": 9
+        "Pokemon 不可执行": 2,
+        "Trainer 不可执行": 5
       }
     }
   },
@@ -694,7 +694,8 @@
           "tag": "passive:bench_immune",
           "location": "field",
           "desc": "As long as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent’s Pokémon done to this Pokémon.",
-          "desc_zh": "只要此宝可梦位于后备，就防止对手的宝可梦所使用招式对此宝可梦造成的所有伤害与效果。"
+          "desc_zh": "只要此宝可梦位于后备，就防止对手的宝可梦所使用招式对此宝可梦造成的所有伤害与效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -1011,7 +1012,8 @@
           "tag": "recon:1:1:any:dest:discard:rest:none",
           "location": "field",
           "desc": "Once during your turn, you may look at the top card of your deck. You may discard that card.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。查看你牌库顶的 1 张卡。你可以弃置那张卡。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。查看你牌库顶的 1 张卡。你可以弃置那张卡。",
+          "cost": ""
         }
       ],
       "real": {
@@ -1835,7 +1837,8 @@
           "tag": "fx:ability_block:flutter_mane",
           "location": "field",
           "desc": "As long as this Pokémon is in the Active Spot, your opponent’s Active Pokémon has no Abilities, except for Midnight Fluttering.",
-          "desc_zh": "只要此宝可梦位于战斗区，对手的战斗宝可梦就没有特性，「午夜飘舞」除外。"
+          "desc_zh": "只要此宝可梦位于战斗区，对手的战斗宝可梦就没有特性，「午夜飘舞」除外。",
+          "cost": ""
         }
       ],
       "real": {
@@ -1885,7 +1888,8 @@
           "tag": "passive:prev_attacks",
           "location": "field",
           "desc": "Each of your evolved Pokémon can use any attack from its previous Evolutions. (You still need the necessary Energy to use each attack.)",
-          "desc_zh": "你的每只进化宝可梦都可以使用其先前进化形态的任意招式。（你仍然需要必要的能量来使用每个招式。）"
+          "desc_zh": "你的每只进化宝可梦都可以使用其先前进化形态的任意招式。（你仍然需要必要的能量来使用每个招式。）",
+          "cost": ""
         }
       ],
       "real": {
@@ -2183,8 +2187,7 @@
           },
           "damage": 0,
           "effects": [
-            "discard:all",
-            "draw:6"
+            "research:6"
           ],
           "desc": "Discard your hand and draw 6 cards.",
           "name_zh": "爆裂咆哮",
@@ -2453,7 +2456,8 @@
           "tag": "search_trainer:1",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for a Stadium card, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。从牌库中检索 1 张竞技场卡，展示它并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。从牌库中检索 1 张竞技场卡，展示它并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -2546,7 +2550,8 @@
           "tag": "passive:dmg_immune:team_bench:effects",
           "location": "field",
           "desc": "Prevent all damage from and effects of attacks from your opponent’s Pokémon done to your Benched Pokémon.",
-          "desc_zh": "防止对手的宝可梦所使用招式对你的后备宝可梦造成的所有伤害与效果。"
+          "desc_zh": "防止对手的宝可梦所使用招式对你的后备宝可梦造成的所有伤害与效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -2598,7 +2603,8 @@
           "tag": "switch_self",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may switch it with your Active Pokémon. If you do, you may move any amount of Energy from your other Pokémon to this Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置于后备时，你可以将此宝可梦与你的战斗宝可梦互换。若如此做，你可以将你的其他宝可梦身上任意数量的能量移动到这只宝可梦身上。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置于后备时，你可以将此宝可梦与你的战斗宝可梦互换。若如此做，你可以将你的其他宝可梦身上任意数量的能量移动到这只宝可梦身上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -2788,7 +2794,8 @@
           "tag": "fx:attack_cost:self:less:per:opp_bench",
           "location": "field",
           "desc": "Attacks used by this Pokémon cost {C} less for each of your opponent’s Benched Pokémon.",
-          "desc_zh": "对手每有 1 只后备宝可梦，此宝可梦使用的招式所需能量就少 {C}。"
+          "desc_zh": "对手每有 1 只后备宝可梦，此宝可梦使用的招式所需能量就少 {C}。",
+          "cost": ""
         }
       ],
       "real": {
@@ -2894,7 +2901,8 @@
           "tag": "passive:dmg_immune:self:from:basic_ex",
           "location": "field",
           "desc": "Prevent all damage done to this Pokémon by attacks from your opponent’s Basic Pokémon {ex}.",
-          "desc_zh": "防止对手的基础宝可梦 ex 所用招式对此宝可梦造成的所有伤害。"
+          "desc_zh": "防止对手的基础宝可梦 ex 所用招式对此宝可梦造成的所有伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3053,7 +3061,8 @@
           "tag": "recon:4:all:basic_energy-metal:dest:attach_spread:rest:shuffle_bottom",
           "location": "field",
           "desc": "Once during your turn, you may look at the top 4 cards of your deck and attach any number of Basic {M} Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards and put them on the bottom of your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。查看你牌库顶的 4 张卡，将其中你找到的任意数量的基本 {M} 能量卡以你喜欢的方式附着于你的宝可梦。将其余的卡洗牌后放置于你的牌库底。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。查看你牌库顶的 4 张卡，将其中你找到的任意数量的基本 {M} 能量卡以你喜欢的方式附着于你的宝可梦。将其余的卡洗牌后放置于你的牌库底。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3262,7 +3271,8 @@
           "tag": "search_any:1",
           "location": "field",
           "desc": "Once during your turn, if your Active Pokémon has the Festival Lead Ability, you may search your deck for a card and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。若你的战斗宝可梦拥有「庆典领舞」特性，则你可以从牌库中检索 1 张卡并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。若你的战斗宝可梦拥有「庆典领舞」特性，则你可以从牌库中检索 1 张卡并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3467,7 +3477,8 @@
           "tag": "attach_energy:1:grass:hand",
           "location": "field",
           "desc": "Once during your turn, you may attach a Basic {G} Energy card from your hand to this Pokémon. If you attached Energy to a Pokémon in this way, draw a card.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。从手牌中把 1 张基本 {G} 能量卡附着于此宝可梦。若你以此方式将能量附着于宝可梦，则抽 1 张牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。从手牌中把 1 张基本 {G} 能量卡附着于此宝可梦。若你以此方式将能量附着于宝可梦，则抽 1 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3572,7 +3583,8 @@
           "tag": "draw_both:1",
           "location": "field",
           "desc": "Once during your turn, you may have each player draw a card.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。让每位玩家各抽 1 张牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。让每位玩家各抽 1 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3722,7 +3734,8 @@
           "tag": "passive:checkup_spread:10:ability_all:except:froslass",
           "location": "field",
           "desc": "During Pokémon Checkup, put 1 damage counter on each Pokémon that has an Ability (both yours and your opponent’s), except any Froslass.",
-          "desc_zh": "在宝可梦检查时，在拥有特性的每只宝可梦（你的与对手的）上放置 1 个伤害指示物，任何「雪妖女」除外。"
+          "desc_zh": "在宝可梦检查时，在拥有特性的每只宝可梦（你的与对手的）上放置 1 个伤害指示物，任何「雪妖女」除外。",
+          "cost": ""
         }
       ],
       "real": {
@@ -3813,7 +3826,8 @@
           "tag": "bounce:shuffle_self",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may shuffle it and all attached cards into your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次。若此宝可梦位于战斗区，你可以将此宝可梦及所有附着卡洗回你的牌库。"
+          "desc_zh": "在你的回合中，你可以使用 1 次。若此宝可梦位于战斗区，你可以将此宝可梦及所有附着卡洗回你的牌库。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4058,7 +4072,8 @@
           "tag": "on_damaged:status:burn",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Burned.",
-          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则使用招式的宝可梦现在处于灼伤状态。"
+          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则使用招式的宝可梦现在处于灼伤状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4108,7 +4123,8 @@
           "tag": "recon:6",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may look at the top 6 cards of your deck, reveal a Supporter card you find there, and put it into your hand. Shuffle the other cards back into your deck.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，则你可以使用 1 次，查看自己牌库上方的 6 张卡，从中展示 1 张支援者卡并加入手牌。将其余的卡洗回牌库。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，则你可以使用 1 次，查看自己牌库上方的 6 张卡，从中展示 1 张支援者卡并加入手牌。将其余的卡洗回牌库。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4159,7 +4175,8 @@
           "tag": "attach_energy:1:deck",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从牌库中检索 1 张宝可梦道具卡并附着于此宝可梦。然后洗牌。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从牌库中检索 1 张宝可梦道具卡并附着于此宝可梦。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4265,7 +4282,8 @@
           "tag": "energy_move:1:from:any:to:any",
           "location": "field",
           "desc": "Once during your turn, you may move a Basic Energy from 1 of your Pokémon to another of your Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，将 1 个基本能量从自己的 1 只宝可梦移动到自己的另 1 只宝可梦上。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，将 1 个基本能量从自己的 1 只宝可梦移动到自己的另 1 只宝可梦上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4317,7 +4335,8 @@
           "tag": "fx:static_dmg:add:50:self_vs_ability",
           "location": "field",
           "desc": "Attacks used by this Pokémon do 50 more damage to your opponent’s Active Pokémon that has an Ability (before applying Weakness and Resistance).",
-          "desc_zh": "此宝可梦使用的招式对对手拥有特性的战斗宝可梦造成 +50 伤害（在应用弱点和抗性之前）。"
+          "desc_zh": "此宝可梦使用的招式对对手拥有特性的战斗宝可梦造成 +50 伤害（在应用弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4525,7 +4544,8 @@
           "tag": "counters:5:scope:opp:1:selfko",
           "location": "field",
           "desc": "Once during your turn, you may put 5 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，在对手的 1 只宝可梦上放置 5 个伤害指示物。若你使用此特性，则此宝可梦被击倒。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，在对手的 1 只宝可梦上放置 5 个伤害指示物。若你使用此特性，则此宝可梦被击倒。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4577,7 +4597,8 @@
           "tag": "counters:13:scope:opp:1:selfko",
           "location": "field",
           "desc": "Once during your turn, you may put 13 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，在对手的 1 只宝可梦上放置 13 个伤害指示物。若你使用此特性，则此宝可梦被击倒。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，在对手的 1 只宝可梦上放置 13 个伤害指示物。若你使用此特性，则此宝可梦被击倒。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4685,7 +4706,8 @@
           "tag": "attach_energy:2:fighting:hand",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may attach up to 2 Basic {F} Energy cards from your hand to this Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从手牌中把最多 2 张基本 {F} 能量卡附着于此宝可梦。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从手牌中把最多 2 张基本 {F} 能量卡附着于此宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -4808,6 +4830,59 @@
       "source_card_id": 138,
       "name_key": "okidogiex",
       "uid": "Okidogi ex@SFA 36"
+    },
+    {
+      "name": "Munkidori ex",
+      "name_zh": "愿增猿 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 210,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Dirty Headbutt",
+          "cost": {
+            "darkness": 2,
+            "colorless": 1
+          },
+          "damage": 190,
+          "effects": [
+            "attack_lock:name:turn:Dirty Headbutt"
+          ],
+          "desc": "During your next turn, this Pokémon can’t use Dirty Headbutt.",
+          "name_zh": "肮脏头撞",
+          "desc_zh": "在你的下个回合中，此宝可梦无法使用肮脏头撞。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Oh No You Don’t",
+          "name_zh": "休想",
+          "tag": "ko_prize_minus:1:if_named:pecharunt",
+          "location": "field",
+          "desc": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, and if you have any Pecharunt {ex} in play, your opponent takes 1 fewer Prize card.",
+          "desc_zh": "若此宝可梦因对手宝可梦的招式伤害而被击倒，且你场上有桃歹郎 ex，则对手获得的奖赏卡减少 1 张。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SFA",
+        "number": "37"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 139,
+      "name_key": "munkidoriex",
+      "uid": "Munkidori ex@SFA 37"
     },
     {
       "name": "Varoom",
@@ -4995,7 +5070,8 @@
           "tag": "coin:heads:status_choose:burn+confuse+poison",
           "location": "field",
           "desc": "Once during your turn, you may flip a coin. If heads, choose Burned, Confused, or Poisoned. Your opponent’s Active Pokémon is now affected by that Special Condition.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，抛硬币。若为正面，选择灼伤、混乱或中毒。对手的战斗宝可梦现在处于该特殊状态。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，抛硬币。若为正面，选择灼伤、混乱或中毒。对手的战斗宝可梦现在处于该特殊状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -5336,7 +5412,8 @@
           "tag": "fx:static_dmg:add:30:team_vs_evolution",
           "location": "field",
           "desc": "Attacks used by your Pokémon do 30 more damage to your opponent’s Active Evolution Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "自己的宝可梦使用的招式对对手战斗的进化宝可梦造成 +30 伤害（在应用弱点和抗性之前）。"
+          "desc_zh": "自己的宝可梦使用的招式对对手战斗的进化宝可梦造成 +30 伤害（在应用弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -5427,7 +5504,8 @@
           "tag": "passive:dmg_immune:self:min:200",
           "location": "field",
           "desc": "Prevent all damage done to this Pokémon by attacks from your opponent’s Pokémon if that damage is 200 or more.",
-          "desc_zh": "若伤害为 200 或更多，则防止对手宝可梦的招式对此宝可梦造成的所有伤害。"
+          "desc_zh": "若伤害为 200 或更多，则防止对手宝可梦的招式对此宝可梦造成的所有伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -5986,7 +6064,8 @@
           "tag": "search_pokemon:3:type:colorless:hp:100",
           "location": "field",
           "desc": "Once during your first turn, you may search your deck for up to 3 {C} Pokémon with 100 HP or less, reveal them, and put them into your hand. Then, shuffle your deck. You can’t use more than 1 Fan Call Ability during your turn.",
-          "desc_zh": "在你的首个回合中，你可以使用 1 次，从牌库中检索最多 3 只 HP 为 100 或以下的 {C} 宝可梦，展示后加入手牌。然后洗牌。你的回合中只能使用 1 次风扇呼唤特性。"
+          "desc_zh": "在你的首个回合中，你可以使用 1 次，从牌库中检索最多 3 只 HP 为 100 或以下的 {C} 宝可梦，展示后加入手牌。然后洗牌。你的回合中只能使用 1 次风扇呼唤特性。",
+          "cost": ""
         }
       ],
       "real": {
@@ -6037,7 +6116,8 @@
           "tag": "fx:team_reduce:60:basic:colorless:other:bouffalant:nonstack",
           "location": "field",
           "desc": "As long as you have at least 1 other Bouffalant in play, all of your Basic {C} Pokémon take 60 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Curly Wall doesn’t stack.",
-          "desc_zh": "只要场上还有至少 1 只其他的爆爆头水牛，自己所有基本 {C} 宝可梦受到对手宝可梦的招式伤害减少 60 点（在应用弱点和抗性之后）。卷毛之墙的效果不会叠加。"
+          "desc_zh": "只要场上还有至少 1 只其他的爆爆头水牛，自己所有基本 {C} 宝可梦受到对手宝可梦的招式伤害减少 60 点（在应用弱点和抗性之后）。卷毛之墙的效果不会叠加。",
+          "cost": ""
         }
       ],
       "real": {
@@ -6187,7 +6267,8 @@
           "tag": "on_damaged:counter:30",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 3 damage counters on the Attacking Pokémon.",
-          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则在使用招式的宝可梦上放置 3 个伤害指示物。"
+          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则在使用招式的宝可梦上放置 3 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -6239,6 +6320,57 @@
       "source_card_id": 181,
       "name_key": "quaxwell",
       "uid": "Quaxwell@SSP 51"
+    },
+    {
+      "name": "Quaquaval",
+      "name_zh": "狂欢浪舞鸭",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 170,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Quaxwell",
+      "attacks": [
+        {
+          "name": "Hydro Splash",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [],
+          "desc": "",
+          "name_zh": "水之飞溅",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Up-Tempo",
+          "name_zh": "快节奏",
+          "tag": "draw_to:5",
+          "location": "field",
+          "desc": "You must put a card from your hand on the bottom of your deck in order to use this Ability. Once during your turn, you may draw cards until you have 5 cards in your hand.",
+          "desc_zh": "为了使用此特性，你必须将手牌中的 1 张卡置于牌库下方。在你的回合中，你可以使用 1 次，抽牌直到手牌有 5 张。",
+          "cost": "hand_bottom:1"
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "52"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 182,
+      "name_key": "quaquaval",
+      "uid": "Quaquaval@SSP 52"
     },
     {
       "name": "Smoochum",
@@ -6746,6 +6878,59 @@
       "uid": "Swablu@SSP 148"
     },
     {
+      "name": "Durant ex",
+      "name_zh": "铁蚁 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 190,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Vengeful Crush",
+          "cost": {
+            "grass": 1,
+            "colorless": 2
+          },
+          "damage": 120,
+          "effects": [
+            "dmg_plus:30:per:opp_prizes_taken"
+          ],
+          "desc": "This attack does 30 more damage for each Prize card your opponent has taken.",
+          "name_zh": "复仇碾压",
+          "desc_zh": "对手每获得 1 张奖赏卡，此招式就造成 +30 伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Sudden Shearing",
+          "name_zh": "突然剪切",
+          "tag": "mill:1:opp",
+          "location": "field",
+          "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent’s deck.",
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以弃置对手牌库上方的 1 张卡。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "4"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 198,
+      "name_key": "durantex",
+      "uid": "Durant ex@SSP 4"
+    },
+    {
       "name": "Scatterbug",
       "name_zh": "粉蝶虫",
       "supertype": "Pokemon",
@@ -6934,7 +7119,8 @@
           "tag": "fx:static_dmg:add:10:team_evolution_type:fire",
           "location": "field",
           "desc": "Attacks used by your Evolution {R} Pokémon do 10 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "自己的进化 {R} 宝可梦使用的招式对对手的战斗宝可梦造成 +10 伤害（在应用弱点和抗性之前）。"
+          "desc_zh": "自己的进化 {R} 宝可梦使用的招式对对手的战斗宝可梦造成 +10 伤害（在应用弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -6986,7 +7172,8 @@
           "tag": "fx:effect_immune:attack:self",
           "location": "field",
           "desc": "Prevent all effects of attacks used by your opponent’s Pokémon done to this Pokémon. (Damage is not an effect.)",
-          "desc_zh": "防止对手宝可梦使用的招式对此宝可梦造成的所有效果。（伤害不是效果。）"
+          "desc_zh": "防止对手宝可梦使用的招式对此宝可梦造成的所有效果。（伤害不是效果。）",
+          "cost": ""
         }
       ],
       "real": {
@@ -7134,7 +7321,8 @@
           "tag": "passive:dmg_immune:self:from:tera:effects",
           "location": "field",
           "desc": "Prevent all damage from and effects of attacks from your opponent’s Tera Pokémon done to this Pokémon.",
-          "desc_zh": "防止对手太晶宝可梦的招式对此宝可梦造成的所有伤害和效果。"
+          "desc_zh": "防止对手太晶宝可梦的招式对此宝可梦造成的所有伤害和效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -7226,7 +7414,8 @@
           "tag": "discard_stadium",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以弃置场上 1 张竞技场。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以弃置场上 1 张竞技场。",
+          "cost": ""
         }
       ],
       "real": {
@@ -7276,7 +7465,8 @@
           "tag": "attach_spread:3:any:discard:target:type-lightning:selfko",
           "location": "field",
           "desc": "Once during your turn, you may attach up to 3 Basic Energy cards from your discard pile to your {L} Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中以任意方式把最多 3 张基本能量卡附着于自己的 {L} 宝可梦。若你使用此特性，则此宝可梦被击倒。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中以任意方式把最多 3 张基本能量卡附着于自己的 {L} 宝可梦。若你使用此特性，则此宝可梦被击倒。",
+          "cost": ""
         }
       ],
       "real": {
@@ -7436,7 +7626,8 @@
           "tag": "ko_prize_plus:1:coin",
           "location": "field",
           "desc": "When your opponent’s Active Pokémon is Knocked Out, flip a coin. If heads, take 1 more Prize card. The effect of Wonder Kiss doesn’t stack.",
-          "desc_zh": "当对手的战斗宝可梦被击倒时，抛硬币。若为正面，则多获得 1 张奖赏卡。奇迹之吻的效果不会叠加。"
+          "desc_zh": "当对手的战斗宝可梦被击倒时，抛硬币。若为正面，则多获得 1 张奖赏卡。奇迹之吻的效果不会叠加。",
+          "cost": ""
         }
       ],
       "real": {
@@ -7696,6 +7887,57 @@
       "uid": "Cofagrigus@SSP 83"
     },
     {
+      "name": "Meowstic",
+      "name_zh": "超能妙喵",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 90,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Espurr",
+      "attacks": [
+        {
+          "name": "Psyshot",
+          "cost": {
+            "psychic": 1,
+            "colorless": 2
+          },
+          "damage": 80,
+          "effects": [],
+          "desc": "",
+          "name_zh": "精神射击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Beckoning Tail",
+          "name_zh": "招引之尾",
+          "tag": "gust",
+          "location": "field",
+          "desc": "You must discard a Chill Teaser Toy card from your hand in order to use this Ability. Once during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
+          "desc_zh": "为了使用此特性，你必须从手牌中弃置 1 张「冰凉逗猫玩具」卡。在你的回合中，你可以使用 1 次，将对手的 1 只后备宝可梦换入战斗区。",
+          "cost": "discard_named:1:chillteasertoy"
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "85"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 221,
+      "name_key": "meowstic",
+      "uid": "Meowstic@SSP 85"
+    },
+    {
       "name": "Dedenne",
       "name_zh": "咚咚鼠",
       "supertype": "Pokemon",
@@ -7841,7 +8083,8 @@
           "tag": "fx:ability_block:gastrodon",
           "location": "field",
           "desc": "As long as this Pokémon is on your Bench, Benched Stage 2 Pokémon (both yours and your opponent’s) have no Abilities.",
-          "desc_zh": "只要此宝可梦位于后备，双方后备的 2 阶进化宝可梦都没有特性。"
+          "desc_zh": "只要此宝可梦位于后备，双方后备的 2 阶进化宝可梦都没有特性。",
+          "cost": ""
         }
       ],
       "real": {
@@ -8115,7 +8358,8 @@
           "tag": "passive:checkup_plus:poison:50:side:opp:active_only",
           "location": "field",
           "desc": "As long as this Pokémon is in the Active Spot, put 5 more damage counters on your opponent’s Poisoned Pokémon during Pokémon Checkup.",
-          "desc_zh": "只要此宝可梦位于战斗区，在宝可梦检查时，在对手的中毒宝可梦上多放置 5 个伤害指示物。"
+          "desc_zh": "只要此宝可梦位于战斗区，在宝可梦检查时，在对手的中毒宝可梦上多放置 5 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -8470,7 +8714,8 @@
           "tag": "evolve_act:heal:all:active:type:grass|discard_energy:all:if_prev",
           "location": "field",
           "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from your Active {G} Pokémon. If you healed any damage in this way, discard all Energy from that Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以回复你的战斗 {G} 宝可梦的所有伤害。若你以此方式回复了伤害，弃置该宝可梦身上的所有能量。"
+          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以回复你的战斗 {G} 宝可梦的所有伤害。若你以此方式回复了伤害，弃置该宝可梦身上的所有能量。",
+          "cost": ""
         }
       ],
       "real": {
@@ -9022,7 +9267,8 @@
           "tag": "on_ko:counter:60",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent’s Pokémon, put 6 damage counters on the Attacking Pokémon.",
-          "desc_zh": "若此宝可梦位于战斗区，且被对手宝可梦的招式伤害击倒，在攻击的宝可梦上放置 6 个伤害指示物。"
+          "desc_zh": "若此宝可梦位于战斗区，且被对手宝可梦的招式伤害击倒，在攻击的宝可梦上放置 6 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -9074,7 +9320,8 @@
           "tag": "passive:checkup_plus:burn:30:side:opp",
           "location": "field",
           "desc": "During Pokémon Checkup, put 3 more damage counters on your opponent’s Burned Pokémon.",
-          "desc_zh": "在宝可梦检查时，在对手的灼伤宝可梦上多放置 3 个伤害指示物。"
+          "desc_zh": "在宝可梦检查时，在对手的灼伤宝可梦上多放置 3 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -9235,7 +9482,8 @@
           "tag": "burn",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may make your opponent’s Active Pokémon Burned.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，使对手的战斗宝可梦处于灼伤状态。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，使对手的战斗宝可梦处于灼伤状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -9632,7 +9880,8 @@
           "tag": "attach_energy:1:lightning:hand",
           "location": "field",
           "desc": "As often as you like during your turn, you may attach a Basic {L} Energy card from your hand to 1 of your Iono’s Pokémon.",
-          "desc_zh": "在你的回合中，你可以不限次数，从手牌中将 1 张基本 {L} 能量卡附着于你的 1 只奇树的宝可梦。"
+          "desc_zh": "在你的回合中，你可以不限次数，从手牌中将 1 张基本 {L} 能量卡附着于你的 1 只奇树的宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -9686,6 +9935,57 @@
       "source_card_id": 270,
       "name_key": "ionoswattrel",
       "uid": "Iono’s Wattrel@JTG 54"
+    },
+    {
+      "name": "Iono’s Kilowattrel",
+      "name_zh": "奇树的大电海燕",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Iono)",
+      "evolves_from": "Iono’s Wattrel",
+      "attacks": [
+        {
+          "name": "Mach Bolt",
+          "cost": {
+            "lightning": 1,
+            "colorless": 2
+          },
+          "damage": 70,
+          "effects": [],
+          "desc": "",
+          "name_zh": "音速雷电",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Flashing Draw",
+          "name_zh": "闪耀抽取",
+          "tag": "draw_to:6",
+          "location": "field",
+          "desc": "You must discard a Basic {L} Energy from this Pokémon in order to use this Ability. Once during your turn, you may draw cards until you have 6 cards in your hand.",
+          "desc_zh": "你须从此宝可梦身上弃置 1 个基本 {L} 能量才能使用此特性。在你的回合中，你可以使用 1 次，抽牌直到你的手牌有 6 张。",
+          "cost": "discard_self_energy:1:lightning"
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "55"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 271,
+      "name_key": "ionoskilowattrel",
+      "uid": "Iono’s Kilowattrel@JTG 55"
     },
     {
       "name": "Beldum",
@@ -10026,7 +10326,8 @@
           "tag": "search_pokemon:1",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 只宝可梦，展示它，并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 只宝可梦，展示它，并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -10408,7 +10709,8 @@
           "tag": "draw:2",
           "location": "field",
           "desc": "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 2 cards.",
-          "desc_zh": "你须弃置手牌中的 1 张卡才能使用此特性。在你的回合中，你可以使用 1 次，抽 2 张牌。"
+          "desc_zh": "你须弃置手牌中的 1 张卡才能使用此特性。在你的回合中，你可以使用 1 次，抽 2 张牌。",
+          "cost": "discard:1"
         }
       ],
       "real": {
@@ -10944,7 +11246,8 @@
           "tag": "fx:static_dmg:add:30:team_name:hops:nonstack",
           "location": "field",
           "desc": "Attacks used by your Hop’s Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance). The effect of Extra Helpings doesn’t stack.",
-          "desc_zh": "你的赫普的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（计算弱点与抗性前）。追加餐点的效果不会叠加。"
+          "desc_zh": "你的赫普的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（计算弱点与抗性前）。追加餐点的效果不会叠加。",
+          "cost": ""
         }
       ],
       "real": {
@@ -11245,7 +11548,8 @@
           "tag": "evolve_act:gust",
           "location": "field",
           "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
-          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以将对手的 1 只后备宝可梦换入战斗区。"
+          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以将对手的 1 只后备宝可梦换入战斗区。",
+          "cost": ""
         }
       ],
       "real": {
@@ -11683,7 +11987,8 @@
           "tag": "fx:static_dmg:add:20:team_type:grass,fire",
           "location": "field",
           "desc": "Attacks used by your {G} Pokémon and {R} Pokémon do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "你的 {G} 宝可梦和 {R} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +20（计算弱点与抗性前）。"
+          "desc_zh": "你的 {G} 宝可梦和 {R} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +20（计算弱点与抗性前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -11857,7 +12162,8 @@
           "tag": "attach_energy:1:discard",
           "location": "field",
           "desc": "Once during your turn, you may attach a Basic Energy card from your discard pile to 1 of your Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从你的弃牌堆中将 1 张基本能量卡附着于你的 1 只宝可梦。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从你的弃牌堆中将 1 张基本能量卡附着于你的 1 只宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -12056,7 +12362,8 @@
           "tag": "passive:dmg_immune:self:from:ex",
           "location": "field",
           "desc": "Prevent all damage done to this Pokémon by attacks from your opponent’s Pokémon {ex}.",
-          "desc_zh": "防止此宝可梦受到对手的宝可梦 {ex} 的招式造成的所有伤害。"
+          "desc_zh": "防止此宝可梦受到对手的宝可梦 {ex} 的招式造成的所有伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -12546,7 +12853,8 @@
           "tag": "attach_energy:3:grass:deck",
           "location": "field",
           "desc": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may search your deck for up to 3 Basic {G} Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，当此宝可梦从你的后备移动到战斗区时，你可以使用 1 次，从牌库中检索最多 3 张基本 {G} 能量卡并附着于此宝可梦。然后洗牌。"
+          "desc_zh": "在你的回合中，当此宝可梦从你的后备移动到战斗区时，你可以使用 1 次，从牌库中检索最多 3 张基本 {G} 能量卡并附着于此宝可梦。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -12636,7 +12944,8 @@
           "tag": "fx:static_dmg:add:30:team_name:cynthias",
           "location": "field",
           "desc": "Attacks used by your Cynthia’s Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "你的竹兰的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（计算弱点与抗性前）。"
+          "desc_zh": "你的竹兰的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（计算弱点与抗性前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -12685,7 +12994,8 @@
           "tag": "passive:dmg_immune:team_bench:no_rule_box",
           "location": "field",
           "desc": "Prevent all damage done to your Benched Pokémon that don’t have a Rule Box by attacks from your opponent’s Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)",
-          "desc_zh": "防止对手的宝可梦的招式对你没有规则栏的后备宝可梦造成的所有伤害。（宝可梦 {ex}、宝可梦 {V} 等拥有规则栏。）"
+          "desc_zh": "防止对手的宝可梦的招式对你没有规则栏的后备宝可梦造成的所有伤害。（宝可梦 {ex}、宝可梦 {V} 等拥有规则栏。）",
+          "cost": ""
         }
       ],
       "real": {
@@ -12779,7 +13089,8 @@
           "tag": "passive:dmg_immune:self:from:ex",
           "location": "field",
           "desc": "Prevent all damage done to this Pokémon by attacks from your opponent’s Pokémon {ex}.",
-          "desc_zh": "防止此宝可梦受到对手的宝可梦 {ex} 的招式造成的所有伤害。"
+          "desc_zh": "防止此宝可梦受到对手的宝可梦 {ex} 的招式造成的所有伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -13066,7 +13377,8 @@
           "tag": "draw:1",
           "location": "field",
           "desc": "Once during your turn, you may draw a card.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，抽 1 张牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，抽 1 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -13157,7 +13469,8 @@
           "tag": "search_any:1",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for an Ethan’s Adventure card, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 张阿响的冒险卡，展示它，并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 张阿响的冒险卡，展示它，并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -13302,7 +13615,8 @@
           "tag": "attach_energy:2:fire:hand:target:bench",
           "location": "field",
           "desc": "Once during your turn, you may attach up to 2 Basic {R} Energy cards from your hand to 1 of your Benched Ethan’s Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从手牌中将最多 2 张基本 {R} 能量卡附着于你的后备中的 1 只阿响的宝可梦。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从手牌中将最多 2 张基本 {R} 能量卡附着于你的后备中的 1 只阿响的宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -13491,7 +13805,8 @@
           "tag": "passive:bench_immune",
           "location": "field",
           "desc": "As long as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent’s Pokémon done to this Pokémon.",
-          "desc_zh": "只要此宝可梦位于后备，就防止对手的宝可梦所使用招式对此宝可梦造成的所有伤害与效果。"
+          "desc_zh": "只要此宝可梦位于后备，就防止对手的宝可梦所使用招式对此宝可梦造成的所有伤害与效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -14239,7 +14554,8 @@
           "tag": "search_pokemon:1",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for a Cynthia’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 只竹兰的宝可梦，展示它，并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 只竹兰的宝可梦，展示它，并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -14387,7 +14703,8 @@
           "tag": "passive:dmg_reduce:30",
           "location": "field",
           "desc": "This Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
-          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。"
+          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -14833,7 +15150,8 @@
           "tag": "evolve_act:recover:2:any",
           "location": "field",
           "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may put up to 2 Arven’s Sandwich cards from your discard pile into your hand.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以从弃牌堆中把最多 2 张派帕的三明治卡加入手牌。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以从弃牌堆中把最多 2 张派帕的三明治卡加入手牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -15211,7 +15529,8 @@
           "tag": "attach_energy:1:discard",
           "location": "field",
           "desc": "Once during your turn, you may attach a Basic Energy card from your discard pile to this Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中把 1 张基本能量卡附着于此宝可梦。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中把 1 张基本能量卡附着于此宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -15486,7 +15805,7 @@
           },
           "damage": 0,
           "effects": [
-            "burn"
+            "status_multi:burn+confuse"
           ],
           "desc": "Your opponent’s Active Pokémon is now Burned and Confused.",
           "name_zh": "残酷煤炭",
@@ -15814,7 +16133,8 @@
           "tag": "on_ko:energy_to_hand:water",
           "location": "field",
           "desc": "When 1 of your {W} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, you may put all Basic {W} Energy attached to that Pokémon into your hand instead of the discard pile.",
-          "desc_zh": "当你的 1 只 {W} 宝可梦被对手的宝可梦的招式伤害击倒时，你可以把附着于该宝可梦的所有基本 {W} 能量加入手牌，而非放入弃牌堆。"
+          "desc_zh": "当你的 1 只 {W} 宝可梦被对手的宝可梦的招式伤害击倒时，你可以把附着于该宝可梦的所有基本 {W} 能量加入手牌，而非放入弃牌堆。",
+          "cost": ""
         }
       ],
       "real": {
@@ -16616,7 +16936,8 @@
           "tag": "move_damage:1",
           "location": "field",
           "desc": "As often as you like during your turn, you may move 1 damage counter from 1 of your Team Rocket’s Pokémon to another of your Pokémon.",
-          "desc_zh": "在你的回合中，不限次数，你可以把 1 个伤害指示物从你的 1 只火箭队的宝可梦移动到你的另 1 只宝可梦身上。"
+          "desc_zh": "在你的回合中，不限次数，你可以把 1 个伤害指示物从你的 1 只火箭队的宝可梦移动到你的另 1 只宝可梦身上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -16751,7 +17072,8 @@
           "tag": "fx:static_dmg:add:120:self_if_damage:2",
           "location": "field",
           "desc": "If this Pokémon has 2 or more damage counters on it, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "若此宝可梦身上有 2 个以上的伤害指示物，此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +120（在适用弱点和抗性之前）。"
+          "desc_zh": "若此宝可梦身上有 2 个以上的伤害指示物，此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +120（在适用弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -16887,7 +17209,8 @@
           "tag": "passive:checkup_spread:20:opp_basic:active_only",
           "location": "field",
           "desc": "During Pokémon Checkup, if this Pokémon is in the Active Spot, put 2 damage counters on each of your opponent’s Basic Pokémon.",
-          "desc_zh": "在宝可梦检查时，若此宝可梦位于战斗区，在对手的每只基础宝可梦上放置 2 个伤害指示物。"
+          "desc_zh": "在宝可梦检查时，若此宝可梦位于战斗区，在对手的每只基础宝可梦上放置 2 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -17588,7 +17911,8 @@
           "tag": "evolve_act:counters:2:scope:opp:1",
           "location": "field",
           "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may put 2 damage counters on 1 of your opponent’s Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以在对手的 1 只宝可梦上放置 2 个伤害指示物。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以在对手的 1 只宝可梦上放置 2 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -18144,6 +18468,58 @@
       "uid": "Team Rocket's Porygon2@DRI 154"
     },
     {
+      "name": "Team Rocket's Porygon-Z",
+      "name_zh": "火箭队的多边兽Z",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 140,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Team Rocket)",
+      "evolves_from": "Team Rocket's Porygon2",
+      "attacks": [
+        {
+          "name": "R Command",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_set:20:per:own_discard_named_supporter:teamrocket"
+          ],
+          "desc": "This attack does 20 damage for each Supporter card that has “Team Rocket” in its name in your discard pile.",
+          "name_zh": "R 指令",
+          "desc_zh": "你的弃牌堆中名称中含有「火箭队」的支援者卡每有 1 张，此招式造成 20 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Reconstitute",
+          "name_zh": "重组",
+          "tag": "draw:1",
+          "location": "field",
+          "desc": "You must discard 2 cards from your hand in order to use this Ability. Once during your turn, you may draw a card.",
+          "desc_zh": "你必须从手牌中弃置 2 张卡才能使用此特性。在你的回合中，你可以使用 1 次，抽 1 张牌。",
+          "cost": "discard:2"
+        }
+      ],
+      "real": {
+        "set": "DRI",
+        "number": "155"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 475,
+      "name_key": "teamrocketsporygonz",
+      "uid": "Team Rocket's Porygon-Z@DRI 155"
+    },
+    {
       "name": "Taillow",
       "name_zh": "傲骨燕",
       "supertype": "Pokemon",
@@ -18422,7 +18798,8 @@
           "tag": "fx:static_dmg:add:20:team",
           "location": "field",
           "desc": "Attacks used by your Pokémon do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "你的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +20（在适用弱点和抗性之前）。"
+          "desc_zh": "你的宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +20（在适用弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -19107,6 +19484,57 @@
       "uid": "Larvesta@BLK 15"
     },
     {
+      "name": "Volcarona",
+      "name_zh": "火神蛾",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Larvesta",
+      "attacks": [
+        {
+          "name": "Fire Wing",
+          "cost": {
+            "fire": 1,
+            "colorless": 2
+          },
+          "damage": 70,
+          "effects": [],
+          "desc": "",
+          "name_zh": "火焰之翼",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Torrid Scales",
+          "name_zh": "灼热鳞片",
+          "tag": "burn",
+          "location": "field",
+          "desc": "You must discard a Basic {R} Energy card from your hand in order to use this Ability. Once during your turn, you may make your opponent’s Active Pokémon Burned.",
+          "desc_zh": "你必须从手牌中弃置 1 张基本 {R} 能量卡才能使用此特性。在你的回合中，你可以使用 1 次，使对手的战斗宝可梦陷入灼伤状态。",
+          "cost": "discard_hand_energy:1:fire"
+        }
+      ],
+      "real": {
+        "set": "BLK",
+        "number": "16"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 497,
+      "name_key": "volcarona",
+      "uid": "Volcarona@BLK 16"
+    },
+    {
       "name": "Panpour",
       "name_zh": "冷水猴",
       "supertype": "Pokemon",
@@ -19442,7 +19870,8 @@
           "tag": "passive:dmg_immune:self:from:special_energy:effects",
           "location": "field",
           "desc": "Prevent all damage from and effects of attacks done to this Pokémon by your opponent’s Pokémon that have any Special Energy attached.",
-          "desc_zh": "防止附着有特殊能量的对手的宝可梦的招式对此宝可梦造成的所有伤害和效果。"
+          "desc_zh": "防止附着有特殊能量的对手的宝可梦的招式对此宝可梦造成的所有伤害和效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -19492,7 +19921,8 @@
           "tag": "bounce:discard_to_bench:1:hp:70",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may put a Basic Pokémon with 70 HP or less from your discard pile onto your Bench.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，从弃牌堆中把 1 只 HP 为 70 以下的基础宝可梦放置到你的后备。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，从弃牌堆中把 1 只 HP 为 70 以下的基础宝可梦放置到你的后备。",
+          "cost": ""
         }
       ],
       "real": {
@@ -19842,7 +20272,8 @@
           "tag": "attach_energy:1:lightning:discard:target:bench",
           "location": "field",
           "desc": "Once during your turn, you may attach a Basic {L} Energy card from your discard pile to 1 of your Benched Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中把 1 张基本 {L} 能量卡附着于你的 1 只后备宝可梦。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从弃牌堆中把 1 张基本 {L} 能量卡附着于你的 1 只后备宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -20626,7 +21057,8 @@
           "tag": "passive:hp_plus:40",
           "location": "field",
           "desc": "This Pokémon gets +40 HP for each {F} Energy attached to it.",
-          "desc_zh": "此宝可梦身上附着的 {F} 能量每有 1 个，此宝可梦的 HP +40。"
+          "desc_zh": "此宝可梦身上附着的 {F} 能量每有 1 个，此宝可梦的 HP +40。",
+          "cost": ""
         }
       ],
       "real": {
@@ -20914,7 +21346,8 @@
           "tag": "on_damaged:status:poison",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Poisoned.",
-          "desc_zh": "若此宝可梦位于战斗区，且被对手的宝可梦的招式造成伤害（即使此宝可梦被击倒），攻击的宝可梦现在处于中毒状态。"
+          "desc_zh": "若此宝可梦位于战斗区，且被对手的宝可梦的招式造成伤害（即使此宝可梦被击倒），攻击的宝可梦现在处于中毒状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -21200,7 +21633,8 @@
           "tag": "search_pokemon:2:type:metal:stage:evolution",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for up to 2 Evolution {M} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索最多 2 只进化 {M} 宝可梦，展示它们，并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索最多 2 只进化 {M} 宝可梦，展示它们，并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -21667,7 +22101,8 @@
           "tag": "heal:20:active",
           "location": "field",
           "desc": "Once during your turn, you may heal 20 damage from your Active Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，回复你的战斗宝可梦的 20 点伤害。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，回复你的战斗宝可梦的 20 点伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -22109,7 +22544,8 @@
           "tag": "attach_energy:1:fire:hand",
           "location": "field",
           "desc": "As often as you like during your turn, you may attach a Basic {R} Energy card from your hand to 1 of your Pokémon.",
-          "desc_zh": "在你的回合中，不限次数，你可以从手牌中把 1 张基本 {R} 能量卡附着于你的 1 只宝可梦。"
+          "desc_zh": "在你的回合中，不限次数，你可以从手牌中把 1 张基本 {R} 能量卡附着于你的 1 只宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -22454,7 +22890,8 @@
           "tag": "switch_self",
           "location": "field",
           "desc": "Once during your turn, you may switch your Active Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent’s Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
-          "desc_zh": "在你的回合中，你可以使用 1 次，将自己的战斗宝可梦与后备宝可梦中的 1 只互换。若这样做，将对手的战斗宝可梦换入后备。（由对手选择新的战斗宝可梦。）"
+          "desc_zh": "在你的回合中，你可以使用 1 次，将自己的战斗宝可梦与后备宝可梦中的 1 只互换。若这样做，将对手的战斗宝可梦换入后备。（由对手选择新的战斗宝可梦。）",
+          "cost": ""
         }
       ],
       "real": {
@@ -23419,7 +23856,8 @@
           "tag": "opp_shuffle_draw:3",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may have your opponent shuffle their hand into their deck and draw 3 cards.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，使对手将手牌洗入其牌库，并抽 3 张牌。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，使对手将手牌洗入其牌库，并抽 3 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -24015,6 +24453,48 @@
       "uid": "Scraggy@WHT 57"
     },
     {
+      "name": "Scrafty",
+      "name_zh": "头巾混混",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Scraggy",
+      "attacks": [
+        {
+          "name": "Ruffians Attack",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 60,
+          "effects": [
+            "coin_each:own_field_type_darkness:heads:dmg_set:60"
+          ],
+          "desc": "Flip a coin for each {D} Pokémon you have in play. This attack does 60 damage for each heads.",
+          "name_zh": "恶棍攻击",
+          "desc_zh": "你场上每有 1 只 {D} 宝可梦，就抛 1 次硬币。每出现 1 次正面，此招式造成 60 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "WHT",
+        "number": "58"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 611,
+      "name_key": "scrafty",
+      "uid": "Scrafty@WHT 58"
+    },
+    {
       "name": "Trubbish",
       "name_zh": "破破袋",
       "supertype": "Pokemon",
@@ -24553,7 +25033,8 @@
           "tag": "fx:team_reduce:20:energy:metal",
           "location": "field",
           "desc": "All of your Pokémon that have any {M} Energy attached take 20 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance).",
-          "desc_zh": "你所有附着有 {M} 能量的宝可梦，受到对手宝可梦的招式伤害减少 20 点（在计算弱点与抗性之后）。"
+          "desc_zh": "你所有附着有 {M} 能量的宝可梦，受到对手宝可梦的招式伤害减少 20 点（在计算弱点与抗性之后）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -24918,7 +25399,8 @@
           "tag": "passive:dmg_reduce:30",
           "location": "field",
           "desc": "This Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
-          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。"
+          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -25236,7 +25718,8 @@
           "tag": "fx:team_reduce:30:faction:stevens:source_bench:nonstack",
           "location": "field",
           "desc": "As long as this Pokémon is on your Bench, all of your Steven’s Pokémon take 30 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Stone Palace doesn’t stack.",
-          "desc_zh": "只要此宝可梦位于你的后备区，你所有大吾的宝可梦受到对手宝可梦的招式伤害减少 30 点（在计算弱点与抗性之后）。「石之宫殿」的效果不会叠加。"
+          "desc_zh": "只要此宝可梦位于你的后备区，你所有大吾的宝可梦受到对手宝可梦的招式伤害减少 30 点（在计算弱点与抗性之后）。「石之宫殿」的效果不会叠加。",
+          "cost": ""
         }
       ],
       "real": {
@@ -25381,7 +25864,8 @@
           "tag": "attach_spread_multi:1:psychic:1:metal:deck:target:type-psychic+type-metal",
           "location": "field",
           "desc": "Once during your turn, you may search your deck for a Basic {P} Energy card, a Basic {M} Energy card, or 1 of each and attach them to your {P} Pokémon and {M} Pokémon in any way you like. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 张基本 {P} 能量卡、1 张基本 {M} 能量卡，或各 1 张，并以任意方式附着于你的 {P} 宝可梦与 {M} 宝可梦。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次，从牌库中检索 1 张基本 {P} 能量卡、1 张基本 {M} 能量卡，或各 1 张，并以任意方式附着于你的 {P} 宝可梦与 {M} 宝可梦。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -25706,7 +26190,8 @@
           "tag": "evolve_act:attach_spread:5:darkness:deck:target:cat-marnie",
           "location": "field",
           "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic {D} Energy cards and attach them to your Marnie’s Pokémon in any way you like. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以从牌库中检索最多 5 张基本 {D} 能量卡，并以任意方式附着于你的玛俐的宝可梦。然后洗牌。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以从牌库中检索最多 5 张基本 {D} 能量卡，并以任意方式附着于你的玛俐的宝可梦。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -25881,7 +26366,8 @@
           "tag": "energy_move:1:type:grass:from:any:to:any",
           "location": "field",
           "desc": "As often as you like during your turn, you may use this Ability. Move a Basic {G} Energy from 1 of your Pokémon to another of your Pokémon.",
-          "desc_zh": "在你的回合中，你可以任意次数使用此特性。将 1 个基本 {G} 能量从你的 1 只宝可梦移动到你的另 1 只宝可梦身上。"
+          "desc_zh": "在你的回合中，你可以任意次数使用此特性。将 1 个基本 {G} 能量从你的 1 只宝可梦移动到你的另 1 只宝可梦身上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -26943,7 +27429,8 @@
           "tag": "evolve_act:gust",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Switch in 1 of your opponent’s Benched Pokémon to the Active Spot.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。将对手后备宝可梦中的 1 只换入战斗区。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。将对手后备宝可梦中的 1 只换入战斗区。",
+          "cost": ""
         }
       ],
       "real": {
@@ -26955,55 +27442,6 @@
       "source_card_id": 674,
       "name_key": "hariyama",
       "uid": "Hariyama@MEG 73"
-    },
-    {
-      "name": "Lunatone",
-      "name_zh": "月石",
-      "supertype": "Pokemon",
-      "stage": 0,
-      "hp": 110,
-      "types": [
-        "fighting"
-      ],
-      "weakness": "grass",
-      "resistance": null,
-      "retreat": 1,
-      "is_ex": false,
-      "is_mega": false,
-      "category": "",
-      "evolves_from": null,
-      "attacks": [
-        {
-          "name": "Power Gem",
-          "cost": {
-            "fighting": 2
-          },
-          "damage": 50,
-          "effects": [],
-          "desc": "",
-          "name_zh": "力量宝石",
-          "desc_zh": ""
-        }
-      ],
-      "abilities": [
-        {
-          "name": "Lunar Cycle",
-          "name_zh": "月之周期",
-          "tag": "draw:3",
-          "location": "field",
-          "desc": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn.",
-          "desc_zh": "在你的回合中，若你场上有太阳岩，你可以从手牌弃置 1 张基本 {F} 能量卡，以使用此特性。抽 3 张牌。每回合只能使用 1 次「月之周期」特性。"
-        }
-      ],
-      "real": {
-        "set": "MEG",
-        "number": "74"
-      },
-      "provenance": "dataset-derived",
-      "fidelity": "rule-parser-derived",
-      "source_card_id": 675,
-      "name_key": "lunatone",
-      "uid": "Lunatone@MEG 74"
     },
     {
       "name": "Solrock",
@@ -27446,7 +27884,8 @@
           "tag": "fx:static_dmg:add:30:team_type:fighting",
           "location": "field",
           "desc": "Attacks used by your {F} Pokémon do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "你的 {F} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点与抗性之前）。"
+          "desc_zh": "你的 {F} 宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点与抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -27497,7 +27936,8 @@
           "tag": "on_damaged:counter:10",
           "location": "field",
           "desc": "If your Active {D} Pokémon is damaged by an attack from your opponent’s Pokémon (even if your Active {D} Pokémon is Knocked Out), place 1 damage counter on the Attacking Pokémon.",
-          "desc_zh": "若你的战斗 {D} 宝可梦受到对手宝可梦的招式伤害（即使你的战斗 {D} 宝可梦被击倒），在攻击的宝可梦身上放置 1 个伤害指示物。"
+          "desc_zh": "若你的战斗 {D} 宝可梦受到对手宝可梦的招式伤害（即使你的战斗 {D} 宝可梦被击倒），在攻击的宝可梦身上放置 1 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -27874,7 +28314,8 @@
           "tag": "evolve_act:coin:heads:discard_energy:1:opp",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Flip a coin. If heads, discard an Energy from your opponent’s Active Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抛硬币。若为正面，从对手的战斗宝可梦身上弃置 1 个能量。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抛硬币。若为正面，从对手的战斗宝可梦身上弃置 1 个能量。",
+          "cost": ""
         }
       ],
       "real": {
@@ -28404,7 +28845,8 @@
           "tag": "heal:30:choose",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon has any {G} Energy attached, you may use this Ability. Heal 30 damage from 1 of your Pokémon.",
-          "desc_zh": "在你的回合中，若此宝可梦身上附着有 {G} 能量，你可以使用 1 次此特性。回复你的 1 只宝可梦的 30 点伤害。"
+          "desc_zh": "在你的回合中，若此宝可梦身上附着有 {G} 能量，你可以使用 1 次此特性。回复你的 1 只宝可梦的 30 点伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -28496,7 +28938,8 @@
           "tag": "evolve_act:search_bench:1:name:shedinja",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Search your deck for a Shedinja and put it onto your Bench. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。从牌库中检索 1 张脱壳忍者卡，放置到你的后备区。然后洗牌。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。从牌库中检索 1 张脱壳忍者卡，放置到你的后备区。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -28632,7 +29075,8 @@
           "tag": "fx:static_dmg:sub:30:opp_active",
           "location": "field",
           "desc": "As long as this Pokémon is in the Active Spot, attacks used by your opponent’s Active Pokémon do 30 less damage (before applying Weakness and Resistance).",
-          "desc_zh": "只要此宝可梦位于战斗区，对手的战斗宝可梦使用的招式伤害减少 30 点（在计算弱点与抗性之前）。"
+          "desc_zh": "只要此宝可梦位于战斗区，对手的战斗宝可梦使用的招式伤害减少 30 点（在计算弱点与抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -28991,7 +29435,8 @@
           "tag": "attach_energy:2:water:hand",
           "location": "field",
           "desc": "Once during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up to 2 Basic {W} Energy cards from your hand to this Pokémon.",
-          "desc_zh": "在你的回合中，当此宝可梦从战斗区移动到你的后备区时，你可以使用 1 次此特性。从手牌中把最多 2 张基本 {W} 能量卡附着于此宝可梦。"
+          "desc_zh": "在你的回合中，当此宝可梦从战斗区移动到你的后备区时，你可以使用 1 次此特性。从手牌中把最多 2 张基本 {W} 能量卡附着于此宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -29677,7 +30122,8 @@
           "tag": "evolve_act:draw:2",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Draw 2 cards.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抽 2 张牌。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抽 2 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -29728,7 +30174,8 @@
           "tag": "evolve_act:draw:3",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Draw 3 cards.",
-          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抽 3 张牌。"
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化你的 1 只宝可梦时，你可以使用 1 次此特性。抽 3 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -29943,6 +30390,58 @@
       "source_card_id": 747,
       "name_key": "megagardevoirex",
       "uid": "Mega Gardevoir ex@MEG 60"
+    },
+    {
+      "name": "Shedinja",
+      "name_zh": "脱壳忍者",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Nincada",
+      "attacks": [
+        {
+          "name": "Damage Beat",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_set:20:per:opp_active_counters"
+          ],
+          "desc": "This attack does 20 damage for each damage counter on your opponent’s Active Pokémon.",
+          "name_zh": "伤害节拍",
+          "desc_zh": "对手的战斗宝可梦身上的伤害指示物每有 1 个，此招式造成 20 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Fragile Husk",
+          "name_zh": "脆弱外壳",
+          "tag": "ko_prize_minus:all:from_ex",
+          "location": "field",
+          "desc": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, your opponent can’t take any Prize cards for it.",
+          "desc_zh": "若此宝可梦因对手的宝可梦 {ex} 的招式伤害而被击倒，对手不会因此拿取任何奖赏卡。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "61"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 748,
+      "name_key": "shedinja",
+      "uid": "Shedinja@MEG 61"
     },
     {
       "name": "Spoink",
@@ -30245,7 +30744,8 @@
           "tag": "draw:2",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw 2 cards. You can’t use more than 1 Run Errand Ability each turn.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次此特性。抽 2 张牌。每回合只能使用 1 次「跑腿」特性。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次此特性。抽 2 张牌。每回合只能使用 1 次「跑腿」特性。",
+          "cost": ""
         }
       ],
       "real": {
@@ -30764,7 +31264,8 @@
           "tag": "passive:dmg_reduce:30",
           "location": "field",
           "desc": "This Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
-          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。"
+          "desc_zh": "此宝可梦受到的招式伤害减少 30 点（计算弱点与抗性后）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -30993,6 +31494,58 @@
       "source_card_id": 771,
       "name_key": "haunter",
       "uid": "Haunter@PFL 55"
+    },
+    {
+      "name": "Mega Gengar ex",
+      "name_zh": "超级耿鬼 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 350,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Haunter",
+      "attacks": [
+        {
+          "name": "Void Gale",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 230,
+          "effects": [
+            "energy_move:1:from:active:to:bench"
+          ],
+          "desc": "Move an Energy from this Pokémon to 1 of your Benched Pokémon.",
+          "name_zh": "虚空狂风",
+          "desc_zh": "将此宝可梦身上的 1 个能量移动到你的 1 只后备宝可梦上。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Shadowy Concealment",
+          "name_zh": "暗影隐匿",
+          "tag": "ko_prize_minus:1:from_ex:team_darkness",
+          "location": "field",
+          "desc": "If 1 of your {D} Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon {ex}, that player takes 1 fewer Prize card. The effect of Shadowy Concealment doesn’t stack.",
+          "desc_zh": "若你的 1 只 {D} 宝可梦因对手的宝可梦 ex 的招式伤害而被击倒，该玩家拿取的奖赏卡减少 1 张。暗影隐匿的效果不会叠加。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "PFL",
+        "number": "56"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 772,
+      "name_key": "megagengarex",
+      "uid": "Mega Gengar ex@PFL 56"
     },
     {
       "name": "Murkrow",
@@ -31348,7 +31901,7 @@
           },
           "damage": 30,
           "effects": [
-            "sleep"
+            "status_multi:sleep+poison"
           ],
           "desc": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
           "name_zh": "花粉炸弹",
@@ -31500,7 +32053,8 @@
           "tag": "heal:60:choose",
           "location": "field",
           "desc": "Once during your turn, if you have any {G} Mega Evolution Pokémon {ex} in play, you may use this Ability. Heal 60 damage from 1 of your Pokémon.",
-          "desc_zh": "在你的回合中，若场上有你的 {G} 超级进化宝可梦 ex，你可以使用 1 次此特性。回复你的 1 只宝可梦的 60 点伤害。"
+          "desc_zh": "在你的回合中，若场上有你的 {G} 超级进化宝可梦 ex，你可以使用 1 次此特性。回复你的 1 只宝可梦的 60 点伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -31918,7 +32472,8 @@
           "tag": "attach_energy:1:fire:hand:target:bench",
           "location": "field",
           "desc": "As often as you like during your turn, if you have any {R} Mega Evolution Pokémon {ex} in play, you may use this Ability. Attach a Basic {R} Energy card from your hand to 1 of your Benched {R} Pokémon.",
-          "desc_zh": "在你的回合中，若场上有你的 {R} 超级进化宝可梦 ex，你可以任意次数使用此特性。从手牌中把 1 张基本 {R} 能量卡附着于你的 1 只后备 {R} 宝可梦。"
+          "desc_zh": "在你的回合中，若场上有你的 {R} 超级进化宝可梦 ex，你可以任意次数使用此特性。从手牌中把 1 张基本 {R} 能量卡附着于你的 1 只后备 {R} 宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -32108,7 +32663,8 @@
           "tag": "passive:dmg_reduce:30:from:type:fire,water",
           "location": "field",
           "desc": "This Pokémon takes 30 less damage from attacks from your opponent’s {R} or {W} Pokémon (after applying Weakness and Resistance).",
-          "desc_zh": "此宝可梦受到的来自对手 {R} 或 {W} 宝可梦的招式伤害减少 30 点（在计算弱点和抗性之后）。"
+          "desc_zh": "此宝可梦受到的来自对手 {R} 或 {W} 宝可梦的招式伤害减少 30 点（在计算弱点和抗性之后）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -32912,7 +33468,8 @@
           "tag": "evolve_act:confuse",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Make your opponent’s Active Pokémon Confused.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。使对手的战斗宝可梦陷入混乱状态。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。使对手的战斗宝可梦陷入混乱状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -33183,7 +33740,8 @@
           "tag": "evolve_act:mill:2:opp",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. You may also use this Ability if this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent’s Pokémon. Discard the top 2 cards of your opponent’s deck.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。若此宝可梦位于战斗区，且因对手的宝可梦的招式伤害而被击倒，你也可以使用此特性。弃置对手牌库顶部的 2 张卡。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。若此宝可梦位于战斗区，且因对手的宝可梦的招式伤害而被击倒，你也可以使用此特性。弃置对手牌库顶部的 2 张卡。",
+          "cost": ""
         }
       ],
       "real": {
@@ -33433,7 +33991,8 @@
           "tag": "fx:static_dmg:add:120:self_if_mega_type:darkness",
           "location": "field",
           "desc": "If you have any {D} Mega Evolution Pokémon {ex} in play, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-          "desc_zh": "若场上有你的 {D} 超级进化宝可梦 ex，此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +120（在计算弱点和抗性之前）。"
+          "desc_zh": "若场上有你的 {D} 超级进化宝可梦 ex，此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +120（在计算弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -33695,7 +34254,8 @@
           "tag": "attach_energy:1:darkness:deck:target:bench_type:darkness:counters:20",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Search your deck for a Basic {D} Energy card and attach it to 1 of your Benched {D} Pokémon. Then, shuffle your deck. If you attached Energy to a Pokémon in this way, place 2 damage counters on that Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索 1 张基本 {D} 能量卡，并附着于你的 1 只后备 {D} 宝可梦。然后洗牌。若你以此方式把能量附着于宝可梦，则在该宝可梦上放置 2 个伤害指示物。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索 1 张基本 {D} 能量卡，并附着于你的 1 只后备 {D} 宝可梦。然后洗牌。若你以此方式把能量附着于宝可梦，则在该宝可梦上放置 2 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -33747,7 +34307,8 @@
           "tag": "fx:effect_immune:attack:self",
           "location": "field",
           "desc": "Prevent all effects of attacks used by your opponent’s Pokémon done to this Pokémon. (Damage is not an effect.)",
-          "desc_zh": "防止对手宝可梦使用的招式对此宝可梦造成的所有效果。（伤害不是效果。）"
+          "desc_zh": "防止对手宝可梦使用的招式对此宝可梦造成的所有效果。（伤害不是效果。）",
+          "cost": ""
         }
       ],
       "real": {
@@ -34219,7 +34780,8 @@
           "tag": "switch_self:if:own_mega_in_play",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is on your Bench, and if you have any Mega Evolution Pokémon {ex} in play, you may use this Ability. Switch this Pokémon with your Active Pokémon.",
-          "desc_zh": "在你的回合中，若此宝可梦位于你的后备，且场上有你的超级进化宝可梦 ex，你可以使用 1 次此特性。将此宝可梦与你的战斗宝可梦互换。"
+          "desc_zh": "在你的回合中，若此宝可梦位于你的后备，且场上有你的超级进化宝可梦 ex，你可以使用 1 次此特性。将此宝可梦与你的战斗宝可梦互换。",
+          "cost": ""
         }
       ],
       "real": {
@@ -34416,7 +34978,8 @@
           "tag": "evolve_act:search_bench:1:name:silcoon+cascoon",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Search your deck for a Silcoon or a Cascoon and put it onto your Bench. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。从牌库中检索甲壳茧或盾甲茧，并放置于你的后备。然后洗牌。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。从牌库中检索甲壳茧或盾甲茧，并放置于你的后备。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -34550,7 +35113,7 @@
           },
           "damage": 100,
           "effects": [
-            "sleep"
+            "status_multi:sleep+poison"
           ],
           "desc": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
           "name_zh": "黄昏之毒",
@@ -34564,7 +35127,8 @@
           "tag": "coin:heads:bounce:energy:opp_active:1",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Flip a coin. If heads, put an Energy attached to your opponent’s Active Pokémon into their hand.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。抛硬币。若为正面，将对手的战斗宝可梦上附着的 1 个能量放回其手牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。抛硬币。若为正面，将对手的战斗宝可梦上附着的 1 个能量放回其手牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -34656,7 +35220,8 @@
           "tag": "on_damaged:status:burn",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Burned.",
-          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则使用招式的宝可梦现在处于灼伤状态。"
+          "desc_zh": "若此宝可梦位于战斗区且受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则使用招式的宝可梦现在处于灼伤状态。",
+          "cost": ""
         }
       ],
       "real": {
@@ -35007,7 +35572,8 @@
           "tag": "draw_both:1",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Each player draws a card.",
-          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次此特性。双方玩家各抽 1 张卡。"
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次此特性。双方玩家各抽 1 张卡。",
+          "cost": ""
         }
       ],
       "real": {
@@ -35158,6 +35724,59 @@
       "source_card_id": 870,
       "name_key": "helioptile",
       "uid": "Helioptile@ASC 63"
+    },
+    {
+      "name": "Heliolisk",
+      "name_zh": "光电伞蜥",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Helioptile",
+      "attacks": [
+        {
+          "name": "Powerful Bolt",
+          "cost": {
+            "lightning": 1,
+            "colorless": 2
+          },
+          "damage": 70,
+          "effects": [
+            "coin_each:own_active_energy:heads:dmg_set:70"
+          ],
+          "desc": "Flip a coin for each Energy attached to this Pokémon. This attack does 70 damage for each heads.",
+          "name_zh": "强力闪电",
+          "desc_zh": "附着于此宝可梦的每个能量抛 1 次硬币。每次正面，此招式造成 70 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Frilled Generator",
+          "name_zh": "褶边发电机",
+          "tag": "attach_energy:2:lightning:deck",
+          "location": "field",
+          "desc": "Once during your turn, if you played Canari from your hand this turn, you may use this Ability. Search your deck for up to 2 Basic {L} Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，若你在本回合从手牌打出了卡娜莉，你可以使用 1 次此特性。从牌库中检索最多 2 张基本 {L} 能量卡，并附着于此宝可梦。然后洗牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "64"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 871,
+      "name_key": "heliolisk",
+      "uid": "Heliolisk@ASC 64"
     },
     {
       "name": "Tapu Koko",
@@ -36125,7 +36744,8 @@
           "tag": "on_damaged:counter:50",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 5 damage counters on the Attacking Pokémon.",
-          "desc_zh": "若此宝可梦位于战斗区，且受到对手的宝可梦的招式伤害（即使此宝可梦被击倒），就在攻击的宝可梦上放置 5 个伤害指示物。"
+          "desc_zh": "若此宝可梦位于战斗区，且受到对手的宝可梦的招式伤害（即使此宝可梦被击倒），就在攻击的宝可梦上放置 5 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -36176,7 +36796,8 @@
           "tag": "search_any:1",
           "location": "field",
           "desc": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, search your deck for a card and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "若此宝可梦因对手的宝可梦的招式伤害而被击倒，从牌库中检索 1 张卡并加入手牌。然后洗牌。"
+          "desc_zh": "若此宝可梦因对手的宝可梦的招式伤害而被击倒，从牌库中检索 1 张卡并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -36311,7 +36932,8 @@
           "tag": "fx:static_dmg:add:30:self_per_prize",
           "location": "field",
           "desc": "Attacks used by this Pokémon do 30 more damage to your opponent’s Active Pokémon for each Prize card your opponent has taken (before applying Weakness and Resistance).",
-          "desc_zh": "对手已拿取的每张奖赏卡，使此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点和抗性之前）。"
+          "desc_zh": "对手已拿取的每张奖赏卡，使此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +30（在计算弱点和抗性之前）。",
+          "cost": ""
         }
       ],
       "real": {
@@ -36402,7 +37024,8 @@
           "tag": "search_pokemon:1:stage:evolution",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon has any Energy attached, you may use this Ability. Search your deck for an Evolution Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，若此宝可梦上附着有能量，你可以使用 1 次此特性。从牌库中检索 1 只进化宝可梦，展示并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，若此宝可梦上附着有能量，你可以使用 1 次此特性。从牌库中检索 1 只进化宝可梦，展示并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -36454,7 +37077,8 @@
           "tag": "switch_self",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Switch your Active Pokémon with 1 of your Benched Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。将你的战斗宝可梦与你的 1 只后备宝可梦互换。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。将你的战斗宝可梦与你的 1 只后备宝可梦互换。",
+          "cost": ""
         }
       ],
       "real": {
@@ -36800,7 +37424,7 @@
           },
           "damage": 160,
           "effects": [
-            "sleep"
+            "status_multi:sleep+poison"
           ],
           "desc": "Your opponent’s Active Pokémon is now Asleep and Poisoned.",
           "name_zh": "花朵粉末",
@@ -36814,7 +37438,8 @@
           "tag": "heal:30:all",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Heal 30 damage from each of your Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。回复你的每只宝可梦的 30 点伤害。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。回复你的每只宝可梦的 30 点伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -37015,7 +37640,8 @@
           "tag": "search_pokemon:1",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Search your deck for an Erika’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索 1 只莉佳的宝可梦，展示并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索 1 只莉佳的宝可梦，展示并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -37423,7 +38049,8 @@
           "tag": "switch_self",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is on your Bench, you may switch it with your Active Pokémon.",
-          "desc_zh": "在你的回合中，若此宝可梦位于你的后备，你可以将其与你的战斗宝可梦互换。"
+          "desc_zh": "在你的回合中，若此宝可梦位于你的后备，你可以将其与你的战斗宝可梦互换。",
+          "cost": ""
         }
       ],
       "real": {
@@ -39339,7 +39966,8 @@
           "tag": "evolve_act:heal:all:evolved|discard_energy:all:evolved:if_prev",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Heal all damage from each of your Evolution Pokémon. If you healed any damage in this way, discard all Energy from those Pokémon.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。回复你的每只进化宝可梦的所有伤害。若你以此方式回复了伤害，则弃置那些宝可梦的所有能量。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打出以进化你的 1 只宝可梦时，你可以使用 1 次此特性。回复你的每只进化宝可梦的所有伤害。若你以此方式回复了伤害，则弃置那些宝可梦的所有能量。",
+          "cost": ""
         }
       ],
       "real": {
@@ -39390,7 +40018,8 @@
           "tag": "passive:coin_prevent:darkness",
           "location": "field",
           "desc": "If this Pokémon has any {D} Energy attached and is damaged by an attack, flip a coin. If heads, prevent that damage.",
-          "desc_zh": "若此宝可梦上附着有 {D} 能量且受到招式伤害，抛硬币。若为正面，防止该伤害。"
+          "desc_zh": "若此宝可梦上附着有 {D} 能量且受到招式伤害，抛硬币。若为正面，防止该伤害。",
+          "cost": ""
         }
       ],
       "real": {
@@ -40415,7 +41044,8 @@
           "tag": "on_damaged:counter_per:2:metal",
           "location": "field",
           "desc": "If this Pokémon is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 2 damage counters on the Attacking Pokémon for each {M} Energy attached to this Pokémon.",
-          "desc_zh": "若此宝可梦受到对手的宝可梦的招式伤害（即使此宝可梦被击倒），此宝可梦上附着的每 1 个 {M} 能量，就在攻击的宝可梦上放置 2 个伤害指示物。"
+          "desc_zh": "若此宝可梦受到对手的宝可梦的招式伤害（即使此宝可梦被击倒），此宝可梦上附着的每 1 个 {M} 能量，就在攻击的宝可梦上放置 2 个伤害指示物。",
+          "cost": ""
         }
       ],
       "real": {
@@ -40469,6 +41099,48 @@
       "source_card_id": 996,
       "name_key": "larrysdunsparce",
       "uid": "Larry's Dunsparce@ASC 163"
+    },
+    {
+      "name": "Larry's Dudunsparce ex",
+      "name_zh": "青木的土龙节节 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 270,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Larry)",
+      "evolves_from": "Larry's Dunsparce",
+      "attacks": [
+        {
+          "name": "Work Rush",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 80,
+          "effects": [
+            "coin_each:own_active_energy:heads:dmg_set:80"
+          ],
+          "desc": "Flip a coin for each Energy attached to this Pokémon. This attack does 80 damage for each heads.",
+          "name_zh": "工作冲刺",
+          "desc_zh": "此宝可梦身上每附着 1 个能量，抛 1 次硬币。此招式每出现 1 个正面，造成 80 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "164"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 997,
+      "name_key": "larrysdudunsparceex",
+      "uid": "Larry's Dudunsparce ex@ASC 164"
     },
     {
       "name": "Slakoth",
@@ -41052,7 +41724,8 @@
           "tag": "attach_energy:1:hand",
           "location": "field",
           "desc": "Once during your turn, if this Pokémon is on your Bench, you may use this Ability. Attach an Energy card from your hand to your Active Larry’s Pokémon.",
-          "desc_zh": "在你的回合中，若此宝可梦位于你的后备区，你可以使用 1 次此特性。从手牌中把 1 张能量卡附着于你的战斗中的青木的宝可梦。"
+          "desc_zh": "在你的回合中，若此宝可梦位于你的后备区，你可以使用 1 次此特性。从手牌中把 1 张能量卡附着于你的战斗中的青木的宝可梦。",
+          "cost": ""
         }
       ],
       "real": {
@@ -41513,7 +42186,8 @@
           "tag": "opp_shuffle_draw:4:if_hand",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Your opponent shuffles their hand and puts it on the bottom of their deck. If they put any cards on the bottom of their deck in this way, they draw 4 cards.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。对手将其手牌洗牌并放到其牌库下方。若对手以此方式将任意卡牌放到牌库下方，则对手抽 4 张牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。对手将其手牌洗牌并放到其牌库下方。若对手以此方式将任意卡牌放到牌库下方，则对手抽 4 张牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -41709,7 +42383,8 @@
           "tag": "discard_opp_random:1",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Flip a coin. If heads, discard a random card from your opponent’s hand.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。抛硬币。若为正面，随机弃置对手的 1 张手牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。抛硬币。若为正面，随机弃置对手的 1 张手牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -41857,7 +42532,8 @@
           "tag": "on_damaged:discard_energy:1",
           "location": "field",
           "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), discard an Energy from the Attacking Pokémon.",
-          "desc_zh": "若此宝可梦位于战斗区并受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则从进行攻击的宝可梦身上弃置 1 个能量。"
+          "desc_zh": "若此宝可梦位于战斗区并受到对手宝可梦的招式伤害（即使此宝可梦被击倒），则从进行攻击的宝可梦身上弃置 1 个能量。",
+          "cost": ""
         }
       ],
       "real": {
@@ -41957,7 +42633,8 @@
           "tag": "energy_move:1:type:water:from:bench:to:active",
           "location": "field",
           "desc": "As often as you like during your turn, you may use this Ability. Move a {W} Energy from 1 of your Benched Pokémon to your Active Pokémon.",
-          "desc_zh": "在你的回合中，你可以任意次数使用此特性。将 1 个 {W} 能量从你的 1 只后备宝可梦移到你的战斗宝可梦身上。"
+          "desc_zh": "在你的回合中，你可以任意次数使用此特性。将 1 个 {W} 能量从你的 1 只后备宝可梦移到你的战斗宝可梦身上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -42092,7 +42769,8 @@
           "tag": "fx:team_reduce:50:energy:water:nonstack",
           "location": "field",
           "desc": "All of your Pokémon that have any {W} Energy attached take 50 less damage from attacks from your opponent’s Pokémon (after applying Weakness and Resistance). The effect of Tundra Wall doesn’t stack.",
-          "desc_zh": "你所有附着了 {W} 能量的宝可梦受到对手宝可梦的招式伤害减少 50 点（在计算弱点和抗性之后）。「冻原之墙」的效果不会叠加。"
+          "desc_zh": "你所有附着了 {W} 能量的宝可梦受到对手宝可梦的招式伤害减少 50 点（在计算弱点和抗性之后）。「冻原之墙」的效果不会叠加。",
+          "cost": ""
         }
       ],
       "real": {
@@ -42104,6 +42782,61 @@
       "source_card_id": 1033,
       "name_key": "aurorus",
       "uid": "Aurorus@POR 24"
+    },
+    {
+      "name": "Volcanion",
+      "name_zh": "波尔凯尼恩",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Strength",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "力量",
+          "desc_zh": ""
+        },
+        {
+          "name": "Powerful Steam",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 90,
+          "effects": [
+            "coin_each:own_active_energy_water:heads:dmg_set:90"
+          ],
+          "desc": "Flip a coin for each {W} Energy attached to this Pokémon. This attack does 90 damage for each heads.",
+          "name_zh": "强力蒸汽",
+          "desc_zh": "此宝可梦身上每附着 1 个 {W} 能量，抛 1 次硬币。此招式每出现 1 个正面，造成 90 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "25"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1034,
+      "name_key": "volcanion",
+      "uid": "Volcanion@POR 25"
     },
     {
       "name": "Shinx",
@@ -42296,7 +43029,8 @@
           "tag": "fx:effect_immune:ability:self",
           "location": "field",
           "desc": "Prevent all effects of your opponent’s Pokémon’s Abilities done to this Pokémon.",
-          "desc_zh": "防止对手宝可梦的特性对此宝可梦造成的所有效果。"
+          "desc_zh": "防止对手宝可梦的特性对此宝可梦造成的所有效果。",
+          "cost": ""
         }
       ],
       "real": {
@@ -42553,7 +43287,8 @@
           "tag": "search_energy:2:type:psychic",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Search your deck for up to 2 Basic {P} Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索最多 2 张基本 {P} 能量卡，展示它们并加入手牌。然后洗牌。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从牌库中检索最多 2 张基本 {P} 能量卡，展示它们并加入手牌。然后洗牌。",
+          "cost": ""
         }
       ],
       "real": {
@@ -42915,7 +43650,8 @@
           "tag": "attach_energy:1:fighting:hand",
           "location": "field",
           "desc": "Once during your turn, you may use this Ability. Attach a Basic {F} Energy card from your hand to 1 of your {F} Pokémon.",
-          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从手牌中把 1 张基本 {F} 能量卡附着于你的 1 只 {F} 宝可梦身上。"
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。从手牌中把 1 张基本 {F} 能量卡附着于你的 1 只 {F} 宝可梦身上。",
+          "cost": ""
         }
       ],
       "real": {
@@ -43619,7 +44355,8 @@
           "tag": "search_trainer:1",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand onto your Bench, you may use this Ability. Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck. You can’t use more than 1 Ability that has “Last-Ditch” in its name each turn.",
-          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打到后备区时，你可以使用 1 次此特性。从牌库中检索 1 张支援者卡，展示并加入手牌。然后洗牌。每回合你只能使用 1 次名称中含有「绝境」的特性。"
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦打到后备区时，你可以使用 1 次此特性。从牌库中检索 1 张支援者卡，展示并加入手牌。然后洗牌。每回合你只能使用 1 次名称中含有「绝境」的特性。",
+          "cost": ""
         }
       ],
       "real": {
@@ -44002,6 +44739,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1094,
       "uid": "Bug Catching Set@TWM 143"
+    },
+    {
+      "name": "Dangerous Laser",
+      "name_zh": "危险激光",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "status_multi:burn+confuse",
+      "desc": "Your opponent’s Active Pokémon is now Burned and Confused.",
+      "desc_zh": "对手的战斗宝可梦现在处于灼伤和混乱状态。",
+      "real": {
+        "set": "SFA",
+        "number": "58"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1095,
+      "uid": "Dangerous Laser@SFA 58"
     },
     {
       "name": "Poké Vital A",
@@ -45107,6 +45861,23 @@
       "uid": "Morty’s Conviction@TEF 155"
     },
     {
+      "name": "Carmine",
+      "name_zh": "丹瑜",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "research:5",
+      "desc": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards.",
+      "desc_zh": "若你先攻，你可以在你的第一个回合中使用此卡。\n\n弃置你的手牌并抽 5 张牌。",
+      "real": {
+        "set": "TWM",
+        "number": "145"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1192,
+      "uid": "Carmine@TWM 145"
+    },
+    {
       "name": "Hassel",
       "name_zh": "哈塞尔",
       "supertype": "Trainer",
@@ -45224,6 +45995,40 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1202,
       "uid": "Drayton@SSP 174"
+    },
+    {
+      "name": "Surfer",
+      "name_zh": "冲浪者",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "switch_draw_to:5",
+      "desc": "Switch your Active Pokémon with 1 of your Benched Pokémon. If you do, draw cards until you have 5 cards in your hand.",
+      "desc_zh": "将你的战斗宝可梦与你的 1 只后备宝可梦互换。若你如此做，抽牌直到你的手牌为 5 张。",
+      "real": {
+        "set": "SSP",
+        "number": "187"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1203,
+      "uid": "Surfer@SSP 187"
+    },
+    {
+      "name": "Lisia’s Appeal",
+      "name_zh": "琉琪亚的呼吁",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "gust_confuse",
+      "desc": "Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot. If you do, the new Active Pokémon is now Confused.",
+      "desc_zh": "将对手的 1 只后备基础宝可梦换入战斗区。若你如此做，新的战斗宝可梦现在处于混乱状态。",
+      "real": {
+        "set": "SSP",
+        "number": "179"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1204,
+      "uid": "Lisia’s Appeal@SSP 179"
     },
     {
       "name": "Cyrano",

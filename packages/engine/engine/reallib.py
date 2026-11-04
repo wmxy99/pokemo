@@ -153,7 +153,8 @@ def _fossil_def(entry: dict) -> PokemonDef:
                    location=ab.get("location", "field"),
                    desc=ab.get("desc", ""),
                    name_zh=ab.get("name_zh", ""),
-                   desc_zh=ab.get("desc_zh", ""))
+                   desc_zh=ab.get("desc_zh", ""),
+                   cost=ab.get("cost", ""))
         for ab in raw.get("abilities") or ())
     return PokemonDef(
         entry["name"], hp=hp,
@@ -179,7 +180,8 @@ def _build_card(entry: dict):
                        location=ab.get("location", "field"),
                        desc=ab.get("desc", ""),
                        name_zh=ab.get("name_zh", ""),
-                       desc_zh=ab.get("desc_zh", ""))
+                       desc_zh=ab.get("desc_zh", ""),
+                       cost=ab.get("cost", ""))
             for ab in entry.get("abilities", []))
         return PokemonDef(
             entry["name"], hp=int(entry["hp"]),

@@ -4,22 +4,22 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1057** 项）· 全仓 **2000** 项测试全绿
-（engine 1057 · agent 796 · api 135 · gym 12）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1103** 项）· 全仓 **2084** 项测试全绿
+（engine 1103 · agent 834 · api 135 · gym 12）
 <!-- 上面这行由 scripts/check_doc_counts.py 在 CI 中核对（计数类文档必须实证） -->
 
 | | |
 |---|---|
 | 许可 | 核心代码 **Apache-2.0**；`packages/content-pokemon` **PolyForm Noncommercial 1.0.0** |
 | 仓库 | `packages/`（engine · card-db · agent · gym）+ `apps/`（api · web · cli） |
-| 卡池 | 收录 **1267** 张，其中引擎可对战 **1045** 张（82.5%，**差异逐一披露**，见下「已知边界」） |
+| 卡池 | 收录 **1267** 张，其中引擎可对战 **1061** 张（83.7%，**差异逐一披露**，见下「已知边界」） |
 | K2（卡牌效果解析） | 本地 4B **40%**（不可用）→ 云端 **100%**（50 条工程基准集，**含过拟合提醒**，见下） |
 
 ## 快速开始
 
 ```bash
 # ① 引擎：无需三方依赖，装好 Python 3.12 即可
-cd packages/engine && python -m unittest discover -s tests      # 1057 项
+cd packages/engine && python -m unittest discover -s tests      # 1103 项
 
 # ② 平台（后端 = FastAPI，同时托管前端构建产物到 /app）
 pip install -r apps/api/requirements.txt
@@ -84,8 +84,8 @@ python scripts/ci_local.py engine api   # 只跑指定 job（--list 可看全部
 
 | 边界 | 数值 | 披露位置 |
 |---|---|---|
-| 卡池引擎覆盖率 | 1045 / 1267 = **82.5%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
-| 未建模动作条目 | **209** 条（**全部纳入实现范围**，见 `docs/RULES_COMPLETION_PLAN.md`） | 同上（含批次图例与处置） |
+| 卡池引擎覆盖率 | 1061 / 1267 = **83.7%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
+| 未建模动作条目 | **206** 条（**全部纳入实现范围**，见 `docs/RULES_COMPLETION_PLAN.md`） | 同上（含批次图例与处置） |
 | 规则简化子集 | 先手不禁攻（开关已留）· 每回合抽 1 · 起手自动铺后备 · 攻击即结束回合 | `packages/engine/README.md`「规则边界」 |
 | 引擎未实现卡 | 对战时以基础能量**占位**并在 UI 显式告知 | 卡组页 / 预设清单三态标注 |
 

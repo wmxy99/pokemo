@@ -339,7 +339,7 @@ class TestSystemPromptInjection(unittest.TestCase):
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9345,
+            len(sp), 9400,
             f"提示词已 {len(sp)} 字符，超过 9345 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 

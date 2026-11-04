@@ -3,6 +3,35 @@
 > **2026-10-26 策略变更**：取消 B5「永久不建模」豁免。项目目标从「诚实披露覆盖率」
 > 改为「**全部 1267 张卡的规则全部实现**」。本文是这条路的施工图。
 
+## 本轮成果（2026-11-04 · 第四十八~五十二批 · 5 批）
+
+**一句话**：`engine_ready` **1045 → 1061（82.5% → 83.7%）**，池 1030 → **1046**，
+未建模动作条目 209 → **206**；全仓测试 **2000 → 2084**（engine 1103 · agent 834 · api 135 · gym 12）。
+
+| 批次 | 主题 | 落地 | 顺带修掉的静默缺陷 |
+|---|---|---|---|
+| 48 | `coin_each` 的币数计数源 | 4 | **31 个招式**全反面仍打满伤；4 张卡零 tag 零理由 |
+| 49 | 特性发动代价 `AbilityDef.cost` | 4（净 +3） | 特性侧 `draw_to:` 漏白名单；1 张「免费发动」被暴露 |
+| 50 | 被击倒时「对手少拿奖赏卡」 | 3 | 被动钩子误进合法动作表 |
+| 51 | 训练家复合句（一 tag 两动作） | 4 | **5 个招式**多状态只落第一个 |
+| 52 | 白名单补白（零新机制） | 3 | `research:` / `mill:` / `gust` 三处从未真正可用 |
+
+**方法论沉淀（三条，都是本轮的实证）**：
+1. **「静默丢卡」比「未建模」危险**：9 张训练家 + 4 张 `coin_each` 卡的共同特征是
+   「整卡不收、没有任何理由」—— 登记表里只剩一个 `unmatched`。本轮给 `to_engine_tags`
+   加了兜底登记，并把「多 tag 拒收」这类**结构性**拒绝也变成可见问题。
+2. **白名单是第二套真相**：`draw_to:` / `research:` / `mill:` / `gust` / `nullify_if:` 五次事故同源 ——
+   解析产出、引擎支持，但准入白名单漏了前缀 ⇒ 机制从未触发。**新增 tag 必须同步三处**
+   （`ATTACK_TAG_PREFIXES` / `ABILITY_TAG_PREFIXES` / `TRAINER_TAGS`），并跑一次
+   `test_v14_pool_ext`（池内**全部**招式/特性逐个执行）。
+3. **IGNORECASE 不改捕获大小写**：卡面首字母大写、映射表全小写键 ⇒ 检测器静默返回空。
+   凡「用捕获值查表」的地方都必须显式 `.lower()`。
+
+**已知缺口（下一批首要）**：本轮新增的 `ko_prize_minus` / `status_multi` / `switch_draw_to` /
+`gust_confuse` / `coin_until_tails` 三种新子效果 / `AbilityDef.cost` **尚未纳入
+`audit_pool_alignment.py` 的对账类**（仍 38 类）。按本仓纪律，这些族目前只有单测与
+「池内全量执行」兜底，缺「卡面 ↔ tag」的双向核对 —— 这是下一批第一优先事项。
+
 ## 一、完成定义（每一族都必须同时满足，缺一不算完成）
 
 1. **解析**：卡面句式 → 引擎 tag（`agent/effects.py`，只落到白名单，判不出返回 None）
@@ -18,10 +47,10 @@
 | 指标 | 值 |
 |---|---:|
 | 卡库总卡数 | 1267 |
-| 引擎可对战（`engine_ready`） | **1045（82.5%）** |
-| 不可对战 | **222** |
-| 未建模动作条目 | **209** |
-| 测试总数 | **2000** |
+| 引擎可对战（`engine_ready`） | **1061（83.7%）** |
+| 不可对战 | **206** |
+| 未建模动作条目 | **206** |
+| 测试总数 | **2084** |
 
 > ✅ **口径修正（2026-10-27）**：`name_key` 同名回落已收紧为「招式/特性名集合
 > 一致」。此前 152 张 `name_key` 命中里有 150 张宝可梦与池内同名条目**招式完全
@@ -57,7 +86,7 @@
 > ⚠ **本表是 2026-10-27 的快照**：同日后续两批（受击反应 `on_damaged`、条件伤害
 > 缩放第五批 17 条件）已落地，`B4-scaling` / `S6` 两行的实时数字已变动。
 > **实时口径以 `packages/card-db/data/cleaned/unmodeled_registry.md` 为准**
-> （当前：未建模 209 条 · `engine_ready` 1045 张）。本表不逐日重排，避免与
+> （当前：未建模 206 条 · `engine_ready` 1061 张）。本表不逐日重排，避免与
 > 生成物产生第二份真相。
 
 ## 四、实施顺序（依赖关系决定，不按数字大小）
@@ -185,6 +214,11 @@ S6 不是"一类机制"，而是解析链**一个动作都没产出的兜底桶*
 | 2026-10-28 | **第九批：全量回复 / 招式击倒 / 场地形态 / 牌库顶重排** —— ① 全量回复 `heal:all[:<scope>][:type:<c>]`（范围口径与 `heal:N` 共用 `_heal_scope_of`，补 `from your Benched Pokémon` 与「HP/指示物阈值」负向守卫），抛币条件版走 `coin_all:N:heads:heal:all:<scope>`（Whimsicott / Miltank）。② 招式击倒 `knockout:<scope>`：`opp_active[:basic]` · `opp_bench[:basic]` · `opp_any` · `opp_counters:<n>` · `both_active`，目标位置可由 `action.ko` 指定、缺省按战斗位优先；普通/全中抛币两路都经 `coin…` 子 tag 派发；击倒属**招式效果**，受效果免疫拦截（Hydrapple / Annihilape / Glaceon ex / Team Rocket's Exeggutor / Iono's Electrode / Alolan Exeggutor）。③ 场地形态新增 7 类：`no_tool_effect`（Jamming Tower，道具仍附着但全部失效）、`no_retreat:faction:ns`（N's Castle）、`attack_plus:N:faction:hops`（Postwick，弱点/抗性之前）、`dmg_reduce:N:faction:stevens`（Granite Cave，弱抗之后）、`status_immune:require:energy`（Festival Grounds：施加拦截 + 回合开始恢复）、`evolve_same_turn:type:grass`（Forest of Vitality，仅放宽「本回合从手牌放置」且非首回合）、`dmg_immune:box:none:from:rulebox`（Neutralization Zone）。阵营键按 `_name_key` 前缀精确判定，认不出的一律拒绝。④ 检视牌库顶：`shuffle_top:N[:opp]`（Team Rocket's Dottler，只重排顺序、不移动卡）。对账新增第十三/十四类「招式击倒范围」「场地静态规则」+ 6 个负向自测；engine 624 / agent 480；CI 8/8、对账 14/14、K1 0.795 | **766（60.5%）** |
 | 2026-10-28 | **静态免伤族（第八批）+ 护盾来源限定修正** —— 新被动 `passive:dmg_immune:<self|team_bench>[:from:<src>|:min:<n>|:no_rule_box][:effects]`：来源限定只收**可精确判定**的五种（`basic_ex` / `ex` / `tera` / `has_ability` / `special_energy`）加伤害门槛 `min:N`，范围区分「自身」与「全队后备」（+`no_rule_box`）；`effects` 后缀表示卡面写明「from and effects of attacks」（连效果一起挡），只写 prevent all damage 的**只挡伤害**。引擎侧在 `_do_attack`（伤害）与 `_opp_blocked`（效果）双点拦截，spread/snipe 逐目标判定全队后备免伤。**同时修掉两处池内静默错算**：① 护盾 `shield:prevent_all` 此前把「只挡伤害」与「连效果一起挡」合成一个标志（Metapod/Roggenrola/Bronzong 等把中毒也挡了）→ 拆为 `shield_prevent_effects`；② Metapod/Roggenrola「伤害 ≤N 才挡」、Archaludon/Dipplin「只挡基础宝可梦」、Terapagos ex「Basic non-{C}」的来源/门槛限定此前被丢弃 → 新增 `shield:prevent_all[:from:…|:if_damage:le:N][:effects]` 并在引擎按攻击方与伤害判定；认不出的来源一律如实未建模。另把 Tera 规则 `bench_immune` 拆成 `bench_immune_dmg`（Tera 只挡伤害）。落地 Rabsca / Farigiraf ex / Milotic ex / Sylveon / Crustle / Shaymin / Drednaw / Carracosta；对账新增第十二类「静态免伤来源」+ 6 个负向自测；engine 598 / agent 456；CI 8/8、对账 12/12、K1 0.795 | **751（59.3%）** |
 | 2026-10-30 | **第三十批：对手指定招式的封锁（`attack_lock:opp_name`）** —— 引擎早有 `attack_lock` 的 `all`/`opp_all`/`name` 三种范围，唯独缺「**Choose 1 of your opponent's Active Pokémon's attacks … that Pokémon can't use that attack**」这一类（Klefki「Memory Lock」/ Team Rocket's Murkrow「Torment」）。① 解析侧：新增整段认领正则 `_ATTACK_LOCK_CHOOSE_RE` → `scope=opp_name`；**并把「that attack」从 named 规则里排除**（原先会被当成具体卡名生成 `attack_lock:name:turn:that attack`，锚不到任何招式 → 静默不生效）。② `to_engine_tags` 增 `opp_name` 分支（不再报「对手指定招式的封锁（B4）」）；`gen_engine_pool.py` 的 `attack_lock:` 前缀白名单本就覆盖。③ 引擎 `_apply_attack_lock_tag` 增 `opp_name` 范围：目标=对手战斗位、窗口=对手**下一个**回合（`_lock_until(1-current)`），**招式名由出招动作 `action['lock_attack']` 运行时选择**（沿用 `snipe` 的「无选择→确定性默认」口径：缺省锁对手首个招式，绝不静默不生效）。④ 对账新增**第二十七类**「对手指定招式封锁」：卡面写了「choose 1 … that attack」却缺 tag、或把指代词当卡名，均报错；3 个负向自测证明能拦。新增 engine 3 例 / agent 2 例。池 953 张、`engine_ready` 966 → **968（76.4%）**、未建模 268 → **266**；engine 788 / agent 610；审计 27/27 | **968（76.4%）** |
+| 2026-11-04 | **第五十二批：白名单补白（3 张，零新机制）** —— 三条「解析早已产出、引擎也早已支持、但准入白名单漏了前缀」的**静默失效**：① 招式侧 `research:`（Raging Bolt ex「Burst Roar」弃全部手牌抽 6）；② 特性侧 `mill:`（Durant ex「Sudden Shearing」磨对手牌库）；③ 特性侧 `gust`（Meowstic「Beckoning Tail」拉后备）。这类缺陷的特征是**卡能打、测试全绿、机制却从未触发过** —— 与第七批 `nullify_if:` 漏白名单同源。引擎侧三处派发均复用既有实现（`_trainer_mill` / `_trainer_boss` / 手牌弃置 + `_safe_draw`），并给 `gust` 补「对手无后备则不可发动」的合法动作过滤。落地 Raging Bolt ex · Durant ex · Meowstic SSP 85（+3）；池 1043 → **1046**、`engine_ready` 1058 → **1061（83.7%）** | **1061（83.7%）** |
+| 2026-11-04 | **第五十一批：训练家复合句 + 多状态静默丢失（4 张训练家 + 5 个招式修复）** —— 训练家只认**一个**卡级 tag，而这些句子被通用分支拆成两条（`discard:all`+`draw:5` / `switch_self`+`draw_to:5` / `gust`+`confuse`）→ 建池判「多 tag」→ **整卡不收，且没有任何理由记录**（9 张训练家因此静默消失）。解法：整句认领成一条复合 tag —— ① `research:N`（Carmine，复用引擎早有的实现）；② `switch_draw_to:N`（Surfer：换位后抽到 N，抽牌口径要减掉**还在手上**的本卡）；③ `gust_confuse`（Lisia's Appeal：拉后备后**新战斗位**混乱，派发必须排在 `startswith(gust)` 之前）；④ `status_multi:<a>+<b>`（Dangerous Laser「Burned **and** Confused」）。⚠ ④ 顺带修了一处**静默削弱**：招式侧「is now X and Y」此前只落第一个状态，第二个被丢掉（5 个招式受影响）；现在招式/训练家两侧共用同一 tag，并按 `_status_blocked` 走免疫判定。⚠ 另记一条坑：正则的 IGNORECASE 只影响匹配、**不改捕获的大小写**（`Burned` 原样返回），而映射表是全小写键 → 必须显式 `.lower()`，否则检测器静默返回空（本轮实测踩到）。落地 Dangerous Laser · Carmine · Surfer · Lisia's Appeal（+4）；池 1040 → **1043**、`engine_ready` 1055 → **1058（83.5%）** | **1058（83.5%）** |
+| 2026-11-04 | **第五十批：被击倒时「对手少拿奖赏卡」（3 张）** —— 新 tag **`ko_prize_minus:<n|all>[:from_ex][:team_<color>][:if_named:<key>]`**，挂在**被击倒方**（特性 / 同队 / 道具三种载体）。⚠ 与既有 `ko_prize_plus:`（**多拿**，挂在取奖赏方）方向相反、挂载方也不同，混用会让奖赏数反向变化。四条条件各自独立：`from_ex`（必须被对手 **{ex}** 宝可梦的**招式伤害**击倒 —— Mega 的 `is_ex` 同为 True；「不是招式击倒」（指示物/自爆）一律不成立）、`team_<color>`（「1 of your {X} Pokémon」同队判定，特性可能挂在**没被击倒**的那只身上，属性按**被击倒者**判）、`if_named:<key>`（Munkidori 要求场上有 Pecharunt ex；⚠ `{ex}` 是**卡面标记**不是卡名，归一化前必须剥掉，否则键变成 `pecharuntex`、按卡名匹配永不成立）、无前缀（道具形态）。另剥掉「The effect of X doesn't stack.」—— 它是**叠加限制**不是条件，引擎本就取 max 不叠加。⚠ 首版把 `ko_prize_minus:` 放进了合法动作表，随机对局立刻报「未知 field tag」→ 它和 `ko_draw:` /`ko_prize_plus:` 一样是**被动钩子**，必须进被动前缀名单。落地 Shedinja · Munkidori ex · Mega Gengar ex（+3）；池 1039 → **1040**、`engine_ready` 1052 → **1055（83.3%）** | **1055（83.3%）** |
+| 2026-11-04 | **第四十九批：特性发动代价（4 张 + 1 处白名单补白 / 1 处差异暴露）** —— 卡面「**You must** <代价> **in order to use this Ability.**」—— 代价不是效果，做成 tag 会挤掉主效果，且执行顺序会跑到效果之后；与 gate 的区别是**真的扣牌**（当 gate 实现 = 免费发动）。新字段 `AbilityDef.cost`（与 `TrainerDef.play_cost` 同一套纪律）：**先剥句**再解析，引擎在效果**之前**付账、付不出则**不进合法动作表**。五种形态：`hand_bottom:1`（Quaquaval 手牌放牌库底）、`discard_named:1:chillteasertoy`（Meowstic 弃具名卡）、`discard_self_energy:1:lightning`（Kilowattrel 弃**自身身上**基本能量）、`discard_hand_energy:1:fire`（Volcarona 弃**手牌**基本能量）、`discard:2`（Porygon-Z）。⚠ 两个能量形态**不可互换**（场上 vs 手牌），且特殊能量不是合法代价（卡面写 Basic）。② **补白**：特性侧 `draw_to:` 一直不在白名单（`draw:` 前缀不匹配 `draw_to:`）→ 「draw cards until you have N」的特性**静默丢弃**，Quaquaval / Kilowattrel 卡在这。③ **差异暴露**：给「带代价却没抽出代价」加兜底守卫后，Lunatone MEG 74 从「自由发动」变成如实未建模（`engine_ready` −1）—— 这是**诚实化**，不是退化。落地 Quaquaval · Iono's Kilowattrel ·Porygon-Z · Volcarona（+4，净 +3）；池 1038 → **1039**、`engine_ready` 1053 → **1052（83.0%）** | **1052（83.0%）** |
+| 2026-11-04 | **第四十八批：`coin_each` 的币数计数源（4 张 + 31 个招式修正 + 静默兜底）** —— 卡面「Flip a coin **for each** Energy attached to this Pokémon / for each {X} Pokémon you have in play」—— 币数本身由计数源决定。⚠ 此前 `_COIN_PER_SIDE_RE` 的 `(\d+)?` 留空 → 当成 **1 枚币**，而且只产出 damage 动作、**既没有 tag 也没有 unsupported** → 整卡在登记表里只剩 `unmatched`。新增计数源 `own_field_type_<color>`（数**只数**且按属性筛；用 `own_field` 会多算别的属性）。⚠ 计数源名用**下划线不用冒号**：`coin_each:<counter>:<side>:<sub>` 里 counter 是中间段，带冒号会被 `split(':', 3)` 截断（首版踩到，池内全部招式逐个执行时立刻报「未知计数源」）。② **修一处长期静默加强**：`coin_each … dmg_set` 在**全反面**时 `_apply_coin_sub` 从未被调用，`mods['set']` 保持 None → 引擎回落到印刷伤害（「Flip 3 coins, 30 damage for each heads」0 正面打 30），实测 **31 个招式**受影响；改为 `repeat=0` 也调用，并把 `max(1,…)` 放宽成 `max(0,…)`。③ **静默兜底**：`to_engine_tags` 在「有文本、零动作、零理由」时登记一条 unsupported，让「沉默」变成「显式待办」（只在**一个动作都没解析出来**时触发，避免误杀 `damage` 由印刷值承载的合法解析）。落地 Heliolisk · Larry's Dudunsparce ex · Volcanion · Scrafty（+4）；池 1034 → **1038**、`engine_ready` 1045 → **1049（82.8%）** | **1049（82.8%）** |
 | 2026-11-03 | **第四十七批：可选加伤 + 反伤 / 抛币选状态全集（3 张）** —— ① **可选加伤 + 反伤联动**（Gurdurr「Superpower」30/30 · Dondozo ex「Dynamic Dive」120/50）：「You may do N more damage. If you do, this Pokémon also does M damage to itself.」→ 新 tag **`dmg_plus:N:recoil:M`**：加伤在**伤害修正层**计入（吃弱点/抗性），反伤在 `_apply_attack_effects` 按 `self:N` 口径结算（**不吃弱抗、可自爆**，击倒由对手取奖赏）。⚠ 不能拆成 `dmg_plus:N` + `self:M` 两条 —— 那会丢掉「If you do」的绑定，将来引入选择层就会变成「加伤没付代价」或「付代价没加伤」的静默错算。引擎无交互层 → 确定性**取用**（与既有「可选特性按已声明使用」一致）。② **抛币选状态·全集**（Grafaiai「Miraculous Paint」）：「Flip a coin. If heads, choose a Special Condition. …」→ `coin:heads:status_choose:poison+burn+sleep+paralyze+confuse`（顺序取 `rules.STATUSES`，确定性默认首个 poison，可用 `action["status_choice"]` 覆盖）；与 Cradily 的三选一**分开**匹配（卡面不列举 ≠ 列举三项，否则会静默缩小选择范围）。③ 对账仍 **38 类**，扩既有 `audit_extra_damage`（「itself」子句在有「You may do N more」时必须整条 `dmg_plus:N:recoil:M`；无该前缀的纯反伤仍走 `self:M`）与 `audit_coin_forms`（全集五选一逐字核对）；6 条负向自测。④ 一处**既有测试的决策反转**：`test_coin_until_composite::test_optional_extra_still_unmodeled` 原断言「You may … If you do 是可选代价 → 整段未建模」，现按确定性取用建模 → 改为锁定 `dmg_plus:30:recoil:30` 并在测试内留痕。落地 Gurdurr（未建模印刷）· Dondozo ex · Grafaiai（+3）；池 1027 → **1030**、`engine_ready` 1042 → **1045（82.5%）**、未建模 212 → **209**；engine 1057 / agent 796 / 全仓 2000；审计 **38/38** | **1045（82.5%）** |
 | 2026-11-03 | **第四十六批：限时减伤族（3 张）** —— ① **全队限时减伤**（Iron Defender，道具）：「During your opponent's next turn, all of your {M} Pokémon take 30 less damage … (This includes new Pokémon that come into play.)」→ 新 tag **`team_shield:reduce:<n>:type:<color>`**：状态记在**玩家**层面（`PlayerState.team_shield_*`），不是逐只 shield —— 逐只写会漏掉「之后上场的宝可梦」；减伤在**弱抗之后**、四个伤害应用点（主伤害 / spread / spread_free / snipe）统一扣减；卡面限定「from attacks from **your opponent's** Pokémon」→ 己方招式打自己宝可梦**不减免**。⚠ 时限制不能落成常驻 `fx:team_reduce`（那会把一个回合的保护放大成永久）。② **单体限时护盾 + 奖赏数打出前置条件**（Acerola's Mischief，支援者）：「You can use this card only if your opponent has 2 or fewer Prize cards remaining. Choose 1 of your Pokémon in play. During your opponent's next turn, prevent all damage from and effects of attacks done to that Pokémon by your opponent's Pokémon {ex}.」→ 新 tag **`shield_choose:prevent_all:from:ex:effects:gate:opp_prizes_le:2`**；`:gate:` 复用 `_eval_condition`（新增条件 **`opp_prizes_le:<n>`**，按**剩余**奖赏判定），不满足时该卡**不进**合法动作表；护盾沿用既有字段（到期在持有者下个回合开始），并修正 `_opp_blocked`：`from:<src>` 限定**同样作用于效果**（非 {ex} 的攻击效果照常生效，不静默扩大）。③ **常驻全队减伤补完**（Aurorus「Tundra Wall」）：「All of your Pokémon that have any {W} Energy attached take 50 … The effect of Tundra Wall doesn't stack.」—— 既有 `fx:team_reduce:<n>:energy:<color>` 的正则要求**句尾**恰好结束，多出的「The effect … doesn't stack.」导致整卡未建模；解析侧补可选尾句并落 **`:nonstack`**（多只同族在场不叠加），引擎既有 `:nonstack` 去重直接生效。④ 对账仍 **38 类**，扩既有 `audit_dmg_layer`：时限制全队减伤必须 `team_shield:`（落成 `fx:team_reduce` 报「永久化」）、`doesn't stack` 必须带 `:nonstack`、Acerola 整条 tag（来源/effects/gate）逐字核对；6 条负向自测。落地 Iron Defender · Acerola's Mischief · Aurorus（+3）；池 1024 → **1027**、`engine_ready` 1039 → **1042（82.2%）**、未建模 216 → **212**；engine 1052 / agent 791 / 全仓 1990；审计 **38/38** | **1042（82.2%）** |
 | 2026-11-03 | **第四十五批：四种抛币变体（4 张）** —— ① **逐目标各抛一枚**（Mega Zygarde ex「Nullifying Zero」）：「For each of your opponent's Pokémon, flip a coin. If heads, this attack does 150 damage to that Pokémon.」→ 新 tag **`coin_per_target:N:scope:opp`**：引擎对每个对手宝可梦**独立**抛币，正面集合再交给 `snipe` 的伤害派发（战斗位照常吃弱点/抗性、后备原始值，与卡面括号一致）。⚠ 两种错误折叠：`snipe:opp:N:all` = 每只**必中**；`coin:heads:snipe:…` = 只抛一次（**全中/全不中**，概率分布完全不同）。② **抛币三选一**（Cradily「Selective Slime」）：「flip a coin. If heads, choose Burned, Confused, or Poisoned…」→ `coin:heads:status_choose:burn+confuse+poison`；引擎无交互层 → 确定性默认取**卡面首个**（burn），可用 `action["status_choice"]` 覆盖，非法值退回首个（绝不静默换成别的状态）。③ **抛币免伤被动**（Fezandipiti「Adrena-Pheromone」）：「If this Pokémon has any {D} Energy attached and is damaged by an attack, flip a coin. If heads, prevent that damage.」→ **`passive:coin_prevent:darkness`**：在**伤害结算内**（主伤害 / spread / spread_free / snipe 四个应用点）逐目标抛币、正面归零。⚠ 不能落成 `on_damaged:` —— 那是伤害已加上之后，事后无法撤销；也不能无条件 `passive:dmg_immune`。④ **双方洗回手牌 + 抛币分抽**（Harlequin，支援者）：「Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 …, opponent 3. If tails, you draw 3 …, opponent 5.」→ 新 tag **`shuffle_both_coin_draw:<mine_h>:<opp_h>:<mine_t>:<opp_t>`**（训练家只有一个卡级 tag，洗牌 + 单次抛币 + 四个张数必须合并）；先双方洗回（自己的本卡不算手牌），再抛一次，再按结果给双方抽不同张数；洗牌后自己牌库为空会直接判负 → 该卡不进合法动作表。⑤ 对账仍 **38 类**，扩既有 `audit_coin_forms`：逐目标抛币（落成 snipe 报错）、三选一（拆成多条状态报错）、抛币免伤（落成 `on_damaged` 报错）、洗回分抽（四个张数逐字核对）；`audit_extra_damage` 在有 `coin_per_target` 时跳过 `that Pokémon` 子句。9 条负向自测。⑥ 一处**既有测试的决策反转**：`test_effects::test_prevent_damage_reaction_still_unmodeled` 原断言 Fezandipiti 的抛币免伤「需要预防层 → 未建模」，现已在伤害结算内实现 → 改为锁定 `passive:coin_prevent:darkness` 并在测试内留痕。落地 Mega Zygarde ex · Cradily · Fezandipiti · Harlequin（+4）；池 1020 → **1024**、`engine_ready` 1035 → **1039（82.0%）**、未建模 220 → **216**；engine 1040 / agent 785 / 全仓 1972；审计 **38/38** | **1039（82.0%）** |

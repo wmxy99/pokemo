@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-05 11:22:58",
+  "reparsed_at": "2026-11-05 15:37:21",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1122,
+  "engine_ready": 1129,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1122,
-   "engine_approximated": 1107,
-   "engine_unmatched": 145,
-   "engine_namekey_mismatch": 19
+   "zh_backfill": 1129,
+   "engine_approximated": 1114,
+   "engine_unmatched": 138,
+   "engine_namekey_mismatch": 18
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 138,
-   "engine_tags": 1444,
-   "unsupported": 142,
+   "engine_tags": 1442,
+   "unsupported": 141,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1107,
+  "engine_approximated": 1114,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -32168,14 +32168,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "PalossandEX@SSP 91",
    "parse": {
     "items": [
      {
@@ -71719,14 +71721,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Duosion@BLK 38",
    "parse": {
     "items": [
      {
@@ -71760,12 +71764,7 @@
       "engine_tags": [
        "evolve_from_deck"
       ],
-      "unsupported": [
-       {
-        "type": "evolve",
-        "reason": "招式/特性驱动的进化需卡级 tag"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -71796,12 +71795,7 @@
     "engine_tags": [
      "evolve_from_deck"
     ],
-    "unsupported": [
-     {
-      "type": "evolve",
-      "reason": "招式/特性驱动的进化需卡级 tag"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -126533,14 +126527,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Miraidon ex@ASC 73",
    "parse": {
     "items": [
      {
@@ -129224,14 +129220,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Koraidon ex@ASC 121",
    "parse": {
     "items": [
      {
@@ -145239,14 +145237,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 3 cards of your deck and put them back in any order, or shuffle them and put them on the bottom of your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 3 张卡，以任意顺序放回，或将其洗牌并放到你的牌库下方。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Deduction Kit@SSP 171",
    "parse": {
     "items": [
      {
@@ -153561,14 +153561,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Search your deck for a card that has no Abilities and evolves from 1 of your Pokémon, and put it onto that Pokémon to evolve it. Then, shuffle your deck. You can use this card on a Pokémon you put down when you were setting up to play or on a Pokémon that was put into play this turn.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从牌库中检索 1 张没有特性且进化自你的 1 只宝可梦的卡，并将其放到该宝可梦上使其进化。然后洗牌。你可以对准备阶段放下的宝可梦或本回合放入场中的宝可梦使用此卡。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Salvatore@TEF 160",
    "parse": {
     "items": [
      {
@@ -153600,8 +153602,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "evolve_from_deck",
-       "candy"
+       "evolve_from_deck:no_ability"
       ],
       "play_cost": "",
       "play_gate": "",
@@ -153634,8 +153635,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "evolve_from_deck",
-     "candy"
+     "evolve_from_deck:no_ability"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -155253,14 +155253,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Discard your hand and search your deck for a Pokémon, a Supporter card, and a Basic Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "弃置你的手牌，从牌库中检索 1 只宝可梦、1 张支援者卡和 1 张基本能量卡，展示它们并加入手牌。然后洗牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Larry’s Skill@PRE 115",
    "parse": {
     "items": [
      {
@@ -155295,8 +155297,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard:all",
-       "search_pokemon:1"
+       "discard_search_multi:pokemon+supporter+basic_energy:1"
       ],
       "play_cost": "",
       "play_gate": "",
@@ -155332,8 +155333,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard:all",
-     "search_pokemon:1"
+     "discard_search_multi:pokemon+supporter+basic_energy:1"
     ],
     "unsupported": [],
     "generated_by": "rule",

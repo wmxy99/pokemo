@@ -2184,10 +2184,26 @@ class Battle:
             placed = f"discard tool {self._apply_discard_tool(tag)}"
         elif tag == "discard_stadium":
             placed = f"discard stadium {self._apply_discard_stadium()}"
+        elif tag.startswith("discard_search_multi:"):
+            # 第九十二批（2026-11-05）：先弃**全部**手牌，再逐类别各取 1 张
+            # （Larry's Skill PRE 115）。两条独立动作由解析侧合成一条复合 tag
+            # —— 训练家 `TrainerDef.tag` 单值、派发链只执行一条，拆两条会被
+            # `build_trainer` 整卡拒；只留第一条则会静默丢掉整个检索。
+            _d = self._trainer_discard_all(p, "discard:all", hi)
+            _s = self._search_multi(p, "search_multi:" + tag.split(":", 1)[1])
+            placed = f"{_d}; {_s}"
         elif tag.startswith("discard:"):
             placed = self._trainer_discard_all(p, tag, hi)
         elif tag.startswith("mill:"):
             placed = self._trainer_mill(tag)
+        elif tag.startswith("shuffle_top:"):
+            # 第九十一批（2026-11-05）：检视牌库顶后重排（Deduction Kit）。
+            # 此前只在 `_apply_attack_effects` 派发，训练家侧缺失 → 卡在池外。
+            placed = self._trainer_shuffle_top(tag)
+        elif tag.startswith("evolve_from_deck"):
+            # 第九十二批（2026-11-05）：从牌库检索并当场进化（Salvatore）。
+            # 此前三处全缺：只在攻击白名单、只在攻击侧派发、无训练家分支。
+            placed = self._trainer_evolve_from_deck(p, tag, action)
         elif tag.startswith("prize_bonus:"):
             # 第八十九批（2026-11-05）：本回合多拿奖赏（Briar「白蕾」）。
             # 设为**本回合**旗标（`prize_bonus_until == turn_number`），在
@@ -3692,6 +3708,69 @@ class Battle:
             self._to_discard(vp, vp.deck.pop())
             moved += 1
         return f"mill {moved}"
+
+    def _trainer_shuffle_top(self, tag: str) -> str:
+        """训练家「检视牌库顶 N 张后重排」（``shuffle_top:N[:opp]``）
+
+        第九十一批（2026-11-05）：该 tag 原先**只在招式侧**派发
+        （``_apply_attack_effects``），训练家侧缺失 → Deduction Kit（SSP 171，
+        `shuffle_top:3:own`）即便解析产出也进不了池。与 `energy_to_deck`
+        属同一类陷阱：判定「引擎支持」不能只看 `battle.py` 里出现过一次。
+
+        ⚠ **语义取舍（显式记录，不假装完整实现）**：Deduction Kit 卡面是
+        「Look at the top 3 cards … put them back in any order, **or** shuffle
+        them and put them on the bottom of your deck.」—— 第二个分支
+        （洗回牌库底）**未建模**，按 choose 类「确定性默认」取第一分支
+        （只重排顶部、不移动卡）。两者差异只在 deck 顺序（不涉手牌/弃牌/
+        伤害/奖赏），但确实少了「把牌塞到牌库底」这一玩法。
+        """
+        parts = tag.split(":")
+        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+        victim = (1 - self.current
+                  if len(parts) > 2 and parts[2] == "opp" else self.current)
+        vp = self.players[victim]
+        k = min(n, len(vp.deck))
+        if k > 1:
+            top = vp.deck[-k:]
+            self.rng.shuffle(top)
+            vp.deck[-k:] = top
+        self._log("shuffle_top", {"player": victim, "n": k})
+        return f"shuffle top {k}"
+
+    def _trainer_evolve_from_deck(self, p: PlayerState, tag: str,
+                                  action: Optional[dict] = None) -> str:
+        """训练家「从牌库检索并当场进化」（``evolve_from_deck[:no_ability]``）
+
+        第九十二批（2026-11-05）：Salvatore（TEF 160）。该 tag 此前**三处全缺**
+        —— 只在 `ATTACK_TAG_PREFIXES`、只在 `_apply_attack_effects` 派发、
+        `_do_trainer` 无分支 → 卡必然在池外。与前两批复盘的两处
+        （``energy_to_deck`` / ``shuffle_top``）是同一类陷阱。
+
+        目标选择：卡面「evolves from 1 of your Pokémon」→ choose 类
+        **确定性默认**：按「战斗位 → 后备顺序」取第一个有合法进化源的目标。
+
+        ``:no_ability`` = 卡面「a card that has no Abilities and evolves from …」，
+        只允许检索无特性的进化卡。
+        """
+        no_ability = str(tag).endswith(":no_ability")
+        target = None
+        for fp in [p.active, *p.bench]:
+            if fp is None or getattr(fp, "is_ko", False):
+                continue
+            if no_ability and not any(
+                    isinstance(c, PokeRef) and c.pdef.stage > 0
+                    and c.pdef.evolves_from == fp.pdef.name
+                    and fp.pdef.stage + 1 == c.pdef.stage
+                    and not c.pdef.abilities
+                    for c in p.deck):
+                continue
+            target = fp
+            break
+        if target is None:
+            raise ValueError("牌库无可进化目标")
+        old = target.name
+        self._evolve_from_deck(p, target, no_ability)
+        return f"evolve {old} -> {target.name}"
 
     def _trainer_play_stadium(self, p: PlayerState, card, tag: str) -> str:
         """打出场馆：全局唯一，顶替旧场地（旧场地进弃牌堆）
@@ -5828,12 +5907,17 @@ class Battle:
             return 0
         return p.team_shield_n
 
-    def _evolve_from_deck(self, p: PlayerState, fp: FieldPokemon) -> None:
+    def _evolve_from_deck(self, p: PlayerState, fp: FieldPokemon,
+                          no_ability: bool = False) -> None:
         """``evolve_from_deck``：从牌库检索「可进化此宝可梦的卡」直接进化
 
         卡面原型：「Search your deck for a card that evolves from this Pokémon and
         put it onto this Pokémon to evolve it.」——属**招式内进化**。
         语义：「可以」→ 牌库无目标时**不算失败**（不抛错，仅记录无效果）。
+
+        ``no_ability=True``（第九十二批，Salvatore TEF 160）：「a card that
+        **has no Abilities** and evolves from …」——只允许检索**无特性**的进化卡。
+        不区分就会搜到带特性的进化卡，是静默放宽。
         """
         if fp is None or p is None:
             return
@@ -5843,6 +5927,8 @@ class Battle:
             if isinstance(c, PokeRef) and c.pdef.stage > 0 \
                     and c.pdef.evolves_from == fp.pdef.name \
                     and fp.pdef.stage + 1 == c.pdef.stage:
+                if no_ability and c.pdef.abilities:
+                    continue                # 「has no Abilities」限定
                 idx = i
                 break
         if idx is None:

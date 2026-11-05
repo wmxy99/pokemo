@@ -2635,8 +2635,14 @@ def _multi_search_alts(text: str) -> Optional[list]:
     Pokémon」）→ 返回 None，由调用方如实拒绝（绝不猜类别）。
     """
     t = _norm_prose(text)
+    # 第九十二批（2026-11-05）：第一个类别可能**不带 "card"** 后缀 ——
+    # Larry's Skill PRE 115「search your deck for **a Pokémon**, a Supporter
+    # card, and a Basic Energy card」；旧正则要求每段都以 `card,` 结尾，
+    # 于是整句漏判 → 退化成 `search_pokemon:1`（**少拿支援者与基本能量**，
+    # 静默削弱）。放宽为「取到 reveal 子句前的整段并列」，再逐段判类别；
+    # 认不出的类别仍返回 None（绝不猜）。
     m = re.search(
-        r"search your deck for (?P<list>(?:an? )?[^.]*?card,[^.]*?card),"
+        r"search your deck for (?P<list>(?:an? )?[^.]*?),"
         r" reveal them, and put them into your hand", t)
     if not m:
         return None
@@ -2649,16 +2655,23 @@ def _multi_search_alts(text: str) -> Optional[list]:
                           (r"item card", "item"),
                           (r"supporter card", "supporter"),
                           (r"stadium card", "stadium"),
+                          # ⚠ `basic energy card` 必须排在 `energy card` **之前**：
+                          # 否则「a Basic Energy card」会被判成 `energy`，丢掉
+                          # basic 限定 → 连特殊能量一起检索（静默放宽）。
+                          (r"basic energy card", "basic_energy"),
                           (r"energy card", "energy"),
                           (r"trainer card", "trainer"),
-                          (r"pok[eé]mon card", "pokemon")):
+                          (r"pok[eé]mon card", "pokemon"),
+                          # 「a Pokémon」（无 card 后缀，Larry's Skill）
+                          (r"pok[eé]mon(?!\w)", "pokemon")):
             if re.search(r"(?:a|an) " + pat, ch):
                 found = kind
                 break
         if not found:
             return None
         kinds.append(found)
-    return kinds or None
+    # 至少两类才算「逐类别各取」；单类别交给通用检索路径（避免改变既有口径）
+    return kinds if len(kinds) >= 2 else None
 
 
 def _search_destination(text: str, pos: int) -> str:
@@ -8082,9 +8095,23 @@ def to_engine_tags(specs: list) -> dict:
     notes: list = []
     # 同一 spec 里多条 evolve 动作时，只要有一条是「从牌库检索进化」，
     # 即按 evolve_from_deck 处理（避免同句另一条裸 evolve 误报「需卡级 tag」）
+    # 第九十二批（2026-11-05）：除显式 `extra.from_deck` 外，「**同一 spec 内
+    # 先 search 牌库、再 evolve**」同样是「从牌库进化」——Salvatore TEF 160：
+    # 「Search your deck for a card that has no Abilities and evolves from
+    #  1 of your Pokémon, and put it onto that Pokémon to evolve it.」
+    # 旧逻辑只看 `extra.from_deck`，该句漏判后落进 `candy`（Rare Candy **跳阶**）
+    # 分支 —— 语义完全错误：Salvatore 是**正常阶段进化**，不跳阶。
+    def _spec_evolves_from_deck(_actions) -> bool:
+        if not any(a.get("type") == "evolve" for a in _actions):
+            return False
+        if any((a.get("extra") or {}).get("from_deck")
+               for a in _actions if a.get("type") == "evolve"):
+            return True
+        return any(a.get("type") == "search" and a.get("target") == "deck"
+                   for a in _actions)
+
     has_evolve_from_deck = any(
-        a.get("type") == "evolve" and (a.get("extra") or {}).get("from_deck")
-        for s0 in (specs or []) for a in (s0.get("actions") or []))
+        _spec_evolves_from_deck(s0.get("actions") or ()) for s0 in (specs or []))
     for s in specs or []:
         kind = s.get("kind")
         trigger = s.get("trigger")
@@ -8427,7 +8454,14 @@ def to_engine_tags(specs: list) -> dict:
                     else:
                         tags.append(f"evolve_each_pick:{_mx}:{_sc}")
                 elif extra.get("from_deck") or has_evolve_from_deck:
-                    tags.append("evolve_from_deck")
+                    # 第九十二批（2026-11-05）：「a card that **has no Abilities**
+                    # and evolves from …」（Salvatore TEF 160）→ 只允许检索**无特性**
+                    # 的进化卡。不表达该限定就会搜到带特性的进化卡 = 静默放宽。
+                    _src = str(s.get("source_text") or "").lower()
+                    if re.search(r"has no abilit", _src):
+                        tags.append("evolve_from_deck:no_ability")
+                    else:
+                        tags.append("evolve_from_deck")
                 elif kind in ("item", "supporter"):
                     tags.append("candy")
                 else:
@@ -9669,6 +9703,40 @@ def to_engine_tags(specs: list) -> dict:
                     unsupported.append(
                         {"type": "trigger",
                          "reason": "进化触发特性的**第二个触发时机**未建模（B4）"})
+    # 第九十二批（2026-11-05）：`evolve_from_deck` 族**只保留最具体的一条**。
+    # 同一句里 search(dest=evolve) 与 evolve 动作会各产一次，且
+    # `has no Abilities` 变体与裸 tag 会同时出现 —— Salvatore 实测产出
+    # ['evolve_from_deck', 'evolve_from_deck:no_ability']，下游 `build_trainer`
+    # 按「多 tag → 整卡拒」处理，等于白做。
+    # 归一化：有 `:no_ability` 就用它，否则保留裸 tag；位置取首次出现处。
+    _ev_family = [t for t in tags if str(t).startswith("evolve_from_deck")]
+    if len(_ev_family) > 1:
+        _ev_keep = ("evolve_from_deck:no_ability"
+                    if any(str(t).endswith(":no_ability") for t in _ev_family)
+                    else "evolve_from_deck")
+        _ev_done = False
+        _collapsed = []
+        for _t in tags:
+            if str(_t).startswith("evolve_from_deck"):
+                if _ev_done:
+                    continue
+                _ev_done = True
+                _collapsed.append(_ev_keep)
+            else:
+                _collapsed.append(_t)
+        tags = _collapsed
+    # 第九十二批（2026-11-05）：`discard:all` + `search_multi:` 合成**一条**
+    # 复合 tag（Larry's Skill PRE 115：「Discard your hand and search your deck
+    # for a Pokémon, a Supporter card, and a Basic Energy card」）。
+    # 训练家只认**一个**卡级 tag（`TrainerDef.tag` 单值、派发链只执行一条），
+    # 两条独立 tag 会被 `build_trainer` 按「多 tag → 整卡拒」处理；
+    # 而「只留第一条」会静默丢掉整个检索（更隐蔽）。
+    _d_all = "discard:all" in tags
+    _sm_tag = next((str(t) for t in tags if str(t).startswith("search_multi:")), None)
+    if _d_all and _sm_tag:
+        tags = [t for t in tags
+                if t != "discard:all" and str(t) != _sm_tag]
+        tags.append("discard_" + _sm_tag)   # → discard_search_multi:<sel>:<k>
     # 按出现顺序去重
     seen, uniq = set(), []
     for x in tags:

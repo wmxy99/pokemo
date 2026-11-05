@@ -6,22 +6,24 @@
 
 ---
 
-## 0. 基线（2026-11-05 实测，不得凭记忆填写）
+## 0. 基线（2026-11-05 **第九十二批完工后**实测，不得凭记忆填写）
 
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1122（88.6%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **145** | 上者取反 |
-| 引擎池 | **1107** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1129（89.1%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **138** | 上者取反 |
+| 引擎池 | **1114** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **44 类全绿** | `audit_pool_alignment.py` |
-| 测试总数 | **2327**（eng 1218 / agent 959 / api 138 / gym 12） | 三包 `unittest discover` |
+| 测试总数 | **2351**（eng 1231 / agent 970 / card-db 275 / api 138 / gym 12） | 三包 `unittest discover` |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
-| K1 双盲 | **0.795**（200 局，`k1_artifacts/k1_rich.pt`） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200` |
+| K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`，无回归） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200` |
 
-**总批次规划：第 90 批 – 第 133 批，共 44 批**（5 个阶段）。
+> 上表是**滚动基线**：每批完工后更新，开工前必须以它为准，不要沿用旧数字。
 
-**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（可做 137 张 + 结构性 6 张 + 待新能力 2 张 = 145）。
+**总批次规划：第 90 批 – 第 133 批，共 44 批**（5 个阶段）。P1 已完成 3 批（90–92）。
+
+**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（可做 130 张 + 结构性 6 张 + 待新能力 2 张 = 138，剩余 41 批）。
 若后续补「道具触发式」承载能力（`Powerglass` / `Amulet of Hope`），可达 **1261 / 1267 = 99.5%**。
 
 ---
@@ -59,7 +61,11 @@
 
 ---
 
-## 2. 阶段 P1 · A 档：引擎已有，纯建池逻辑（第 90–92 批，3 批）
+## 2. 阶段 P1 · A 档：引擎已有，纯建池逻辑（第 90–92 批，3 批）· ✅ **已完成**
+
+**实际结果（2026-11-05）**：3 批全部完工，**进池 7 张**（6 张目标 + `Duosion` 顺带解禁），
+如实判定 2 张（`Powerglass` / `Amulet of Hope` 保持拒收）。`engine_ready` 1122 → **1129**，
+零回归（无任何卡失去 ready），对账 44 类全绿，CI 8/8，K1 0.795 无回归。
 
 **目标**：6 张进池 + 2 张如实判定。本阶段**不需要新引擎机制**。
 
@@ -162,7 +168,7 @@ Feraligatr(TEF 41) · Sinistcha(TWM 22) · Team Rocket's Ampharos(DRI 74) · Tea
 | 99 | 检索去向 / 数量由计数定 | Drilbur(TEF 85) · Palafin(TWM 60) · Lillie's Comfey(JTG 68) · Musharna(BLK 36) · Rotom(ASC 92) · Grumpig(MEG 63) |
 | 100 | 抛币嵌套子效果 | Vanilluxe(WHT 29) · Team Rocket's Great Ball(DRI 175) · Lucian(TWM 157 跨) |
 | 101 | 受击历史 `on_damaged` | Team Rocket's Koffing(DRI 125) · Mega Heracross ex(PFL 4) · Team Rocket's Hypnotizer(ASC 206) |
-| 102 | 特殊进化驱动 / 进化触发特性 | Duosion(BLK 38) · Archeops(WHT 51) · Noctowl(SCR 115) |
+| 102 | 特殊进化驱动 / 进化触发特性 | ~~Duosion(BLK 38)~~（批 92 已进池）· Archeops(WHT 51) · Noctowl(SCR 115) |
 | 103 | 能量代价 / 提供规则 | Mega Charizard X ex(PFL 13) · Mega Eelektross ex(ASC 61) · Dialga(MEG 95) |
 | 104 | 回复范围 / 全量回复 | Hydrapple ex(SCR 14) · Magearna(JTG 107) · Bianca's Devotion(TEF 142) |
 | 105 | 区分基本 / 特殊能量 | Enhanced Hammer(TWM 148) · Megaton Blower(SSP 182) |
@@ -254,6 +260,31 @@ C 档 27 张的 reason 是解析器自己的兜底文案「静态/未建模（�
 3. **改存量测试前先判断**：该测试断言的是「旧口径」还是「纪律承重墙」。前者可改并注明原因；后者必须改代码。
 4. **每批结束如实回填**本文件的「实际结果」列（进池张数 / 如实拒收张数 / 新增测试数 / CI 状态）。
 5. 若某批实际收益低于规划，**不要用后续批次的卡来凑数** —— 按批次主题推进，宁可该批只进 1 张。
+6. **负向自测必须真能变红**：写完守卫后注入错误写法跑一次，确认测试**失败**。
+   P1 阶段实测两个「假守卫」（见 §8.5 第 4 条），若不验证会一直绿到线上。
+
+---
+
+## 8.5 P1 实证的陷阱（后续批次直接复用，别重踩）
+
+1. **「招式有、训练家没有」已连续出现三处**：`energy_to_deck`（历史）、`shuffle_top`
+   （批 91）、`evolve_from_deck`（批 92）。判定「引擎支持」时，`battle.py` 里出现一次
+   **不算**——必须同时确认 `_do_trainer` 有分支、`TRAINER_TAGS` 有前缀、`reallib` 有登记。
+2. **上游数据集会把卡面规则分类错**：Pokémon ex 的 **Tera 规则文本**被归进 `attacks[]`。
+   修法是在建池侧转写为卡级被动，**禁止**把 `passive:*` 放进攻击白名单（= 出招才免伤的反转）。
+3. **`_SUPPORTED_TRAINER_TAGS`（reallib.py:40）是死代码** —— 全仓仅定义、无任何引用。
+   仍要与 `gen_engine_pool.TRAINER_TAGS` 同步（否则注释在撒谎），但**别指望它拦卡**；
+   真正生效的是 `gen_engine_pool` 的那三处白名单。
+4. **测试布局会让守卫变假**（P1 抓到两个）：
+   - `_evolve_from_deck` 从**牌尾往前**扫 —— 若把「不该被选中」的卡放在数组前面，
+     即使过滤失效也会选到正确的卡 → 守卫永远绿。必须把它放在**末尾**。
+   - 混合 tag 的反例里若掺入**本就不在白名单**的前缀（如 `draw:`），整卡拒收的原因
+     变成了那条非法前缀，掩盖「`passive:` 被误放行」→ 守卫永远绿。反例必须用**白名单内**前缀。
+5. **`candy` 是 Rare Candy 的跳阶语义**，别把它当成「从牌库进化」的近似：
+   Salvatore 被误产 `candy` 会让引擎把二阶卡直接放上去（跳过一阶）。判据是
+   「同一 spec 内先 search(deck) 再 evolve」→ `evolve_from_deck`。
+6. **`Basic Energy card` 的判定顺序**：`basic energy card` 必须排在 `energy card` **之前**，
+   否则丢掉 basic 限定 → 连特殊能量一起检索（静默放宽）。
 
 ---
 
@@ -261,9 +292,9 @@ C 档 27 张的 reason 是解析器自己的兜底文案「静态/未建模（�
 
 | 批 | 阶段 | 主题 | 计划张数 | 实际进池 | 如实拒收 | 状态 |
 |---|---|---|---|---|---|---|
-| 90 | P1 | 被动 tag 归属 | 3 | | | 待办 |
-| 91 | P1 | shuffle_top 训练家侧 | 1 | | | 待办 |
-| 92 | P1 | 多动作复合 tag | 2 | | | 待办 |
+| 90 | P1 | 被动 tag 归属 | 3 | **3** | 0 | ✅ 完成 |
+| 91 | P1 | shuffle_top 训练家侧 | 1 | **1** | 0 | ✅ 完成 |
+| 92 | P1 | 多动作复合 tag | 2 | **2 + 1 顺带** | 0 | ✅ 完成 |
 | 93 | P2 | 伤害缩放·条件型 | 4 | | | 待办 |
 | 94 | P2 | 伤害缩放·计数源 | 5 | | | 待办 |
 | 95 | P2 | 静态修正层 | 5 | | | 待办 |
@@ -273,7 +304,7 @@ C 档 27 张的 reason 是解析器自己的兜底文案「静态/未建模（�
 | 99 | P3 | 检索去向/计数 | 6 | | | 待办 |
 | 100 | P3 | 抛币嵌套 | 3 | | | 待办 |
 | 101 | P3 | on_damaged | 3 | | | 待办 |
-| 102 | P3 | 特殊进化驱动/进化触发 | 3 | | | 待办 |
+| 102 | P3 | 特殊进化驱动/进化触发 | 2 | | | 待办（Duosion 已由批 92 解禁） |
 | 103 | P3 | 能量代价/提供 | 3 | | | 待办 |
 | 104 | P3 | 回复范围 | 3 | | | 待办 |
 | 105 | P3 | 基本/特殊能量区分 | 2 | | | 待办 |

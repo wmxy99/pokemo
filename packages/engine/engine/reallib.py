@@ -56,7 +56,13 @@ _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
                            "ko_prize_minus",
                            # 第八十九批（2026-11-05）：训练家「本回合多拿奖赏」
                            # （Briar）。卡级 tag，引擎按回合旗标消费。
-                           "prize_bonus")
+                           "prize_bonus",
+                           # 第九十一批（2026-11-05）：检视牌库顶后重排
+                           # （Deduction Kit）。引擎 `_trainer_shuffle_top` 派发。
+                           "shuffle_top",
+                           # 第九十二批（2026-11-05）：从牌库检索并当场进化
+                           # （Salvatore）。引擎 `_trainer_evolve_from_deck` 派发。
+                           "evolve_from_deck")
 
 # 基本能量中文名（占位替换时也用中文展示）
 _ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",

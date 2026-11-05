@@ -65,6 +65,15 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 白名单是过滤，漏写即静默丢弃、卡照样能打。
                 "team_boost:",
                 "discard_search_energy", "search_energy", "candy",
+                # 第九十二批（2026-11-05）：从牌库检索并当场进化（Salvatore）。
+                # 该前缀此前只在 ATTACK_TAG_PREFIXES，训练家侧与 `_do_trainer`
+                # 都缺 → 卡三处全缺、必然在池外。`:no_ability` 变体由
+                # `startswith` 一并覆盖（卡面限定「has no Abilities」）。
+                "evolve_from_deck",
+                # 第九十二批（2026-11-05）：先弃全部手牌、再逐类别各取 1 张
+                # （Larry's Skill）。两条动作合成一条复合 tag —— 训练家只认
+                # 一个卡级 tag，拆成 `discard:all` + `search_multi:` 会被整卡拒。
+                "discard_search_multi:",
                 "search_pokemon", "search_trainer", "search_any",
                 # 2026-10-27：检索**铺场**（去向是后备，不是入手）
                 "search_bench",
@@ -83,6 +92,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "draw_cond:",
                 "draw:", "draw_to:", "heal:", "attach", "gust", "discard:",
                 "mill:",
+                # 第九十一批（2026-11-05）：检视牌库顶后重排（Deduction Kit）。
+                # 引擎 `_apply_attack_effects` 早有该 tag，但 `_do_trainer` 当时
+                # 没有派发分支；且该前缀此前只出现在 ATTACK_TAG_PREFIXES，
+                # 训练家侧缺它 → 卡在池外凭空消失（对账也看不出）。
+                "shuffle_top:",
                 # B3（2026-10-28）：抽牌完整性 / 对手洗回手牌
                 "draw_both:", "opp_shuffle_draw:",
                 # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
@@ -341,8 +355,43 @@ def build_pokemon(card: dict, items: dict, name_key: str) -> Optional[dict]:
     # 有卡级文本（其他文本）而解析链没覆盖时，宁可整卡不收，避免静默丢规则。
     if not card.get("parse") and card.get("other_text"):
         return None
+    # 第九十批（2026-11-05）：上游数据集把 Pokémon ex 的 **Tera 规则文本**
+    # （「As long as this Pokémon is on your Bench, prevent all damage done to
+    # this Pokémon by attacks」）归进了 `attacks[]`，解析产物只有一条
+    # `passive:bench_immune_dmg`。该文本是**常驻被动**，引擎只在
+    # `_is_bench_immune()`（battle.py:10367）读 `pdef.abilities[].tag`；
+    # 留在 `attacks.effects` 里会被 `_supported_attack_tags` 滤空 → 整卡拒收
+    # （PalossandEX / Miraidon ex / Koraidon ex 因此长期在池外）。
+    # → 转写为卡级被动词条（`location="field"`，legals 已跳过 `passive:` 前缀，
+    #   battle.py:453），与池内 29 张人工/派生卡的既有写法一致。
+    # ⚠ **禁止**把 `passive:*` 加进 `ATTACK_TAG_PREFIXES`：那会让被动在**出招时**
+    #   才触发（攻击才有免伤）—— 语义反转的静默错位。
+    # 仅当该招式**全部** tag 都是 `passive:` 时才转写；混合 tag 一律走原逻辑
+    # （宁可整卡拒收，也不猜哪条是招式、哪条是被动）。
+    passive_abilities: list = []
+    pseudo_attack_idx: set = set()
+    for _i, a in enumerate(card.get("attacks") or []):
+        _it = items.get(("attack", a.get("name"))) or {}
+        _raw = _it.get("engine_tags") or []
+        if _it.get("unsupported") or not _raw:
+            continue
+        if not all(str(t).startswith("passive:") for t in _raw):
+            continue
+        pseudo_attack_idx.add(_i)
+        for t in _raw:
+            passive_abilities.append({
+                "name": a.get("name") or "",
+                "name_zh": a.get("name_zh") or "",
+                "tag": str(t),
+                "location": "field",
+                "desc": a.get("effect") or "",
+                "desc_zh": a.get("effect_zh") or "",
+                "cost": "",
+            })
     attacks = []
-    for a in card.get("attacks") or []:
+    for _i, a in enumerate(card.get("attacks") or []):
+        if _i in pseudo_attack_idx:
+            continue                        # 已转写为卡级被动，不再作为招式
         it = items.get(("attack", a.get("name")))
         tags = _supported_attack_tags((it or {}).get("engine_tags"))
         if (it or {}).get("unsupported"):
@@ -381,6 +430,8 @@ def build_pokemon(card: dict, items: dict, name_key: str) -> Optional[dict]:
             # this Ability.」—— 由解析链剥句得到，引擎在效果**之前**支付。
             "cost": str((it or {}).get("cost") or ""),
         })
+    # 伪招式转写来的卡级被动（见上方 Tera 说明）合并进 abilities
+    abilities.extend(passive_abilities)
     if not attacks and not abilities:
         return None
     rule = str(card.get("rule") or "").lower()

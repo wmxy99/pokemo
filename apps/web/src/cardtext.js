@@ -172,6 +172,10 @@ export const TRAINER_TAG_DESC = {
   search_discard: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张卡并直接弃置，然后洗牌。`, en: `Search your deck for up to ${argOf(a)} cards, discard them, then shuffle.` }),
   // 第八十五 / 八十九批（2026-11-05）：奖赏卡修正确（少拿 / 本回合多拿）
   ko_prize_minus: (_a) => ({ zh: '该宝可梦被击倒时，对手少拿奖赏卡（具体限定见卡面）。', en: 'When this Pokémon is Knocked Out, your opponent takes fewer Prize cards (conditions per card text).' }),
+  // 第九十一 / 九十二批（2026-11-05）：训练家侧补齐的三个 tag 族
+  shuffle_top: (a) => ({ zh: `查看牌库顶部 ${argOf(a)} 张，然后按任意顺序放回。`, en: `Look at the top ${argOf(a)} cards of your deck and put them back in any order.` }),
+  evolve_from_deck: (_a) => ({ zh: '从牌库检索可进化己方宝可梦的卡，并直接使其进化，然后洗牌。', en: 'Search your deck for a card that evolves from 1 of your Pokémon and put it onto that Pokémon to evolve it, then shuffle.' }),
+  discard_search_multi: (_a) => ({ zh: '弃掉全部手牌，然后从牌库按类别各取 1 张加入手牌，随后洗牌。', en: 'Discard your hand, then search your deck for 1 card of each listed kind and put them into your hand, then shuffle.' }),
   prize_bonus: (a) => ({ zh: `本回合内，对手战斗宝可梦被指定的己方宝可梦招式击倒时，多拿 ${argOf(a)} 张奖赏卡。`, en: `During this turn, take ${argOf(a)} more Prize card(s) when the opponent’s Active is Knocked Out by the specified Pokémon’s attack.` }),
   energy_move: (a) => ({ zh: `在己方宝可梦之间移动至多 ${argOf(a)} 个能量。`, en: `Move up to ${argOf(a)} Energy between your Pokémon.` }),
   recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),

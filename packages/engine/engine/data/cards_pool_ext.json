@@ -11,15 +11,14 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1107,
+      "kept": 1114,
       "by_Energy": 19,
-      "by_Pokemon": 935,
-      "by_Trainer": 153,
+      "by_Pokemon": 939,
+      "by_Trainer": 156,
       "skipped": {
-        "存在未建模项（整卡不收）": 137,
+        "存在未建模项（整卡不收）": 136,
         "人工卡池已有同一印刷（人工优先）": 15,
-        "Pokemon 不可执行": 3,
-        "Trainer 不可执行": 5
+        "Trainer 不可执行": 2
       }
     }
   },
@@ -8629,6 +8628,73 @@
       "source_card_id": 222,
       "name_key": "dedenne",
       "uid": "Dedenne@SSP 87"
+    },
+    {
+      "name": "PalossandEX",
+      "name_zh": "噬沙堡爷EX",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 280,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": "Sandygast",
+      "attacks": [
+        {
+          "name": "Sand Tomb",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 160,
+          "effects": [
+            "retreat_lock:opp:turn"
+          ],
+          "desc": "During your opponent’s next turn, the Defending Pokémon can’t retreat.",
+          "name_zh": "流沙地狱",
+          "desc_zh": "在对手的下个回合中，战斗宝可梦无法撤退。"
+        },
+        {
+          "name": "Barite Jail",
+          "cost": {
+            "water": 1,
+            "psychic": 1,
+            "fighting": 1
+          },
+          "damage": 0,
+          "effects": [
+            "counters_to_hp:100:opp_bench"
+          ],
+          "desc": "Put damage counters on each of your opponent’s Benched Pokémon until its remaining HP is 100.",
+          "name_zh": "重晶石牢笼",
+          "desc_zh": "在对手的每只后备宝可梦上放置伤害指示物，直到其剩余 HP 为 100。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Tera",
+          "name_zh": "太晶",
+          "tag": "passive:bench_immune_dmg",
+          "location": "field",
+          "desc": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
+          "desc_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "91"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 223,
+      "name_key": "palossandex",
+      "uid": "PalossandEX@SSP 91"
     },
     {
       "name": "Annihilape",
@@ -21656,6 +21722,59 @@
       "source_card_id": 518,
       "name_key": "solosis",
       "uid": "Solosis@BLK 37"
+    },
+    {
+      "name": "Duosion",
+      "name_zh": "双卵细胞球",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 70,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Solosis",
+      "attacks": [
+        {
+          "name": "Cellular Evolution",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "evolve_from_deck"
+          ],
+          "desc": "Search your deck for a card that evolves from 1 of your Pokémon and put it onto that Pokémon to evolve it. Then, shuffle your deck.",
+          "name_zh": "细胞进化",
+          "desc_zh": "从牌库中检索 1 张由你的 1 只宝可梦进化而来的卡，将其放置于该宝可梦上以使其进化。然后洗牌。"
+        },
+        {
+          "name": "Spray Fluid",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "喷射液体",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "38"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 519,
+      "name_key": "duosion",
+      "uid": "Duosion@BLK 38"
     },
     {
       "name": "Reuniclus",
@@ -41181,6 +41300,70 @@
       "uid": "Zeraora@SCR 55"
     },
     {
+      "name": "Miraidon ex",
+      "name_zh": "密勒顿 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 220,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Lightning)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Slashing Claw",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "利爪斩",
+          "desc_zh": ""
+        },
+        {
+          "name": "Hadron Spark",
+          "cost": {
+            "lightning": 2,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [
+            "dmg_plus:120:if:opp_active_is_ex"
+          ],
+          "desc": "If your opponent’s Active Pokémon is a Pokémon {ex}, this attack does 120 more damage.",
+          "name_zh": "强子火花",
+          "desc_zh": "若对手的战斗宝可梦是宝可梦 ex，此招式的伤害 +120。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Tera",
+          "name_zh": "太晶",
+          "tag": "passive:bench_immune_dmg",
+          "location": "field",
+          "desc": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
+          "desc_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "73"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 957,
+      "name_key": "miraidonex",
+      "uid": "Miraidon ex@ASC 73"
+    },
+    {
       "name": "Clefable",
       "name_zh": "皮可西",
       "supertype": "Pokemon",
@@ -42095,6 +42278,73 @@
       "source_card_id": 978,
       "name_key": "passimian",
       "uid": "Passimian@SSP 111"
+    },
+    {
+      "name": "Koraidon ex",
+      "name_zh": "故勒顿 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 230,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Fighting)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Orichalcum Fang",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [
+            "dmg_plus:120:if:opp_ko_last_turn"
+          ],
+          "desc": "If any of your Pokémon were Knocked Out by damage from an attack during your opponent’s last turn, this attack does 120 more damage.",
+          "name_zh": "山铜之牙",
+          "desc_zh": "若你的任何宝可梦在上个对手回合中因招式伤害而被击倒，此招式的伤害 +120。"
+        },
+        {
+          "name": "Impact Blow",
+          "cost": {
+            "fighting": 2,
+            "colorless": 1
+          },
+          "damage": 200,
+          "effects": [
+            "attack_lock:name:turn:Impact Blow"
+          ],
+          "desc": "During your next turn, this Pokémon can’t use Impact Blow.",
+          "name_zh": "冲击重击",
+          "desc_zh": "在你的下个回合中，此宝可梦无法使用冲击重击。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Tera",
+          "name_zh": "太晶",
+          "tag": "passive:bench_immune_dmg",
+          "location": "field",
+          "desc": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
+          "desc_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "121"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 979,
+      "name_key": "koraidonex",
+      "uid": "Koraidon ex@ASC 121"
     },
     {
       "name": "Venipede",
@@ -46962,6 +47212,23 @@
       "uid": "Dragon Elixir@SSP 172"
     },
     {
+      "name": "Deduction Kit",
+      "name_zh": "推理套件",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "shuffle_top:3:own",
+      "desc": "Look at the top 3 cards of your deck and put them back in any order, or shuffle them and put them on the bottom of your deck.",
+      "desc_zh": "查看你牌库上方的 3 张卡，以任意顺序放回，或将其洗牌并放到你的牌库下方。",
+      "real": {
+        "set": "SSP",
+        "number": "171"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1106,
+      "uid": "Deduction Kit@SSP 171"
+    },
+    {
       "name": "Scramble Switch",
       "name_zh": "混乱交换",
       "supertype": "Trainer",
@@ -48152,6 +48419,23 @@
       "uid": "Ciphermaniac’s Codebreaking@TEF 145"
     },
     {
+      "name": "Salvatore",
+      "name_zh": "萨尔瓦多",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "evolve_from_deck:no_ability",
+      "desc": "Search your deck for a card that has no Abilities and evolves from 1 of your Pokémon, and put it onto that Pokémon to evolve it. Then, shuffle your deck. You can use this card on a Pokémon you put down when you were setting up to play or on a Pokémon that was put into play this turn.",
+      "desc_zh": "从牌库中检索 1 张没有特性且进化自你的 1 只宝可梦的卡，并将其放到该宝可梦上使其进化。然后洗牌。你可以对准备阶段放下的宝可梦或本回合放入场中的宝可梦使用此卡。",
+      "real": {
+        "set": "TEF",
+        "number": "160"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1189,
+      "uid": "Salvatore@TEF 160"
+    },
+    {
       "name": "Carmine",
       "name_zh": "丹瑜",
       "supertype": "Trainer",
@@ -48373,6 +48657,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1205,
       "uid": "Cyrano@SSP 170"
+    },
+    {
+      "name": "Larry’s Skill",
+      "name_zh": "青木的本领",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "discard_search_multi:pokemon+supporter+basic_energy:1",
+      "desc": "Discard your hand and search your deck for a Pokémon, a Supporter card, and a Basic Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "desc_zh": "弃置你的手牌，从牌库中检索 1 只宝可梦、1 张支援者卡和 1 张基本能量卡，展示它们并加入手牌。然后洗牌。",
+      "real": {
+        "set": "PRE",
+        "number": "115"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1206,
+      "uid": "Larry’s Skill@PRE 115"
     },
     {
       "name": "Iris’s Fighting Spirit",

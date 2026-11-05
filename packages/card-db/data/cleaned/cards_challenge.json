@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-04 15:57:15",
+  "reparsed_at": "2026-11-05 10:09:24",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1105,
+  "engine_ready": 1117,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1105,
-   "engine_approximated": 1090,
-   "engine_unmatched": 162,
-   "engine_namekey_mismatch": 22
+   "zh_backfill": 1117,
+   "engine_approximated": 1102,
+   "engine_unmatched": 150,
+   "engine_namekey_mismatch": 20
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 135,
-   "engine_tags": 1425,
-   "unsupported": 160,
+   "errors": 138,
+   "engine_tags": 1438,
+   "unsupported": 147,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1090,
+  "engine_approximated": 1102,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -28328,14 +28328,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dialga@SSP 135",
    "parse": {
     "items": [
      {
@@ -28361,13 +28363,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索后放到牌库顶/底（B4）"
-       }
-      ]
+      "engine_tags": [
+       "search_top:2"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -28390,13 +28389,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索后放到牌库顶/底（B4）"
-     }
+    "engine_tags": [
+     "search_top:2"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -30349,14 +30345,16 @@
     }
    ],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Pikachu ex@SSP 57",
    "parse": {
     "items": [
      {
@@ -30398,11 +30396,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "survive",
+           "hp": 10
           }
          }
         ],
@@ -30410,14 +30409,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:survive:10"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "card",
@@ -30475,11 +30471,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "survive",
+         "hp": 10
         }
        }
       ],
@@ -30506,14 +30503,10 @@
     "errors": [],
     "engine_tags": [
      "discard_energy:3",
+     "passive:survive:10",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -32269,13 +32262,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "counters_to_hp:100:opp_bench"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -32336,14 +32326,10 @@
     ],
     "engine_tags": [
      "passive:bench_immune_dmg",
-     "retreat_lock:opp:turn"
+     "retreat_lock:opp:turn",
+     "counters_to_hp:100:opp_bench"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -56548,14 +56534,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Arboliva ex@DRI 23",
    "parse": {
     "items": [
      {
@@ -56606,25 +56594,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "cure",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "scope": "all"
           }
          }
         ],
         "source_text": "This Pokémon recovers from all Special Conditions."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：cure"
+      ],
+      "engine_tags": [
+       "cure:self"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -56660,28 +56647,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "cure",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "scope": "all"
         }
        }
       ],
       "source_text": "This Pokémon recovers from all Special Conditions."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：cure"
+    ],
     "engine_tags": [
      "ignore_weakness",
-     "ignore_resistance"
+     "ignore_resistance",
+     "cure:self"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -73641,14 +73626,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Crustle@BLK 52",
    "parse": {
     "items": [
      {
@@ -73693,11 +73680,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "survive",
+           "hp": 10
           }
          }
         ],
@@ -73705,14 +73693,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:survive:10"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -73743,11 +73728,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "survive",
+         "hp": 10
         }
        }
       ],
@@ -73756,14 +73742,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "coin:heads:dmg_plus:60"
+     "coin:heads:dmg_plus:60",
+     "passive:survive:10"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -117839,14 +117821,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Hawlucha ex@ASC 116",
    "parse": {
     "items": [
      {
@@ -117898,11 +117882,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "coin_survive",
+           "hp": 10
           }
          }
         ],
@@ -117910,14 +117895,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:coin_survive:10"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -117954,11 +117936,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "coin_survive",
+         "hp": 10
         }
        }
       ],
@@ -117968,14 +117951,10 @@
     "errors": [],
     "engine_tags": [
      "discard_stadium",
-     "dmg_plus:140:if:stadium_in_play"
+     "dmg_plus:140:if:stadium_in_play",
+     "passive:coin_survive:10"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -129732,14 +129711,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Scolipede@TWM 117",
    "parse": {
     "items": [
      {
@@ -129765,13 +129746,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "counters_to_hp:10:opp_active"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -129794,13 +129772,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "counters_to_hp:10:opp_active"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -142365,14 +142340,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库上方的 4 张卡。你可以展示其中任意数量的支援者卡并加入手牌。将其他卡牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Roto-Stick@PRE 127",
    "parse": {
     "items": [
      {
@@ -142386,27 +142363,33 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "recon",
+          "amount": "all",
+          "target": "hand",
           "extra": {
-           "look_top": 4
+           "look_top": 4,
+           "max": "all",
+           "sel": "supporter",
+           "dest": "hand",
+           "rest": "shuffle",
+           "gate": null
           }
          }
         ],
-        "source_text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+        "source_text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.type 非法：recon",
+       "[0] action.amount 应为整数（HP 计）：'all'"
+      ],
+      "engine_tags": [
+       "recon:4:all:supporter"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检视牌库顶（非特性侧未精确识别，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -142417,25 +142400,31 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "recon",
+        "amount": "all",
+        "target": "hand",
         "extra": {
-         "look_top": 4
+         "look_top": 4,
+         "max": "all",
+         "sel": "supporter",
+         "dest": "hand",
+         "rest": "shuffle",
+         "gate": null
         }
        }
       ],
-      "source_text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+      "source_text": "Look at the top 4 cards of your deck. You may reveal any number of Supporter cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检视牌库顶（非特性侧未精确识别，B4）"
-     }
+    "errors": [
+     "[0] action.type 非法：recon",
+     "[0] action.amount 应为整数（HP 计）：'all'"
     ],
+    "engine_tags": [
+     "recon:4:all:supporter"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -143793,14 +143782,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you discard 3 other cards from your hand.\n\nSearch your deck for an Item card, a Pokémon Tool card, a Supporter card, and a Stadium card, reveal them, and put them into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只有从手牌中弃置 3 张其他卡牌，你才可以使用此卡。\n\n从牌库中检索 1 张物品卡、1 张宝可梦道具卡、1 张支援者卡和 1 张竞技场卡，展示它们并加入手牌。然后洗牌。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Secret Box@TWM 163",
    "parse": {
     "items": [
      {
@@ -143827,15 +143818,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "search_multi:item+tool+supporter+stadium:1"
+      ],
       "play_cost": "discard:3",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -143859,13 +143847,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "多类别并列检索（逐类别各取 1 张）未建模（B4）"
-     }
+    "engine_tags": [
+     "search_multi:item+tool+supporter+stadium:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -147147,14 +147132,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Search your deck for any number of Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从牌库中检索任意数量的基础宝可梦，放到你的后备区。然后洗牌。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Precious Trolley@SSP 185",
    "parse": {
     "items": [
      {
@@ -147180,15 +147167,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "search_bench:all:basic"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147211,13 +147195,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
+    "engine_tags": [
+     "search_bench:all:basic"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -147339,14 +147320,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Search your deck for up to 5 cards and discard them. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从牌库中检索最多 5 张卡牌并将其弃置。然后洗牌。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Brilliant Blender@SSP 164",
    "parse": {
     "items": [
      {
@@ -147372,15 +147355,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "search_discard:5"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147403,13 +147383,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
+    "engine_tags": [
+     "search_discard:5"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -147437,14 +147414,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Shuffle up to 5 Pokémon from your discard pile into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的弃牌堆中最多 5 只宝可梦洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Sacred Ash@DRI 168",
    "parse": {
     "items": [
      {
@@ -147470,15 +147449,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "pokemon_to_deck:5"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147501,13 +147477,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "pokemon_to_deck:5"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -153485,14 +153458,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Search your deck for 2 cards, shuffle your deck, then put those cards on top of it in any order.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从牌库中检索 2 张卡，洗牌，然后以任意顺序将这些卡置于牌库上方。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Ciphermaniac’s Codebreaking@TEF 145",
    "parse": {
     "items": [
      {
@@ -153518,15 +153493,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "search_top:2"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索后放到牌库顶/底（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -153549,13 +153521,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索后放到牌库顶/底（B4）"
-     }
+    "engine_tags": [
+     "search_top:2"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

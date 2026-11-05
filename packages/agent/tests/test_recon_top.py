@@ -121,11 +121,16 @@ class TestReconTopPositive(unittest.TestCase):
 class TestReconTopNegative(unittest.TestCase):
     """不可精确表达的同族写法必须继续未建模（不得放宽）"""
 
-    def test_any_number_still_unmodeled(self):
-        # 「any number of Supporter cards」= 玩家自由数量 → 不许退化成「全部」
+    def test_any_number_supporter_now_modeled(self):
+        """第七十九批决策反转：Roto-Stick 已精确建模
+
+        旧断言「any number of Supporter cards = 玩家自由数量 → 必须未建模」。
+        但备选集合被「牌库顶 4 张」封死，取满就是卡面的最大合法取值 ——
+        不需要交互层。新口径 `recon:4:all:supporter`。
+        """
         got = _tags(ROTO_STICK)
-        self.assertEqual(got["tags"], [])
-        self.assertTrue(got["unsupported"])
+        self.assertEqual(got["tags"], ["recon:4:all:supporter"])
+        self.assertEqual(got["unsupported"], [])
 
     def test_unknown_energy_symbol_not_guessed(self):
         bad = BUG_SET.replace("{G} Energy", "{Z} Energy")

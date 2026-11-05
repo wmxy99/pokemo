@@ -1276,6 +1276,14 @@ _RECON_TOP_PATTERNS: tuple = (
         r"supporter card you find there and put it into your hand[.] "
         + _RECON_TAIL + r"$"),
      {"k": 1, "sel": "supporter", "dest": "hand", "rest": "shuffle"}),
+    # Roto-Stick（第七十九批）：顶部 4 张里**任意数量**的支援者 → 入手。
+    # 「any number of」的备选集合被顶部 N 张封死 → 不需要交互层（同 Bug Catching
+    # Set 的 `all` 口径）；不能退化成 `k=1`（那样会把多张支援者静默少拿）。
+    (re.compile(
+        r"^look at the top (?P<n>\d+) cards? of your deck[.] you may reveal any "
+        r"number of supporter cards you find there and put them into your hand[.] "
+        + _RECON_TAIL + r"$"),
+     {"k": "all", "sel": "supporter", "dest": "hand", "rest": "shuffle"}),
     # Bug Catching Set：{G} 宝可梦 与 基本 {G} 能量「任意组合」至多 2 张 → 入手
     (re.compile(
         r"^look at the top (?P<n>\d+) cards? of your deck[.] you may reveal up to "
@@ -2603,6 +2611,43 @@ def _en_search_what(lower: str) -> str:
 # 而 `search your deck for a Pokémon, reveal it` 之类不含第二个 `card`，不受影响）。
 _MULTI_KIND_SEARCH = re.compile(
     r"search your deck for an? [^.,]*?card,\s*an? [^.,]*?card", re.I)
+
+
+def _multi_search_alts(text: str) -> Optional[list]:
+    """「逐类别各取 1 张」的并列检索 → 引擎筛选项列表（第七十九批）
+
+    卡面原型（Secret Box）：「Search your deck for an Item card, a Pokémon Tool
+    card, a Supporter card, and a Stadium card, reveal them, and put them into
+    your hand.」——四个类别**各 1 张**，不能退化成「任意类别 1 张」或「共 1 张」。
+
+    只认**完整且可枚举**的四类写法；出现任何不认识的类别短语（例如「a Basic
+    Pokémon」）→ 返回 None，由调用方如实拒绝（绝不猜类别）。
+    """
+    t = _norm_prose(text)
+    m = re.search(
+        r"search your deck for (?P<list>(?:an? )?[^.]*?card,[^.]*?card),"
+        r" reveal them, and put them into your hand", t)
+    if not m:
+        return None
+    chunks = re.split(r",\s*(?:and\s+)?", m.group("list"))
+    kinds: list = []
+    for ch in chunks:
+        ch = ch.strip(" .")
+        found = None
+        for pat, kind in ((r"pok[eé]mon tool card", "tool"),
+                          (r"item card", "item"),
+                          (r"supporter card", "supporter"),
+                          (r"stadium card", "stadium"),
+                          (r"energy card", "energy"),
+                          (r"trainer card", "trainer"),
+                          (r"pok[eé]mon card", "pokemon")):
+            if re.search(r"(?:a|an) " + pat, ch):
+                found = kind
+                break
+        if not found:
+            return None
+        kinds.append(found)
+    return kinds or None
 
 
 def _search_destination(text: str, pos: int) -> str:
@@ -4596,6 +4641,14 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
                 and _COIN_STATUS_CHOOSE_ANY_RE.fullmatch(
                     _norm_apostrophe(text).strip() or ""):
             drop.append("静态/未建模（英文）")
+        # 免击倒家族（第七十八/八十批）：整段已由 `passive:*survive:N` 承载
+        # → 移除分词器留下的泛化占位，否则整卡会因「有文本无 tag」被拒收。
+        if any(str((m.get("extra") or {}).get("kind")) in
+               ("coin_survive", "survive") for m in mods):
+            drop.append("静态/未建模（英文）")
+        # 清除自身状态（第八十一批）：整段已由 `cure:self` 承载。
+        if any(m.get("type") == "cure" for m in mods):
+            drop.append("静态/未建模（英文）")
         actions = [a for a in actions
                    if not (a.get("type") == "rule"
                            and _note_starts_with(a, drop))]
@@ -4869,6 +4922,59 @@ _COIN_STATUS_CHOOSE_ANY_RE = re.compile(
     r"flip\s+a\s+coin\.\s*if\s+heads,\s*choose\s+a\s+special\s+condition\.\s*"
     r"your\s+opponent's\s+active\s+pok[eé]mon\s+is\s+now\s+affected\s+by\s+that\s+"
     r"special\s+condition\.", re.I)
+# 抛币免击倒（第七十八批，Mega Hawlucha ex「Tenacious Body」）：
+# 「If this Pokémon would be Knocked Out by damage from an attack, flip a coin.
+#  If heads, this Pokémon is not Knocked Out, and its remaining HP becomes N.」
+# ⚠ 与道具 `tool:survive:N` 不同：**不要求满 HP**、是特性不是道具、且要抛币。
+_COIN_SURVIVE_RE = re.compile(
+    r"if\s+this\s+pok[eé]mon\s+would\s+be\s+knocked\s+out\s+by\s+damage\s+from\s+"
+    r"an\s+attack,\s*flip\s+a\s+coin\.\s*if\s+heads,\s*this\s+pok[eé]mon\s+is\s+"
+    r"not\s+knocked\s+out,\s*and\s+its\s+remaining\s+hp\s+becomes\s+(\d+)\.", re.I)
+# 满 HP 免击倒·特性版（第八十批，Pikachu ex「Resolute Heart」/ Crustle）：
+# 「If this Pokémon has full HP and would be Knocked Out by damage from an attack,
+#  it is not Knocked Out, and its remaining HP becomes N.」
+# ⚠ 三个口径缺一不可：① 必须**受伤前满 HP**（调用点已算 was_full）；
+# ② 是**特性**不是道具（不弃置自身）；③ **不抛币**（与 coin_survive 反口径）。
+# 少了「full HP」短语就不是本形态 —— 不能放宽，否则会把「残血也免死」的卡
+# 静默加强。
+_SURVIVE_FULL_HP_RE = re.compile(
+    r"if\s+this\s+pok[eé]mon\s+has\s+full\s+hp\s+and\s+would\s+be\s+knocked\s+out\s+"
+    r"by\s+damage\s+from\s+an\s+attack,\s*it\s+is\s+not\s+knocked\s+out,\s*and\s+"
+    r"its\s+remaining\s+hp\s+becomes\s+(\d+)\.", re.I)
+# 清除自身全部特殊状态（第八十一批，Arboliva ex「Aroma Shot」）：
+# 「This Pokémon recovers from all Special Conditions.」
+# ⚠ 只认**整句且作用自身**的形态。「heal … from your Pokémon」「Your opponent's
+# Active Pokémon recovers …」等换对象的写法一律不认领（否则会清错阵营）；
+# 「recovers from **a** Special Condition」是单数，范围不同，也不认领。
+_CURE_SELF_RE = re.compile(
+    r"this\s+pok[eé]mon\s+recovers\s+from\s+all\s+special\s+conditions\.", re.I)
+# 弃牌堆宝可梦洗回牌库（第八十二批，Sacred Ash）：
+# 「Shuffle up to N Pokémon from your discard pile into your deck.」
+# ⚠ 两头钉死（fullmatch）：「Shuffle **all** Pokémon」「into your **hand**」
+# 都不是本形态；「up to N」由引擎确定性取至多 N 张（choose 类默认口径）。
+_POKEMON_TO_DECK_RE = re.compile(
+    r"shuffle\s+up\s+to\s+(\d+)\s+pok[eé]mon\s+from\s+your\s+discard\s+pile\s+"
+    r"into\s+your\s+deck\.", re.I)
+# 检索后弃置（第八十三批，Brilliant Blender）：
+# 「Search your deck for up to N cards and discard them. Then, shuffle your deck.」
+# ⚠ 与 `search_pokemon:*`（入手）/`search_top:*`（放牌库顶）都不同：
+# 去向是**弃牌堆**。落成入手会凭空多 N 张手牌（静默加强）。
+# ⚠ 只认「任意卡 + 训练家卡级」的干净整句：Drilbur 的「放到后备时触发 +
+# 限 Basic {F} Energy」需要上场触发钩子与能量筛选层，本批如实拒绝。
+_SEARCH_DISCARD_RE = re.compile(
+    r"search\s+your\s+deck\s+for\s+up\s+to\s+(\d+)\s+cards?\s+and\s+discard\s+"
+    r"them\.\s*then,?\s*shuffle\s+your\s+deck\.", re.I)
+# 放指示物直到剩余 HP 为 N（第八十四批，PalossandEX / Scolipede）：
+# 「Put/Place damage counters on each of your opponent's Benched Pokémon /
+#  your opponent's Active Pokémon until its remaining HP is N.」
+# ⚠ 与 `counters:<个数>` **不是同一口径**：这里是「目标剩余 HP」而非「放几个」，
+# 且要逐只按各自当前 damage 计算差额；已有伤害更多时一只都不能回血。
+# 只认两种明确的阵营+范围，其它范围（each Pokémon / 1 of …）一律不认领。
+_COUNTERS_TO_HP_RE = re.compile(
+    r"(?:put|place)\s+damage\s+counters\s+on\s+"
+    r"(?P<scope>each\s+of\s+your\s+opponent's\s+benched\s+pok[eé]mon|"
+    r"your\s+opponent's\s+active\s+pok[eé]mon)\s+until\s+its\s+remaining\s+"
+    r"hp\s+is\s+(?P<hp>\d+)\.", re.I)
 # 静态免伤（2026-10-28 第八批）：**整句**认领，只收「来源 / 门槛」可精确判定的形态。
 #   卡面原型：
 #     Prevent all damage done to this Pokémon by attacks from your opponent's
@@ -6929,6 +7035,26 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
                        {"recoil": int(m_rec.group(2))}))
         return out
 
+    # 抛币免击倒（第七十八批，Mega Hawlucha ex）：整段唯一语义，直接认领
+    m_sv = _COIN_SURVIVE_RE.fullmatch(t.strip() or "")
+    if m_sv:
+        out.append(act("passive", None, "self",
+                       {"kind": "coin_survive", "hp": int(m_sv.group(1))}))
+        return out
+
+    # 清除自身全部特殊状态（第八十一批）：整段唯一语义，直接认领。
+    if _CURE_SELF_RE.fullmatch(t.strip() or ""):
+        out.append(act("cure", None, "self", {"scope": "all"}))
+        return out
+
+    # 满 HP 免击倒·特性版（第八十批）：整段唯一语义，直接认领。
+    # 与 coin_survive 并列但**反口径**：这里必须满 HP、不抛币、必定生效。
+    m_fh = _SURVIVE_FULL_HP_RE.fullmatch(t.strip() or "")
+    if m_fh:
+        out.append(act("passive", None, "self",
+                       {"kind": "survive", "hp": int(m_fh.group(1))}))
+        return out
+
     # 1) 条件/计数伤害缩放（先算，便于抛币分支复用同一伤害修正语义）
     # 两个正则**分开**匹配：`_SCALING_BASE_RE` = 基础伤害按计数源重算，必须落
     # `dmg_set`；`_SCALING_MORE_RE` = 在印刷伤害上加，落 `dmg_plus`。早期用
@@ -8495,12 +8621,24 @@ def to_engine_tags(specs: list) -> dict:
                     dynamic_n = re.search(
                         r"\ba number of\b|\bany number of\b|"
                         r"up to the number of|for each", src, re.I)
-                    if _MULTI_KIND_SEARCH.search(_norm_prose(src)):
-                        # 多类别并列检索（Secret Box）：逐类别各取 1 张，
-                        # 通用分支只取到第一个类别 → 张数与类别双错（静默削弱）。
+                    _multi = _multi_search_alts(src)
+                    if _multi:
+                        # 第七十九批：逐类别各取 1 张（Secret Box）。
+                        # 旧口径整卡拒绝；引擎 `search_multi:<sel>:1` 已实现。
+                        tags.append(f"search_multi:{'+'.join(_multi)}:1")
+                    elif _MULTI_KIND_SEARCH.search(_norm_prose(src)):
+                        # 未识别的多类别并列：通用分支只取到第一个类别 →
+                        # 张数与类别双错（静默削弱）→ 如实拒绝。
                         unsupported.append(
                             {"type": t, "reason": "多类别并列检索"
                                                   "（逐类别各取 1 张）未建模（B4）"})
+                    elif dest == "bench" and re.search(
+                            r"any number of basic pok[eé]mon and put them onto "
+                            r"your bench", src, re.I):
+                        # 第七十九批：Precious Trolley「任意数量基础宝可梦铺后备」。
+                        # 备选集合被「牌库里的基础宝可梦」封死、落点受后备上限约束
+                        # → 不需要交互层（同 Tatsugiri ex 的 `all` 口径）。
+                        tags.append("search_bench:all:basic")
                     elif _mp and _in_coin_branch(src, _mp.start()):
                         # 抛币分支内的检索：应由 coin 层产出（coin:heads:<sub>），
                         # 不能退化成「必定检索」（否则强度翻倍）
@@ -8708,11 +8846,30 @@ def to_engine_tags(specs: list) -> dict:
                                 + ":deck" + (":target:any" if _to_any else "")
                                 + _ctr_tail)
                     elif dest == "deck_top":
-                        unsupported.append(
-                            {"type": t, "reason": "检索后放到牌库顶/底（B4）"})
+                        # 第七十九批：检索 N 张后**放回牌库顶**
+                        # （Ciphermaniac's Codebreaking / Dialga「Time Manipulation」）。
+                        # 去向必须与「入手」区分：拿进手牌会凭空多 N 张手牌（静默加强）。
+                        # 只认明确写「on top of it/your deck」的形态；「放牌库底」
+                        # 仍是未建模（引擎没有 bottom 检索）。
+                        if re.search(r"put those cards on top of "
+                                     r"(?:it|your deck)", src, re.I):
+                            tags.append(f"search_top:{n}")
+                        else:
+                            unsupported.append(
+                                {"type": t, "reason": "检索后放到牌库顶/底（B4）"})
                     else:
-                        unsupported.append(
-                            {"type": t, "reason": "检索去向不可判（B4）"})
+                        # 第八十三批：检索后**弃置**（去向 = 弃牌堆）。
+                        # 只认训练家卡级 + 「up to N 任意卡」的整句，类别筛选
+                        # （Basic {F} Energy）与上场触发钩子都不在此处冒充。
+                        _sd = (None if kind not in ("item", "supporter")
+                               or str(extra.get("what") or "any") != "any"
+                               else _SEARCH_DISCARD_RE.fullmatch(
+                                   _norm_prose(src)))
+                        if _sd:
+                            tags.append(f"search_discard:{int(_sd.group(1))}")
+                        else:
+                            unsupported.append(
+                                {"type": t, "reason": "检索去向不可判（B4）"})
             elif t == "recover":
                 if extra.get("coin_heads") is not None:
                     # B3：张数由抛币决定（Stoutland「Flip 3 coins …」）
@@ -8724,7 +8881,25 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"recover:{n}:{kd}"
                                 + (f":type:{_pt}" if _pt else ""))
             elif t == "rule":
-                if extra.get("ko_prize_plus"):
+                # 第八十二批：Sacred Ash 的整句认领。只替换**泛化占位**那条
+                # rule（别的 rule 分支已带语义标志，不覆盖）；且必须是训练家
+                # 卡级 spec，招式里的同形句式不在此处认领。
+                _rsrc = _norm_prose(str(s.get("source_text") or ""))
+                _is_placeholder = str(extra.get("note") or "").startswith(
+                    "静态/未建模")
+                _cth = (None if kind != "attack" else
+                        _COUNTERS_TO_HP_RE.fullmatch(_rsrc))
+                _ptd = (None if kind not in ("item", "supporter") else
+                        _POKEMON_TO_DECK_RE.fullmatch(_rsrc))
+                if _cth and _is_placeholder:
+                    # 第八十四批：逐只放到「剩余 HP = N」。
+                    _scope = ("opp_bench" if "benched" in _cth.group("scope")
+                              else "opp_active")
+                    tags.append(f"counters_to_hp:{int(_cth.group('hp'))}:"
+                                f"{_scope}")
+                elif _ptd and _is_placeholder:
+                    tags.append(f"pokemon_to_deck:{int(_ptd.group(1))}")
+                elif extra.get("ko_prize_plus"):
                     # 被击倒触发：多取奖赏（Togekiss「Wonder Kiss」）
                     tags.append(f"ko_prize_plus:{int(extra['ko_prize_plus'])}"
                                 + (":coin" if extra.get("coin") else ""))
@@ -9194,6 +9369,24 @@ def to_engine_tags(specs: list) -> dict:
                             "type": t, "reason": f"抛币免伤属性未识别（{_col}）"})
                     else:
                         tags.append(f"passive:coin_prevent:{_col}")
+                elif kind_ == "coin_survive":
+                    # 抛币免击倒（第七十八批，Mega Hawlucha ex）
+                    _hp = extra.get("hp")
+                    if not isinstance(_hp, int) or _hp <= 0:
+                        unsupported.append({
+                            "type": t, "reason": "抛币免击倒后的剩余 HP 未识别"})
+                    else:
+                        tags.append(f"passive:coin_survive:{_hp}")
+                elif kind_ == "survive":
+                    # 满 HP 免击倒·特性版（第八十批）。引擎 `_ability_survive`
+                    # 只在「受伤前满 HP」时调用；这里产出 tag 后不能退化成
+                    # `tool:survive`（会弃道具）或 `passive:coin_survive`（会抛币）。
+                    _hp = extra.get("hp")
+                    if not isinstance(_hp, int) or _hp <= 0:
+                        unsupported.append({
+                            "type": t, "reason": "满 HP 免击倒后的剩余 HP 未识别"})
+                    else:
+                        tags.append(f"passive:survive:{_hp}")
                 elif kind_ == "prev_attacks":
                     # Relicanth「Memory Dive」：进化前形态的招式可用（照付其费用）
                     tags.append("passive:prev_attacks")
@@ -9288,6 +9481,14 @@ def to_engine_tags(specs: list) -> dict:
                         {"type": t, "reason": f"Checkup 改写形态未识别：{st}"})
                 else:
                     tags.append(f"checkup_set:{st}:{int(amt)}")
+            elif t == "cure":
+                # 第八十一批：清除**出招者自身**的全部特殊状态。
+                # 换对象 / 单数范围都不精确 → 如实拒绝，绝不猜。
+                if tgt != "self" or str(extra.get("scope") or "") != "all":
+                    unsupported.append({"type": t,
+                                        "reason": "清除特殊状态的范围未识别（B4）"})
+                else:
+                    tags.append("cure:self")
             elif t == "knockout":
                 # 招式击倒（2026-10-28 第九批）：`knockout:<scope>`
                 # scope：opp_active[:basic|if:senergy] · opp_bench[:basic] ·

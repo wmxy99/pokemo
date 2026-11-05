@@ -68,6 +68,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "search_pokemon", "search_trainer", "search_any",
                 # 2026-10-27：检索**铺场**（去向是后备，不是入手）
                 "search_bench",
+                # 第七十九批（2026-11-05）：检索后**放回牌库顶** /
+                # **逐类别各取 1 张**（Ciphermaniac's Codebreaking / Secret Box）
+                "search_top:", "search_multi:",
                 # S2 道具（2026-10-26）：附着型训练家
                 "tool:",
                 # S3 场地（2026-10-27）：全场唯一
@@ -87,6 +90,12 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 第七十批（2026-11-04）：弃牌堆基本能量洗回牌库（Energy Recycler）
                 # —— 复用招式侧 Kyogre「Riptide」的同一 helper `_energy_to_deck`。
                 "energy_to_deck:",
+                # 第八十二批（2026-11-05）：弃牌堆**宝可梦**洗回牌库（Sacred Ash）。
+                # 与 energy_to_deck 来源不同，前缀不重叠，必须显式放行。
+                "pokemon_to_deck:",
+                # 第八十三批（2026-11-05）：检索后**弃置**（Brilliant Blender）。
+                # 与 search_top / search_multi 同族但去向不同，须独立放行。
+                "search_discard:",
                 "discard_opp_random:", "shuffle_opp_hand:", "discard_opp_to:",
                 # 第五十四批：**双方**各弃手牌到剩 N（Hand Trimmer）。
                 # 前缀不被 `discard:` 覆盖（第 8 位是 `_` 不是 `:`），必须显式列出。
@@ -127,6 +136,8 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
 ATTACK_TAG_PREFIXES = (
     "poison", "burn", "sleep", "paralyze", "confuse", "status_self:", "spread_free:", "spread:",
     "snipe:", "heal:", "self:", "draw:", "draw_to:", "discard:",
+    # 第八十一批（2026-11-05）：清除出招者自身全部特殊状态（Arboliva ex）
+    "cure:",
     "discard_energy:", "switch_self", "gust", "attach", "move_damage:",
     "recover:", "dmg_plus:", "dmg_set:", "dmg_minus:", "dmg_zero",
     "ignore_weakness",
@@ -151,6 +162,10 @@ ATTACK_TAG_PREFIXES = (
     "recon:",
     # 检索**铺场**（2026-10-27）
     "search_bench:",
+    # 第七十九批（2026-11-05）：检索后**放回牌库顶**（Dialga「Time Manipulation」/
+    # Ciphermaniac's Codebreaking 是训练家侧，招式侧同机制）。
+    # ⚠ 与 `search_pokemon:` 不同：那条是「入手」，这条不增加手牌。
+    "search_top:",
     # B3（2026-10-28）：双方同抽 / 对手洗回手牌后抽 / 带类型手牌弃能（含失败门）
     "draw_both:", "opp_shuffle_draw:", "discard_hand_energy:",
     # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
@@ -176,6 +191,9 @@ ATTACK_TAG_PREFIXES = (
     "checkup_set:",
     # 第十四批（2026-10-28）：伤害指示物直放（不吃弱抗，Haunter / Alakazam）
     "counters:",
+    # 第八十四批（2026-11-05）：逐只放到「剩余 HP = N」（PalossandEX /
+    # Scolipede）。与 `counters:<个数>` 口径不同，前缀不重叠，须显式放行。
+    "counters_to_hp:",
     # 第四十五批（2026-11-03）：逐目标各抛一枚（Mega Zygarde ex）
     # 与抛币选状态（Cradily）——两者都是招式侧 tag
     "coin_per_target:", "status_choose:",

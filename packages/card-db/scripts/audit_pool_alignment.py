@@ -81,6 +81,11 @@ _COIN_STATUS_CHOOSE_ANY_RE = re.compile(
     r"flip a coin\.\s*if heads,\s*choose a special condition\.\s*"
     r"your opponent[\u2019']?s active pok[eé]mon is now affected by that "
     r"special condition", re.I)
+# 抛币免击倒（第七十八批，Mega Hawlucha ex）
+_COIN_SURVIVE_RE = re.compile(
+    r"if this pok[eé]mon would be knocked out by damage from an attack,\s*"
+    r"flip a coin\.\s*if heads,\s*this pok[eé]mon is not knocked out,\s*and its "
+    r"remaining hp becomes (\d+)", re.I)
 # 抛币免伤被动（第四十五批，Fezandipiti）——必须在伤害结算内抛币
 _COIN_PREVENT_PASSIVE_RE = re.compile(
     r"has any \{([a-z])\} energy attached and is damaged by an attack,\s*"
@@ -536,6 +541,12 @@ def audit_coin_forms(card_name: str, item_name: str, desc: str,
             errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
                         f"`{want or 'passive:coin_prevent:<color>'}`"
                         "（伤害结算内抛币；事后无法撤销）")
+    for m in _COIN_SURVIVE_RE.finditer(d):
+        # 抛币免击倒：必须是特性被动（不是道具 `tool:survive`、不要求满 HP）。
+        want = f"passive:coin_survive:{int(m.group(1))}"
+        if want not in [str(e) for e in effects]:
+            errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` 必须落 "
+                        f"`{want}`（现为 {[str(e) for e in effects]}）")
     for m in _SHUFFLE_BOTH_COIN_DRAW_RE.finditer(d):
         # 训练家只有一个卡级 tag：洗牌 + 单次抛币 + 双方不同张数必须合并。
         want = (f"shuffle_both_coin_draw:{int(m.group(1))}:{int(m.group(2))}:"
@@ -3204,6 +3215,182 @@ def audit_batch68_77(card_name: str, item_name: str, desc: str,
     return errs
 
 
+_B79_ROTO = re.compile(
+    r"look at the top (\d+) cards? of your deck. you may reveal any number of "
+    r"supporter cards you find there and put them into your hand", re.I)
+_B79_SECRET = re.compile(
+    r"search your deck for an? item card, an? pok[eé]mon tool card, an? supporter "
+    r"card, and an? stadium card", re.I)
+_B79_TROLLEY = re.compile(
+    r"search your deck for any number of basic pok[eé]mon and put them onto "
+    r"your bench", re.I)
+_B79_TOP = re.compile(
+    r"search your deck for (\d+) cards?[^.]*?then put those cards on top of "
+    r"(?:it|your deck)", re.I)
+_B79_BOTTOM = re.compile(
+    r"then put (?:those cards|them) on (?:the )?bottom of", re.I)
+
+
+def audit_batch79(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """第七十九批搜索族对账（张数 / 去向 / 类别逐项独立复算）
+
+    ① Roto-Stick：「top N 里任意数量 Supporter → 入手」必须
+       `recon:N:all:supporter`。落成 `recon:N`（旧口径随机 1 张）会少拿。
+    ② Secret Box：四类别**各 1 张** → `search_multi:item+tool+supporter+stadium:1`；
+       落成 `search_trainer:1` 是「张数 4→1、类别任一」双错。
+    ③ Precious Trolley：任意数量基础宝可梦铺后备 → `search_bench:all:basic`；
+       落成 `search_bench:1` 会少铺。
+    ④ 检索后放牌库顶 → `search_top:N`；落成 `search_any:N` 会凭空多 N 张手牌。
+       反向守卫：「放牌库底」不得落 `search_top`（方向相反）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in effects]
+
+    m = _B79_ROTO.search(d)
+    if m:
+        want = f"recon:{int(m.group(1))}:all:supporter"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「top {m.group(1)} 任意"
+                        f"数量 Supporter 入手」应为 `{want}`，实际 "
+                        f"{[t for t in tags if t.startswith('recon:')] or '无'}")
+
+    m = _B79_SECRET.search(d)
+    if m:
+        want = "search_multi:item+tool+supporter+stadium:1"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「四类别各取 1 张」应为 "
+                        f"`{want}`，实际 "
+                        f"{[t for t in tags if t.startswith('search')] or '无'}"
+                        "（退化成任一类别 = 静默少拿 3 张）")
+
+    m = _B79_TROLLEY.search(d)
+    if m:
+        want = "search_bench:all:basic"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「任意数量基础宝可梦铺"
+                        f"后备」应为 `{want}`，实际 "
+                        f"{[t for t in tags if t.startswith('search')] or '无'}")
+
+    m = _B79_TOP.search(d)
+    if m:
+        want = f"search_top:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「检索 {m.group(1)} 张放回"
+                        f"牌库顶」应为 `{want}`，实际 "
+                        f"{[t for t in tags if t.startswith('search')] or '无'}"
+                        "（落成入手 = 静默多抽）")
+    if _B79_BOTTOM.search(d) and any(t.startswith("search_top:") for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面是「放牌库**底**」却落成 "
+                    "`search_top:`（方向相反）")
+    return errs
+
+
+# ---- 第八十~八十四批对账（卡面 ↔ tag，正则独立实现） --------------------
+_B80_FULL_HP = re.compile(
+    r"has\s+full\s+hp\s+and\s+would\s+be\s+knocked\s+out\s+by\s+damage\s+from\s+"
+    r"an\s+attack,\s*it\s+is\s+not\s+knocked\s+out,\s*and\s+its\s+remaining\s+"
+    r"hp\s+becomes\s+(\d+)", re.I)
+_B81_CURE = re.compile(
+    r"this\s+pok[eé]mon\s+recovers\s+from\s+all\s+special\s+conditions", re.I)
+_B82_PTD = re.compile(
+    r"shuffle\s+up\s+to\s+(\d+)\s+pok[eé]mon\s+from\s+your\s+discard\s+pile\s+"
+    r"into\s+your\s+deck", re.I)
+_B82_ALL = re.compile(
+    r"shuffle\s+all\s+pok[eé]mon\s+from\s+your\s+discard\s+pile", re.I)
+_B83_SD = re.compile(
+    r"search\s+your\s+deck\s+for\s+up\s+to\s+(\d+)\s+cards?\s+and\s+discard\s+"
+    r"them", re.I)
+_B83_HAND = re.compile(
+    r"search\s+your\s+deck\s+for\s+up\s+to\s+\d+\s+cards?\s+and\s+put\s+"
+    r"them\s+into\s+your\s+hand", re.I)
+_B84_CTH = re.compile(
+    r"(?:put|place)\s+damage\s+counters\s+on\s+"
+    r"(each\s+of\s+your\s+opponent's\s+benched\s+pok[eé]mon|"
+    r"your\s+opponent's\s+active\s+pok[eé]mon)\s+until\s+its\s+remaining\s+"
+    r"hp\s+is\s+(\d+)", re.I)
+_B84_FIXED = re.compile(
+    r"(?:put|place)\s+(\d+)\s+damage\s+counters\s+on", re.I)
+
+
+def audit_batch80_84(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """第八十~八十四批对账：**反口径守卫**比「有 tag」更重要
+
+    ① 满 HP 免击倒 → `passive:survive:N`，写成 `passive:coin_survive` 是
+       把「必定生效且要求满血」变成「抛币且不要求满血」（反向冒充）。
+    ② 清除自身状态 → `cure:self`。
+    ③ 弃牌堆宝可梦洗回 → `pokemon_to_deck:N`，写成 `energy_to_deck` 是换来源；
+       「shuffle all …」本批明确拒收，落 `pokemon_to_deck` 就是静默缩小。
+    ④ 检索后弃置 → `search_discard:N`，写成 `search_any` 是凭空多 N 张手牌；
+       反向：入手句式不得落 `search_discard`。
+    ⑤ 指示物打到剩余 HP → `counters_to_hp:N:<scope>`，写成固定 `counters:M`
+       会随目标 HP 不同而错算；反向：固定个数句式不得落 `counters_to_hp`。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in effects]
+
+    m = _B80_FULL_HP.search(d)
+    if m:
+        want = f"passive:survive:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「满 HP 免击倒」应为 "
+                        f"`{want}`，实际 {tags}")
+        if any(t.startswith("passive:coin_survive:") for t in tags):
+            errs.append(f"{card_name} · {item_name}：满 HP 免击倒被写成抛币版 "
+                        "`passive:coin_survive`（口径相反）")
+
+    if _B81_CURE.search(d) and "cure:self" not in tags:
+        errs.append(f"{card_name} · {item_name}：卡面「清除自身全部特殊状态」"
+                    "应有 `cure:self`，实际 " + str(tags))
+
+    m = _B82_PTD.search(d)
+    if m:
+        want = f"pokemon_to_deck:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「弃牌堆至多 "
+                        f"{m.group(1)} 张宝可梦洗回」应为 `{want}`，实际 {tags}")
+        if any(t.startswith("energy_to_deck:") for t in tags):
+            errs.append(f"{card_name} · {item_name}：宝可梦洗回被写成能量洗回 "
+                        "`energy_to_deck`（来源不同）")
+    if _B82_ALL.search(d) and any(t.startswith("pokemon_to_deck:") for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面是「shuffle all Pokémon」，"
+                    "本批只认 `up to N` → 不得落 `pokemon_to_deck`")
+
+    m = _B83_SD.search(d)
+    if m:
+        want = f"search_discard:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「检索 {m.group(1)} "
+                        f"张并弃置」应为 `{want}`，实际 {tags}"
+                        "（落成入手 = 凭空多牌）")
+        if any(t.startswith(("search_any:", "search_top:", "search_pokemon:"))
+               for t in tags):
+            errs.append(f"{card_name} · {item_name}：检索弃置被写成入手/放顶 "
+                        "（去向相反）")
+    if _B83_HAND.search(d) and any(t.startswith("search_discard:") for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面是「入手」却落 "
+                    "`search_discard`（去向相反）")
+
+    m = _B84_CTH.search(d)
+    if m:
+        scope = "opp_bench" if "benched" in m.group(1) else "opp_active"
+        want = f"counters_to_hp:{int(m.group(2))}:{scope}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「放到剩余 HP "
+                        f"{m.group(2)}」应为 `{want}`，实际 {tags}")
+        if any(t.startswith("counters:") for t in tags):
+            errs.append(f"{card_name} · {item_name}：按剩余 HP 放置被写成固定"
+                        "个数 `counters:`（逐只差额会错算）")
+    if _B84_FIXED.search(d) and any(t.startswith("counters_to_hp:")
+                                    for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面是「放固定个指示物」却落 "
+                    "`counters_to_hp`（口径不同）")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3262,6 +3449,8 @@ def main() -> int:
                 errs += audit_batch58_62(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch63_67(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch68_77(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch79(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch80_84(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3289,6 +3478,10 @@ def main() -> int:
             errs += audit_batch63_67(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch68_77(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
+            errs += audit_batch79(c["name"], c["name"], _cdesc,
+                                  [_ctag] if _ctag else [])
+            errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
@@ -3331,8 +3524,10 @@ def main() -> int:
           "奖赏减少/双状态/换位补抽/拉人混乱/弃手重抽/特性发动代价 · "
           "对手弃手牌/撤退费归零/常驻禁打 · "
           "自身跨回合禁攻/对手自选洗回/无视弱抗两档/Kofu 减费计数源/能量移动区域 · "
-          "双方洗抽/道具+HP/训练家能量洗回/指示物Defending/指示物this "
-          "四十二类对账全部一致")
+          "双方洗抽/道具+HP/训练家能量洗回/指示物Defending/指示物this · "
+          "搜索族（牌库顶筛支援者/四类别各取1/任意数量铺后备/检索放回牌库顶） · "
+          "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 "
+          "四十四类对账全部一致")
     return 0
 
 

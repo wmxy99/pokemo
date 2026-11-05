@@ -892,6 +892,14 @@ class Battle:
                             or str(getattr(c.edef, "type", "")) == _ecolor)
                        for c in p.discard_refs):
                     out.append(dict(base))
+            elif tag.startswith("pokemon_to_deck:"):
+                # 弃牌堆没有宝可梦时不进动作表（打出去只会空转）。
+                if any(isinstance(c, PokeRef) for c in p.discard_refs):
+                    out.append(dict(base))
+            elif tag.startswith("search_discard:"):
+                # 牌库空了就没什么可检索/可弃的 → 不进动作表。
+                if p.deck:
+                    out.append(dict(base))
             elif tag.startswith("energy_move:"):
                 # S6 能量移动族：按 from/to 生成可选目标（至多 N，源上须有能量）
                 _ep = tag.split(":")
@@ -2038,6 +2046,18 @@ class Battle:
             placed = self._trainer_search_kind(p, tag)
         elif tag.startswith("search_bench:"):
             placed = self._search_bench(p, tag)
+        elif tag.startswith("search_top:"):
+            # 第七十九批：检索后放回牌库顶（Ciphermaniac's Codebreaking）
+            placed = self._search_top(p, tag)
+        elif tag.startswith("search_multi:"):
+            # 第七十九批：逐类别各取 1 张（Secret Box）
+            placed = self._search_multi(p, tag)
+        elif tag.startswith("search_discard:"):
+            # 第八十三批：检索至多 N 张直接弃置（Brilliant Blender）。
+            # 派发须排在 `search_*` 通用族之后但早于 `tool:` 等无关分支。
+            _sdp = tag.split(":")
+            _sraw = _sdp[1] if len(_sdp) > 1 else "1"
+            placed = f"search discard {_search_discard(self, p, _sraw)}"
         elif tag.startswith("tool:"):
             placed = self._trainer_attach_tool(p, c, tag,
                                                int(action.get("target", 0)))
@@ -2146,6 +2166,11 @@ class Battle:
             _color = _ed[1] if len(_ed) > 1 else "any"
             _raw = _ed[2] if len(_ed) > 2 else "all"
             placed = f"energy to deck {_energy_to_deck(self, p, _color, _raw)}"
+        elif tag.startswith("pokemon_to_deck:"):
+            # 第八十二批：Sacred Ash，弃牌堆宝可梦洗回牌库。
+            _pd = tag.split(":")
+            _praw = _pd[1] if len(_pd) > 1 else "all"
+            placed = f"pokemon to deck {_pokemon_to_deck(self, p, _praw)}"
         elif tag.startswith("energy_move:"):
             placed = self._apply_energy_move(tag, None, action)
         elif tag.startswith("bounce:"):
@@ -3767,7 +3792,15 @@ class Battle:
         后备已满 / 牌库无合法目标时**不执行**（官方规则：招式照常可用）。
         """
         parts = tag.split(":")
-        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+        raw_n = parts[1] if len(parts) > 1 else "1"
+        if raw_n == "all":
+            # 第七十九批：Precious Trolley「any number of Basic Pokémon」
+            # —— 备选集合与后备空位共同封死上限，不需要交互层。
+            n = 999
+        elif raw_n.isdigit():
+            n = int(raw_n)
+        else:
+            raise ValueError(f"search_bench 张数非法：{tag}")
         basic_only = "basic" in parts[2:]
         ptype = None
         names = None
@@ -4009,6 +4042,60 @@ class Battle:
             return f"search 0 {_search_kind_of(tag)} to hand"
         self.rng.shuffle(p.deck)
         return f"search {found} {_search_kind_of(tag)} to hand"
+
+    def _search_top(self, p: PlayerState, tag: str) -> str:
+        """检索 N 张 → 洗牌 → **放回牌库顶**（第七十九批）
+
+        卡面：「Search your deck for 2 cards, shuffle your deck, then put those
+        cards on top of it in any order.」（Ciphermaniac's Codebreaking / Dialga
+        「Time Manipulation」）。去向是牌库顶，**不是手牌** —— 拿进手牌会凭空
+        多 N 张手牌，是静默加强。
+
+        选哪 N 张：引擎无交互层，确定性取**当前牌库顶 N 张**（与 `recon` 的
+        选牌口径一致）；洗牌后按原选取顺序放回顶部（卡面允许任意顺序）。
+        """
+        n = int(tag.split(":")[1])
+        take = min(n, len(p.deck))
+        picked = [p.deck.pop() for _ in range(take)]   # picked[0] = 原牌库顶
+        self.rng.shuffle(p.deck)
+        # 放回顶部：列表末尾是牌库顶 → 逆序 extend 后 picked[0] 在最顶。
+        p.deck.extend(reversed(picked))
+        return f"search {take} to deck top"
+
+    def _search_multi(self, p: PlayerState, tag: str) -> str:
+        """逐类别各取 K 张入手（第七十九批）
+
+        卡面：「Search your deck for an Item card, a Pokémon Tool card, a
+        Supporter card, and a Stadium card, reveal them, and put them into your
+        hand.」（Secret Box）——四个类别**各 1 张**；不能退化成「任意类别共 1
+        张」（通用 `search_trainer:1` 的口径会少拿 3 张，是静默削弱）。
+
+        tag 形态 ``search_multi:<sel1>+<sel2>…:<k>``；筛选项语义复用
+        `_recon_one`（item/tool/supporter/stadium/energy/trainer/pokemon），
+        未知筛选项抛错（不猜、不静默放行）。
+        """
+        parts = tag.split(":")
+        if len(parts) < 3 or not parts[2].isdigit():
+            raise ValueError(f"search_multi tag 字段非法：{tag}")
+        alts = [a for a in parts[1].split("+") if a]
+        k = int(parts[2])
+        picked_idx: list = []
+        seen: set = set()
+        for alt in alts:
+            got = 0
+            for i in range(len(p.deck) - 1, -1, -1):
+                if got >= k:
+                    break
+                if i in seen:
+                    continue
+                if _recon_one(p.deck[i], alt):
+                    picked_idx.append(i)
+                    seen.add(i)
+                    got += 1
+        picked = [p.deck.pop(i) for i in sorted(picked_idx, reverse=True)]
+        p.hand.extend(picked)
+        self.rng.shuffle(p.deck)
+        return f"search {len(picked)} ({'+'.join(alts)}) to hand"
 
     def _trainer_candy(self, p: PlayerState, action: dict) -> str:
         """跳阶进化（Rare Candy）：手牌二阶卡直接放置到链根基础宝可梦上"""
@@ -4289,8 +4376,14 @@ class Battle:
             self._trigger_energy_on_damaged(defender, attacker, damage_dealt)
             # 2026-10-29 第二十九批：下回合「受击反制」（Bouffalant / Zamazenta）
             self._trigger_retaliate(defender, attacker, damage_dealt)
-            if defender.is_ko and was_full and self._tool_survive(defender):
+            # 免击倒优先级：道具 → 特性（同一击只生效一次，`or` 短路保证）。
+            # 两者都要求「受伤前满 HP」；抛币版不要求满 HP，故单独一档。
+            if defender.is_ko and was_full and (
+                    self._tool_survive(defender)
+                    or self._ability_survive(defender)):   # 第八十批
                 pass                      # 免击倒：伤害已改为「剩 M 点」
+            elif defender.is_ko and self._ability_coin_survive(defender):
+                pass                      # 抛币免击倒（第七十八批，Mega Hawlucha ex）
             if defender.is_ko:
                 self._resolve_ko(1 - self.current, defender)
         finally:
@@ -5310,7 +5403,7 @@ class Battle:
             elif any(x.startswith("dmg_set:") for x in plain):
                 # 全反面 + 「does N damage for each heads」→ 伤害必须是 **0**。
                 # 不调用的话 `mods["set"]` 保持 None，引擎会回落到印刷伤害
-                # （第四十八批实测 31 个招式在全反面时打出满伤）。
+                # （第七十八批实测 31 个招式在全反面时打出满伤）。
                 self._apply_coin_sub(attacker, "|".join(plain), out, repeat=0)
             if conds:
                 heads = hits if side == "heads" else max(0, n - hits)
@@ -5431,7 +5524,7 @@ class Battle:
         if sub.startswith("dmg_set:"):
             # set 语义不是「重复叠加」：coin_each 命中 N 枚 → 基础伤害 = N × 命中数。
             # 必须放在循环外，否则 repeat 次循环会变成 N × repeat²。
-            # ⚠ `repeat` 可以是 **0**（全反面）：2026-11-04 第四十八批修 —— 此前
+            # ⚠ `repeat` 可以是 **0**（全反面）：2026-11-04 第七十八批修 —— 此前
             # 这里写 `max(1, repeat)` 且 coin_each 只在命中时才调用，于是「Flip 3
             # coins, 30 damage for each heads」在 0 正面时回落到印刷伤害 30
             # （应为 0），实测 31 个招式受影响。
@@ -5623,6 +5716,70 @@ class Battle:
                     "player": 1 - self.current, "ability": ab.name,
                     "kind": "coin_prevent", "target": fp.name})
                 return True
+        return False
+
+    def _ability_coin_survive(self, defender: FieldPokemon) -> bool:
+        """``passive:coin_survive:<hp>`` —— 抛币免击倒（第七十八批）
+
+        卡面（Mega Hawlucha ex「Tenacious Body」）：「If this Pokémon would be
+        Knocked Out by damage from an attack, flip a coin. If heads, this Pokémon
+        is not Knocked Out, and its remaining HP becomes N.」
+
+        与 `tool:survive:N` 的区别：**不要求受伤前满 HP**、不是道具（不弃置）、
+        且正面才生效（反面照常击倒）。只在 `_do_attack` 的击倒结算点调用。
+        """
+        for ab in defender.pdef.abilities:
+            tag = str(ab.tag or "")
+            if not tag.startswith("passive:coin_survive:"):
+                continue
+            parts = tag.split(":")
+            if len(parts) != 3 or not parts[2].isdigit():
+                raise ValueError(f"passive:coin_survive 形态非法：{tag}")
+            hp = int(parts[2])
+            if hp <= 0:
+                raise ValueError(f"passive:coin_survive 剩余 HP 非法：{tag}")
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": 1 - self.current, "result": res,
+                               "tag": tag, "ability": ab.name})
+            if res != "heads":
+                continue
+            defender.damage = max(0, defender.max_hp - hp)
+            self._log("ability_trigger", {
+                "player": 1 - self.current, "ability": ab.name,
+                "kind": "coin_survive", "target": defender.name, "hp": hp})
+            return True
+        return False
+
+    def _ability_survive(self, defender: FieldPokemon) -> bool:
+        """``passive:survive:<hp>`` —— 满 HP 时免于被招式击倒（第八十批）
+
+        卡面（Pikachu ex「Resolute Heart」/ Crustle「Mysterious Rock Inn」）：
+        「If this Pokémon has **full HP** and would be Knocked Out by damage
+        from an attack, it is not Knocked Out, and its remaining HP becomes N.」
+
+        与两个相邻机制的边界（**不可互换**）：
+        · ``tool:survive:N``：挂在**道具**上，触发后道具弃置；
+        · ``passive:coin_survive:N``：不要求满 HP，且要抛币、反面照常击倒；
+        · 本 tag：**特性**、**必定生效**、但**只在受伤前满 HP 时**（由调用点的
+          ``was_full`` 保证），且不弃置任何卡牌。
+
+        只在 `_do_attack` 击倒结算点调用；改 damage 后 `is_ko` 自动回退。
+        """
+        for ab in defender.pdef.abilities:
+            tag = str(ab.tag or "")
+            if not tag.startswith("passive:survive:"):
+                continue
+            parts = tag.split(":")
+            if len(parts) != 3 or not parts[2].isdigit():
+                raise ValueError(f"passive:survive 形态非法：{tag}")
+            hp = int(parts[2])
+            if hp <= 0:
+                raise ValueError(f"passive:survive 剩余 HP 非法：{tag}")
+            defender.damage = max(0, defender.max_hp - hp)
+            self._log("ability_trigger", {
+                "player": 1 - self.current, "ability": ab.name,
+                "kind": "survive", "target": defender.name, "hp": hp})
+            return True
         return False
 
     def _team_shield_reduce(self, fp: Optional[FieldPokemon],
@@ -6165,6 +6322,14 @@ class Battle:
                     self.rng.shuffle(_top)
                     _vp.deck[-_k:] = _top
                 self._log("shuffle_top", {"player": _victim, "n": _k})
+            elif tag == "cure:self":
+                # 第八十一批：「This Pokémon recovers from all Special Conditions.」
+                # 只清**出招者自身**；`clear_status()` 与「换下战斗位解状态」
+                # 同源。对手的状态、我方后备的状态一律不动。
+                had = sorted(str(x) for x in attacker.status)
+                attacker.clear_status()
+                self._log("cure", {"player": self.current,
+                                   "target": attacker.name, "cleared": had})
             elif tag.startswith("heal:"):
                 # 范围（全体/后备/属性限定）由 `_apply_heal` 统一解释；
                 # 无 scope 时回复攻击方自身（历史语义，保持不变）
@@ -6175,6 +6340,13 @@ class Battle:
                                    "targets": n_tgt})
                 prev_ok = healed > 0       # 「If you healed any damage in this way」
 
+            elif tag.startswith("counters_to_hp:"):
+                # 第八十四批：逐只放到「剩余 HP = N」。必须排在
+                # `counters:` 之前（虽不重名，但语义族相邻，顺序显式化）。
+                _cth = tag.split(":")
+                if len(_cth) != 3 or not _cth[1].isdigit():
+                    raise ValueError(f"counters_to_hp tag 非法：{tag}")
+                self._apply_counters_to_hp(int(_cth[1]), _cth[2])
             elif tag.startswith("counters:"):
                 # 「Place N damage counters on your opponent's Active Pokémon」
                 # （Haunter / Alakazam）—— 指示物**直放**：不吃弱点/抗性，
@@ -6535,6 +6707,11 @@ class Battle:
                 detail = self._search_bench(p, tag)
                 self._log("search_bench", {"player": self.current,
                                            "detail": detail})
+            elif tag.startswith("search_top:"):
+                # 第七十九批：招式侧「检索 2 张放回牌库顶」（Dialga）
+                detail = self._search_top(p, tag)
+                self._log("search_top", {"player": self.current,
+                                          "detail": detail})
             elif tag.startswith("search_"):
                 # 招式侧**全牌库检索**（2026-10-27）：与特性/训练家侧同一语义
                 # （从整副牌库检索指定类别入手，不是 `recon` 的「牌库顶 N 取 1」）。
@@ -6927,6 +7104,45 @@ class Battle:
                                       "target": holder.name, "scope": "selfko"})
         self._resolve_ko(self.current, holder)
         return self.finished
+
+    def _apply_counters_to_hp(self, hp: int, scope: str) -> None:
+        """``counters_to_hp:<hp>:<opp_bench|opp_active>``（第八十四批）
+
+        卡面：「Put damage counters on each of your opponent's Benched
+        Pokémon until its remaining HP is 100.」（PalossandEX）/「Place damage
+        counters on your opponent's Active Pokémon until its remaining HP is
+        10.」（Scolipede）。
+
+        与 `counters:<个数>` 的差别：这里给的是**目标剩余 HP**，要逐只按
+        `max_hp - hp - 当前 damage` 算差额；直接放固定个数会随目标 HP 不同而
+        错算。指示物**不吃弱抗**，因此直接改 `damage`（与 `_apply_counters`
+        同源口径），不走 damage/snipe 结算。
+
+        ⚠ 剩余 HP 已 ≤ 门槛的宝可梦**不放**（官方规则不能靠指示物回血）；
+        目标 HP 恒 > 0，故本效应不会击倒任何宝可梦，不触发 KO 钩子。
+        """
+        if hp <= 0:
+            raise ValueError(f"counters_to_hp 剩余 HP 非法：{hp}")
+        if scope not in ("opp_bench", "opp_active"):
+            raise ValueError(f"counters_to_hp 范围非法：{scope}")
+        opp = self.players[1 - self.current]
+        targets = ([opp.active] if scope == "opp_active"
+                   else list(opp.bench))
+        touched = 0
+        for fp in targets:
+            if fp is None:
+                continue
+            goal = fp.max_hp - hp
+            if goal <= fp.damage:
+                continue
+            delta = goal - fp.damage
+            fp.damage = goal
+            touched += 1
+            self._log("counters", {"player": 1 - self.current,
+                                   "target": fp.name, "dmg": delta,
+                                   "remaining_hp": hp})
+        self._log("counters_to_hp", {"hp": hp, "scope": scope,
+                                     "targets": touched})
 
     def _apply_counters(self, tag: str, action: Optional[dict] = None,
                         holder: Optional[FieldPokemon] = None) -> bool:
@@ -8855,6 +9071,61 @@ def _energy_to_deck(battle, p: PlayerState, color: str, raw: str) -> int:
     return moved
 
 
+def _pokemon_to_deck(battle, p: PlayerState, raw: str) -> int:
+    """弃牌堆里的**宝可梦**洗回牌库（``pokemon_to_deck:<n|all>``，第八十二批）
+
+    卡面（Sacred Ash）：「Shuffle up to 5 Pokémon from your discard pile into
+    your deck.」——与 `energy_to_deck` 是**两种来源**（宝可梦 vs 基本能量），
+    不可互代。``up to N`` 由引擎确定性取至多 N 张（choose 类默认口径，
+    从弃牌堆尾部倒序），不会凭空变卡、也不会把能量一起洗回去。
+
+    洗回后**立刻洗牌**（与检索后洗牌同一约定）；没移动任何卡就不洗
+    —— 空集合的「顺手洗牌」也是静默改状态。
+    """
+    n = 999 if raw == "all" else int(raw)
+    picked: list = []
+    for i in range(len(p.discard_refs) - 1, -1, -1):
+        if not isinstance(p.discard_refs[i], PokeRef):
+            continue
+        picked.append(i)
+        if len(picked) >= n:
+            break
+    moved = 0
+    for i in picked:
+        ref = battle._rebuild_ref(p.discard_refs.pop(i))
+        label = _card_label(ref)
+        for k in range(len(p.discard) - 1, -1, -1):
+            if p.discard[k] == label:
+                p.discard.pop(k)
+                break
+        p.deck.append(ref)
+        moved += 1
+    if moved:
+        battle.rng.shuffle(p.deck)
+    return moved
+
+
+def _search_discard(battle, p: PlayerState, raw: str) -> int:
+    """检索至多 N 张 → **弃置**（``search_discard:<n|all>``，第八十三批）
+
+    卡面（Brilliant Blender）：「Search your deck for up to 5 cards and
+    discard them. Then, shuffle your deck.」——去向是弃牌堆，**不是手牌**：
+    拿进手牌会凭空多 N 张（静默加强），落成 `search_top` 则等于没弃。
+
+    选哪 N 张：引擎无交互层，确定性取**当前牌库顶 N 张**（与 `recon` /
+    `search_top` 同口径）；`up to N` 取卡面允许的最大合法值。取到卡才洗牌
+    —— 空集合的「顺手洗牌」也是静默改状态。
+    """
+    n = 999 if raw == "all" else int(raw)
+    take = min(n, len(p.deck))
+    picked = [p.deck.pop() for _ in range(take)]
+    for ref in picked:
+        battle._to_discard(p, ref)
+    if take:
+        battle.rng.shuffle(p.deck)
+    return take
+
+
 def _energy_self_to_deck(battle, p: PlayerState,
                          fp: Optional[FieldPokemon]) -> int:
     """把 fp 身上附着的**全部能量**还原成卡并洗回牌库 → 移动张数
@@ -9460,7 +9731,7 @@ def _eval_counter(battle, counter: str) -> int:
             raise ValueError(f"未知宝可梦属性 {color}（{counter}）")
         return sum(fp.energy_of_type(color) for fp in p.all_field()
                    if key and key in _name_key(fp.pdef.name))
-    # ---- 第四十八批（2026-11-04）：按**属性**数在场宝可梦 ----
+    # ---- 第七十八批（2026-11-04）：按**属性**数在场宝可梦 ----
     # 「Flip a coin for each {D} Pokémon you have in play」（Scrafty WHT 58）——
     # 数的是**只数**、且限定属性。用 `own_field`（全队只数）会多算别的属性，
     # 用 `own_all_energy` 更是完全不同的量纲（能量 vs 只数）。

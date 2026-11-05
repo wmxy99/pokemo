@@ -23,7 +23,7 @@ PokéLab AI 的自研简化版宝可梦 TCG 对战规则引擎 + 模拟器（对
 ## 运行
 
 ```bash
-# 全量用例（77 项，含 M1 真实卡池）
+# 全量用例（1207 项，含 M1 真实卡池）
 python -m unittest discover -s tests -v
 
 # 单局复盘（中文事件流）

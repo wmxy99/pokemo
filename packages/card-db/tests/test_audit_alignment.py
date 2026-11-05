@@ -1362,6 +1362,25 @@ class TestAuditBatch47(unittest.TestCase):
         self.assertTrue(any("status_choose" in e for e in errs), errs)
 
 
+class TestAuditBatch78(unittest.TestCase):
+    """第七十八批（2026-11-03）：抛币免击倒"""
+
+    TEXT = ("If this Pokémon would be Knocked Out by damage from an attack, flip a "
+            "coin. If heads, this Pokémon is not Knocked Out, and its remaining HP "
+            "becomes 10.")
+
+    def test_recognized(self):
+        self.assertEqual(
+            A.audit_coin_forms("Mega Hawlucha ex", "Tenacious Body",
+                               self.TEXT, ["passive:coin_survive:10"]), [])
+
+    def test_tool_tag_flagged(self):
+        """道具 `tool:survive` 要求满 HP、不抛币 → 不能冒充这张特性"""
+        errs = A.audit_coin_forms("Mega Hawlucha ex", "Tenacious Body",
+                                  self.TEXT, ["tool:survive:10"])
+        self.assertTrue(any("coin_survive" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -1719,6 +1738,157 @@ class TestAuditBatch68_77(unittest.TestCase):
             "Flip a coin. If tails, put 2 damage counters on this Pokémon.",
             ["coin_flip:heads:counters:2:scope:opp:1|"
              "tails:counters:2:scope:self"]), [])
+
+
+class TestAuditBatch79(unittest.TestCase):
+    """第七十九批（2026-11-05）：搜索族对账（第四十三类）"""
+
+    ROTO = ("Look at the top 4 cards of your deck. You may reveal any number of "
+            "Supporter cards you find there and put them into your hand. Shuffle "
+            "the other cards back into your deck.")
+    SECRET = ("Search your deck for an Item card, a Pokémon Tool card, a "
+              "Supporter card, and a Stadium card, reveal them, and put them "
+              "into your hand. Then, shuffle your deck.")
+    TROLLEY = ("Search your deck for any number of Basic Pokémon and put them "
+               "onto your Bench. Then, shuffle your deck.")
+    TOP = ("Search your deck for 2 cards, shuffle your deck, then put those "
+           "cards on top of it in any order.")
+
+    def test_roto_ok(self):
+        self.assertEqual(A.audit_batch79("Roto-Stick", "Roto-Stick", self.ROTO,
+                                         ["recon:4:all:supporter"]), [])
+
+    def test_roto_old_form_flagged(self):
+        errs = A.audit_batch79("Roto-Stick", "Roto-Stick", self.ROTO,
+                               ["recon:4"])
+        self.assertTrue(any("all:supporter" in e for e in errs), errs)
+
+    def test_secret_ok(self):
+        self.assertEqual(A.audit_batch79(
+            "Secret Box", "Secret Box", self.SECRET,
+            ["search_multi:item+tool+supporter+stadium:1"]), [])
+
+    def test_secret_folded_flagged(self):
+        errs = A.audit_batch79("Secret Box", "Secret Box", self.SECRET,
+                               ["search_trainer:1"])
+        self.assertTrue(any("静默少拿 3 张" in e for e in errs), errs)
+
+    def test_trolley_ok(self):
+        self.assertEqual(A.audit_batch79(
+            "Precious Trolley", "Precious Trolley", self.TROLLEY,
+            ["search_bench:all:basic"]), [])
+
+    def test_trolley_fixed_one_flagged(self):
+        errs = A.audit_batch79("Precious Trolley", "Precious Trolley",
+                               self.TROLLEY, ["search_bench:1:basic"])
+        self.assertTrue(any("search_bench:all:basic" in e for e in errs), errs)
+
+    def test_top_ok(self):
+        self.assertEqual(A.audit_batch79("Ciphermaniac’s Codebreaking", "X",
+                                         self.TOP, ["search_top:2"]), [])
+
+    def test_top_written_as_hand_flagged(self):
+        errs = A.audit_batch79("Ciphermaniac’s Codebreaking", "X", self.TOP,
+                               ["search_any:2"])
+        self.assertTrue(any("静默多抽" in e for e in errs), errs)
+
+    def test_bottom_with_top_tag_flagged(self):
+        desc = ("Search your deck for 2 cards, shuffle your deck, then put "
+                "those cards on the bottom of your deck in any order.")
+        errs = A.audit_batch79("X", "Y", desc, ["search_top:2"])
+        self.assertTrue(any("方向相反" in e for e in errs), errs)
+
+
+class TestAuditBatch80_84(unittest.TestCase):
+    """第八十~八十四批对账（第四十四类）：正确态放行 + 反口径必报"""
+
+    FULL_HP = ("If this Pokémon has full HP and would be Knocked Out by damage "
+               "from an attack, it is not Knocked Out, and its remaining HP "
+               "becomes 10.")
+    CURE = "This Pokémon recovers from all Special Conditions."
+    PTD = "Shuffle up to 5 Pokémon from your discard pile into your deck."
+    SD = ("Search your deck for up to 5 cards and discard them. "
+          "Then, shuffle your deck.")
+    CTH_BENCH = ("Put damage counters on each of your opponent’s Benched "
+                 "Pokémon until its remaining HP is 100.")
+    CTH_ACTIVE = ("Place damage counters on your opponent's Active Pokémon "
+                  "until its remaining HP is 10.")
+
+    # 80
+    def test_full_hp_ok(self):
+        self.assertEqual(A.audit_batch80_84("Pikachu ex", "X", self.FULL_HP,
+                                            ["passive:survive:10"]), [])
+
+    def test_full_hp_coin_version_flagged(self):
+        errs = A.audit_batch80_84("Pikachu ex", "X", self.FULL_HP,
+                                  ["passive:coin_survive:10"])
+        self.assertTrue(any("口径相反" in e for e in errs), errs)
+
+    # 81
+    def test_cure_ok(self):
+        self.assertEqual(A.audit_batch80_84("Arboliva ex", "X", self.CURE,
+                                            ["cure:self"]), [])
+
+    def test_cure_missing_flagged(self):
+        errs = A.audit_batch80_84("Arboliva ex", "X", self.CURE, [])
+        self.assertTrue(any("cure:self" in e for e in errs), errs)
+
+    # 82
+    def test_pokemon_to_deck_ok(self):
+        self.assertEqual(A.audit_batch80_84("Sacred Ash", "X", self.PTD,
+                                            ["pokemon_to_deck:5"]), [])
+
+    def test_pokemon_to_deck_wrong_source_flagged(self):
+        errs = A.audit_batch80_84("Sacred Ash", "X", self.PTD,
+                                  ["energy_to_deck:any:5"])
+        self.assertTrue(any("来源不同" in e for e in errs), errs)
+
+    def test_shuffle_all_refused_flagged(self):
+        d = "Shuffle all Pokémon from your discard pile into your deck."
+        errs = A.audit_batch80_84("X", "Y", d, ["pokemon_to_deck:5"])
+        self.assertTrue(any("shuffle all" in e for e in errs), errs)
+
+    # 83
+    def test_search_discard_ok(self):
+        self.assertEqual(A.audit_batch80_84("Brilliant Blender", "X", self.SD,
+                                            ["search_discard:5"]), [])
+
+    def test_search_discard_written_as_hand_flagged(self):
+        errs = A.audit_batch80_84("Brilliant Blender", "X", self.SD,
+                                  ["search_any:5"])
+        self.assertTrue(any("去向相反" in e for e in errs), errs)
+
+    def test_into_hand_not_discard_flagged(self):
+        d = ("Search your deck for up to 5 cards and put them into your hand. "
+             "Then, shuffle your deck.")
+        errs = A.audit_batch80_84("X", "Y", d, ["search_discard:5"])
+        self.assertTrue(any("去向相反" in e for e in errs), errs)
+
+    # 84
+    def test_counters_to_hp_bench_ok(self):
+        self.assertEqual(A.audit_batch80_84("PalossandEX", "X", self.CTH_BENCH,
+                                            ["counters_to_hp:100:opp_bench"]),
+                         [])
+
+    def test_counters_to_hp_active_ok(self):
+        self.assertEqual(A.audit_batch80_84("Scolipede", "X", self.CTH_ACTIVE,
+                                            ["counters_to_hp:10:opp_active"]),
+                         [])
+
+    def test_counters_to_hp_wrong_scope_flagged(self):
+        errs = A.audit_batch80_84("PalossandEX", "X", self.CTH_BENCH,
+                                  ["counters_to_hp:100:opp_active"])
+        self.assertTrue(any("opp_bench" in e for e in errs), errs)
+
+    def test_fixed_counters_not_to_hp_flagged(self):
+        d = "Put 3 damage counters on your opponent's Active Pokémon."
+        errs = A.audit_batch80_84("X", "Y", d, ["counters_to_hp:10:opp_active"])
+        self.assertTrue(any("口径不同" in e for e in errs), errs)
+
+    def test_to_hp_written_as_fixed_flagged(self):
+        errs = A.audit_batch80_84("Scolipede", "X", self.CTH_ACTIVE,
+                                  ["counters:9"])
+        self.assertTrue(any("逐只差额" in e for e in errs), errs)
 
 
 if __name__ == "__main__":

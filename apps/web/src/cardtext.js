@@ -131,6 +131,9 @@ export const TRAINER_TAG_DESC = {
   search_pokemon: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张宝可梦加入手牌。`, en: `Search your deck for ${argOf(a)} Pokémon.` }),
   search_trainer: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张训练家卡加入手牌。`, en: `Search your deck for ${argOf(a)} Trainer cards.` }),
   search_any: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张任意卡加入手牌。`, en: `Search your deck for ${argOf(a)} cards.` }),
+  // 第七十九批（2026-11-05）：逐类别各取 1 张 / 检索后放回牌库顶
+  search_multi: (_a) => ({ zh: '从牌库中逐类别各取 1 张卡加入手牌。', en: 'Search your deck for 1 card of each listed category and put them into your hand.' }),
+  search_top: (a) => ({ zh: `从牌库检索 ${argOf(a)} 张卡，洗牌后放回牌库顶。`, en: `Search your deck for ${argOf(a)} cards, shuffle, then put them on top of your deck.` }),
   // ---- 真实卡池的 39 类 tag 族（2026-11-04 补齐）----
   // 背景：真实卡组（A1–A4 / B1–B5）一进手牌就整屏黑屏 —— trainerDesc 对
   // 未收录的族走了「返回 {zh,en} 对象」的兜底分支，被 React 当子节点渲染。
@@ -164,6 +167,9 @@ export const TRAINER_TAG_DESC = {
   discard_tool: (a) => ({ zh: `弃置至多 ${argOf(a)} 张双方宝可梦身上的道具。`, en: `Discard up to ${argOf(a)} Pokémon Tools attached to Pokémon (either side).` }),
   discard_tool_or_senergy: (a) => ({ zh: `弃置对手的 ${argOf(a)} 张道具或特殊能量。`, en: `Your opponent discards ${argOf(a)} Pokémon Tool or Special Energy.` }),
   energy_to_deck: (a) => ({ zh: `从弃牌堆把至多 ${argOf(a)} 张基本能量洗回牌库。`, en: `Shuffle up to ${argOf(a)} Basic Energy from your discard pile into your deck.` }),
+  // 第八十二/八十三批（2026-11-05）：弃牌堆宝可梦洗回 / 检索后弃置
+  pokemon_to_deck: (a) => ({ zh: `从弃牌堆把至多 ${argOf(a)} 张宝可梦洗回牌库。`, en: `Shuffle up to ${argOf(a)} Pokémon from your discard pile into your deck.` }),
+  search_discard: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张卡并直接弃置，然后洗牌。`, en: `Search your deck for up to ${argOf(a)} cards, discard them, then shuffle.` }),
   energy_move: (a) => ({ zh: `在己方宝可梦之间移动至多 ${argOf(a)} 个能量。`, en: `Move up to ${argOf(a)} Energy between your Pokémon.` }),
   recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),
   search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),

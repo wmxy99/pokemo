@@ -1,3 +1,54 @@
+## 本轮成果（2026-11-05 · 第八十~八十四批 · 5 批）
+
+**一句话**：`engine_ready` **1111 → 1117（87.7% → 88.2%）**，池 **1096 → 1102**，
+未建模动作条目 **154 → 147**；对账 **43 → 44 类**（新增 `audit_batch80_84`，14 个负向自测）；
+测试 **2266 → 2301**（engine 1207 · agent 944 · api 138 · gym 12）；**CI 8/8 PASS**
+（含前端卡面文案守卫：训练家卡 **43 个 tag 族**全部有说明）。
+第七十八~七十九批的未提交改动在本轮一并收尾并入库。
+
+| 批次 | 主题 | 落地卡（池内） | 顺带修掉的静默缺陷 / 结论 |
+|---|---|---|---|
+| 80 | 满 HP 免击倒·特性版 `passive:survive:<hp>` | 2（Pikachu ex / Crustle） | 与 `tool:survive`（要弃道具）、`passive:coin_survive`（要抛币且**不**要求满 HP）三者互不可代。复用 `_do_attack` 击倒点已有的 `was_full`，`or` 短路保证同一击只免死一次；对账把「满 HP 句式被写成抛币版」设为反向守卫 |
+| 81 | 攻击清除自身特殊状态 `cure:self` | 1（Arboliva ex） | 落在 `_apply_attack_effects`，只调 `attacker.clear_status()`；换对象（对手）/ 单数范围均整句拒收，避免清错阵营 |
+| 82 | 弃牌堆**宝可梦**洗回牌库 `pokemon_to_deck:N` | 1（Sacred Ash） | 与 `energy_to_deck`（只洗基本能量）来源不同，照抄其 helper 但改判 `PokeRef`；「空集合顺手洗牌」用带计数 rng 实测守卫；训练家派发 + `TRAINER_TAGS` 白名单 + legals 门三处同接 |
+| 83 | 检索后**弃置** `search_discard:N` | 1（Brilliant Blender） | 去向是弃牌堆，落成 `search_any` 会凭空多 N 张手牌、落成 `search_top` 等于没弃。确定性取牌库顶至多 N 张（choose 类默认口径）；Drilbur「放到后备时触发 + 限 Basic {F} Energy」需上场触发钩子与能量筛选层，**如实拒绝** |
+| 84 | 按剩余 HP 放指示物 `counters_to_hp:<hp>:<scope>` | 1（Scolipede） | 与 `counters:<个数>` **口径不同**：这里给的是目标剩余 HP，需逐只按 `max_hp - hp - 当前 damage` 算差额；已低于门槛者不放（不能靠指示物回血），目标 HP 恒 > 0 故不触发 KO 钩子。**PalossandEX 未落地**：其 `Tera` 招式挂着 `passive:bench_immune_dmg` —— 那是**特性被动 tag**，被解析链错挂到 attack item；放行到攻击白名单会造成静默错位，按「宁可未建模」保持整卡拒收 |
+
+**本轮三处收尾（不属于建模，但属 C5/可复核性）**：
+- 补跑完整重跑链并刷新 `unmodeled_registry.md` / `unmodeled_backlog.{json,md}`：
+  79 批留下的登记文件是 **09:18 中间态**（159 条 / 1106 张），与 DB 真实值不符。
+- 前端 `TRAINER_TAG_DESC` 补 `pokemon_to_deck` / `search_discard` 两族说明
+  （守卫实测从「42 族缺 1」到「43 族全通过」）。
+- 修回第七十八批遗留的 3 处注释误改（「第四十八批」被批量替换成「第七十八批」）。
+
+**口径提醒**：本轮共 7 张卡产出新 tag，但池只 +6 —— 第 7 张（PalossandEX）
+因上述静态被动错挂仍 `engine_ready=false`。**只认池与 DB 实测，不认产 tag 数**。
+
+---
+
+## 本轮成果（2026-11-05 · 第七十八~七十九批 · 2 批）
+
+**一句话**：`engine_ready` **1105 → 1111（87.2% → 87.7%）**，池 **1090 → 1096**，
+未建模动作条目 **160 → 154**；对账 **42 → 43 类**（新增 `audit_batch79`，9 个负向自测）；
+测试 **2244 → 2266**（engine 1188 · agent 928 · api 138 · gym 12）；**CI 8/8 PASS**
+（含 web 卡面文案守卫新增 `search_multi` / `search_top` 两族说明）。
+（本轮按用户要求「测试完即结束」，未重跑 K1 200 局。）
+
+| 批次 | 主题 | 落地卡（池内） | 顺带修掉的静默缺陷 / 结论 |
+|---|---|---|---|
+| 78 | 抛币免击倒 `passive:coin_survive:<hp>` | 1（Mega Hawlucha ex「Tenacious Body」） | 与道具 `tool:survive` **不是同一机制**：前者**不要求受伤前满 HP**，且反面照常击倒。引擎在 `_do_attack` 的击倒点分流；对账新增「卡面命中抛币句式 → 必须有 `passive:coin_survive`」守卫，`tool:survive` 不能冒充 |
+| 79 | 搜索族四形态 | 5（Roto-Stick · Secret Box · Precious Trolley · Ciphermaniac's Codebreaking · Dialga SSP 135） | ① `recon:4:all:supporter`（Roto-Stick）：备选集合被「顶 4 张」封死，取满即卡面最大合法值；② 新 `search_multi:item+tool+supporter+stadium:1`（Secret Box）——逐类别各取 1 张，旧的 `search_trainer:1` 是「张数 4→1、类别任一」双错；代价 `discard:3` 保留；③ `search_bench:all:basic`（Precious Trolley）：任意数量基础宝可梦铺后备，受后备上限约束；④ 新 `search_top:N`（Ciphermaniac / Dialga「Time Manipulation」）——检索后**放回牌库顶**，落成入手会凭空多 N 张手牌 |
+
+**两处存量测试的决策反转（留痕）**：
+- `test_play_cost::test_secret_box_rejected` → 改为锁定 `search_multi:item+tool+supporter+stadium:1`（旧断言要求整卡未建模）。
+- `test_recon_top::test_any_number_still_unmodeled` → 改为锁定 `recon:4:all:supporter`（旧断言把「any number of」一律视为交互层）。
+
+**本轮明确撤回（未提交半成品）**：Team Rocket's Ariana / Archer / Lucian 的解析改动依赖尚未实现的
+`own_all_category` / 阵营级击倒历史 / `bottom_draw_coin`，按「宁可未建模，不可静默错算」整体回退，
+三张卡保持未建模。
+
+---
+
 ## 本轮成果（2026-11-04 · 第六十八~七十七批 · 10 批）
 
 **一句话**：`engine_ready` **1102 → 1105（87.0% → 87.2%）**，池 1087 → **1090**，

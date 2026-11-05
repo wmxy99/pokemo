@@ -118,17 +118,19 @@ class TestRealCards(unittest.TestCase):
         self.assertEqual(m["play_cost"], "discard:2")
         self.assertEqual(m["tags"], ["search_pokemon:1"])
 
-    def test_secret_box_rejected(self):
-        """代价识别了，但主效果是「多类别各取 1 张」→ 如实退回未建模
+    def test_secret_box_modeled(self):
+        """第七十九批决策反转：代价 + 四类别各取 1 张**都已建模**
 
-        通用分支只看第一个类别短语，产出 `search_trainer:1` —— 张数（4→1）
-        与类别（逐类各一→任一训练家）双错，属静默削弱。
+        旧断言要求「多类别并列检索 → 整卡未建模」，理由是通用分支只看第一个
+        类别短语（4→1 张、逐类→任一，双错）。第七十九批新增引擎
+        `search_multi:<sel>:<k>` 精确执行「逐类别各取 k 张」，旧断言随之
+        改为锁定新 tag；代价 `discard:3` 仍必须保留（不得变成免费）。
         """
         m = _m(SECRET, kind="item")
-        self.assertEqual(m["tags"], [])
+        self.assertEqual(m["tags"],
+                         ["search_multi:item+tool+supporter+stadium:1"])
         self.assertEqual(m["play_cost"], "discard:3")
-        self.assertTrue(any("多类别并列检索" in u["reason"]
-                            for u in m["unsupported"]))
+        self.assertEqual(m["unsupported"], [])
 
     def test_blowtorch_energy_cost_modeled(self):
         """Blowtorch（第三十八批）：带属性的代价 + 主效果「二选一」都已建模

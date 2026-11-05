@@ -3,7 +3,8 @@
 | 文档 | 内容 | 状态 |
 |------|------|------|
 | [`architecture.md`](architecture.md) | **架构总览**：monorepo 依赖图 / 请求链路 / 运行时数据与配置 / LLM 数据链路 / 测试与 CI | ✅ 已补齐 |
-| [`RULES_RUNBOOK_B90_PLUS.md`](RULES_RUNBOOK_B90_PLUS.md) | **规则建模运行档案（第九十批起）**：44 批编排、每批卡清单 `(series, number)`、7 步固定工作流、DoD、偏差处理、结构性边界 6 张 | 🔵 现行 · **执行依据** |
+| [`RULES_RUNBOOK_B90_PLUS.md`](RULES_RUNBOOK_B90_PLUS.md) | **规则建模运行档案（第九十批起）**：44 批编排、每批卡清单 `(series, number)`、7 步固定工作流、DoD、偏差处理、结构性边界 6 张。**自动生成，勿手改** | 🔵 现行 · **执行依据** |
+| [`runbook_batches.json`](runbook_batches.json) | **运行档案的数据真相**：批次 → 卡 → 状态（`status` / `actual_pool` / `actual_refused`）。改进度只改这里，再跑 `render_runbook.py` | 🔵 现行 · 单一数据源 |
 | [`RULES_COMPLETION_PLAN.md`](RULES_COMPLETION_PLAN.md) | **规则建模历史台账**：逐批落地卡、静默缺陷修复记录、指标变化（第八十九批及之前） | ✅ 只追加 |
 | [`COMPLIANCE.md`](COMPLIANCE.md) | 合规 6.1（内容）/ 6.2（数据隐私）实现状态、脱敏与审计、上线前自查清单 | ✅ 现行 |
 | 引擎规则边界 | v1 简化子集与官方规则差异清单 | 见 `packages/engine/README.md`「规则边界」（**不迁入 docs/**，避免两处维护） |

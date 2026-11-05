@@ -2188,6 +2188,17 @@ class Battle:
             placed = self._trainer_discard_all(p, tag, hi)
         elif tag.startswith("mill:"):
             placed = self._trainer_mill(tag)
+        elif tag.startswith("prize_bonus:"):
+            # 第八十九批（2026-11-05）：本回合多拿奖赏（Briar「白蕾」）。
+            # 设为**本回合**旗标（`prize_bonus_until == turn_number`），在
+            # `_resolve_ko` 结算奖赏时按条件消费；turn_number 每回合 +1 → 过期
+            # 自动失效（无需显式清）。
+            _pb = tag.split(":")
+            p.prize_bonus_n = (int(_pb[1]) if len(_pb) > 1 and _pb[1].isdigit()
+                               else 0)
+            p.prize_bonus_tera = bool(len(_pb) > 2 and _pb[2] == "tera")
+            p.prize_bonus_until = self.turn_number
+            placed = f"prize bonus {p.prize_bonus_n} this turn"
         elif tag.startswith("fx:"):
             placed = families.apply_action(
                 self, tag, {"kind": "trainer", "card": c, "action": action,
@@ -6439,7 +6450,7 @@ class Battle:
 
             elif tag.startswith("knockout:"):
                 # 招式击倒（2026-10-28 第九批）
-                if self._apply_knockout(tag, action, _opp_blocked):
+                if self._apply_knockout(tag, action, _opp_blocked, attacker):
                     return
             elif tag.startswith("dmg_plus:") and ":recoil:" in tag:
                 # 可选加伤 + 反伤（第四十七批，Gurdurr / Dondozo ex）：
@@ -7246,7 +7257,8 @@ class Battle:
             return self._resolve_self_ko(holder)
         return False
 
-    def _apply_knockout(self, tag: str, action: Optional[dict], blocked) -> bool:
+    def _apply_knockout(self, tag: str, action: Optional[dict], blocked,
+                         attacker: Optional["FieldPokemon"] = None) -> bool:
         """``knockout:<scope>`` —— 招式**直接击倒**（2026-10-28 第九批）
 
         scope：
@@ -7256,6 +7268,10 @@ class Battle:
           ``opp_all``              **每一只**满足限定的对手宝可梦（第五十五批）
           ``opp_counters:<n>``     对手「恰好 n 个伤害指示物」的 1 只
           ``both_active``          双方战斗位同时被击倒
+          ``least_hp``             场上（己方+对手）**剩余 HP 最少**者，
+                                   排除「this Pokémon」(attacker)（第八十六批，
+                                   Inteleon「Bring Down」）。确定性默认：并列时
+                                   优先对手战斗位；其次对手后备，再次己方。
 
         限定（可叠加在 opp_active / opp_bench / opp_any / opp_all 后）：
           ``basic``            只挑基础宝可梦
@@ -7291,6 +7307,36 @@ class Battle:
                 if self.finished:
                     return True
             return False
+
+        if scope == "least_hp":
+            # 「Choose a Pokémon in play (yours or your opponent's) that has the
+            #  least HP remaining, except for this Pokémon, and it is Knocked
+            #  Out.」（Inteleon「Bring Down」，第八十六批）。遍历双方场上，
+            #  排除「this Pokémon」(attacker)，选 remaining HP 最小者击倒。
+            #  确定性默认：并列时优先对手战斗位→对手后备→己方（先遍历 opp）。
+            _cands = []
+            for owner, pl in ((1 - self.current, opp), (self.current, me)):
+                fp = pl.active
+                if fp is not None and not fp.is_ko:
+                    _cands.append((owner, fp))
+                for fp in pl.bench:
+                    if fp is not None and not fp.is_ko:
+                        _cands.append((owner, fp))
+            if attacker is not None:
+                _cands = [(o, fp) for o, fp in _cands
+                          if id(fp) != id(attacker)]
+            if not _cands:
+                self._log("no_effect", {"tag": tag,
+                                        "reason": "除自身外无场上宝可梦"})
+                return False
+            _cands.sort(key=lambda op: (op[1].hp_remaining,
+                                        0 if op[0] == 1 - self.current else 1))
+            _owner, fp = _cands[0]
+            if _owner != self.current and blocked(fp):
+                self._log("blocked", {"target": fp.name, "by": "knockout"})
+                return False
+            _ko_one(_owner, fp)
+            return self.finished
 
         if scope == "opp_active":
             pool = [(0, opp.active)] if opp.active is not None else []
@@ -7431,9 +7477,12 @@ class Battle:
         # 特殊能量修正（Legacy Energy）：仅限「被对手招式伤害击倒」，每局一次
         if self._ko_from_attack:
             give = max(0, give + special_energy.prize_delta(self, fp))
-        # 被击倒触发：多取奖赏（Togekiss「Wonder Kiss」，只在**战斗位**被击倒时）
-        if _was_active:
-            give = max(0, give + self._ko_prize_bonus(owner))
+        # 被击倒触发：多取奖赏（Togekiss「Wonder Kiss」仅战斗位 / Hydreigon ex
+        # 「Greedy Eater」对手基础宝可梦任意位置，第八十七批）
+        give = max(0, give + self._ko_prize_bonus(owner, fp, _was_active))
+        # 第八十九批：本回合训练家奖赏加成（Briar「Tera」）
+        give = max(0, give + self._trainer_prize_bonus(owner, _attacker,
+                                                       _was_active))
         opp.prizes_left = max(0, opp.prizes_left - give)
         opp.prizes_taken_this_turn += give     # 「上回合取走几张」记账
         self._log("prize", {"player": 1 - owner, "take": give,
@@ -7474,12 +7523,17 @@ class Battle:
                 if self.finished:
                     return
 
-    def _ko_prize_bonus(self, owner: int) -> int:
-        """被击倒触发：**取奖赏方**因对手战斗位被击倒而多取 N 张
+    def _ko_prize_bonus(self, owner: int, fp: FieldPokemon,
+                         was_active: bool) -> int:
+        """被击倒触发：**取奖赏方**因对手宝可梦被击倒而多取 N 张
 
-        卡面原型（Togekiss「Wonder Kiss」）：「When your opponent's Active Pokémon
-        is Knocked Out, flip a coin. If heads, take 1 more Prize card. The effect
-        doesn't stack.」→ 只取**第一条**命中的特性（不叠加）。
+        卡面原型：
+          · Togekiss「Wonder Kiss」（plain / ``coin``）：仅对手**战斗位**被击倒时。
+          · Hydreigon ex「Greedy Eater」（``opp_basic``，第八十七批）：被击倒的是
+            对手**基础**宝可梦（任意位置，含后备）即触发。
+
+        ``fp`` 为被击倒的宝可梦（属 ``owner`` 方，即取奖赏方的对手）；``was_active``
+        标记其是否处于战斗位。只取**第一条**命中的特性（不叠加）。
         """
         taker = 1 - owner
         for holder in self.players[taker].all_field():
@@ -7493,7 +7547,16 @@ class Battle:
                 n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
                 if n <= 0:
                     continue
-                if len(parts) > 2 and parts[2] == "coin":
+                conds = parts[2:]
+                if "opp_basic" in conds:
+                    # 对手基础宝可梦被击倒（任意位置，含后备）才触发
+                    if getattr(fp.pdef, "stage", 0) != 0:
+                        continue
+                else:
+                    # 默认（Togekiss「Wonder Kiss」）：仅对手战斗位被击倒
+                    if not was_active:
+                        continue
+                if "coin" in conds:
                     res = "heads" if self.rng.random() < 0.5 else "tails"
                     self._log("coin", {"player": taker, "result": res,
                                        "tag": tag})
@@ -7503,6 +7566,29 @@ class Battle:
                                             "from": holder.name, "n": n})
                 return n
         return 0
+
+    def _trainer_prize_bonus(self, owner: int, attacker: Optional[FieldPokemon],
+                              was_active: bool) -> int:
+        """本回合训练家奖赏加成（Briar「白蕾」，第八十九批）
+
+        「During this turn, if your opponent's Active Pokémon is Knocked Out by
+         damage from an attack used by your Tera Pokémon, take N more Prize
+         card.」—— 只在**本回合**（`prize_bonus_until == turn_number`）、被击倒
+        的是对手**战斗位**、且攻击方为 Tera 宝可梦时触发。
+        """
+        taker = 1 - owner
+        t = self.players[taker]
+        n = int(getattr(t, "prize_bonus_n", 0) or 0)
+        if n <= 0 or int(getattr(t, "prize_bonus_until", -1)) != self.turn_number:
+            return 0
+        if not was_active:
+            return 0
+        if getattr(t, "prize_bonus_tera", False):
+            if attacker is None or "tera" not in str(
+                    getattr(attacker.pdef, "category", "") or "").lower():
+                return 0
+        self._log("prize_bonus", {"player": taker, "n": n})
+        return n
 
     def _ko_prize_reduction(self, owner: int, fp: FieldPokemon) -> int:
         """被击倒方的「对手**少拿**奖赏卡」钩子 → 减少张数（第五十批）

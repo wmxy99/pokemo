@@ -154,7 +154,11 @@ _FIELD_NAMED_DMG_RE = re.compile(
 
 
 def _norm(s: str) -> str:
-    return (s or "").replace("\u2019", "'").lower()
+    # 还原弯撇号（’→'）与**不间断空格**（\xa0 → 普通空格）：真实卡池里
+    # 「in play\xa0(yours …」这类 NBSP 会让整句正则静默失配（Inteleon「Bring
+    # Down」实测），表现为「明明写了规则却对不上账」。
+    return ((s or "").replace("\u2019", "'").replace("\u00a0", " ")
+            .lower())
 
 
 def _want_snipe(tgt: str, per: int):
@@ -1381,6 +1385,19 @@ def audit_energy_cost(card_name: str, item_name: str, desc: str,
     if hand_tags and not re.search(r"\benergy\b", d, re.I):
         errs.append(f"{card_name} · {item_name}：卡面无能量文本，却出现 "
                     f"{hand_tags} —— 认领越界")
+    # ⑥ 属性不符（第八十八批）：卡面写「Basic {G} Energy card from your hand」
+    # 却落成 `discard_hand_energy:N:type:fire` —— 会弃错属性的能量（静默算错）。
+    for t in hand_tags:
+        mt = re.search(r":type:([a-z]+)", t)
+        if not mt:
+            continue
+        got_type = mt.group(1).lower()
+        ms = re.search(r"basic \{([a-z])\} energy", d, re.I)
+        if ms:
+            want = _EN_LETTER.get(ms.group(1).upper())
+            if want and want != got_type:
+                errs.append(f"{card_name} · {item_name}：`{t}` 属性 {got_type} "
+                            f"与卡面 {{{ms.group(1)}}} 不符")
     return errs
 
 
@@ -1678,6 +1695,11 @@ _KO_TEXT = {
     "opp_active:if:senergy": (
         r"if your opponent'?s active pok[eé]mon has any special energy attached, "
         r"it is knocked out"),
+    # 第八十六批：确定性「剩余 HP 最少者」（Inteleon「Bring Down」）。
+    # （normalize 后撇号为直撇、空白折叠；括号按字面转义。）
+    "least_hp": (
+        r"choose a pok[eé]mon in play \(yours or your opponent'?s\) that has the "
+        r"least hp remaining, except for this pok[eé]mon, and it is knocked out"),
 }
 
 
@@ -1720,12 +1742,24 @@ def audit_knockout(card_name: str, item_name: str, desc: str,
     if re.search(r"knock out", low) and not kos:
         errs.append(f"{card_name} · {item_name}：卡面写了 Knock Out，"
                     f"却没有 knockout tag（击倒被静默丢弃）")
+    # 第八十六批：确定性「least HP remaining」击倒句式（Inteleon「Bring Down」）
+    # 不带 tag 时无法被通用「knock out」正则捕获（卡面用「… and it is Knocked
+    # Out」被动语态）→ 单独守卫，避免该句式被静默丢效果。
+    if (re.search(r"choose a pok[eé]mon in play.*least hp remaining.*"
+                  r"and it is knocked out", low)
+            and not any("least_hp" in t for t in kos)):
+        errs.append(f"{card_name} · {item_name}：卡面「least HP remaining」击倒"
+                    f"句式未产出 knockout:least_hp tag（击倒被静默丢弃）")
     # 被击倒**触发**（第十批）：tag 与卡面必须逐项对上
     for tag in (str(t) for t in effects):
         if tag.startswith("ko_prize_plus:"):
             m = re.search(r"take (\d+) more prize card", low)
             if not m or f"ko_prize_plus:{int(m.group(1))}" not in tag:
                 errs.append(f"{card_name} · {item_name}：`{tag}` 与卡面不符")
+            elif "opp_basic" in tag and "basic pokémon" not in low:
+                # 第八十七批：Hydreigon ex「Greedy Eater」限定「对手基础宝可梦」
+                errs.append(f"{card_name} · {item_name}：`{tag}` 含 opp_basic "
+                            f"但卡面无「Basic Pokémon」")
         elif tag.startswith("on_ko:counter:"):
             m = re.search(r"put (\d+) damage counters? on the attacking pok",
                           low)
@@ -3391,6 +3425,60 @@ def audit_batch80_84(card_name: str, item_name: str, desc: str,
     return errs
 
 
+_B85_KPM = re.compile(
+    r"knocked out by damage from an attack from your opponent'?s pok[eé]mon"
+    r"(?:, and if you have any .+? in play,)?,? "
+    r"(?:your opponent|that player) "
+    r"(?:takes? 1 fewer prize cards?|can'?t take any prize cards?)", re.I)
+
+
+def audit_batch85(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """第八十五批对账：对手宝可梦被击倒→少拿奖赏，必须产 `ko_prize_minus:*`
+
+    反向守卫：卡面命中「by damage from an attack from your opponent's Pokémon …
+    that player takes 1 fewer Prize card」句式，却落 `unsupported`（或别的 tag）
+    就是静默丢效果。引擎 `_ko_prize_reduction` 的 tool 形态已承载
+    `ko_prize_minus:1`（Lillie's Pearl）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in effects]
+    if _B85_KPM.search(d) and not any(t.startswith("ko_prize_minus:")
+                                      for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面「对手宝可梦被击倒→少拿"
+                    f"奖赏」应产 `ko_prize_minus:*` tag，实际 {tags}")
+    return errs
+
+
+_B89_PB = re.compile(
+    r"during this turn, if your opponent'?s active pok[eé]mon is knocked out by "
+    r"damage from an attack used by your (tera|n'?s) pok[eé]mon, take (\d+) "
+    r"more prize card", re.I)
+
+
+def audit_batch89(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """第八十九批对账：训练家「本回合多拿奖赏」→ `prize_bonus:N:<scope>`
+
+    卡面：「During this turn, if your opponent's Active Pokémon is Knocked Out by
+    damage from an attack used by your (Tera|N's) Pokémon, take N more Prize
+    card.」（Briar / Anthea & Concordia）。落后即整卡丢效果（少拿奖赏）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in effects]
+    m = _B89_PB.search(d)
+    if not m:
+        return errs
+    scope = "tera" if m.group(1).lower() == "tera" else "nteam"
+    want = f"prize_bonus:{int(m.group(2))}:{scope}"
+    if want not in tags:
+        errs.append(f"{card_name} · {item_name}：卡面「本回合多拿奖赏」应产 "
+                    f"`{want}`，实际 {tags}")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3451,6 +3539,7 @@ def main() -> int:
                 errs += audit_batch68_77(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch79(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch80_84(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch85(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3483,6 +3572,10 @@ def main() -> int:
                                   [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
+            errs += audit_batch85(c["name"], c["name"], _cdesc,
+                                 [_ctag] if _ctag else [])
+            errs += audit_batch89(c["name"], c["name"], _cdesc,
+                                 [_ctag] if _ctag else [])
         # 化石卡：训练家条目带 `fossil` 上场形态（其特性挂在 fossil.abilities 下）
         fossil = c.get("fossil") or {}
         for it in fossil.get("abilities") or []:

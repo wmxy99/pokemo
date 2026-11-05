@@ -711,7 +711,7 @@ def _detect_ko_prize_minus(text: str, kind: str) -> list:
     只收**四种已确认条件组合**；其余写法（别的数量、别的条件）一律不认领 ——
     奖赏数是胜负量纲，估错比不建模危险得多。
     """
-    if kind not in ("ability", "tool"):
+    if kind not in ("ability", "tool", "item"):
         return []
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
     # 「The effect of <Name> doesn't stack.」是**叠加限制**而非条件：引擎本来就不
@@ -2130,8 +2130,19 @@ _FIRST_TURN_ATTACK_RE = re.compile(
 # 二者都不满足此语义 → 如实登记，不静默按近似执行。
 _TYPED_HAND_DISCARD_RE = re.compile(
     r"discard \d+ basic \{[a-z]\} energy cards? from your hand", re.I)
+# 第八十八批（2026-11-05）：单数形态「Discard a Basic {G} Energy card from your
+# hand.」—— 上面那条要求数字，单数（a/an）会漏认领 → 整卡不收。引擎
+# `discard_hand_energy:1:type:<c>[:required]` 已支持该弃置来源+属性限定。
+_TYPED_HAND_DISCARD_ONE_RE = re.compile(
+    r"discard (?:a|an) basic \{[a-z]\} energy card from your hand", re.I)
 _FAILED_DISCARD_GATE_RE = re.compile(
     r"if you can'?t discard .{0,40}this attack does nothing", re.I)
+# 第八十八批（2026-11-05）：单数手牌弃能常写「If you can't, this attack does
+# nothing.」（Decidueye「Power Shot」，伤害 170）。与上面那条**同一语义**，只是
+# 省略了 discard 宾语。⚠ 仅用于带类型手牌弃能分支的 `:required` 判定，**不并入**
+# 全局失败门 —— 否则「无 typed 弃能」的招式会被误登记为 B5 未建模。
+_FAILED_COST_NOTHING_RE = re.compile(
+    r"if you can'?t, this attack does nothing", re.I)
 # 「弱点 / 抗性无视」（2026-10-27）：引擎在伤害结算时跳过对应步骤
 # （`ignore_weakness` / `ignore_resistance`，见 rules.apply_weakness_resistance）。
 # 只认**无条件**的「This attack's/This damage isn't affected by …」写法。
@@ -3146,6 +3157,41 @@ def _detect_borrow(text: str, kind: str) -> list:
     return []
 
 
+# ---------------- 训练家「本回合多拿奖赏」（2026-11-05 第八十九批） ----------------
+# 「During this turn, if your opponent's Active Pokémon is Knocked Out by damage
+#  from an attack used by your Tera Pokémon, take N more Prize card.」（Briar
+#  「白蕾」）。Anthea & Concordia 同形但限定「your N's Pokémon」，且带「6 张具名
+#  宝可梦在场」的前置条件（gate 未建模，B4）→ 只映射效果侧，gate 侧照旧拒收。
+_TRAINER_PRIZE_BONUS_RE = re.compile(
+    r"during this turn, if your opponent'?s active pok[eé]mon is knocked out by "
+    r"damage from an attack used by your (tera|n'?s) pok[eé]mon, take (\d+) "
+    r"more prize card", re.I)
+
+
+def _detect_prize_bonus(text: str, kind: str) -> list:
+    """训练家卡级：本回合对手战斗位被 (Tera / N's) 招式击倒 → 多拿 N 张奖赏
+
+    → ``prize_bonus:<n>:<tera|nteam>``（训练家卡级 tag，引擎按**本回合旗标**
+    在 `_resolve_ko` 结算奖赏时消费）。
+    """
+    if kind not in ("supporter", "item", "stadium", "tool"):
+        return []
+    t = _norm_apostrophe(text or "")
+    # ⚠ 前置条件守卫：`_split_play_gate` 已把**能识别**的 gate 剥走；若这里仍残留
+    # 「You can use this card only if …」，说明是**未建模的前置条件**（Anthea &
+    # Concordia「6 张具名宝可梦在场」，B4）。此时**绝不认领** —— 一旦 early return
+    # 就会把这句未建模的 gate 静默丢掉，卡在没有前置条件下也能打出（+3 奖赏的
+    # 静默 buff）。整卡如实未建模。
+    if re.search(r"can use this card only if", t, re.I):
+        return []
+    m = _TRAINER_PRIZE_BONUS_RE.search(t)
+    if not m:
+        return []
+    scope = "tera" if m.group(1).lower() == "tera" else "nteam"
+    return [act("rule", None, "any",
+                {"prize_bonus": int(m.group(2)), "scope": scope})]
+
+
 def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     """规则后端（英文卡面）：抽取 spec（伤害/指示物/抽弃/检索/回复/附能/状态/
     互换/击倒/静态规则 + 触发时机）"""
@@ -3268,6 +3314,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _kpm:
         return {"kind": kind, "name": name, "trigger": "static",
                 "conditions": conditions, "actions": _kpm,
+                "source_text": str(text or ""), "citations": []}
+    # 训练家「本回合多拿奖赏」（2026-11-05 第八十九批）：Briar / Anthea & Concordia
+    _pb = _detect_prize_bonus(t, kind)
+    if _pb:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _pb,
                 "source_text": str(text or ""), "citations": []}
     # 「Flip a coin until you get tails」+ **非伤害**子效果（2026-11-02 第四十批）：
     # 张数结算时才知道，通用 mill / 检索分支会把它们折成常数（Tyrantrum 被折成
@@ -3878,20 +3930,24 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     elif (_m := _EN_DISCARD_ALL_ENERGY_RE.search(t)):
         actions.append(act("discard", None, "self", {"card_type": "energy",
                                                      "all": True}))
-    elif (_m := _TYPED_HAND_DISCARD_RE.search(t)) \
+    elif ((_m := _TYPED_HAND_DISCARD_RE.search(t))
+          or (_m := _TYPED_HAND_DISCARD_ONE_RE.search(t))) \
             and not _in_coin_branch(t, _m.start()):
         # B3：「Discard 2 Basic {G} Energy cards from your hand.」
+        # 第八十八批：单数「Discard a Basic {G} Energy card from your hand.」
         # 必须在通用 `discard N energy` 之前判定 —— 否则会退化成
         # 「弃任意手牌能量」，把火能量当草能量弃掉（静默算错）。
-        n = int(re.search(r"discard\s+(\d+)", _m.group(0), re.I).group(1))
+        _nm = re.search(r"discard\s+(\d+)", _m.group(0), re.I)
+        n = int(_nm.group(1)) if _nm else 1
         pt = _EN_ENERGY_LETTER.get(
             re.search(r"\{([a-z])\}", _m.group(0), re.I).group(1).upper())
         if pt is None:
             actions.append(act("rule", None, "hand",
                                {"note": "手牌弃能属性符号未识别（B4）"}))
         else:
-            required = bool(_FAILED_DISCARD_GATE_RE.search(
-                _norm_apostrophe(t)))
+            _nt = _norm_apostrophe(t)
+            required = bool(_FAILED_DISCARD_GATE_RE.search(_nt)
+                            or _FAILED_COST_NOTHING_RE.search(_nt))
             actions.append(act("discard", n, "hand",
                                {"hand_energy_type": pt,
                                 "required": required}))
@@ -6316,6 +6372,15 @@ _KO_PATTERNS = (
     (r"knock out each of your opponent'?s pok[eé]mon that has (\d+) hp or less "
      r"remaining",
      lambda m: f"opp_all:if:hp_le:{int(m.group(1))}", False),
+    # ---- 第八十六批（2026-11-05）：「least HP remaining」确定性击倒 ----
+    # 「Choose a Pokémon in play (yours or your opponent's) that has the least HP
+    # remaining, except for this Pokémon, and it is Knocked Out.」（Inteleon
+    # 「Bring Down」）。引擎 `knockout:least_hp` 遍历双方场上、排除「this
+    # Pokémon」、选剩余 HP 最小者击倒（确定性默认）。
+    (r"choose a pok[eé]mon in play \(yours or your opponent'?s\) that has the "
+     r"least hp remaining, except for this pok[eé]mon, and it is knocked out",
+     lambda m: "least_hp", False),
+
     # 被动语态：「… your opponent's Active Pokémon is Knocked Out.」
     # ⚠ **必须**落在抛币分支里（Iono's Electrode「Flip a coin. If heads, …」）；
     # 否则它多半是**触发从句**（Togekiss「When your opponent's Active Pokémon is
@@ -6911,6 +6976,16 @@ def _detect_ko_trigger(text: str, kind: str) -> list:
     if m:
         return [act("rule", None, "any",
                     {"ko_prize_plus": int(m.group(1)), "coin": True})]
+    # 第八十七批（2026-11-05）：「If your opponent's Basic Pokémon is Knocked Out
+    # by damage from an attack used by this Pokémon, take 1 more Prize card.」
+    # （Hydreigon ex「Greedy Eater」）。引擎 `_ko_prize_bonus` 新增 `opp_basic`
+    # 限定：被击倒的是**对手基础**宝可梦（任意位置，含后备）才触发。
+    m = re.search(r"if your opponent'?s basic pok[eé]mon is knocked out by "
+                  r"damage from an attack used by this pok[eé]mon, take (\d+) "
+                  r"more prize card", low)
+    if m:
+        return [act("rule", None, "any",
+                    {"ko_prize_plus": int(m.group(1)), "opp_basic": True})]
     m = re.search(r"if this pok[eé]mon is in the active spot and is knocked out "
                   r"by damage from an attack from your opponent'?s pok[eé]mon, "
                   r"put (\d+) damage counters? on the attacking pok[eé]mon", low)
@@ -8899,10 +8974,22 @@ def to_engine_tags(specs: list) -> dict:
                                 f"{_scope}")
                 elif _ptd and _is_placeholder:
                     tags.append(f"pokemon_to_deck:{int(_ptd.group(1))}")
+                elif extra.get("prize_bonus"):
+                    # 第八十九批：训练家本回合多拿奖赏（Briar）。`:tera` = 攻击
+                    # 方须为 Tera 宝可梦；`:nteam` = 须为 N's 宝可梦。
+                    tags.append(f"prize_bonus:{int(extra['prize_bonus'])}:"
+                                f"{extra.get('scope') or 'tera'}")
                 elif extra.get("ko_prize_plus"):
-                    # 被击倒触发：多取奖赏（Togekiss「Wonder Kiss」）
+                    # 被击倒触发：多取奖赏（Togekiss「Wonder Kiss」/
+                    # Hydreigon ex「Greedy Eater」）。`:opp_basic` = 被击倒的
+                    # 是对手基础宝可梦（任意位置）才触发；`:coin` = 抛币命中。
+                    _suf = ""
+                    if extra.get("opp_basic"):
+                        _suf += ":opp_basic"
+                    if extra.get("coin"):
+                        _suf += ":coin"
                     tags.append(f"ko_prize_plus:{int(extra['ko_prize_plus'])}"
-                                + (":coin" if extra.get("coin") else ""))
+                                + _suf)
                 elif extra.get("on_ko_counter"):
                     # 自身被击倒时反制攻击方（Maractus）
                     tags.append(f"on_ko:counter:{int(extra['on_ko_counter'])}")
@@ -9493,12 +9580,13 @@ def to_engine_tags(specs: list) -> dict:
                 # 招式击倒（2026-10-28 第九批）：`knockout:<scope>`
                 # scope：opp_active[:basic|if:senergy] · opp_bench[:basic] ·
                 #        opp_any · opp_all[:if:hp_le:<n>] ·
-                #        opp_counters:<n> · both_active
+                #        opp_counters:<n> · both_active ·
+                #        least_hp（第八十六批：剩余 HP 最少者，排除自身）
                 scope = str(extra.get("scope") or "")
                 if scope.split(":")[0] not in ("opp_active", "opp_bench",
                                                "opp_any", "opp_all",
-                                               "opp_counters",
-                                               "both_active"):
+                                               "opp_counters", "both_active",
+                                               "least_hp"):
                     unsupported.append(
                         {"type": t, "reason": f"击倒目标范围未识别：{scope}"})
                 else:

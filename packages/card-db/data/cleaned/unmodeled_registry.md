@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-05 10:09:25
+- 生成时间：2026-11-05 11:22:59
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **147** 条 · 已映射 tag 1438 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1117 张**
-- 解析层面「无未建模动作」卡：977 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **142** 条 · 已映射 tag 1444 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1122 张**
+- 解析层面「无未建模动作」卡：982 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -29,17 +29,16 @@
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
 | B4 | coin_flip | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | type:ability_cost | `ability_cost` | 1 | 1 | 特性发动代价形态未识别（B4） |
-| B5 | S6 | `rule` | 38 | 38 | 静态/未建模（英文） |
-| B5 | S5 | `rule` | 11 | 11 | 静态/未建模（英文） |
-| B5 | S2 | `rule` | 6 | 6 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 37 | 37 | 静态/未建模（英文） |
+| B5 | S5 | `rule` | 9 | 9 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
+| B5 | S2 | `rule` | 5 | 5 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 3 | 3 | 条件伤害缩放：条件未识别（引擎无该条件） |
 | B5 | S6 | `rule` | 2 | 2 | 首回合招式使用限制（需招式静态条件层，B5） |
 | B5 | S6 | `rule` | 2 | 2 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B5 | S3 | `rule` | 2 | 2 | 场地形态未建模（S3 未覆盖） |
 | B5 | S4 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
-| B5 | S6 | `rule` | 1 | 1 | 未建模的招式失败门（条件不满足则此招式无效，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（of your opponent's Pokémon {ex） |
 | B5 | S2 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S1 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
@@ -100,29 +99,29 @@
 
 - `Lunatone`（月石）：Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t
 
-**B5 · S6**（38 条）
+**B5 · S6**（37 条）
 
 - `Shiftry`（狡猾天狗）：Choose 3 of your opponent’s Benched Pokémon. If you do, shuffle all of your opponent’s Benched Pokémon that you didn’t choose, and all cards attached to those P
 - `Milotic`（美纳斯）：Your opponent’s Pokémon in play and all attached cards can’t be put into your opponent’s hand.
 - `Palafin ex`（海豚侠 ex）：Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability.
 
-**B5 · S5**（11 条）
+**B5 · S5**（9 条）
 
 - `Hoothoot`（咕咕）：Your opponent reveals their hand.
 - `Espurr`（妙喵）：Your opponent reveals their hand.
 - `N’s Sigilyph`（N 的象征鸟）：If you use this attack when you have exactly 1 Prize card remaining, you win this game.
-
-**B5 · S2**（6 条）
-
-- `Rotom ex`（洛托姆 ex）：Each of your Pokémon that has "Rotom" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Poké
-- `Heavy Baton`（沉重接力棒）：If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's
-- `Lillie’s Pearl`（莉莉艾的珍珠）：If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card.
 
 **B5 · S6**（5 条）
 
 - `Lillie’s Ribombee`（莉莉艾的蝶结萌虻）：When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of B
 - `Team Rocket's Honchkrow`（火箭队的乌鸦头头）：You may discard any number of Supporter cards that have “Team Rocket” in their name from your hand, and this attack does 60 damage for each card you discarded i
 - `Doublade`（双剑鞘）：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
+
+**B5 · S2**（5 条）
+
+- `Rotom ex`（洛托姆 ex）：Each of your Pokémon that has "Rotom" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Poké
+- `Heavy Baton`（沉重接力棒）：If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's
+- `Cynthia's Power Weight`（竹兰的力量负重）：The Cynthia's Pokémon this card is attached to gets +70 HP.
 
 **B5 · S6**（3 条）
 
@@ -152,10 +151,6 @@
 **B5 · S6**（1 条）
 
 - `Iron Crown ex`（铁头壳 ex）：Attacks used by your Future Pokémon, except any Iron Crown {ex}, do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).
-
-**B5 · S6**（1 条）
-
-- `Decidueye`（狙射树枭）：Discard a Basic {G} Energy card from your hand. If you can’t, this attack does nothing.
 
 **B5 · S6**（1 条）
 

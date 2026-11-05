@@ -1891,5 +1891,109 @@ class TestAuditBatch80_84(unittest.TestCase):
         self.assertTrue(any("逐只差额" in e for e in errs), errs)
 
 
+# ------------------------------ 第八十五批 ------------------------------
+class TestBatch85(unittest.TestCase):
+    KPM = ("If the Lillie's Pokémon this card is attached to is Knocked Out by "
+           "damage from an attack from your opponent's Pokémon, that player takes "
+           "1 fewer Prize card.")
+
+    def test_lillies_pearl_ok(self):
+        self.assertEqual(A.audit_batch85("Lillie's Pearl", "X", self.KPM,
+                                        ["ko_prize_minus:1"]), [])
+
+    def test_lillies_pearl_missing_flagged(self):
+        errs = A.audit_batch85("Lillie's Pearl", "X", self.KPM,
+                               ["unsupported"])
+        self.assertTrue(any("ko_prize_minus" in e for e in errs), errs)
+
+
+class TestBatch86(unittest.TestCase):
+    TXT = ("Choose a Pokémon in play (yours or your opponent's) that has the "
+           "least HP remaining, except for this Pokémon, and it is Knocked Out.")
+    BAD = ("Choose a Pokémon in play (yours or your opponent's) that has the "
+           "most HP remaining, except for this Pokémon, and it is Knocked Out.")
+
+    def test_least_hp_ok(self):
+        self.assertEqual(
+            A.audit_knockout("Inteleon", "Bring Down", self.TXT,
+                             ["knockout:least_hp"]), [])
+
+    def test_least_hp_mismatch_flagged(self):
+        # 卡面写的是 most（语义相反）→ 不应落到 least_hp
+        errs = A.audit_knockout("Inteleon", "Bring Down", self.BAD,
+                                ["knockout:least_hp"])
+        self.assertTrue(any("least_hp" in e or "目标" in e for e in errs), errs)
+
+    def test_surface_without_tag_flagged(self):
+        # 卡面写了 Knock Out 却没 tag → 静默丢效果
+        errs = A.audit_knockout("Inteleon", "Bring Down", self.TXT, [])
+        self.assertTrue(any("knockout" in e for e in errs), errs)
+
+    def test_nbsp_surface_matches(self):
+        # 卡面含**不间断空格**（\xa0）也要能对上（真实卡池 Inteleon 实测）
+        txt = ("Choose a Pokémon in play\u00a0(yours or your opponent's) that "
+               "has the least HP remaining, except for this Pokémon, and it is "
+               "Knocked Out.")
+        self.assertEqual(
+            A.audit_knockout("Inteleon", "Bring Down", txt,
+                             ["knockout:least_hp"]), [])
+
+
+class TestBatch87(unittest.TestCase):
+    TXT = ("If your opponent's Basic Pokémon is Knocked Out by damage from an "
+           "attack used by this Pokémon, take 1 more Prize card.")
+
+    def test_opp_basic_ok(self):
+        self.assertEqual(
+            A.audit_knockout("Hydreigon ex", "Greedy Eater", self.TXT,
+                             ["ko_prize_plus:1:opp_basic"]), [])
+
+    def test_opp_basic_no_surface_flagged(self):
+        # tag 含 opp_basic 但卡面无「Basic Pokémon」→ 静默错映射
+        errs = A.audit_knockout("Hydreigon ex", "Greedy Eater",
+                                "If your opponent's Pokémon is Knocked Out by "
+                                "damage from an attack used by this Pokémon, "
+                                "take 1 more Prize card.",
+                                ["ko_prize_plus:1:opp_basic"])
+        self.assertTrue(any("opp_basic" in e for e in errs), errs)
+
+
+class TestBatch88(unittest.TestCase):
+    TXT = ("Discard a Basic {G} Energy card from your hand. If you can't, "
+           "this attack does nothing.")
+
+    def test_type_ok(self):
+        self.assertEqual(
+            A.audit_energy_cost("Decidueye", "Power Shot", self.TXT,
+                                ["discard_hand_energy:1:type:grass:required"]),
+            [])
+
+    def test_type_mismatch_flagged(self):
+        # 卡面 {G} 却落成 fire → 弃错属性
+        errs = A.audit_energy_cost("Decidueye", "Power Shot", self.TXT,
+                                   ["discard_hand_energy:1:type:fire:required"])
+        self.assertTrue(any("属性" in e for e in errs), errs)
+
+
+class TestBatch89(unittest.TestCase):
+    TXT = ("During this turn, if your opponent's Active Pokémon is Knocked Out "
+           "by damage from an attack used by your Tera Pokémon, take 1 more "
+           "Prize card.")
+
+    def test_briar_ok(self):
+        self.assertEqual(
+            A.audit_batch89("Briar", "X", self.TXT, ["prize_bonus:1:tera"]), [])
+
+    def test_briar_missing_flagged(self):
+        errs = A.audit_batch89("Briar", "X", self.TXT, ["unsupported"])
+        self.assertTrue(any("prize_bonus" in e for e in errs), errs)
+
+    def test_scope_mismatch_flagged(self):
+        # 卡面是 Tera 却落成 nteam → 静默错映射
+        errs = A.audit_batch89("Briar", "X", self.TXT,
+                               ["prize_bonus:1:nteam"])
+        self.assertTrue(any("prize_bonus" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main()

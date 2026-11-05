@@ -54,12 +54,12 @@ class TestKoPrizeMinus(unittest.TestCase):
         r = _m(LILLIES_PEARL, kind="tool", name="Lillie’s Pearl")
         self.assertEqual(r["tags"], ["ko_prize_minus:1"])
 
-    def test_tool_kind_not_claimed_as_item(self):
-        """道具走 `item` kind 时**不认领** —— 卡级 tag 需要 `tool:` 前缀，
-        在这里产出裸 `ko_prize_minus:` 会被建池判成非法训练家 tag（静默错映射）。"""
+    def test_item_kind_claimed(self):
+        """第八十五批起：道具走 `item` kind 时**也认领**（Lillie's Pearl 的真实
+        kind 就是 `item`）→ `ko_prize_minus:1`。建池侧 `build_trainer` 已同步
+        放行 `ko_prize_minus:` 前缀作为道具的有效 tag，不会判成非法训练家 tag。"""
         r = _m(LILLIES_PEARL, kind="item", name="Lillie’s Pearl")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["ko_prize_minus:1"])
 
     def test_other_counts_not_claimed(self):
         """别的张数（如「takes 2 fewer」）不认领 —— 奖赏数是胜负量纲"""
@@ -71,11 +71,12 @@ class TestKoPrizeMinus(unittest.TestCase):
 
     def test_more_prizes_not_hijacked(self):
         """「take 1 **more** Prize card」是另一条路径（`ko_prize_plus:`），
-        不得被本族当成「少拿」"""
+        不得被本族当成「少拿」。第八十七批起该句式由 `ko_prize_plus` 认领
+        （Hydreigon「Greedy Eater」→ `ko_prize_plus:1:opp_basic`）。"""
         r = _m("If your opponent’s Basic Pokémon is Knocked Out by damage from "
                "an attack used by this Pokémon, take 1 more Prize card.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertFalse(
+            any(t.startswith("ko_prize_minus") for t in r["tags"]), r["tags"])
 
 
 if __name__ == "__main__":

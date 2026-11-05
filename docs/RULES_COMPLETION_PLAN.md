@@ -1,3 +1,25 @@
+## 本轮成果（2026-11-05 · 第八十五~八十九批 · 5 批）
+
+**一句话**：`engine_ready` **1117 → 1122（88.2% → 88.6%）**，池 **1102 → 1107**，
+未建模动作条目 **143 → 138**；对账 **44 类全绿**（batch85–89 各带正+负自测）；
+测试 **2301 → 2327**（engine 1218 · agent 959 · api 138 · gym 12）；**CI 8/8 PASS**；
+**K1 双盲 200 局 0.795（PASS）**；前端 `TRAINER_TAG_DESC` 补 `ko_prize_minus` /
+`prize_bonus`（45 族全通过）。
+
+| 批次 | 主题 | 落地卡（池内） | 顺带修掉的静默缺陷 / 结论 |
+|---|---|---|---|
+| 85 | 道具所附宝可梦被击倒→对手**少拿**奖赏 `ko_prize_minus:1` | 1（Lillie's Pearl） | 引擎 `_ko_prize_reduction` 早已支持该 tool 形态，但解析侧 `_detect_ko_prize_minus` 只认 `ability`/`tool` kind（该卡真实 kind=`item`）→ 整卡不收。三处同步：解析 kind 放行 `item`、`TRAINER_TAGS` 放行 `ko_prize_minus:`、`build_trainer` 道具检查认 `ko_prize_minus:` 前缀。**存量测试 `test_tool_kind_not_claimed_as_item` 断言的是批 50 旧口径，按新行为改写为 `test_item_kind_claimed`** |
+| 86 | 剩余 HP 最少者击倒 `knockout:least_hp` | 1（Inteleon「Bring Down」） | 引擎 `_apply_knockout` 新增 `least_hp` scope：遍历双方场上、**排除 this Pokémon**（调用点把 `attacker` 传进去）、按 `hp_remaining` 升序取第一只（并列优先对手）。**N's Vanilluxe「翻倍指示物」如实拒收**：引擎把指示物与攻击伤害并进 `fp.damage`、无独立字段，翻倍会连攻击伤害一起翻 → 静默语义错误 |
+| 87 | **对手基础**被击倒→多拿 `ko_prize_plus:1:opp_basic` | 1（Hydreigon ex WHT 67「Greedy Eater」） | 旧 `_ko_prize_bonus` 只在**战斗位**被击倒时触发（Togekiss）且不区分类别；新增 `opp_basic`：对手**基础**任意位置（含后备）都触发，普通形态仍限战斗位。`coin` 判定由 `parts[2]=="coin"` 改为 `"coin" in conds`，避免被 `opp_basic` 挤位 |
+| 88 | 单数手牌弃**指定属性**能量 `discard_hand_energy:1:type:<c>[:required]` | 1（Decidueye「Power Shot」） | 引擎攻击侧早已派发 `discard_hand_energy:`，但解析只认 `\d+` 复数（`Discard 2 Basic {G}…`），单数（`a/an`）漏认领→整卡不收。合并复数/单数两条正则；「If you can't, this attack does nothing」用**局部** `_FAILED_COST_NOTHING_RE` 补 `:required`（**不并入全局失败门**，否则无 typed 弃能的招式会被误登记 B5）。对账新增属性校验（`{G}`↔`:type:grass`） |
+| 89 | 训练家**本回合多拿**奖赏 `prize_bonus:<n>:<tera\|nteam>` | 1（Briar「白蕾」） | 新机制：打出时设为**本回合旗标**（`prize_bonus_until == turn_number`，每回合 +1 自动过期），`_resolve_ko` 结算奖赏时按「对手战斗位 + 攻击方为 Tera」消费。`play_gate: opp_prizes_exactly:2` 早已解析。**Anthea & Concordia 如实拒收**：其 gate「6 张具名宝可梦在场」未建模（B4），early return 会把未建模 gate 静默丢掉（无条件 +3 奖赏的静默 buff）→ 先查 `can use this card only if` 残留即整卡不收 |
+
+**本轮一处数据质量修复（影响全部对账）**：审计 `_norm` 现把**不间断空格 `\xa0`** 归一为普通空格 —— 真实卡池 Inteleon 卡面是 `in play\xa0(yours…`，旧 `_norm` 不处理 NBSP，导致整句正则静默失配（表现为「解析侧产了 tag、对账却报不符」）。已补 NBSP 回归用例（`test_nbsp_surface_matches`）。
+
+**口径提醒**：5 批共 5 张目标卡全部进池（1117→1122 / 1102→1107，各 +5）；Anthea 的 `nteam` 效果侧虽已解析，但 gate 未建模 → 卡仍在池外。**只认池与 DB 实测，不认产 tag 数。**
+
+---
+
 ## 本轮成果（2026-11-05 · 第八十~八十四批 · 5 批）
 
 **一句话**：`engine_ready` **1111 → 1117（87.7% → 88.2%）**，池 **1096 → 1102**，

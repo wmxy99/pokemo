@@ -170,6 +170,9 @@ export const TRAINER_TAG_DESC = {
   // 第八十二/八十三批（2026-11-05）：弃牌堆宝可梦洗回 / 检索后弃置
   pokemon_to_deck: (a) => ({ zh: `从弃牌堆把至多 ${argOf(a)} 张宝可梦洗回牌库。`, en: `Shuffle up to ${argOf(a)} Pokémon from your discard pile into your deck.` }),
   search_discard: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张卡并直接弃置，然后洗牌。`, en: `Search your deck for up to ${argOf(a)} cards, discard them, then shuffle.` }),
+  // 第八十五 / 八十九批（2026-11-05）：奖赏卡修正确（少拿 / 本回合多拿）
+  ko_prize_minus: (_a) => ({ zh: '该宝可梦被击倒时，对手少拿奖赏卡（具体限定见卡面）。', en: 'When this Pokémon is Knocked Out, your opponent takes fewer Prize cards (conditions per card text).' }),
+  prize_bonus: (a) => ({ zh: `本回合内，对手战斗宝可梦被指定的己方宝可梦招式击倒时，多拿 ${argOf(a)} 张奖赏卡。`, en: `During this turn, take ${argOf(a)} more Prize card(s) when the opponent’s Active is Knocked Out by the specified Pokémon’s attack.` }),
   energy_move: (a) => ({ zh: `在己方宝可梦之间移动至多 ${argOf(a)} 个能量。`, en: `Move up to ${argOf(a)} Energy between your Pokémon.` }),
   recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),
   search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),

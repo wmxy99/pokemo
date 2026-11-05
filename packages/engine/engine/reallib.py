@@ -49,7 +49,14 @@ _SUPPORTED_TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss",
                            # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 前置条件
                            "recon",
                            # 对手手牌操作（2026-10-30 第三十二批）：**我方选**口径
-                           "opp_hand")
+                           "opp_hand",
+                           # 第八十五批（2026-11-05）：道具所附宝可梦被击倒时对手
+                           # 少拿 1 张奖赏（Lillie's Pearl）。引擎 `_ko_prize_reduction`
+                           # 按 `fp.tool` 前缀读取，被动旗标、不参与训练家效果派发。
+                           "ko_prize_minus",
+                           # 第八十九批（2026-11-05）：训练家「本回合多拿奖赏」
+                           # （Briar）。卡级 tag，引擎按回合旗标消费。
+                           "prize_bonus")
 
 # 基本能量中文名（占位替换时也用中文展示）
 _ENERGY_ZH = {"psychic": "超", "fire": "火", "grass": "草", "darkness": "恶",

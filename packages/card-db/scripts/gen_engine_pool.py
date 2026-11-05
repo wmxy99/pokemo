@@ -100,6 +100,13 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 第五十四批：**双方**各弃手牌到剩 N（Hand Trimmer）。
                 # 前缀不被 `discard:` 覆盖（第 8 位是 `_` 不是 `:`），必须显式列出。
                 "discard_to_both:",
+                # 第八十五批（2026-11-05）：道具所附宝可梦被击倒时对手少拿 1 张奖赏
+                # （Lillie's Pearl）。引擎 `_ko_prize_reduction` 按 `fp.tool` 前缀
+                # 读取，tag 本身以 `ko_prize_minus:` 开头（非 `tool:`），须独立放行。
+                "ko_prize_minus:",
+                # 第八十九批（2026-11-05）：训练家「本回合多拿奖赏」（Briar）。
+                # 卡级 tag，引擎按回合旗标在 `_resolve_ko` 结算时消费。
+                "prize_bonus:",
                 # 化石卡（2026-10-28）：当作 N-HP 基础宝可梦上场
                 "fossil:",
                 # 检视牌库顶（2026-10-30 第二十批）：筛选 + 去向 + 打出前置条件
@@ -438,10 +445,14 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
         if len(st) != 1 or len(tags) != 1:
             return None
     if is_tool:
-        # ⚠ 道具必须**只认 tool: tag**：道具卡面里常夹带「draw / search」等
-        #   触发式子效果，若按普通训练家 tag 准入，就会变成**无条件生效**
-        #   （静默加强）。这里要求：唯一的可执行 tag 必须是 tool:*。
-        tool_tags = [t for t in tags if str(t).startswith("tool:")]
+        # ⚠ 道具必须**只认 tool: tag**（或 `ko_prize_minus:`，见第八十五批）：
+        # 道具卡面里常夹带「draw / search」等触发式子效果，若按普通训练家 tag
+        # 准入，就会变成**无条件生效**（静默加强）。这里要求：唯一的可执行 tag
+        # 必须是 tool:* 或 ko_prize_minus:*（被动奖赏修正，引擎按 `fp.tool` 前缀
+        # 在击倒点读取，不参与 `_do_trainer` 派发）。
+        tool_tags = [t for t in tags
+                     if str(t).startswith("tool:")
+                     or str(t).startswith("ko_prize_minus:")]
         if len(tool_tags) != 1 or len(tags) != 1:
             return None
     # 多 tag 训练家（2026-10-28 第十二批）：引擎的 `TrainerDef.tag` 只有**一个**

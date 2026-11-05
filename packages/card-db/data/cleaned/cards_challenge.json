@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-05 10:09:24",
+  "reparsed_at": "2026-11-05 11:22:58",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1117,
+  "engine_ready": 1122,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1117,
-   "engine_approximated": 1102,
-   "engine_unmatched": 150,
-   "engine_namekey_mismatch": 20
+   "zh_backfill": 1122,
+   "engine_approximated": 1107,
+   "engine_unmatched": 145,
+   "engine_namekey_mismatch": 19
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 138,
-   "engine_tags": 1438,
-   "unsupported": 147,
+   "engine_tags": 1444,
+   "unsupported": 142,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1102,
+  "engine_approximated": 1107,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -18021,14 +18021,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Decidueye@SFA 5",
    "parse": {
     "items": [
      {
@@ -18070,11 +18072,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "discard",
+          "amount": 1,
+          "target": "hand",
           "extra": {
-           "note": "未建模的招式失败门（条件不满足则此招式无效，B5）"
+           "hand_energy_type": "grass",
+           "required": true
           }
          }
         ],
@@ -18082,13 +18085,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "未建模的招式失败门（条件不满足则此招式无效，B5）"
-       }
-      ]
+      "engine_tags": [
+       "discard_hand_energy:1:type:grass:required"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -18116,11 +18116,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "discard",
+        "amount": 1,
+        "target": "hand",
         "extra": {
-         "note": "未建模的招式失败门（条件不满足则此招式无效，B5）"
+         "hand_energy_type": "grass",
+         "required": true
         }
        }
       ],
@@ -18129,14 +18130,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "draw_to:7"
+     "draw_to:7",
+     "discard_hand_energy:1:type:grass:required"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "未建模的招式失败门（条件不满足则此招式无效，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -84261,14 +84258,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Hydreigon ex@WHT 67",
    "parse": {
     "items": [
      {
@@ -84316,22 +84315,21 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "ko_prize_plus": 1,
+           "opp_basic": true
           }
          }
         ],
-        "source_text": "If your opponent’s Basic Pokémon is Knocked Out by damage from an attack used by this Pokémon, take 1 more Prize card."
+        "source_text": "If your opponent’s Basic Pokémon is Knocked Out by damage from an attack used by this Pokémon, take 1 more Prize card.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "ko_prize_plus:1:opp_basic"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -84363,25 +84361,23 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "ko_prize_plus": 1,
+         "opp_basic": true
         }
        }
       ],
-      "source_text": "If your opponent’s Basic Pokémon is Knocked Out by damage from an attack used by this Pokémon, take 1 more Prize card."
+      "source_text": "If your opponent’s Basic Pokémon is Knocked Out by damage from an attack used by this Pokémon, take 1 more Prize card.",
+      "citations": []
      }
     ],
     "errors": [
      "[0] action.type 非法：retreat_lock"
     ],
     "engine_tags": [
-     "retreat_lock:opp:turn"
+     "retreat_lock:opp:turn",
+     "ko_prize_plus:1:opp_basic"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -91340,6 +91336,15 @@
         ],
         "actions": [
          {
+          "type": "discard",
+          "amount": 1,
+          "target": "hand",
+          "extra": {
+           "hand_energy_type": "fighting",
+           "required": false
+          }
+         },
+         {
           "type": "draw",
           "amount": 3,
           "target": "deck"
@@ -91350,6 +91355,7 @@
       ],
       "errors": [],
       "engine_tags": [
+       "discard_hand_energy:1:type:fighting",
        "draw:3"
       ],
       "cost": "",
@@ -91375,6 +91381,15 @@
       ],
       "actions": [
        {
+        "type": "discard",
+        "amount": 1,
+        "target": "hand",
+        "extra": {
+         "hand_energy_type": "fighting",
+         "required": false
+        }
+       },
+       {
         "type": "draw",
         "amount": 3,
         "target": "deck"
@@ -91385,6 +91400,7 @@
     ],
     "errors": [],
     "engine_tags": [
+     "discard_hand_energy:1:type:fighting",
      "draw:3"
     ],
     "unsupported": [
@@ -97763,14 +97779,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Inteleon@MEG 41",
    "parse": {
     "items": [
      {
@@ -97784,11 +97802,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "knockout",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "scope": "least_hp"
           }
          }
         ],
@@ -97796,13 +97814,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "knockout:least_hp"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -97841,11 +97856,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "knockout",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "scope": "least_hp"
         }
        }
       ],
@@ -97871,14 +97886,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "knockout:least_hp",
      "discard_energy:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151825,14 +151836,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Lillie’s Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, that player takes 1 fewer Prize card.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "若此卡所附着的莉莉艾的宝可梦被对手宝可梦的招式伤害击倒，该玩家拿取的奖赏卡减少 1 张。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lillie’s Pearl@JTG 151",
    "parse": {
     "items": [
      {
@@ -151842,60 +151855,56 @@
        {
         "kind": "item",
         "name": "Lillie’s Pearl",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "ko_prize",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "n": 1
           }
          }
         ],
-        "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card."
+        "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "ko_prize_minus:1"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "item",
       "name": "Lillie’s Pearl",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "ko_prize",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "n": 1
         }
        }
       ],
-      "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card."
+      "source_text": "If the Lillie's Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent's Pokémon, that player takes 1 fewer Prize card.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "ko_prize_minus:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -154748,14 +154757,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if your opponent has exactly 2 Prize cards remaining.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当对手的剩余奖赏卡正好为 2 张时，才能使用此卡。\n\n本回合中，若对手的战斗宝可梦被你的太晶宝可梦使用的招式伤害击倒，则多拿取 1 张奖赏卡。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Briar@SCR 132",
    "parse": {
     "items": [
      {
@@ -154773,24 +154784,23 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "prize_bonus": 1,
+           "scope": "tera"
           }
          }
         ],
         "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
+        "citations": [],
         "play_gate": "opp_prizes_exactly:2"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "prize_bonus:1:tera"
+      ],
       "play_cost": "",
       "play_gate": "opp_prizes_exactly:2",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -154805,22 +154815,21 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "prize_bonus": 1,
+         "scope": "tera"
         }
        }
       ],
       "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your Tera Pokémon, take 1 more Prize card.",
+      "citations": [],
       "play_gate": "opp_prizes_exactly:2"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "prize_bonus:1:tera"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

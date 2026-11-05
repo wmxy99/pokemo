@@ -60,6 +60,14 @@ class PlayerState:
     last_turn_ancient_attackers: list = field(default_factory=list)
     prizes_taken_this_turn: int = 0
     prizes_taken_last_turn: int = 0
+    # ---- 本回合多拿奖赏（2026-11-05 第八十九批，Briar）----
+    # 「During this turn, if your opponent's Active Pokémon is Knocked Out by
+    #  damage from an attack used by your Tera Pokémon, take N more Prize card.」
+    # 打出支援者时设为本回合旗标；`prize_bonus_until == self.turn_number`
+    # 表示「仅本回合有效」（turn_number 每回合 +1，过期自动失效）。
+    prize_bonus_n: int = 0
+    prize_bonus_tera: bool = False     # True = 攻击方须为 Tera 宝可梦
+    prize_bonus_until: int = 0
     # ---- 全队限时减伤（2026-11-03 第四十六批，Iron Defender）----
     # 「During your opponent's next turn, all of your {M} Pokémon take N less
     # damage … (This includes new Pokémon that come into play.)」

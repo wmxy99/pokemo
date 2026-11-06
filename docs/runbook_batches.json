@@ -327,10 +327,10 @@
    "id": 98,
    "phase": "P3",
    "theme": "附加伤害目标扩展",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 1,
+   "note": "**落地 2 张**：Shaymin（`snipe:opp_bench:60:1:target:ex`）、Flygon ex（`snipe:opp:100:all:target:ex` + 无视弱抗）——引擎第四十一批就有 `:target:ex` 目标筛选，缺的是「{ex} or/and {V}」并集写法的**短语映射**。**如实拒收 1 张**：Wellspring Mask Ogerpon ex（「可以洗回 3 个能量，若如此做才对后备 +120」= 可选代价与效果耦合，需交互层）。",
    "cards": [
     {
      "name": "Shaymin",
@@ -403,10 +403,10 @@
    "id": 100,
    "phase": "P3",
    "theme": "抛币嵌套子效果",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**落地 1 张**：Vanilluxe（`coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze`）——引擎早已支持多币阈值，缺的是「If **either** of them is heads」这句措辞（此前只认 both/all/at least）。**如实拒收 2 张**：Team Rocket's Great Ball（抛币两侧各检索不同类别，需 coin 嵌套检索）、Lucian（双手牌洗回 + 抛币抽牌，多段复合）。",
    "cards": [
     {
      "name": "Vanilluxe",
@@ -542,10 +542,10 @@
    "id": 105,
    "phase": "P3",
    "theme": "区分基本 / 特殊能量",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "引擎当前不区分基本/特殊能量；压成「任意能量」= 静默放宽。须先补 `is_special` 判定，否则如实拒收。",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Enhanced Hammer（`discard_energy:1:opp:special:any`）——`senergy` 是**卡**列表，引擎本就能区分特殊/基本；缺的是训练家侧出口：该前缀此前只在 `ATTACK_TAG_PREFIXES`，训练家白名单没有 → `build_trainer` 整卡拒收（进池后还会报「未知训练家 tag」）。**如实拒收 1 张**：Megaton Blower（同时弃**全部**道具 + **全部**特殊能量 + 一张场地，需复合训练家 tag）。",
    "cards": [
     {
      "name": "Enhanced Hammer",
@@ -663,10 +663,10 @@
    "id": 110,
    "phase": "P3",
    "theme": "抽牌分支 / 延迟队列",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**落地 1 张**：Team Rocket's Ariana（`draw_to_branch:5:8:if:own_all_name:teamrockets`）——新增「分支替换的抽到 N 张」：两条 `draw_to` 叠加与卡面等价（只补不弃），不需要回合状态。**如实拒收 2 张**：Amarys（回合末延迟弃手牌，需延迟队列）、Lucian（抛币嵌套抽牌）。",
    "cards": [
     {
      "name": "Team Rocket's Ariana",

@@ -70,16 +70,22 @@ class TestSnipeTargetEx(unittest.TestCase):
         self.assertIn("snipe:opp:60:all", r["tags"])
         self.assertNotIn(":target:ex", " ".join(r["tags"]))
 
-    def test_ex_or_v_still_unmodeled(self):
-        """与 {V} 混写 → 引擎无法表达，必须如实不认领"""
-        r = _m(SHAYMIN)
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+    def test_ex_or_v_now_modeled(self):
+        """与 {V} 混写：第九十八批起按 `:target:ex` 建模
 
-    def test_ex_and_v_still_unmodeled(self):
+        旧口径（第四十一批）拒绝它，理由是「引擎没有 V 标记、无法确认意图」。
+        但引擎**四十一批起就有 `:target:ex`**，缺的只是并集写法的短语映射；
+        且本卡池 1267 张**没有 Pokémon V**（`test_batch98_100_110_parse.
+        TestNoVInDataset` 守着这条前提）—— 并集与 {ex} 在当前数据上等价。
+        """
+        r = _m(SHAYMIN)
+        self.assertEqual(r["tags"], ["snipe:opp_bench:60:1:target:ex"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_ex_and_v_now_modeled(self):
         r = _m(FLYGON)
-        self.assertFalse([t for t in r["tags"] if t.startswith("snipe:")])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("snipe:opp:100:all:target:ex", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestEnergySelfToDeck(unittest.TestCase):

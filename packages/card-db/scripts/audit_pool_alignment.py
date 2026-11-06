@@ -184,8 +184,12 @@ def _want_snipe(tgt: str, per: int):
     # 「…Pokémon {ex}」→ 引擎 `:target:ex` 目标筛选（2026-11-03 第四十一批）。
     # ⚠ 只认「**仅** {ex}」：与 {V} 混写（「{ex} or Pokémon {V}」/「{ex} and
     #   Pokémon {V}」）在引擎无法表达 → 继续走下面的 unmodeled 判定。
-    if re.search(r"pok[eé]mon \{ex\}", t) and not re.search(r"\{v\}", t) \
-            and not re.search(r"\{ex\}\s+(?:or|and)\b", t):
+    # 「{ex}」以及「{ex} or/and {V}」都按 `:target:ex` 处理（第九十八批）：
+    # 本卡池无 Pokémon V，并集与 {ex} 等价；先剥 `{V}` 整段再去 `{ex}`，
+    # 否则残留的 `and pokémon {v}` 会掉进下面的「不可表达子集」判定。
+    if re.search(r"pok[eé]mon \{ex\}", t):
+        t = re.sub(r"\s*(?:or|and)?\s*pok[eé]mon\s*\{v\}", "", t, flags=re.I)
+        t = re.sub(r"\s*(?:or|and)\s*$", "", t)
         t = re.sub(r"\s*\{ex\}", "", t)
     if re.search(r"\bitself\b", t) or t.startswith("this pok"):
         return "self"
@@ -460,8 +464,6 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
     # 「Pokémon {ex}」→ 必须有 `:target:ex`（第四十一批）：缺了就会打**非 ex**
     # 的目标（卡面本不允许），属静默超范围。
     if re.search(r"pok[eé]mon \{ex\}", low_clause) \
-            and not re.search(r"\{v\}", low_clause) \
-            and not re.search(r"\{ex\}\s+(?:or|and)\b", low_clause) \
             and not any(":target:ex" in h for h in hits):
         return [f"{card_name} · {item_name}：`{raw[:60]}` 缺 `:target:ex`"
                 f"（只允许选对手的 ex 宝可梦，现为 {hits}）"]

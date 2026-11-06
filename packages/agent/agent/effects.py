@@ -787,6 +787,16 @@ _TURN1_PERMISSION = re.compile(
 _TC_DRAW_MORE = re.compile(
     r"^draw (?P<base>\d+) cards?[.]\s*(?:then,?\s*)?if (?P<cond>[^,]+),\s*"
     r"draw (?P<more>\d+) more cards?[.]$", re.I)
+# 「Draw cards until you have N cards in your hand. If all of your Pokémon in play
+#  are X Pokémon, draw cards until you have M cards in your hand instead.」
+# （第九十八批，Team Rocket's Ariana）—— 与上面 `shuffle + draw N` 形态**不同**
+# 口径（那是「抽 N 张」，这是「补到 N 张」）：前者靠 `draw_cond`，后者靠
+# `draw_to_branch`（两次 draw_to 叠加，只补不弃）。
+_TC_DRAW_TO_BRANCH = re.compile(
+    r"^draw cards until you have (?P<base>\d+) cards? in your hand[.]\s*"
+    r"if all of your pok[eé]mon in play are (?P<who>[a-z' .-]{3,24}?) "
+    r"pok[eé]mon,\s*draw cards until you have (?P<alt>\d+) cards? in your "
+    r"hand instead[.]$", re.I)
 _TC_DRAW_INSTEAD = re.compile(
     r"^shuffle your hand into your deck[.]\s*(?:then,?\s*)?"
     r"draw (?P<base>\d+) cards?[.]\s*if (?P<cond>[^,]+),\s*"
@@ -999,6 +1009,15 @@ def _detect_draw_cond(text: str) -> list:
     本函数静默吞掉，所以宁可整段不认领（退回未建模）。
     """
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _TC_DRAW_TO_BRANCH.match(t)
+    if m:
+        key = _tag_name_key(m.group("who"))
+        if not key:
+            return []
+        return [act("draw", None, "deck",
+                    {"draw_to_branch": (int(m.group("base")),
+                                        int(m.group("alt"))),
+                     "cond": f"own_all_name:{key}"})]
     m = _TC_DRAW_MORE.match(t)
     if m:
         cond = _draw_cond_key(m.group("cond"))
@@ -2280,14 +2299,19 @@ def _en_snipe_spec(clause: str):
     if need_damaged:
         c = re.sub(r"\s*that (?:has|have) any damage counters? on it", "", c)
     # 「…Pokémon {ex}」：引擎 `:target:ex` 精确筛选（2026-11-03 第四十一批）。
-    # ⚠ 只认「**仅** {ex}」——与 {V} 混写的形态（「{ex} or Benched Pokémon {V}」/
-    #   「{ex} and Pokémon {V}」）本库没有 V 卡也无法确认卡面意图 → 如实不认领。
+    # 第九十八批（2026-11-06）：**「{ex} or/and {V}」也按 `:target:ex` 处理** ——
+    #   本卡池 1267 张**没有 Pokémon V**（引擎里也没有 `is_v` 这个判定），
+    #   所以并集与 {ex} 在当前数据上等价。
+    # ⚠ 这是**有前提的等价**：`test_batch98_parse` 里有一条守卫，一旦数据集
+    #   出现 V 类卡就立刻失败，强制回来重新评估（而不是让并集静默算少）。
     need_ex = False
-    if re.search(r"pok[eé]mon \{ex\}", c) and not re.search(r"\{v\}", c) \
-            and not re.search(r"\{ex\}\s+(?:or|and)\b", c):
+    if re.search(r"pok[eé]mon \{ex\}", c):
         need_ex = True
-        # 只去掉 `{ex}` 记号本身（保留「Pokémon」这个词，让下面的
-        # 「each of your opponent's Pokémon」/「N of … Benched」分支照常命中）
+        # 先剥掉「Pokémon {V}」整段，再去掉残留的 or/and 与 `{ex}` 记号。
+        # 「each of your opponent's Pokémon {ex} and Pokémon {V}」若只删 `{ex}`，
+        # 剩下的 `and pokémon {v}` 会落进 `_SNIPE_SUBSET_RE` 被判成不可表达。
+        c = re.sub(r"\s*(?:or|and)?\s*pok[eé]mon\s*\{v\}", "", c, flags=re.I)
+        c = re.sub(r"\s*(?:or|and)\s*$", "", c)
         c = re.sub(r"\s*\{ex\}", "", c)
     # ⚠ 顺序要紧：先判「战斗位 / 自身」，再判子集 —— 否则
     #   「does 80 damage to your opponent's Active Pokémon for each tails」
@@ -3931,8 +3955,18 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             "discard_energy_special": {"n": "all" if raw == "all" else 1,
                                        "side": "opp"}}))
     elif _sp_e:
-        actions.append(act("rule", None, "any", {
-            "note": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"}))
+        # 「Discard a Special Energy from **1 of your opponent's Pokémon**」
+        # （第九十八批，Enhanced Hammer）——目标含后备，用 `:opp:special:any`
+        # 让引擎在战斗位没有特殊能量时继续找后备；只写 `:opp:special`
+        # 会把「对手把特殊能量贴后备」的情形静默变成空效果。
+        _one_of = re.search(r"from 1 of your opponent'?s pok[eé]mon", lower)
+        if _one_of:
+            actions.append(act("rule", None, "any", {
+                "discard_energy_special": {"n": 1, "side": "opp",
+                                           "any": True}}))
+        else:
+            actions.append(act("rule", None, "any", {
+                "note": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"}))
     elif _da and _is_delayed(t, _da.start()):
         # Amarys：「Draw 4 cards. At the end of this turn, … discard your hand.」
         # 引擎没有「回合末延迟队列」，立即弃手牌会把刚抽的牌一并弃掉（时序错）。
@@ -4929,6 +4963,11 @@ _COIN_MULTI_STATUS_RE = re.compile(
 _COIN_MULTI_AT_LEAST_RE = re.compile(
     r"if\s+at\s+least\s+(\d+)\s+of\s+them\s+are\s+(heads|tails)[^.]*?"
     + _COIN_COND_STATUS, re.I)
+# 「If **either** of them is heads, …」（第九十八批，Vanilluxe「Double Freeze」）
+# —— 与 at_least 的区别只是措辞（`is` 而非 `are`），语义 = 「≥1 个正面」。
+_COIN_MULTI_EITHER_RE = re.compile(
+    r"if\s+either\s+of\s+them\s+is\s+(heads|tails)[^.]*?"
+    + _COIN_COND_STATUS, re.I)
 
 
 def _coin_cond_of(text: str):
@@ -4938,6 +4977,11 @@ def _coin_cond_of(text: str):
     其它目标一律不认（宁可未建模，不可静默少施加/错施加）。
     """
     tnorm = _norm_apostrophe(text or "")
+    m = _COIN_MULTI_EITHER_RE.search(tnorm)
+    if m:
+        mode = ("at_least_heads" if m.group(1).lower() == "heads"
+                else "at_least_tails")
+        return (f"cond:{mode}:1:{_STATUS_WORD_TO_TAG[m.group(2).lower()]}", m)
     m = _COIN_MULTI_AT_LEAST_RE.search(tnorm)
     if m:
         mode = ("at_least_heads" if m.group(2).lower() == "heads"
@@ -8375,6 +8419,13 @@ def to_engine_tags(specs: list) -> dict:
                     # B3：对手洗回手牌后抽（Gothitelle / Vivillon）
                     tail = ":if_hand" if extra.get("if_hand") else ""
                     tags.append(f"opp_shuffle_draw:{int(amt or 1)}{tail}")
+                elif extra.get("draw_to_branch"):
+                    # 分支替换的「抽到 N 张」（第九十八批，Ariana）——
+                    # 必须先于 `to_hand_size` 判断：本动作的 amount 是 None，
+                    # 落到后面会被当成「抽牌量未识别」。
+                    _b, _a = extra["draw_to_branch"]
+                    tags.append(f"draw_to_branch:{int(_b)}:{int(_a)}"
+                                f":if:{extra['cond']}")
                 elif extra.get("to_hand_size") is not None:
                     tail = f":if:{_cond}" if _cond else ""
                     tags.append(f"draw_to:{int(extra['to_hand_size'])}{tail}")
@@ -9215,10 +9266,11 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"pre:discard_tool:{_pt.get('n', 'all')}"
                                 f":{_pt.get('scope', 'opp_active')}")
                 elif extra.get("discard_energy_special"):
-                    # 弃对手战斗位**特殊能量卡**（第二十四批）
+                    # 弃对手**特殊能量卡**（第二十四批）；`:any` = 目标含后备
                     _de = extra["discard_energy_special"]
                     tags.append(f"discard_energy:{_de.get('n', 1)}:"
-                                f"{_de.get('side', 'opp')}:special")
+                                f"{_de.get('side', 'opp')}:special"
+                                + (":any" if _de.get("any") else ""))
                 elif extra.get("discard_tool"):
                     _dt = extra["discard_tool"]
                     tags.append(f"discard_tool:{_dt.get('n', 1)}"

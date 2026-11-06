@@ -136,10 +136,11 @@ class TestSnipeNegativeGuards(unittest.TestCase):
         self.assertEqual(r["tags"], ["snipe:opp_bench:60:1:target:damaged"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_ex_subset_unmodeled(self):
+    def test_ex_subset_now_modeled(self):
+        """`{ex} or {V}` 目标：第九十八批起落 `:target:ex`（本卡池无 V 卡）"""
         r = _tags(SHAYMIN)
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["snipe:opp_bench:60:1:target:ex"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_target_relative_scale(self):
         """「for each damage counter on **that** Pokémon」→ `:per:target_counters`

@@ -1033,15 +1033,25 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
                        "Resistance for Benched Pok\u00e9mon.)")
         self.assertEqual(r["tags"], ["snipe:own_bench:10:1"])
 
-    def test_subset_target_still_unmodeled(self):
-        """带子集限定的目标（`{ex}` / `that has …`）仍**不可**映射
+    def test_ex_subset_now_modeled_via_target_ex(self):
+        """带 `{ex}` 限定的目标：引擎有 `:target:ex`，第九十八批起可精确表达
 
-        `snipe` 只能表达「任意 1 只 / 全部」，无法表达「只打 ex」这类筛选。
+        旧注释说「snipe 只能表达任意 1 只 / 全部」——**已过期**：第四十一批起
+        `_apply_snipe` 就支持 `:target:ex` 目标筛选（先筛后选）。
+        本卡池无 Pokémon V，故「{ex} or {V}」与「{ex}」等价（见 test_batch98
+        的 `TestNoVInDataset` 守卫）。
         """
         r = self._tags("This attack does 60 damage to 1 of your opponent\u2019s "
                        "Benched Pok\u00e9mon {ex} or Benched Pok\u00e9mon {V}. "
                        "(Don\u2019t apply Weakness and Resistance for "
                        "Benched Pok\u00e9mon.)")
+        self.assertEqual(r["tags"], ["snipe:opp_bench:60:1:target:ex"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_ability_subset_still_unmodeled(self):
+        """反例：`that has an Ability` 这类子集**仍**不可表达（必须拒收）"""
+        r = self._tags("This attack does 60 damage to 1 of your opponent\u2019s "
+                       "Benched Pok\u00e9mon that has an Ability.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(any("附加伤害目标未建模" in u["reason"]
                             for u in r["unsupported"]), r["unsupported"])

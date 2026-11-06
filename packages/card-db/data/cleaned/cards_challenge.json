@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-06 11:11:33",
+  "reparsed_at": "2026-11-06 14:23:07",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1138,
+  "engine_ready": 1143,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1138,
-   "engine_approximated": 1123,
-   "engine_unmatched": 129,
+   "zh_backfill": 1143,
+   "engine_approximated": 1128,
+   "engine_unmatched": 124,
    "engine_namekey_mismatch": 16
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 138,
-   "engine_tags": 1451,
-   "unsupported": 131,
+   "engine_tags": 1455,
+   "unsupported": 126,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1123,
+  "engine_approximated": 1128,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -5502,14 +5502,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Shaymin@TEF 13",
    "parse": {
     "items": [
      {
@@ -5525,10 +5527,14 @@
          {
           "type": "damage",
           "amount": 60,
-          "target": "active_opponent",
+          "target": "active_opponent_bench",
           "extra": {
-           "unaligned_target": "1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon",
-           "clause": "does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}"
+           "snipe_scope": "opp_bench",
+           "snipe_count": 1,
+           "snipe_per": null,
+           "snipe_target": null,
+           "snipe_ex": true,
+           "snipe_if": null
           }
          }
         ],
@@ -5536,13 +5542,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "snipe:opp_bench:60:1:target:ex"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -5555,10 +5558,14 @@
        {
         "type": "damage",
         "amount": 60,
-        "target": "active_opponent",
+        "target": "active_opponent_bench",
         "extra": {
-         "unaligned_target": "1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon",
-         "clause": "does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}"
+         "snipe_scope": "opp_bench",
+         "snipe_count": 1,
+         "snipe_per": null,
+         "snipe_target": null,
+         "snipe_ex": true,
+         "snipe_if": null
         }
        }
       ],
@@ -5566,13 +5573,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon）"
-     }
+    "engine_tags": [
+     "snipe:opp_bench:60:1:target:ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -27117,14 +27121,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Flygon ex@SSP 106",
    "parse": {
     "items": [
      {
@@ -27165,10 +27171,14 @@
          {
           "type": "damage",
           "amount": 100,
-          "target": "active_opponent",
+          "target": "active_opponent_bench",
           "extra": {
-           "unaligned_target": "each of your opponent’s Pokémon {ex} and Pokémon {V}",
-           "clause": "does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}"
+           "snipe_scope": "opp",
+           "snipe_count": "all",
+           "snipe_per": null,
+           "snipe_target": null,
+           "snipe_ex": true,
+           "snipe_if": null
           }
          },
          {
@@ -27193,15 +27203,11 @@
       ],
       "errors": [],
       "engine_tags": [
+       "snipe:opp:100:all:target:ex",
        "ignore_weakness",
        "ignore_resistance"
       ],
-      "unsupported": [
-       {
-        "type": "damage",
-        "reason": "附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "card",
@@ -27258,10 +27264,14 @@
        {
         "type": "damage",
         "amount": 100,
-        "target": "active_opponent",
+        "target": "active_opponent_bench",
         "extra": {
-         "unaligned_target": "each of your opponent’s Pokémon {ex} and Pokémon {V}",
-         "clause": "does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}"
+         "snipe_scope": "opp",
+         "snipe_count": "all",
+         "snipe_per": null,
+         "snipe_target": null,
+         "snipe_ex": true,
+         "snipe_if": null
         }
        },
        {
@@ -27304,16 +27314,12 @@
     "errors": [],
     "engine_tags": [
      "switch_self",
+     "snipe:opp:100:all:target:ex",
      "ignore_weakness",
      "ignore_resistance",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "damage",
-      "reason": "附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -79718,14 +79724,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Vanilluxe@WHT 29",
    "parse": {
     "items": [
      {
@@ -79744,14 +79752,6 @@
           "target": "active_opponent"
          },
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4）"
-          }
-         },
-         {
           "type": "coin_flip",
           "amount": null,
           "target": "active_opponent",
@@ -79760,7 +79760,10 @@
            "mode": "each",
            "counter": "2",
            "sub": "dmg_set",
-           "sub_amount": 90
+           "sub_amount": 90,
+           "sub_more": [
+            "cond:at_least_heads:1:paralyze"
+           ]
           }
          }
         ],
@@ -79769,14 +79772,9 @@
       ],
       "errors": [],
       "engine_tags": [
-       "coin_each:2:heads:dmg_set:90"
+       "coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -79792,14 +79790,6 @@
         "target": "active_opponent"
        },
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4）"
-        }
-       },
-       {
         "type": "coin_flip",
         "amount": null,
         "target": "active_opponent",
@@ -79808,7 +79798,10 @@
          "mode": "each",
          "counter": "2",
          "sub": "dmg_set",
-         "sub_amount": 90
+         "sub_amount": 90,
+         "sub_more": [
+          "cond:at_least_heads:1:paralyze"
+         ]
         }
        }
       ],
@@ -79817,14 +79810,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "coin_each:2:heads:dmg_set:90"
+     "coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -142709,14 +142697,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Discard a Special Energy from 1 of your opponent’s Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从对手的 1 只宝可梦身上弃置 1 个特殊能量。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Enhanced Hammer@TWM 148",
    "parse": {
     "items": [
      {
@@ -142734,7 +142724,11 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"
+           "discard_energy_special": {
+            "n": 1,
+            "side": "opp",
+            "any": true
+           }
           }
          }
         ],
@@ -142742,15 +142736,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "discard_energy:1:opp:special:any"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -142765,7 +142756,11 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"
+         "discard_energy_special": {
+          "n": 1,
+          "side": "opp",
+          "any": true
+         }
         }
        }
       ],
@@ -142773,13 +142768,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "弃置**特殊**能量（引擎不区分基本/特殊能量，B4）"
-     }
+    "engine_tags": [
+     "discard_energy:1:opp:special:any"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156217,14 +156209,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket’s Pokémon, draw cards until you have 8 cards in your hand instead.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抽牌直到你的手牌为 5 张。若你场上的所有宝可梦都是火箭队的宝可梦，则改为抽牌直到你的手牌为 8 张。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Ariana@DRI 171",
    "parse": {
     "items": [
      {
@@ -156238,27 +156232,29 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "draw",
           "amount": null,
           "target": "deck",
           "extra": {
-           "note": "抽到指定张数带分支替换（B4）"
+           "draw_to_branch": [
+            5,
+            8
+           ],
+           "cond": "own_all_name:teamrockets"
           }
          }
         ],
-        "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead."
+        "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "draw_to_branch:5:8:if:own_all_name:teamrockets"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽到指定张数带分支替换（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156269,25 +156265,27 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "draw",
         "amount": null,
         "target": "deck",
         "extra": {
-         "note": "抽到指定张数带分支替换（B4）"
+         "draw_to_branch": [
+          5,
+          8
+         ],
+         "cond": "own_all_name:teamrockets"
         }
        }
       ],
-      "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead."
+      "source_text": "Draw cards until you have 5 cards in your hand. If all of your Pokémon in play are Team Rocket's Pokémon, draw cards until you have 8 cards in your hand instead.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽到指定张数带分支替换（B4）"
-     }
+    "engine_tags": [
+     "draw_to_branch:5:8:if:own_all_name:teamrockets"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

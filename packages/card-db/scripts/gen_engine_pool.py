@@ -90,6 +90,15 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 第五十八批（2026-11-04）：条件抽牌（`draw_cond:` 第 5 位是 `_`，
                 # 不会被 `draw:` 覆盖 —— 白名单是**过滤**，漏写即静默丢弃）。
                 "draw_cond:",
+                # 第九十八批（2026-11-06）：分支替换的「抽到 N 张」
+                # （Ariana「…draw until 5. If all your Pokémon are Team
+                # Rocket's, draw until 8 instead」）。⚠ 与 `draw_to:` 互不覆盖：
+                # 前缀是 `draw_to_branch:`，若漏写这一行会被白名单**静默丢弃**。
+                "draw_to_branch:",
+                # 第九十八批（2026-11-06）：弃对手**特殊能量**（Enhanced Hammer）。
+                # ⚠ 该前缀原本只出现在 ATTACK_TAG_PREFIXES（招式侧），训练家侧
+                # 从来没有 → 卡在池外凭空消失（`build_trainer` 找不到可用 tag）。
+                "discard_energy:",
                 "draw:", "draw_to:", "heal:", "attach", "gust", "discard:",
                 "mill:",
                 # 第九十一批（2026-11-05）：检视牌库顶后重排（Deduction Kit）。

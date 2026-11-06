@@ -2099,6 +2099,12 @@ class Battle:
             # 虽然 `draw_cond:` 第 5 位是 `_`，`startswith("draw:")` 不会命中，
             # 但排列上仍按「更具体者先」，避免以后加 `draw_*` 变体时被吞。
             placed = self._trainer_draw_cond(p, tag, hi)
+        elif tag.startswith("draw_to_branch:"):
+            # 「Draw cards until you have N … If <cond>, draw cards until you have
+            #  M **instead**.」（第九十八批，Team Rocket's Ariana）
+            # 两条 draw_to 语义上可叠加（只补到目标数、不弃牌），所以
+            # 「先到 base，条件成立再到 alt」与卡面等价，且不需要新状态。
+            placed = self._trainer_draw_to_branch(p, tag, hi)
         elif tag.startswith("draw_to:"):
             placed = self._trainer_draw_to(p, tag, hi)
         elif tag.startswith("draw:"):
@@ -2189,6 +2195,53 @@ class Battle:
             placed = self._apply_energy_move(tag, None, action)
         elif tag.startswith("bounce:"):
             placed = self._apply_bounce(tag, None, action)
+        elif tag.startswith("discard_senergy:"):
+            # 「Discard a Special Energy from 1 of your opponent's Pokémon.」
+            # （第九十八批，Enhanced Hammer）—— `senergy` 是**卡**列表，
+            # 引擎本来就能精确区分特殊/基本；此前训练家侧只有「道具**或**
+            # 特殊能量」二选一的复合形态，单点弃特殊能量没出口。
+            # 目标选择：战斗位优先，战斗位没有特殊能量再按后备顺序找。
+            _n = int(tag.split(":")[1])
+            _opp = self.players[1 - self.current]
+            _cands = ([_opp.active] if _opp.active is not None else []) \
+                + list(_opp.bench)
+            _done = 0
+            for _fp in _cands:
+                if _fp is None or _fp.is_ko:
+                    continue
+                _done = _discard_special_energy(self, _opp, _fp, _n)
+                if _done:
+                    self._log("discard_energy", {"player": self.current,
+                                                "target": _fp.name,
+                                                "kind": "special"})
+                    break
+            if not _done:
+                raise ValueError("对手场上没有特殊能量可弃")
+            placed = f"discard special {_done}"
+        elif tag.startswith("discard_energy:") and ":special" in tag:
+            # 「Discard a Special Energy from 1 of your opponent's Pokémon.」
+            # （第九十八批，Enhanced Hammer）——训练家侧此前没有 `discard_energy:`
+            # 派发分支（只有招式侧有），卡进池也会在打出时报「未知训练家 tag」。
+            # 目标：战斗位优先，其次后备（`:any`）；只写 `:special` 的组合视为
+            # 同样语义（单点弃特殊能量，不存在「只打战斗位」的卡面）。
+            _dp2 = tag.split(":")
+            _n2 = 999 if _dp2[1] == "all" else int(_dp2[1])
+            _opp2 = self.players[1 - self.current]
+            _cands2 = ([_opp2.active] if _opp2.active is not None else []) \
+                + list(_opp2.bench)
+            _done2 = 0
+            for _fp2 in _cands2:
+                if _fp2 is None or _fp2.is_ko:
+                    continue
+                _done2 = _discard_special_energy(self, _opp2, _fp2, _n2)
+                if _done2:
+                    self._log("discard_energy", {"player": self.current,
+                                                "target": _fp2.name,
+                                                "kind": "special"})
+                    break
+            if not _done2:
+                raise ValueError("对手场上没有特殊能量可弃")
+            placed = f"discard special {_done2}"
         elif tag.startswith("discard_tool_or_senergy:"):
             # 「弃对手道具/特殊能量 或 弃竞技场」二选一（2026-11-02 第三十八批）：
             # 必须排在 `discard_tool:` 之前 —— 前缀相近，将来若有一方放宽成
@@ -2408,6 +2461,30 @@ class Battle:
         self.rng.shuffle(o.deck)
         got = self._safe_draw(oi, n, source="opp_shuffle_draw")
         return f"opp shuffle draw {got}"
+
+    def _trainer_draw_to_branch(self, p: PlayerState, tag: str,
+                                hi: int) -> str:
+        """``draw_to_branch:<base>:<alt>:if:<cond>`` —— 分支替换的抽到 N 张
+
+        卡面（Ariana）：「Draw cards until you have 5 cards in your hand. If all
+        of your Pokémon in play are Team Rocket's Pokémon, draw cards until you
+        have 8 cards in your hand **instead**.」
+        语义校验：`draw_to` 只补到目标数、从不弃牌 → 先到 5 再到 8 与「直接到 8」
+        终局等价；条件不成立时第二次调用被跳过。故无需新增回合状态。
+        """
+        _dp = tag.split(":")
+        if len(_dp) < 4 or not _dp[1].isdigit() or not _dp[2].isdigit() \
+                or _dp[3] != "if":
+            raise ValueError(f"draw_to_branch tag 非法：{tag}")
+        base, alt = int(_dp[1]), int(_dp[2])
+        cond = ":".join(_dp[4:])
+        if not cond:
+            raise ValueError(f"draw_to_branch 缺条件：{tag}")
+        first = self._trainer_draw_to(p, f"draw_to:{base}", hi)
+        if _eval_condition(self, cond):
+            second = self._trainer_draw_to(p, f"draw_to:{alt}", hi)
+            return f"{first} + （条件成立）{second}"
+        return first
 
     def _trainer_draw_to(self, p: PlayerState, tag: str, hi: int) -> str:
         """抽到指定手牌数（``draw_to:N``）——已达上限则不再抽
@@ -6672,7 +6749,21 @@ class Battle:
                                 "target": opp.active.name,
                                 "by": "effect_immune"})
                             continue
-                        if len(parts) > 3 and parts[3] == "special":
+                        if len(parts) > 3 and parts[3] == "special" \
+                                and len(parts) > 4 and parts[4] == "any":
+                            # 「Discard a Special Energy from **1 of your
+                            # opponent's Pokémon**」（第九十八批，Enhanced Hammer）：
+                            # 目标含后备 → 战斗位优先，其次后备顺序；
+                            # 不能让它退化成「只弃战斗位」（对手把特殊能量放后备时
+                            # 该效果会静默不生效）。
+                            for _fp in ([opp.active] if opp.active else []) \
+                                    + list(opp.bench):
+                                if _fp is None or _fp.is_ko:
+                                    continue
+                                done = _discard_special_energy(self, opp, _fp, n)
+                                if done:
+                                    break
+                        elif len(parts) > 3 and parts[3] == "special":
                             # 「Discard a Special Energy from your opponent's Active
                             # Pokémon.」（2026-10-29 第二十四批）——按**特殊能量卡**
                             # 弃置（`senergy`）；普通 `remove_any` 会先弃基本能量，

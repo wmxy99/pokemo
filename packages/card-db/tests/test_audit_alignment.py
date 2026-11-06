@@ -1026,11 +1026,21 @@ class TestAuditBatch41(unittest.TestCase):
             A.audit_extra_damage("Zeraora", "Thunder Raid", self.EX_BENCH,
                                  ["snipe:opp_bench:210:1:target:ex"]), [])
 
-    def test_ex_or_v_still_unmodeled(self):
-        """与 {V} 混写 → 不可精确表达，进池即报错"""
+    def test_ex_or_v_requires_target_ex(self):
+        """与 {V} 混写：第九十八批起可表达（`:target:ex`），但**缺它必须报错**
+
+        措辞从「不可精确表达」变成「缺 `:target:ex`」—— 判定本身没变：
+        卡面限定了 ex，落成不带筛选的 snipe 就会打非 ex 目标（静默超范围）。
+        """
         errs = A.audit_extra_damage("Shaymin", "Pinpoint Dive", self.EX_OR_V,
                                     ["snipe:opp_bench:60:1"])
-        self.assertTrue(any("不可精确表达" in e for e in errs), errs)
+        self.assertTrue(any(":target:ex" in e or "不可精确表达" in e
+                            for e in errs), errs)
+
+    def test_ex_or_v_with_target_ex_ok(self):
+        self.assertEqual(
+            A.audit_extra_damage("Shaymin", "Pinpoint Dive", self.EX_OR_V,
+                                 ["snipe:opp_bench:60:1:target:ex"]), [])
 
     def test_no_ex_qualifier_plain_target(self):
         """没有 {ex} 限定 → 普通 snipe 不应被要求 `:target:ex`"""

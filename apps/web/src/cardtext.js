@@ -141,6 +141,8 @@ export const TRAINER_TAG_DESC = {
   gust: { zh: '将对手的 1 只后备宝可梦换到战斗位。', en: 'Switch in 1 of your opponent’s Benched Pokémon to the Active Spot.' },
   gust_confuse: { zh: '将对手的 1 只后备基础宝可梦换到战斗位，并使其陷入混乱。', en: 'Switch in 1 of your opponent’s Benched Basic Pokémon to the Active Spot and Confuse it.' },
   heal: (a) => ({ zh: `为 1 只己方宝可梦回复 ${argOf(a)} 点伤害。`, en: `Heal ${argOf(a)} damage from 1 of your Pokémon.` }),
+  // 「弃置对手的特殊能量」（Enhanced Hammer）—— 引擎按 senergy 卡精确区分基本/特殊
+  discard_energy: (a) => ({ zh: `弃置对手 1 只宝可梦身上的${argOf(a) === 'all' ? '全部' : ` ${argOf(a)} 个`}能量（special 表示只弃特殊能量）。`, en: `Discard ${argOf(a) === 'all' ? 'all' : argOf(a)} Energy from 1 of your opponent’s Pokémon (special = Special Energy only).` }),
   mill: (a) => ({ zh: `弃掉牌库顶 ${argOf(a)} 张卡。`, en: `Discard the top ${argOf(a)} card(s) of your deck.` }),
   draw: (a, _x, parts) => {
     if ((parts || []).includes('per')) {
@@ -149,6 +151,8 @@ export const TRAINER_TAG_DESC = {
     return { zh: `抽 ${argOf(a)} 张牌。`, en: `Draw ${argOf(a)} card(s).` }
   },
   draw_to: (a) => ({ zh: `抽牌，直到手牌达到 ${argOf(a)} 张。`, en: `Draw cards until you have ${argOf(a)} in hand.` }),
+  // 「Draw until N; if <条件>，改为抽到 M」（Ariana）
+  draw_to_branch: (a, b, c) => ({ zh: `抽牌直到手牌 ${argOf(a)} 张；若满足条件（${argOf(c) || '全队同阵营'}），改为抽到 ${argOf(b)} 张。`, en: `Draw until you have ${argOf(a)}; if the condition holds, draw until ${argOf(b)} instead.` }),
   draw_cond: (_a, _x, parts) => {
     const ns = numsOf(parts)
     const base = ns[0] || 'n'

@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-06 11:11:34
+- 生成时间：2026-11-06 14:23:08
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **131** 条 · 已映射 tag 1451 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1138 张**
-- 解析层面「无未建模动作」卡：992 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **126** 条 · 已映射 tag 1455 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1143 张**
+- 解析层面「无未建模动作」卡：997 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -23,10 +23,8 @@
 | B4 | type:cost | `cost` | 2 | 2 | 能量代价子句未被映射（可选/任意数量代价，B4） |
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（damage counter you placed in t） |
 | B4 | static_lock | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
 | B4 | type:condition | `condition` | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
-| B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（each of your opponent’s Pokémon {ex} and Pokémon {V}） |
 | B4 | coin_flip | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | type:ability_cost | `ability_cost` | 1 | 1 | 特性发动代价形态未识别（B4） |
 | B5 | S6 | `rule` | 37 | 37 | 静态/未建模（英文） |
@@ -42,13 +40,11 @@
 | B5 | S1 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B5 | S6 | `rule` | 1 | 1 | 抛币分支内的状态：多币条件/多状态/非对手战斗位，需扩展 coin 子效果（B4） |
 | B5 | S3 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
 | B5 | S6 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
-| B5 | S4 | `rule` | 1 | 1 | 弃置**特殊**能量（引擎不区分基本/特殊能量，B4） |
 | B5 | S2 | `rule` | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
 | B5 | S2 | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B5 | S2 | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
@@ -72,19 +68,11 @@
 
 **B4 · extra_damage_target**（1 条）
 
-- `Shaymin`（谢米）：This attack does 60 damage to 1 of your opponent’s Benched Pokémon {ex} or Benched Pokémon {V}. (Don’t apply Weakness and Resistance for Benched Pokémon.)
-
-**B4 · extra_damage_target**（1 条）
-
 - `Wellspring Mask Ogerpon ex`（厄诡椪（井之面具）ex）：You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t ap
 
 **B4 · type:condition**（1 条）
 
 - `Noctowl`（猫头夜鹰）：Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for
-
-**B4 · extra_damage_target**（1 条）
-
-- `Flygon ex`（沙漠蜻蜓 ex）：This attack does 100 damage to each of your opponent’s Pokémon {ex} and Pokémon {V}. This attack’s damage isn’t affected by Weakness or Resistance.
 
 **B4 · coin_flip**（1 条）
 
@@ -157,10 +145,6 @@
 
 - `Cetitan ex`（浩大鲸 ex）：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
 
-**B5 · S6**（1 条）
-
-- `Vanilluxe`（双倍多多冰）：Flip 2 coins. This attack does 90 damage for each heads. If either of them is heads, your opponent’s Active Pokémon is now Paralyzed.
-
 **B5 · S3**（1 条）
 
 - `Chi-Yu`（古玉鱼）：If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn.
@@ -180,10 +164,6 @@
 **B5 · S6**（1 条）
 
 - `Doublade`（双剑鞘）：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
-
-**B5 · S4**（1 条）
-
-- `Enhanced Hammer`（增强锤）：Discard a Special Energy from 1 of your opponent's Pokémon.
 
 **B5 · S2**（1 条）
 

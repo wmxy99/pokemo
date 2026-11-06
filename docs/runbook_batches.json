@@ -163,9 +163,9 @@
    "phase": "P2",
    "theme": "静态修正层",
    "status": "done",
-   "actual_pool": 1,
-   "actual_refused": 5,
-   "note": "**落地 1 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 扩展静态修正层支持**卡牌子类**范围并显式编码 except；此前拒绝它的理由是「数据模型无 Future」，**该理由已过期**，数据集 `category` 自 B3 起就有 Future/Ancient）。**如实拒收 5 张**：Lillie's Clefairy ex（弱点属性改写需全局弱点层）、Hop's Choice Band（道具**同时**改费用与加伤，`fp.tool` 是单个字符串，需复合道具 tag 承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）、Feraligatr（回合级自身加伤）。",
+   "actual_pool": 2,
+   "actual_refused": 4,
+   "note": "**落地 2 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 静态修正层新增**卡牌子类**范围与 `:except:` 扩展；旧拒绝理由「数据模型无 Future」已过期）、Feraligatr（`counters:5:scope:self|self_dmg_bonus:120:self` —— 新增**回合级加伤旗标** `dmg_bonus_until`，按持有者对象同一性判定范围，换位后同伴不沾光、跨回合自动过期）。**如实拒收 4 张**：Lillie's Clefairy ex（全局弱点层）、Hop's Choice Band（道具同时改费用+加伤，`fp.tool` 是单字符串，需复合道具承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）。",
    "cards": [
     {
      "name": "Iron Crown ex",
@@ -275,9 +275,9 @@
    "phase": "P2",
    "theme": "指示物目标 / 条件",
    "status": "done",
-   "actual_pool": 2,
-   "actual_refused": 5,
-   "note": "**落地 2 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增**条件门** `:gate:` 与**后备专用**范围 `:scope:opp_bench`；不能用 `:scope:opp`：那条战斗位优先，会把指示物打到战斗位）。**如实拒收 5 张**：Feraligatr（回合级加伤未做）、Sinistcha（需**分配**语义）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
+   "actual_pool": 3,
+   "actual_refused": 4,
+   "note": "**落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增条件门 `:gate:` 与后备专用范围 `:scope:opp_bench`）、Feraligatr（复合特性 `counters:5:scope:self|self_dmg_bonus:120:self`）。**如实拒收 4 张**：Sinistcha（需**分配**语义，`counters:` 只能每目标各 N 个）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
    "cards": [
     {
      "name": "Feraligatr",

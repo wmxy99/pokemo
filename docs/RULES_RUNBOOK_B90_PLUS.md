@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1137（89.7%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **130** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 133） |
-| 引擎池 | **1122** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1138（89.8%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **129** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 131） |
+| 引擎池 | **1123** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **130** = 批次内待做 **122** + 结构性边界 **6** + 待新能力 **2** = **130** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **129** = 批次内待做 **121** + 结构性边界 **6** + 待新能力 **2** = **129** ✅。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **8** 批（完成 7 · 整批受阻 1），剩余**未开工** **36** 批。
 
-**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（当前 1137 + 可做 122）；结构性 6 张与待新能力 2 张永久留在池外，需引擎重构或新增承载字段才可能归零。
+**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（当前 1138 + 可做 121）；结构性 6 张与待新能力 2 张永久留在池外，需引擎重构或新增承载字段才可能归零。
 
 ---
 
@@ -146,11 +146,11 @@
 | Hop’s Choice Band | JTG | 148 | B（有具体缺口·可归族） |  |
 | Kieran | TWM | 154 | B（有具体缺口·可归族） |  |
 | Archaludon ex | SSP | 130 | B（有具体缺口·可归族） |  |
-| Feraligatr | TEF | 41 | B（有具体缺口·可归族） | 跨批 → 97 |
+| Feraligatr | TEF | 41 | done（已完成） | 跨批 → 97 |
 
-**实际结果**：进池 **1** 张，如实拒收 **5** 张。
+**实际结果**：进池 **2** 张，如实拒收 **4** 张。
 
-> **落地 1 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 扩展静态修正层支持**卡牌子类**范围并显式编码 except；此前拒绝它的理由是「数据模型无 Future」，**该理由已过期**，数据集 `category` 自 B3 起就有 Future/Ancient）。**如实拒收 5 张**：Lillie's Clefairy ex（弱点属性改写需全局弱点层）、Hop's Choice Band（道具**同时**改费用与加伤，`fp.tool` 是单个字符串，需复合道具 tag 承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）、Feraligatr（回合级自身加伤）。
+> **落地 2 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 静态修正层新增**卡牌子类**范围与 `:except:` 扩展；旧拒绝理由「数据模型无 Future」已过期）、Feraligatr（`counters:5:scope:self|self_dmg_bonus:120:self` —— 新增**回合级加伤旗标** `dmg_bonus_until`，按持有者对象同一性判定范围，换位后同伴不沾光、跨回合自动过期）。**如实拒收 4 张**：Lillie's Clefairy ex（全局弱点层）、Hop's Choice Band（道具同时改费用+加伤，`fp.tool` 是单字符串，需复合道具承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）。
 
 ### 第 96 批 · `any number of` 自由数量（9 张）· ⛔ 受阻 · 整批如实拒收
 
@@ -174,7 +174,7 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Feraligatr | TEF | 41 | B（有具体缺口·可归族） | 跨批 → 95 |
+| Feraligatr | TEF | 41 | done（已完成） | 跨批 → 95 |
 | Sinistcha | TWM | 22 | B（有具体缺口·可归族） |  |
 | Team Rocket's Ampharos | DRI | 74 | B（有具体缺口·可归族） |  |
 | Team Rocket's Crobat ex | DRI | 122 | done（已完成） |  |
@@ -182,9 +182,9 @@
 | Mismagius | ASC | 86 | done（已完成） |  |
 | Team Rocket's Dugtrio | ASC | 101 | B（有具体缺口·可归族） |  |
 
-**实际结果**：进池 **2** 张，如实拒收 **5** 张。
+**实际结果**：进池 **3** 张，如实拒收 **4** 张。
 
-> **落地 2 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增**条件门** `:gate:` 与**后备专用**范围 `:scope:opp_bench`；不能用 `:scope:opp`：那条战斗位优先，会把指示物打到战斗位）。**如实拒收 5 张**：Feraligatr（回合级加伤未做）、Sinistcha（需**分配**语义）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。
+> **落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增条件门 `:gate:` 与后备专用范围 `:scope:opp_bench`）、Feraligatr（复合特性 `counters:5:scope:self|self_dmg_bonus:120:self`）。**如实拒收 4 张**：Sinistcha（需**分配**语义，`counters:` 只能每目标各 N 个）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。
 
 ---
 
@@ -570,9 +570,9 @@
 | 92 | P1 | 训练家多动作合成复合 tag | 2 | 3 | 0 | ✅ 完成 |
 | 93 | P2 | 静态伤害缩放：条件型 | 4 | 3 | 1 | ✅ 完成 |
 | 94 | P2 | 静态伤害缩放：计数源型 | 5 | 2 | 3 | ✅ 完成 |
-| 95 | P2 | 静态修正层 | 6 | 1 | 5 | ✅ 完成 |
+| 95 | P2 | 静态修正层 | 6 | 2 | 4 | ✅ 完成 |
 | 96 | P2 | `any number of` 自由数量 | 9 | 0 | 9 | ⛔ 受阻 |
-| 97 | P2 | 指示物目标 / 条件 | 7 | 2 | 5 | ✅ 完成 |
+| 97 | P2 | 指示物目标 / 条件 | 7 | 3 | 4 | ✅ 完成 |
 | 98 | P3 | 附加伤害目标扩展 | 3 |  |  | 待办 |
 | 99 | P3 | 检索去向 / 数量由计数定 | 6 |  |  | 待办 |
 | 100 | P3 | 抛币嵌套子效果 | 3 |  |  | 待办 |
@@ -617,11 +617,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 14 张 |
-| 批次内待做 | 122 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 15 张 |
+| 批次内待做 | 121 | 全部未 ready |
 | 结构性边界 | 6 | 不承载 tag，仅建档 |
 | 待新能力 | 2 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **130** | 应等于基线 130 |
+| **合计（= 未 ready 卡数）** | **129** | 应等于基线 129 |
 
 ---
 

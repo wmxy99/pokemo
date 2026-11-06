@@ -139,15 +139,21 @@ class TestCountersOnThis(unittest.TestCase):
         self.assertNotIn("counters:5:scope:opp", r["tags"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_feraligatr_compound_refused(self):
-        """Feraligatr：指示物 + 「本回合 +120」→ 后半段 B4 → 整卡如实拒收"""
+    def test_feraligatr_compound_now_modeled(self):
+        """Feraligatr：指示物 + 「本回合 +120」→ 第九十五批起**单条复合 tag**
+
+        旧口径（第六十八~七十七批）把「本回合 +N 伤害」判为 B4 而整卡拒收；
+        第九十五批新增回合级加伤旗标 `self_dmg_bonus:N`（`dmg_bonus_until`
+        随 turn_number 过期），两半可同时精确表达 → 改为正向断言。
+        """
         r = _tags("Once during your turn, you may put 5 damage counters on "
                   "this Pokémon. If you do, during this turn, attacks used by "
                   "this Pokémon do 120 more damage to your opponent’s Active "
                   "Pokémon (before applying Weakness and Resistance).",
                   kind="ability", name="Feraligatr")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(
+            r["tags"], ["counters:5:scope:self|self_dmg_bonus:120:self"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_walking_wake_scaling_refused(self):
         """Walking Wake：指示物 + 「按放置数重算伤害」→ 后半段 B4 → 如实拒收"""

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-06 11:01:22",
+  "reparsed_at": "2026-11-06 11:11:33",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1137,
+  "engine_ready": 1138,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1137,
-   "engine_approximated": 1122,
-   "engine_unmatched": 130,
+   "zh_backfill": 1138,
+   "engine_approximated": 1123,
+   "engine_unmatched": 129,
    "engine_namekey_mismatch": 16
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 138,
-   "engine_tags": 1450,
-   "unsupported": 133,
+   "engine_tags": 1451,
+   "unsupported": 131,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1122,
+  "engine_approximated": 1123,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -5975,14 +5975,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Feraligatr@TEF 41",
    "parse": {
     "items": [
      {
@@ -6024,48 +6026,31 @@
        {
         "kind": "ability",
         "name": "Torrential Heart",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（this Pokémon）"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "multi": [
+            "counters:5:scope:self",
+            "self_dmg_bonus:120:self"
+           ]
           }
          }
         ],
-        "source_text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "counters:5:scope:self|self_dmg_bonus:120:self"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（this Pokémon）"
-       },
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -6091,51 +6076,33 @@
      {
       "kind": "ability",
       "name": "Torrential Heart",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（this Pokémon）"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "multi": [
+          "counters:5:scope:self",
+          "self_dmg_bonus:120:self"
+         ]
         }
        }
       ],
-      "source_text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+      "citations": []
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:name:turn:Giant Wave"
+     "attack_lock:name:turn:Giant Wave",
+     "counters:5:scope:self|self_dmg_bonus:120:self"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（this Pokémon）"
-     },
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

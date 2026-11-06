@@ -3216,6 +3216,14 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     actions: list = []
     conditions: list = []
     lower = t.lower()
+    # 「自伤指示物 + 本回合自身加伤」复合特性（第九十五批，Feraligatr）：
+    # 必须在 `_claimed_ability` **之前**认领 —— 否则它会把两半拆成
+    # 「放置指示物（this Pokémon）」+「静态伤害增减」两条未建模，整卡被拒。
+    _sb = _detect_self_buff(t_raw, kind)
+    if _sb:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _sb,
+                "source_text": str(text or ""), "citations": []}
     # 被击倒触发 / 进化触发 +「in this way」后续（2026-10-28 第十批）：
     # 这类文本含**触发从句 + 条件后续**，通用分支会把后续当成无条件动作 →
     # 必须在最前面整段认领（认不出则不产出，整卡如实未建模）。
@@ -7144,6 +7152,31 @@ def _shield_prevent_qual(text: str):
     return ("", effects)
 
 
+# 「Once during your turn, you may put N damage counters on this Pokémon. If you
+#  do, during this turn, attacks used by this Pokémon do M more damage …」
+# （第九十五批，Feraligatr「Torrential Heart」）
+# 两件事必须**同时**建模：自伤是**指示物**（不吃弱点/抗性），加伤是回合级旗标。
+# 只落其中一件 = 静默失真（要么白付代价，要么凭空加伤）。
+_SELF_BUFF_RE = re.compile(
+    r"^once during your turn, you may put (\d+) damage counters? on this "
+    r"pok[eé]mon\. if you do, during this turn, attacks used by this "
+    r"pok[eé]mon do (\d+) more damage to your opponent'?s active "
+    r"pok[eé]mon \(before applying weakness and resistance\)\.$", re.I)
+
+
+def _detect_self_buff(text: str, kind: str) -> list:
+    """自伤指示物 + 本回合自身加伤 → **单条**复合 tag（`a|b`，按卡面顺序）"""
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _SELF_BUFF_RE.match(t)
+    if not m:
+        return []
+    return [act("rule", None, "self",
+                {"multi": [f"counters:{int(m.group(1))}:scope:self",
+                           f"self_dmg_bonus:{int(m.group(2))}:self"]})]
+
+
 def _detect_modifiers(text: str, kind: str, name: str) -> list:
     """从卡面文本识别 v1.4 修正器 → 动作列表（未识别返回空表，不猜）"""
     t = _norm_apostrophe(text)
@@ -9061,6 +9094,14 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"recover:{n}:{kd}"
                                 + (f":type:{_pt}" if _pt else ""))
             elif t == "rule":
+                # 复合动作（第九十五批）：一次卡面文本 = 多条 tag 的**有序**序列，
+                # 用 `|` 拼成**单条** tag（训练家/特性都只认一个卡级 tag；
+                # 拆成两条会被整卡拒收或只执行第一条）。
+                if extra.get("multi"):
+                    _m = [str(x) for x in extra["multi"] if x]
+                    if _m:
+                        tags.append("|".join(_m))
+                    continue
                 # 第八十二批：Sacred Ash 的整句认领。只替换**泛化占位**那条
                 # rule（别的 rule 分支已带语义标志，不覆盖）；且必须是训练家
                 # 卡级 spec，招式里的同形句式不在此处认领。

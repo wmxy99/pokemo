@@ -1435,6 +1435,20 @@ class Battle:
             # 顺序反了会变成「先看效果、付不出也照发」（静默加强）。
             if getattr(ab, "cost", ""):
                 self._pay_ability_cost(p, fp, ab.cost, action)
+            # 复合特性（第九十五批）：`<tag1>|<tag2>` 按**卡面顺序**执行。
+            # 例：Feraligatr「Torrential Heart」= 先自伤 5 个指示物（代价）
+            # + 本回合自身加伤 120。顺序反了会变成「先加伤、代价可省」。
+            # ⚠ 必须在各 `startswith` 分支**之前**：`counters:…|…` 会先被
+            #   counters 分支吃掉，把 `self|self_dmg_bonus` 当成非法 scope。
+            # ⚠ 但 `coin:` / `coin_flip:` / `evolve_act:` 里的 `|` 是**分支分隔符**
+            #   而非复合动作，不能拆。
+            if "|" in tag and not tag.startswith(("coin:", "coin_flip:",
+                                                  "evolve_act:")):
+                subs = tuple(x for x in tag.split("|") if x)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": "|".join(subs)})
+                self._apply_attack_effects(fp, subs, action)
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("recon:"):
                 _rspec = _parse_recon_tag(tag)
                 if not _rspec["legacy"]:
@@ -5340,6 +5354,14 @@ class Battle:
             out["plus"] += families.static_dmg_plus(self, attacker, defender)
             # 道具侧静态加伤（Maximum Belt / Light Ball / Binding Mochi）
             out["plus"] += _tool_dmg_plus(attacker, defender)
+            # 本回合限时加伤（第九十五批，Feraligatr「Torrential Heart」）
+            # `dmg_bonus_until == turn_number` → 仅本回合；与静态加伤一样**在弱点之前**。
+            _bl = self.players[self.current]
+            if (_bl.dmg_bonus_n and _bl.dmg_bonus_until == self.turn_number
+                    and (_bl.dmg_bonus_scope == "team"
+                         or (_bl.dmg_bonus_scope == "self"
+                             and attacker is _bl.dmg_bonus_src))):
+                out["plus"] += _bl.dmg_bonus_n
         # 跨回合修正（2026-10-29 第十六批）—— 都在弱点/抗性**之前**。
         #   · 「During your opponent's next turn, attacks used by the Defending
         #     Pokémon do N less damage (before …)」→ 受击方身上的 `atk_minus_next`
@@ -6538,6 +6560,22 @@ class Battle:
                 # 招式击倒（2026-10-28 第九批）
                 if self._apply_knockout(tag, action, _opp_blocked, attacker):
                     return
+            elif tag.startswith("self_dmg_bonus:"):
+                # 「during this turn, attacks used by this Pokémon do N more damage」
+                # （第九十五批，Feraligatr）—— 只设旗标，伤害在 `_attack_mods` 叠加。
+                _sp = tag.split(":")
+                if len(_sp) < 2 or not _sp[1].isdigit():
+                    raise ValueError(f"self_dmg_bonus tag 非法：{tag}")
+                _scope = _sp[2] if len(_sp) > 2 else "self"
+                if _scope not in ("self", "team"):
+                    raise ValueError(f"self_dmg_bonus 范围非法：{tag}")
+                _p = self.players[self.current]
+                _p.dmg_bonus_n = int(_sp[1])
+                _p.dmg_bonus_scope = _scope
+                _p.dmg_bonus_until = self.turn_number
+                _p.dmg_bonus_src = attacker if _scope == "self" else None
+                self._log("dmg_bonus", {"player": self.current,
+                                        "n": _p.dmg_bonus_n, "scope": _scope})
             elif tag.startswith("dmg_plus:") and ":recoil:" in tag:
                 # 可选加伤 + 反伤（第四十七批，Gurdurr / Dondozo ex）：
                 # 「You may do N more damage. If you do, this Pokémon also does M

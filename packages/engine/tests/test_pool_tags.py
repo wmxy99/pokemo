@@ -211,8 +211,12 @@ class TestPoolTagVocabulary(unittest.TestCase):
         """
         bad = []
         for name, item, tag in self._iter_tags():
+            # 复合 tag：`evolve_act:` 前缀 与 第九十五批的 `a|b` 形态都要按 `|` 拆，
+            # 否则 `counters:5:scope:self|self_dmg_bonus:120:self` 的 scope 会被
+            # 当成 `self|self_dmg_bonus`（非法）→ 误报。
             subs = ([p for p in tag[len("evolve_act:"):].split("|") if p]
-                    if tag.startswith("evolve_act:") else [tag])
+                    if tag.startswith("evolve_act:")
+                    else [x for x in tag.split("|") if x])
             for t in subs:
                 if not str(t).startswith("counters:"):
                     continue

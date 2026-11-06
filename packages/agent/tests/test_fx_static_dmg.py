@@ -143,13 +143,20 @@ class TestStaticDamageDetect(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_during_this_turn_rejected(self):
+    def test_during_this_turn_not_claimed_by_fx(self):
+        """「during this turn」的加伤**不归 fx 族**（它是回合级，不是常驻静态）
+
+        第九十五批起由 `self_dmg_bonus:N` 承载（见 `test_batch95_parse`），
+        因此这里断言「fx 族没有认领它」而不是「整卡未建模」。
+        """
         r = _tags("Once during your turn, you may put 5 damage counters on "
                   "this Pokémon. If you do, during this turn, attacks used by "
                   "this Pokémon do 120 more damage to your opponent’s Active "
                   "Pokémon (before applying Weakness and Resistance).")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertFalse(any(t.startswith("fx:static_dmg:") for t in r["tags"]),
+                         f"回合级加伤不得落 fx:static_dmg：{r['tags']}")
+        self.assertTrue(any("self_dmg_bonus" in t for t in r["tags"]),
+                        f"应由 self_dmg_bonus 承载：{r['tags']}")
 
     def test_temporary_debuff_rejected(self):
         r = _tags("During your opponent’s next turn, attacks used by the "

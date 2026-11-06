@@ -109,5 +109,44 @@ class TestBatch95Mismagius(unittest.TestCase):
                          f"无条件句式不得带 gate：{o['tags']}")
 
 
+class TestBatch95Feraligatr(unittest.TestCase):
+    """自伤指示物 + 本回合自身加伤 → **单条**复合 tag
+
+    卡面：「Once during your turn, you may put 5 damage counters on this Pokémon.
+    If you do, during this turn, attacks used by this Pokémon do 120 more damage
+    to your opponent's Active Pokémon (before applying Weakness and Resistance).」
+    """
+
+    TXT = ("Once during your turn, you may put 5 damage counters on this Pokémon. "
+           "If you do, during this turn, attacks used by this Pokémon do 120 more "
+           "damage to your opponent's Active Pokémon (before applying Weakness "
+           "and Resistance).")
+
+    def _parse(self, text: str, kind: str = "ability") -> dict:
+        sp = E.parse_rule(text, kind=kind, name="Torrential Heart")
+        return E.to_engine_tags([sp])
+
+    def test_compound_tag(self):
+        o = self._parse(self.TXT)
+        self.assertEqual(
+            o["tags"], ["counters:5:scope:self|self_dmg_bonus:120:self"])
+        self.assertEqual(o["unsupported"], [])
+
+    def test_missing_if_you_do_rejected(self):
+        """近邻：缺「If you do」→ 代价与效果之间的因果断了，不得认领"""
+        o = self._parse(
+            "Once during your turn, you may put 5 damage counters on this "
+            "Pokémon. During this turn, attacks used by this Pokémon do 120 more "
+            "damage to your opponent's Active Pokémon (before applying Weakness "
+            "and Resistance).")
+        self.assertEqual(o["tags"], [])
+        self.assertTrue(o["unsupported"])
+
+    def test_attack_side_not_claimed(self):
+        """招式侧不得认领该句式（它是特性）"""
+        o = self._parse(self.TXT, kind="attack")
+        self.assertFalse(any("self_dmg_bonus" in t for t in o["tags"]))
+
+
 if __name__ == "__main__":       # pragma: no cover
     unittest.main()

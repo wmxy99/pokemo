@@ -355,8 +355,27 @@ def audit_extra_damage(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def _expand_compound(effects: list) -> list:
+    """把复合 tag（`a|b`）展开成单条，供各类对账按单 tag 断言
+
+    第九十五批起特性 tag 可以是**一条**复合串（`counters:5:scope:self|
+    self_dmg_bonus:120:self`）。对账函数都是按单 tag 前缀判断的，不展开就会
+    报「缺 tag」的假错误。`coin:` / `coin_flip:` / `evolve_act:` 里的 `|`
+    是**分支分隔符**，不能拆。
+    """
+    out: list = []
+    for e in effects or []:
+        t = str(e)
+        if "|" in t and not t.startswith(("coin", "evolve_act:")):
+            out.extend(x for x in t.split("|") if x)
+        else:
+            out.append(t)
+    return out
+
+
 def _check_clause(card_name: str, item_name: str, clause: str, per,
                   effects: list, raw: str, ko_ok: bool = False) -> list:
+    effects = _expand_compound(effects)
     # 「choose N of your opponent's Pokémon and put M damage counters on **each of
     #  them**」（第九十七批，Team Rocket's Crobat ex）
     # ⚠ 目标与只数都在**前一句**（choose N of …），本函数只看到尾句 `each of them`，
@@ -377,6 +396,16 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         return [f"{card_name} · {item_name}：不可精确表达的目标 "
                 f"`{raw[:60]}` **却在池内**（应整卡不收）"]
     if want == "self":
+        # 「put N damage counters on this Pokémon」也可能落精确的
+        # `counters:N:scope:self`（第九十五批，Feraligatr）—— 指示物不吃弱点/抗性，
+        # 比 `self:N`（伤害通道）更精确，视为满足。
+        # 一个指示物 = 10 点伤害，所以 `counters:<per/10>:scope:self`
+        _ctxt = _norm(f"{clause} {raw or ''}")
+        if isinstance(per, int) and per > 0 \
+                and re.search(r"damage counters?", _ctxt) and any(
+                    str(e).startswith(f"counters:{max(1, per // 10)}:scope:self")
+                    for e in effects):
+            return []
         hits = [str(e) for e in effects
                 if str(e) == f"self:{per}" or str(e).startswith(f"self:{per}:")]
         # 抛币分支里的反伤（Team Rocket's Raticate：`coin_all:2:tails:self:90`）
@@ -1584,6 +1613,7 @@ def audit_static_damage(card_name: str, item_name: str, desc: str,
     `passive:dmg_reduce:30` —— 对所有属性都减伤（静默放大）。
     """
     errs = []
+    effects = _expand_compound(effects)
     seen_static = set()
     next_spans = _next_turn_spans(desc)
     for m in re.finditer(r"attacks used by [^.]{0,140}? do(?:es)? (\d+) "
@@ -1591,6 +1621,13 @@ def audit_static_damage(card_name: str, item_name: str, desc: str,
         if any(s <= m.start() < e for s, e in next_spans):
             continue                     # 跨回合修正句，由第十五类接管
         n = int(m.group(1))
+        # 「during this turn, attacks used by this Pokémon do N more damage」
+        # （Feraligatr「Torrential Heart」）—— **回合级**加伤，不是常驻静态：
+        # 由 `self_dmg_bonus:N` 承载（对账在第九十五批前只认 fx，会误报）。
+        _tail = (desc or "")[max(0, m.start() - 140): m.end() + 80].lower()
+        if "during this turn" in _tail and any(
+                str(t).startswith(f"self_dmg_bonus:{n}") for t in effects):
+            continue
         direction = "add" if m.group(2).lower() == "more" else "sub"
         want = f"fx:static_dmg:{direction}:{n}:"
         seen_static.add(m.start())
@@ -2141,7 +2178,7 @@ def audit_on_damaged(card_name: str, item_name: str, desc: str,
     """
     errs = []
     d = PAREN.sub(" ", _norm(desc or ""))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     if "damaged by an attack" not in d:
         return errs
     m = re.search(r"(?:put|place)\s+(\d+)\s+damage\s+counters?\s+on\s+(?:the\s+)?"
@@ -2188,7 +2225,7 @@ def audit_energy_self_to_deck(card_name: str, item_name: str, desc: str,
     has_sent = bool(re.search(
         r"shuffle all energy attached to this pok[eé]mon into your deck, "
         r"and this attack does", d, re.I))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     if has_sent and "energy_self_to_deck:all" not in tags:
         errs.append(f"{card_name} · {item_name}：卡面「Shuffle all Energy attached "
                     "to this Pokémon into your deck」缺 `energy_self_to_deck:all`"
@@ -2467,7 +2504,7 @@ def audit_shuffle_opp_pokemon(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or ""))     # ’ → ' 归一（否则 `opponent's` 不匹配）
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     has = [t for t in tags if "shuffle_opp_pokemon:" in t]
     m = re.search(
         r"flip a coin[.] if heads, choose (\d+) of your opponent'?s? (benched )?"
@@ -2497,7 +2534,7 @@ def audit_batch40(card_name: str, item_name: str, desc: str,
     """连续抛币计数源 / 选 N 只进化 / 不同属性检索（第三十六类）"""
     errs: list = []
     d = PAREN.sub(" ", desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     # ① 「does N [more] damage for each heads」（连续掷币）
     m = _UTAIL_DMG.search(d)
@@ -2662,7 +2699,7 @@ def audit_batch53(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or ""))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     # ① 被击倒时少给奖赏
     m = _KO_PM_IF_NAMED.search(d)
@@ -2810,7 +2847,7 @@ def audit_batch54(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or "")).strip().rstrip(".")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     blob = " ".join(tags)
 
     # ① 对手弃手牌 / 双方弃到剩 N
@@ -2941,7 +2978,7 @@ def audit_batch58_62(card_name: str, item_name: str, desc: str,
                      effects: list, play_gate: str | None = None) -> list:
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or ""))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     # ① draw_cond：keep/shuffle 与 plus/set 方向
     if any(t.startswith("draw_cond:") for t in tags):
@@ -3083,7 +3120,7 @@ def audit_batch63_67(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or ""))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     # ① 自身跨回合禁攻
     if _B63_CANT_ATTACK.search(d) and not _B63_NAMED_LOCK.search(d):
@@ -3200,7 +3237,7 @@ def audit_batch68_77(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(PAREN.sub(" ", desc or ""))
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     m = _B68_EACH_PLAYER.search(d)
     if m:
@@ -3255,7 +3292,10 @@ def audit_batch68_77(card_name: str, item_name: str, desc: str,
         _rest = d[m.end():]
         compound = bool(re.search(
             r"\bif you do\b|during this turn|\bthen\b|this attack does", _rest))
-        if compound and has:
+        # 第九十五批起「+N 伤害 / 按放置数重算」有精确承载：
+        # `self_dmg_bonus:N`（回合级加伤）→ 不再算部分实现。
+        if compound and has and not any(
+                str(t).startswith("self_dmg_bonus:") for t in tags):
             errs.append(f"{card_name} · {item_name}：卡面「put {n} damage "
                         "counters on this Pokémon」后接未建模从句（+120 / 按放置"
                         "数重算）→ 只映射指示物属「部分实现冒充已实现」，应整条" 
@@ -3301,7 +3341,7 @@ def audit_batch79(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     m = _B79_ROTO.search(d)
     if m:
@@ -3385,7 +3425,7 @@ def audit_batch80_84(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
 
     m = _B80_FULL_HP.search(d)
     if m:
@@ -3464,7 +3504,7 @@ def audit_batch85(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     if _B85_KPM.search(d) and not any(t.startswith("ko_prize_minus:")
                                       for t in tags):
         errs.append(f"{card_name} · {item_name}：卡面「对手宝可梦被击倒→少拿"
@@ -3488,7 +3528,7 @@ def audit_batch89(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     m = _B89_PB.search(d)
     if not m:
         return errs
@@ -3529,7 +3569,7 @@ def audit_batch93_94(card_name: str, item_name: str, desc: str,
     """
     errs: list = []
     d = _norm(desc or "")
-    tags = [str(e) for e in effects]
+    tags = [str(e) for e in _expand_compound(effects)]
     if _B93_EXV.search(d) and not any("opp_active_is_ex_or_v" in t for t in tags):
         errs.append(f"{card_name} · {item_name}：卡面「对手战斗位是 ex/V → 加伤」"
                     f"应产 `dmg_plus:*:if:opp_active_is_ex_or_v`，实际 {tags}")
@@ -3573,7 +3613,7 @@ def main() -> int:
             for it in c.get(kind) or []:
                 n_items += 1
                 desc = it.get("desc") or ""
-                eff = list(it.get("effects") or [])
+                eff = _expand_compound(list(it.get("effects") or []))
                 if it.get("tag"):
                     eff.append(it["tag"])
                 eff = _expand_evolve_act(eff)
@@ -3664,7 +3704,7 @@ def main() -> int:
         for it in fossil.get("abilities") or []:
             n_items += 1
             desc = it.get("desc") or ""
-            eff = list(it.get("effects") or [])
+            eff = _expand_compound(list(it.get("effects") or []))
             if it.get("tag"):
                 eff.append(it["tag"])
             errs += audit_static_damage(c["name"], it.get("name"), desc, eff)

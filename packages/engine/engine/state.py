@@ -60,6 +60,16 @@ class PlayerState:
     last_turn_ancient_attackers: list = field(default_factory=list)
     prizes_taken_this_turn: int = 0
     prizes_taken_last_turn: int = 0
+    # ---- 本回合限时加伤（2026-11-06 第九十五批，Feraligatr）----
+    # 「… during this turn, attacks used by this Pokémon do N more damage …」
+    # 与 `prize_bonus_until` 同用 turn_number 过期：`dmg_bonus_until == turn_number`
+    # 即「仅本回合有效」，避免再加一个每回合清零的钩子。
+    dmg_bonus_n: int = 0
+    dmg_bonus_scope: str = "self"       # self | team
+    dmg_bonus_until: int = 0
+    # 「this Pokémon」的**具体持有者**：范围 self 时必须按对象同一性判定，
+    # 不能用 `active` —— 换位后 active 会变成别的宝可梦，加伤会跟着"沾光"。
+    dmg_bonus_src: object = None
     # ---- 本回合多拿奖赏（2026-11-05 第八十九批，Briar）----
     # 「During this turn, if your opponent's Active Pokémon is Knocked Out by
     #  damage from an attack used by your Tera Pokémon, take N more Prize card.」

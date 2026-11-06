@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1122,
+      "kept": 1123,
       "by_Energy": 19,
-      "by_Pokemon": 947,
+      "by_Pokemon": 948,
       "by_Trainer": 156,
       "skipped": {
-        "存在未建模项（整卡不收）": 128,
+        "存在未建模项（整卡不收）": 127,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -1589,6 +1589,58 @@
       "source_card_id": 48,
       "name_key": "croconaw",
       "uid": "Croconaw@TEF 40"
+    },
+    {
+      "name": "Feraligatr",
+      "name_zh": "大力鳄",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 180,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Croconaw",
+      "attacks": [
+        {
+          "name": "Giant Wave",
+          "cost": {
+            "water": 2
+          },
+          "damage": 160,
+          "effects": [
+            "attack_lock:name:turn:Giant Wave"
+          ],
+          "desc": "During your next turn, this Pokémon can’t use Giant Wave.",
+          "name_zh": "巨浪",
+          "desc_zh": "在你的下个回合中，此宝可梦无法使用「巨浪」。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Torrential Heart",
+          "name_zh": "激流之心",
+          "tag": "counters:5:scope:self|self_dmg_bonus:120:self",
+          "location": "field",
+          "desc": "Once during your turn, you may put 5 damage counters on this Pokémon. If you do, during this turn, attacks used by this Pokémon do 120 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+          "desc_zh": "在你的回合中，你可以使用 1 次。在此宝可梦上放置 5 个伤害指示物。若如此做，则在本回合中，此宝可梦使用的招式对对手的战斗宝可梦造成的伤害 +120（计算弱点和抗性之前）。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TEF",
+        "number": "41"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 49,
+      "name_key": "feraligatr",
+      "uid": "Feraligatr@TEF 41"
     },
     {
       "name": "Wiglett",

@@ -5554,6 +5554,12 @@ def _condition_from_text(text: str) -> Optional[str]:
     if m:
         return (f"own_bench_named_all:{_k(m.group(1))}+{_k(m.group(2))}")
     # ---- 第九十三批（2026-11-05）：三个新条件 ----
+    # 「If your opponent's Active Pokémon is affected by a Special Condition …」
+    # （Mismagius「Assassin's Magic」/ 大量既有卡）——引擎条件早已存在，
+    # 但**短语映射**一直缺，导致这类条件加伤/指示物全部落未建模。
+    if re.search(r"opponent'?s active pok[eé]mon is affected by a special "
+                 r"condition", low):
+        return "opp_active_has_status"
     # 「If your opponent's Active Pokémon is a Pokémon {ex} or Pokémon {V}, this
     #  attack does 110 more damage.」（Galvantula ex「Charged Web」）
     if re.search(r"opponent'?s active pok[eé]mon is a pok[eé]mon \{?\s*ex\s*\}?"
@@ -6660,6 +6666,19 @@ def _detect_counters_on_active(text: str, kind: str) -> list:
         return [act("counters", int(m.group(2)), "active_opponent_bench",
                     {"counters_scope": "opp",
                      "counters_count": int(m.group(1))})]
+    # 「If <cond>, place N damage counters on 1 of your opponent's **Benched**
+    #  Pokémon.」（第九十五批，Mismagius「Assassin's Magic」）
+    # 条件可由引擎 `_eval_condition` 精确求值 → `:gate:<cond>`；
+    # 目标是**后备** → `:scope:opp_bench`（不能用 `opp`，那会先打战斗位）。
+    m = re.fullmatch(r"if (.+?), (?:put|place) (\d+) damage counters? on 1 of "
+                     r"your opponent'?s? benched pok[eé]mon\.?", low.strip())
+    if m:
+        cond = _condition_from_text(m.group(1))
+        if not cond:
+            return []
+        return [act("counters", int(m.group(2)), "active_opponent_bench",
+                    {"counters_scope": "opp_bench", "counters_count": 1,
+                     "gate": cond})]
     m = re.search(r"(?:put|place) (\d+) damage counters? on 1 of your opponent'?s? "
                   r"pok[eé]mon([^.;,()]{0,60})", low)
     if m:
@@ -9616,8 +9635,19 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("counters_scope") == "self":
                     # 己方战斗位直放指示物（Venture Bomb / Feraligatr，第七十二批）
                     tag += ":scope:self"
+                elif extra.get("counters_scope") == "opp_bench":
+                    # 只打**对手后备**（Mismagius「Assassin's Magic」，第九十五批）
+                    # ⚠ 与 `:scope:opp` 不同：后者候选取「战斗位优先」，会把指示物
+                    #   打到战斗位（卡面明写 Benched → 静默错位）。
+                    _cnt = extra.get("counters_count")
+                    tag += (":scope:opp_bench:all" if _cnt == "all"
+                            else f":scope:opp_bench:{int(_cnt or 1)}")
                 if extra.get("selfko"):
                     tag += ":selfko"
+                # 条件门（第九十五批）：卡面「If <cond>, place …」——条件不成立时
+                # **不放置**。放在最后，引擎按后缀剥。
+                if extra.get("gate"):
+                    tag += f":gate:{extra['gate']}"
                 tags.append(tag)
             elif t == "team_boost":
                 # 本回合全队增伤（第六十批）

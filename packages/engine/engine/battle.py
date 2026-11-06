@@ -7261,6 +7261,14 @@ class Battle:
         返回 ``True`` 表示对局已结束。
         """
         body = str(tag)
+        # 条件门（第九十五批）：`:gate:<cond>` 放在**最外层**，先剥。
+        # 条件不成立 → 整条效果不执行（不是「放置 0 个」，而是不触发）。
+        gate = None
+        if ":gate:" in body:
+            body, gate = body.split(":gate:", 1)
+            if not _eval_condition(self, gate):
+                self._log("no_effect", {"tag": tag, "reason": "gate_false"})
+                return False
         selfko = body.endswith(":selfko")
         if selfko:
             body = body[: -len(":selfko")]
@@ -7296,6 +7304,21 @@ class Battle:
                 if not targets:                  # 非法位置 → 退回确定性默认
                     targets = [fp for _, fp in (cands if count is None
                                                 else cands[:count])]
+            else:
+                targets = [fp for _, fp in (cands if count is None
+                                            else cands[:count])]
+        elif scope == "opp_bench":
+            # 只打**对手后备**（Mismagius「Assassin's Magic」，第九十五批）。
+            # ⚠ 不能复用 `opp`：那条候选取「战斗位优先」，会把指示物放到战斗位，
+            #   而卡面明写 Benched —— 静默错位（且战斗位吃弱点，伤害不同）。
+            cands = [(pos, fp) for pos, fp in self._snipe_candidates("opp")
+                     if pos != 0]
+            want = action.get("snipe") if isinstance(action, dict) else None
+            if isinstance(want, (list, tuple)) and want:
+                wanted = {int(x) for x in want}
+                targets = [fp for pos, fp in cands if pos in wanted]
+                if not targets:
+                    targets = [fp for _, fp in cands[:count]]
             else:
                 targets = [fp for _, fp in (cands if count is None
                                             else cands[:count])]

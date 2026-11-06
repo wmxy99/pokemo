@@ -94,12 +94,31 @@ class TestStaticDamageDetect(unittest.TestCase):
         self.assertEqual(r["tags"], ["fx:static_dmg:sub:30:opp_active"])
 
     # ---- 负向守卫：近邻写法必须仍被拒绝 ----
-    def test_future_exception_rejected(self):
+    def test_future_exception_modeled(self):
+        """2026-11-06（第九十五批）：`Future` 子类 + 「except any X」已可精确表达
+
+        旧实现拒绝它的理由是「数据模型无 Future」——**该理由已过期**：
+        数据集 `category` 自 B3 起就有 `Future`（10 张）/ `Ancient`（14 张）。
+        现在落 `team_category:future:except:<key>`；例外必须进 tag，否则
+        Iron Crown ex 自己的招式也会 +20（静默加强）。
+        与本类 `test_mega_condition_modeled` 同性质：**能力到位就要正向建模**。
+        """
         r = _tags("Attacks used by your Future Pokémon, except any Iron Crown "
                   "{ex}, do 20 more damage to your opponent’s Active Pokémon "
                   "(before applying Weakness and Resistance).")
+        self.assertEqual(
+            r["tags"],
+            ["fx:static_dmg:add:20:team_category:future:except:ironcrown"])
+
+    def test_category_without_before_applying_rejected(self):
+        """负向守卫：缺「(before applying Weakness and Resistance)」→ 仍拒绝
+
+        该括号声明「加伤在弱点/抗性之前」，缺了无法确定结算顺序 → 不认领。
+        """
+        r = _tags("Attacks used by your Future Pokémon, except any Iron Crown "
+                  "{ex}, do 20 more damage to your opponent’s Active Pokémon.")
         self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"], "Future 例外必须保持未建模")
+        self.assertTrue(r["unsupported"], "缺结算顺序声明必须保持未建模")
 
     def test_mega_condition_modeled(self):
         """2026-10-28 第十二批：`{D} Mega` 前置条件已可精确求值（Seviper）

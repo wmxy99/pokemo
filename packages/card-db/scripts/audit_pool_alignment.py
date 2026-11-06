@@ -412,6 +412,15 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
                     f"缺 `on_damaged:counter:{per}` tag（现为 "
                     f"{[e for e in effects if str(e).startswith('on_damaged')]}）"]
         return []
+    # 「place N damage counters on …」可能落 `counters:…:scope:<same>`（第九十五批起）：
+    # 指示物**不吃弱点/抗性**，比 `snipe:`（走伤害通道）更精确 → 视为满足该目标口径。
+    # 只对「damage counters」子句生效；伤害子句仍必须走 snipe。
+    _ctr_txt = _norm(f"{clause} {raw or ''}")
+    if want.startswith("snipe:") and re.search(r"damage counters?", _ctr_txt):
+        scope_want = want.split(":", 1)[1]
+        if any(str(t).startswith("counters:")
+               and f":scope:{scope_want}" in str(t) for t in effects):
+            return []
     hits = [str(t) for t in effects if str(t).startswith(want + ":")]
     if not hits:
         return [f"{card_name} · {item_name}：`{raw[:60]}` 缺 `{want}:…` tag"]

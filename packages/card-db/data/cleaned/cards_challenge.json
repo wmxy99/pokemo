@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-05 17:36:46",
+  "reparsed_at": "2026-11-06 11:01:22",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1135,
+  "engine_ready": 1137,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1135,
-   "engine_approximated": 1120,
-   "engine_unmatched": 132,
+   "zh_backfill": 1137,
+   "engine_approximated": 1122,
+   "engine_unmatched": 130,
    "engine_namekey_mismatch": 16
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 138,
-   "engine_tags": 1448,
-   "unsupported": 135,
+   "engine_tags": 1450,
+   "unsupported": 133,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1120,
+  "engine_approximated": 1122,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -10461,14 +10461,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Iron Crown ex@TEF 81",
    "parse": {
     "items": [
      {
@@ -10520,30 +10522,29 @@
        {
         "kind": "ability",
         "name": "Cobalt Command",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "tag": "fx:static_dmg:add:20:team_category:future:except:ironcrown",
+           "family": "static_dmg"
           }
          }
         ],
-        "source_text": "Attacks used by your Future Pokémon, except any Iron Crown {ex}, do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "Attacks used by your Future Pokémon, except any Iron Crown {ex}, do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+        "fx_family": "static_dmg"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:static_dmg:add:20:team_category:future:except:ironcrown"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -10580,32 +10581,30 @@
      {
       "kind": "ability",
       "name": "Cobalt Command",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "tag": "fx:static_dmg:add:20:team_category:future:except:ironcrown",
+         "family": "static_dmg"
         }
        }
       ],
-      "source_text": "Attacks used by your Future Pokémon, except any Iron Crown {ex}, do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "Attacks used by your Future Pokémon, except any Iron Crown {ex}, do 20 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+      "fx_family": "static_dmg"
      }
     ],
     "errors": [],
     "engine_tags": [
      "snipe:opp:50:2",
-     "ignore_effects:wr"
+     "ignore_effects:wr",
+     "fx:static_dmg:add:20:team_category:future:except:ironcrown"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -116496,14 +116495,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Mismagius@ASC 86",
    "parse": {
     "items": [
      {
@@ -116517,11 +116518,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "counters",
+          "amount": 6,
+          "target": "active_opponent_bench",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon）"
+           "counters_scope": "opp_bench",
+           "counters_count": 1,
+           "gate": "opp_active_has_status"
           }
          }
         ],
@@ -116529,13 +116532,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon）"
-       }
-      ]
+      "engine_tags": [
+       "counters:6:scope:opp_bench:1:gate:opp_active_has_status"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -116546,11 +116546,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "counters",
+        "amount": 6,
+        "target": "active_opponent_bench",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon）"
+         "counters_scope": "opp_bench",
+         "counters_count": 1,
+         "gate": "opp_active_has_status"
         }
        }
       ],
@@ -116558,13 +116560,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（1 of your opponent’s Benched Pokémon）"
-     }
+    "engine_tags": [
+     "counters:6:scope:opp_bench:1:gate:opp_active_has_status"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

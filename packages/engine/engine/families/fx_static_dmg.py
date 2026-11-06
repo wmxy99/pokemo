@@ -31,7 +31,9 @@ _TYPES = {"grass", "fire", "water", "lightning", "psychic", "fighting",
 _ADD_SCOPES = {"self", "self_if_damage", "self_vs_ability",
                "self_if_mega_type", "self_per_prize",
                "team", "team_type", "team_evolution_type",
-               "team_vs_evolution", "team_name"}
+               "team_vs_evolution", "team_name",
+               # 第九十五批（2026-11-06）：按**卡牌子类**限定（Future / Ancient）
+               "team_category"}
 _SUB_SCOPES = {"opp_active"}
 
 
@@ -53,7 +55,7 @@ def _parse_tag(tag: str) -> dict:
         raise ValueError(f"非法 static_dmg tag：{tag}")
     nonstack = parts[-1] == "nonstack"
     body = parts[:-1] if nonstack else parts
-    if len(body) < 5 or len(body) > 6:
+    if len(body) < 5:
         raise ValueError(f"static_dmg tag 字段数非法：{tag}")
     direction = body[2]
     raw_n = body[3]
@@ -62,6 +64,13 @@ def _parse_tag(tag: str) -> dict:
         raise ValueError(f"static_dmg tag 缺少数值：{tag}")
     n = int(raw_n)
     arg = body[5] if len(body) > 5 else None
+    # 扩展段只允许一种形态：`:except:<key>`（「except any Iron Crown ex」）。
+    # 认不出的扩展一律抛错 —— 静默忽略会变成「例外失效」，多算伤害。
+    except_key = None
+    if len(body) > 6:
+        if len(body) != 8 or body[6] != "except" or not body[7]:
+            raise ValueError(f"static_dmg tag 扩展段非法：{tag}")
+        except_key = body[7]
     if direction == "add":
         if scope not in _ADD_SCOPES:
             raise ValueError(f"未识别的 static_dmg 范围：{tag}")
@@ -85,8 +94,12 @@ def _parse_tag(tag: str) -> dict:
         raise ValueError(f"static_dmg 缺属性参数：{tag}")
     if scope == "team_name" and not arg:
         raise ValueError(f"static_dmg 缺阵营参数：{tag}")
+    if scope == "team_category" and arg not in ("future", "ancient"):
+        raise ValueError(f"static_dmg 类别非法：{tag}")
+    if except_key is not None and scope != "team_category":
+        raise ValueError(f"static_dmg 仅 team_category 支持 except：{tag}")
     return {"direction": direction, "n": n, "scope": scope, "arg": arg,
-            "nonstack": nonstack}
+            "nonstack": nonstack, "except": except_key}
 
 
 def _is_active(battle, fp) -> bool:
@@ -142,6 +155,22 @@ def _scope_applies(info: dict, battle, source, source_side: int,
         return bool(defender and defender.pdef.stage > 0)
     if scope == "team_name":
         return _name_key(attacker.pdef.name).startswith(info["arg"] or "")
+    if scope == "team_category":
+        # 「Attacks used by your **Future** Pokémon, except any Iron Crown {ex}」
+        # `category` 是数据集的卡牌子类（Future / Ancient / Tera(...) /
+        # Trainer's Pokémon(...)）；这里只做**子串**匹配（"future" ∈ "Future"）。
+        cat = str(getattr(attacker.pdef, "category", "") or "").lower()
+        if not cat or (info["arg"] or "") not in cat:
+            return False
+        exc = info.get("except")
+        if not exc:
+            return True
+        # 解析侧把「except any Iron Crown {ex}」归一成 `ironcrown`（`{ex}` 在花括号里，
+        # 不在名字里），而引擎卡名 key 是 `ironcrownex` → 必须剥掉尾部 `ex` 再比。
+        key = _name_key(attacker.pdef.name)
+        if key.endswith("ex"):
+            key = key[:-2]
+        return key != exc
     return False
 
 

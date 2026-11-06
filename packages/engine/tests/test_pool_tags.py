@@ -217,6 +217,13 @@ class TestPoolTagVocabulary(unittest.TestCase):
                 if not str(t).startswith("counters:"):
                     continue
                 body = str(t)[len("counters:"):]
+                # 第九十五批：条件门 `:gate:<cond>` 位于最后 → 先剥并校验条件名，
+                # 否则「条件拼错」会变成静默不触发（测试全绿但卡是废的）。
+                if ":gate:" in body:
+                    body, _gate = body.split(":gate:", 1)
+                    if not _known_condition(_gate):
+                        bad.append(f"{name} · {item}：{t}（gate 条件未建模）")
+                        continue
                 if body.endswith(":selfko"):
                     body = body[: -len(":selfko")]
                 if ":scope:" in body:
@@ -227,9 +234,10 @@ class TestPoolTagVocabulary(unittest.TestCase):
                         if len(_sp) != 2 or _sp[1] != "all":
                             bad.append(f"{name} · {item}：{t}（ability 范围只支持 all）")
                         continue
-                    if _sp[0] != "opp" or (len(_sp) > 1
-                                           and _sp[1] != "all"
-                                           and not _sp[1].isdigit()):
+                    # 支持的数值范围：opp / opp_bench / self（各自可带只数或 all）
+                    if _sp[0] not in ("opp", "opp_bench", "self") \
+                            or (len(_sp) > 1 and _sp[1] != "all"
+                                and not _sp[1].isdigit()):
                         bad.append(f"{name} · {item}：{t}（counters 范围非法）")
                         continue
                 if ":per:" in body:

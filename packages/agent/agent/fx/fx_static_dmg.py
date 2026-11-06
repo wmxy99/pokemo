@@ -92,6 +92,21 @@ _SUB_RE = re.compile(
     r"\(before applying weakness and resistance\)\.$"
 )
 
+# 加伤·**卡牌子类**范围（2026-11-06 第九十五批）：Iron Crown ex「Cobalt Command」
+#   「Attacks used by your **Future** Pokémon, except any Iron Crown {ex}, do 20
+#     more damage to your opponent's Active Pokémon (before applying Weakness and
+#     Resistance).」
+# ⚠ 本模块此前把这条列为「故意拒绝：数据模型无 Future」——**该理由已过期**：
+#   数据集的 `category` 字段自 B3 起就有 `Future` / `Ancient`（各 10 / 14 张）。
+# 例外（except any Iron Crown ex）必须显式编码，否则 Iron Crown ex 自己的招式
+# 也吃 +20（静默加强）。
+_ADD_CATEGORY_RE = re.compile(
+    r"^attacks used by your (?P<cat>future|ancient) " + _POKE + r""
+    r"(?:, except any (?P<except>[a-z][a-z .'-]*?) \{(?:ex|v)\},?)?"
+    r" do (?P<n>\d+) more damage to your opponent's active " + _POKE
+    + r" \(before applying weakness and resistance\)\.$"
+)
+
 
 def _type_of(token: str) -> str | None:
     if not token or len(token) != 3 or token[0] != "{" or token[2] != "}":
@@ -146,6 +161,16 @@ def detect(text: str, kind: str = "attack", name: str = "") -> dict | None:
         if ptype is None:
             return None
         return _spec(_tag("add", int(m.group("n")), "self_if_mega_type", ptype))
+
+    m = _ADD_CATEGORY_RE.match(t)
+    if m:
+        n = int(m.group("n"))
+        cat = str(m.group("cat") or "").lower()
+        except_key = _name_key(m.group("except")) if m.group("except") else None
+        tag = _tag("add", n, "team_category", cat)
+        if except_key:
+            tag += f":except:{except_key}"
+        return _spec(tag)
 
     m = _ADD_RE.match(t)
     if not m:

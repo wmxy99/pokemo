@@ -162,10 +162,10 @@
    "id": 95,
    "phase": "P2",
    "theme": "静态修正层",
-   "status": "blocked",
-   "actual_pool": 0,
-   "actual_refused": 6,
-   "note": "**整批受阻（0 张）**。6 张各需一项**新机制**，本批未做：Iron Crown ex（按 `category=Future` 的静态加伤 + 「except any Iron Crown ex」例外）、Lillie's Clefairy ex（弱点属性改写）、Hop's Choice Band（道具**同时**改费用与加伤，`build_trainer` 只允许一个 `tool:` tag）、Kieran（回合级加伤旗标）、Archaludon ex（「下回合无弱点」+ 弃牌堆自由分配附着）、Feraligatr（自伤指示物 + 回合级加伤）。全部保持拒收，不造假 tag。",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 5,
+   "note": "**落地 1 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 扩展静态修正层支持**卡牌子类**范围并显式编码 except；此前拒绝它的理由是「数据模型无 Future」，**该理由已过期**，数据集 `category` 自 B3 起就有 Future/Ancient）。**如实拒收 5 张**：Lillie's Clefairy ex（弱点属性改写需全局弱点层）、Hop's Choice Band（道具**同时**改费用与加伤，`fp.tool` 是单个字符串，需复合道具 tag 承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）、Feraligatr（回合级自身加伤）。",
    "cards": [
     {
      "name": "Iron Crown ex",
@@ -275,9 +275,9 @@
    "phase": "P2",
    "theme": "指示物目标 / 条件",
    "status": "done",
-   "actual_pool": 1,
-   "actual_refused": 6,
-   "note": "**落地 1 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`，进化触发 + 选 2 只各 2 个指示物，目标可由 `action[\"snipe\"]` 选择）。**如实拒收 6 张**：Feraligatr（同批 95 未完成的回合级加伤）、Sinistcha（「in any way you like」需**分配**语义，`counters:` 只能每目标各 N 个）、Mismagius（需 bench-only 范围 + 条件门）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
+   "actual_pool": 2,
+   "actual_refused": 5,
+   "note": "**落地 2 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增**条件门** `:gate:` 与**后备专用**范围 `:scope:opp_bench`；不能用 `:scope:opp`：那条战斗位优先，会把指示物打到战斗位）。**如实拒收 5 张**：Feraligatr（回合级加伤未做）、Sinistcha（需**分配**语义）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
    "cards": [
     {
      "name": "Feraligatr",

@@ -1995,5 +1995,70 @@ class TestBatch89(unittest.TestCase):
         self.assertTrue(any("prize_bonus" in e for e in errs), errs)
 
 
+class TestBatch93_94(unittest.TestCase):
+    """条件型 / 计数源型伤害缩放：卡面有该句式 → 必须产对应 tag"""
+
+    EXV = ("If your opponent's Active Pokémon is a Pokémon {ex} or Pokémon {V}, "
+           "this attack does 110 more damage.")
+    SUP = ("If you played a Supporter card that has “Team Rocket” in its name from "
+           "your hand during this turn, this attack does 100 more damage.")
+    PAN = ("If any of your Benched Pancham have any damage counters on them, this "
+           "attack does 120 more damage.")
+    ZORO = ("This attack does 60 damage for each of your opponent's Pokémon {ex} "
+            "and Pokémon {V} in play.")
+    TOOL = ("This attack does 40 damage for each Pokémon Tool attached to all "
+            "Pokémon.")
+
+    def test_ex_or_v_ok(self):
+        self.assertEqual(A.audit_batch93_94(
+            "Galvantula ex", "Charged Web", self.EXV,
+            ["dmg_plus:110:if:opp_active_is_ex_or_v"]), [])
+
+    def test_ex_or_v_missing_flagged(self):
+        errs = A.audit_batch93_94("Galvantula ex", "Charged Web", self.EXV, [])
+        self.assertTrue(any("opp_active_is_ex_or_v" in e for e in errs), errs)
+
+    def test_supporter_ok(self):
+        self.assertEqual(A.audit_batch93_94(
+            "TR Kangaskhan ex", "Wicked Impact", self.SUP,
+            ["dmg_plus:100:if:played_supporter_named:teamrocket"]), [])
+
+    def test_supporter_wrong_name_flagged(self):
+        errs = A.audit_batch93_94(
+            "TR Kangaskhan ex", "Wicked Impact", self.SUP,
+            ["dmg_plus:100:if:played_supporter_named:n"])
+        self.assertTrue(any("played_supporter_named" in e for e in errs), errs)
+
+    def test_bench_named_ok(self):
+        self.assertEqual(A.audit_batch93_94(
+            "Pangoro", "Master's Punch", self.PAN,
+            ["dmg_plus:120:if:own_bench_named_has_damage:pancham"]), [])
+
+    def test_bench_named_missing_flagged(self):
+        errs = A.audit_batch93_94("Pangoro", "Master's Punch", self.PAN,
+                                  ["dmg_plus:120:if:own_bench_has_damage"])
+        self.assertTrue(any("own_bench_named_has_damage" in e for e in errs), errs)
+
+    def test_opp_ex_count_ok(self):
+        self.assertEqual(A.audit_batch93_94(
+            "Zoroark", "Illusory Hijacking", self.ZORO,
+            ["dmg_set:60:per:opp_ex_or_v"]), [])
+
+    def test_opp_ex_count_missing_flagged(self):
+        errs = A.audit_batch93_94("Zoroark", "Illusory Hijacking", self.ZORO, [])
+        self.assertTrue(any("opp_ex_or_v" in e for e in errs), errs)
+
+    def test_tools_ok(self):
+        self.assertEqual(A.audit_batch93_94(
+            "Bronzong", "Tool Drop", self.TOOL,
+            ["dmg_set:40:per:both_field_tools"]), [])
+
+    def test_tools_wrong_scope_flagged(self):
+        # 落成「己方道具数」→ 系统性少算
+        errs = A.audit_batch93_94("Bronzong", "Tool Drop", self.TOOL,
+                                  ["dmg_set:40:per:own_field_tools"])
+        self.assertTrue(any("both_field_tools" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main()

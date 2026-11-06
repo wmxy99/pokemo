@@ -80,12 +80,21 @@ def card_key(c: dict) -> tuple:
     return (norm(c["name"]), c["series"], str(c["number"]))
 
 
+def ready_keys() -> set:
+    """DB 实测的「已 ready」卡集合 —— 每批完工后卡会从「待做」变「已进池」，
+    而 JSON 里记的是**当时的**分层；渲染必须以 DB 为准，否则基线口径会漂。"""
+    return {card_key(c) for c in
+            json.loads(DB.read_text(encoding="utf-8"))["cards"]
+            if c.get("engine_ready")}
+
+
 def render(data: dict, m: dict) -> str:
     batches = sorted(data["batches"], key=lambda b: b["id"])
     structural = data["structural"]
     deferred = data["deferred"]
     cross = {card_key(c): c for c in data["cross_batch"]}
 
+    ready = ready_keys()
     seen, uniq = set(), []
     for b in batches:
         for c in b["cards"]:
@@ -93,8 +102,8 @@ def render(data: dict, m: dict) -> str:
             if k not in seen:
                 seen.add(k)
                 uniq.append(c)
-    todo = [c for c in uniq if c["tier"] != "done"]
-    done_cards = [c for c in uniq if c["tier"] == "done"]
+    todo = [c for c in uniq if card_key(c) not in ready]
+    done_cards = [c for c in uniq if card_key(c) in ready]
     slots = sum(len(b["cards"]) for b in batches)
     todo_total = len(todo) + len(structural) + len(deferred)
     expected_final = m["ready"] + len(todo)
@@ -141,8 +150,14 @@ def render(data: dict, m: dict) -> str:
       f"批次内待做 **{len(todo)}** + 结构性边界 **{len(structural)}** + 待新能力 **{len(deferred)}**"
       f" = **{todo_total}** {'✅' if todo_total == m['unready'] else '❌ 需修 JSON'}。")
     A("")
-    A(f"**规划**：第 90–133 批共 **44 批**；已完成 **{sum(1 for b in batches if b['status'] == 'done')}** 批，"
-      f"剩余 **{44 - sum(1 for b in batches if b['status'] == 'done')}** 批。")
+    # 「已处理」= 走完全流程的批次（含整批受阻）：受阻是**如实判定**的结果，
+    # 不是待办。与「未开工」分开计数，避免台账看起来"还有很多批"而其实是能力缺口。
+    _done = [b for b in batches if b["status"] == "done"]
+    _blocked = [b for b in batches if b["status"] == "blocked"]
+    _todo = [b for b in batches if b["status"] == "todo"]
+    A(f"**规划**：第 90–133 批共 **44 批**；已处理 **{len(_done) + len(_blocked)}** 批"
+      f"（完成 {len(_done)} · 整批受阻 {len(_blocked)}），"
+      f"剩余**未开工** **{len(_todo)}** 批。")
     A("")
     A(f"**终局预期**：`engine_ready` **{expected_final} / {m['total']} = {pct:.1f}%**"
       f"（当前 {m['ready']} + 可做 {len(todo)}）；结构性 {len(structural)} 张与待新能力 "
@@ -208,7 +223,8 @@ def render(data: dict, m: dict) -> str:
         A(pdesc + f" 已完成 {gdone}/{len(group)} 批。")
         A("")
         for b in group:
-            badge = "✅ 已完成" if b["status"] == "done" else "待办"
+            badge = {"done": "✅ 已完成", "blocked": "⛔ 受阻 · 整批如实拒收",
+                     "todo": "待办"}[b["status"]]
             A(f"### 第 {b['id']} 批 · {b['theme']}（{len(b['cards'])} 张）· {badge}")
             A("")
             if b["cards"]:
@@ -216,19 +232,21 @@ def render(data: dict, m: dict) -> str:
                 A("|---|---|---|---|---|")
                 for c in b["cards"]:
                     k = card_key(c)
+                    tier = "done" if k in ready else c["tier"]
                     mark = []
                     if k in cross:
                         others = [x for x in cross[k]["batches"] if x != b["id"]]
                         mark.append("跨批 → " + "、".join(str(x) for x in others))
                     A(f"| {c['name']} | {c['series']} | {c['number']} "
-                      f"| {c['tier']}（{TIER_DESC.get(c['tier'], '?')}） "
+                      f"| {tier}（{TIER_DESC.get(tier, '?')}） "
                       f"| {'；'.join(mark)} |")
                 A("")
             else:
                 A("本批不承载卡清单，只做结构性边界建档（见 §7）。")
                 A("")
-            if b["status"] == "done" and b["actual_pool"] is not None:
-                A(f"**实际结果**：进池 **{b['actual_pool']}** 张，如实拒收 **{b['actual_refused']}** 张。")
+            if b["actual_pool"] is not None:
+                A(f"**实际结果**：进池 **{b['actual_pool']}** 张，如实拒收 "
+                  f"**{b['actual_refused']}** 张。")
                 A("")
             if b.get("note"):
                 A(f"> {b['note']}")
@@ -321,7 +339,7 @@ def render(data: dict, m: dict) -> str:
         plan = len(b["cards"])
         pool = b["actual_pool"] if b["actual_pool"] is not None else ""
         ref = b["actual_refused"] if b["actual_refused"] is not None else ""
-        st = "✅ 完成" if b["status"] == "done" else "待办"
+        st = {"done": "✅ 完成", "blocked": "⛔ 受阻", "todo": "待办"}[b["status"]]
         A(f"| {b['id']} | {b['phase']} | {b['theme']} | {plan} | {pool} | {ref} | {st} |")
     A("")
     A("> 台账的「计划张数」只计**卡槽**；第 130–133 批是结构性建档批（0 槽），"

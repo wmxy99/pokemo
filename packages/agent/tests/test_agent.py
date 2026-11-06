@@ -336,11 +336,22 @@ class TestSystemPromptInjection(unittest.TestCase):
         第四十批新增 `until_tails`（「Flip a coin until you get tails」+ 磨牌 /
         弃对手手牌 / 任意卡检索 / 弃对手战斗位能量的**非伤害**子效果）。
         实测：**9340** 字符（上一版 9326，+14 = 该枚举名）。
+
+        ── 2026-11-05 上调至 9500（**仍是引擎能力驱动，正文逐字节未改**）──
+        第九十三批新增两个**带参条件**（进入 `_CONDITION_PARAMS` → 经
+        `dmg_vocab()` 自动注入）：
+          · `own_bench_named_has_damage`（Pangoro：后备具名宝可梦带指示物）
+          · `played_supporter_named`（Team Rocket's Kangaskhan ex：本回合打过
+            名字含 X 的支援者）
+        实测：**9421** 字符（上一版 9340，+81 ≈ 两个条件名 48 + 两条形态说明）。
+        与「{ex} 或 {V}」的近似无关：那两条是**新增能力**（引擎侧独立求值），
+        不是把旧条件改名复用来凑数 —— 复用会让将来加 V 类卡时静默算错。
+        模板正文未改 → 与历次「引擎加能力 → 提示词同步」同性质。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9400,
-            f"提示词已 {len(sp)} 字符，超过 9345 预算；"
+            len(sp), 9500,
+            f"提示词已 {len(sp)} 字符，超过 9500 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 
 

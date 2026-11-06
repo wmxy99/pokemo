@@ -5258,6 +5258,19 @@ def _counter_from_phrase(phrase: str) -> Optional[str]:
         if re.search(r"\benergy card", low):
             return "opp_hand_kind:energy"
 
+    # ---- 第九十四批（2026-11-05）：两个计数源短语 ----
+    # 「for each of your opponent's Pokémon {ex} and Pokémon {V} in play」
+    # （Zoroark「Illusory Hijacking」）——⚠ 本卡池无 V 类卡，引擎侧另起名
+    # `opp_ex_or_v` 而非直接复用 `opp_ex`，便于将来加 V 时定点修改。
+    if re.search(r"of your opponent'?s pok[eé]mon \{?\s*ex\s*\}?"
+                 r"(?:\s*and\s*pok[eé]mon \{?\s*v\s*\})?\s*in play", low):
+        # 只写 {ex} → 既有 `opp_ex`；写成「{ex} and {V}」→ 独立的 `opp_ex_or_v`
+        # （引擎侧两名字当前同值，但分开命名，将来加 V 支持时只需改一处）。
+        return "opp_ex_or_v" if re.search(r"\{?\s*v\s*\}", low) else "opp_ex"
+    # 「for each Pokémon Tool attached to all Pokémon」（Bronzong「Tool Drop」）
+    # 必须是 **all**（双方）—— 只数己方会系统性少算。
+    if re.search(r"pok[eé]mon tool attached to all pok[eé]mon", low):
+        return "both_field_tools"
     # 「双方后备」是引擎已支持的独立计数源；必须显式写出 both 才映射。
     # 不能先走阵营判定 —— 「both yours and your opponent's」同时含 opponent，
     # 早期会被算成**仅对手**后备（Skeledirge / Lillie's Clefairy ex 少算一半）。
@@ -5540,6 +5553,25 @@ def _condition_from_text(text: str) -> Optional[str]:
                   r"your bench", low)
     if m:
         return (f"own_bench_named_all:{_k(m.group(1))}+{_k(m.group(2))}")
+    # ---- 第九十三批（2026-11-05）：三个新条件 ----
+    # 「If your opponent's Active Pokémon is a Pokémon {ex} or Pokémon {V}, this
+    #  attack does 110 more damage.」（Galvantula ex「Charged Web」）
+    if re.search(r"opponent'?s active pok[eé]mon is a pok[eé]mon \{?\s*ex\s*\}?"
+                 r"\s*or\s*pok[eé]mon \{?\s*v\s*\}?", low):
+        return "opp_active_is_ex_or_v"
+    # 「If you played a Supporter card that has “Team Rocket” in its name from your
+    #  hand during this turn, this attack does 100 more damage.」
+    # （Team Rocket's Kangaskhan ex「Wicked Impact」）
+    m = re.search(r"if you played a supporter card that has [\"“]([^\"”]{2,24})[\"”] "
+                  r"in its name from your hand during this turn", low)
+    if m:
+        return f"played_supporter_named:{_k(m.group(1))}"
+    # 「If any of your Benched Pancham have any damage counters on them, this
+    #  attack does 120 more damage.」（Pangoro「Master's Punch」）
+    m = re.search(r"if any of your benched ([a-z][a-z' ]{2,24}?) have any "
+                  r"damage counters on them", low)
+    if m:
+        return f"own_bench_named_has_damage:{_k(m.group(1))}"
     for pat, cond in _CONDITION_PHRASES:
         if re.search(pat, low):
             return cond
@@ -6608,6 +6640,26 @@ def _detect_counters_on_active(text: str, kind: str) -> list:
     # 同一段文本里出现**多处**放置指示物 → 只建模一处会静默丢效果，整体不认
     if len(re.findall(r"(?:put|place) \d+ damage counters?", low)) > 1:
         return []
+    # 「choose N of your opponent's Pokémon and put M damage counters on each of
+    #  them」（Team Rocket's Crobat ex「Biting Spree」，第九十七批）
+    # 引擎 `counters:M:scope:opp:N` 正是这个语义（选 N 只、每只各 M 个），
+    # 且显式选择走 `action["snipe"]`（位置码），所以玩家仍能挑目标。
+    # ⚠ 必须排在「on 1 of your opponent's Pokémon」之前：那条会把
+    #   「on each of them」当成本句无目标而退回未建模。
+    m = re.search(r"choose (\d+) of your opponent'?s? pok[eé]mon and "
+                  r"(?:put|place) (\d+) damage counters? on each of them", low)
+    if m:
+        head = low[:m.start()].strip()
+        if re.search(r"\bif\b|in any way|as you like|instead|then\b", head):
+            return []
+        if kind == "ability" and not (_ONCE_TURN_COUNTER_HEAD.match(head)
+                                      or _EVOLVE_COUNTER_HEAD.match(head)):
+            return []
+        if kind == "attack" and re.search(r"\bif\b|\bwhen\b|\bonce\b", head):
+            return []
+        return [act("counters", int(m.group(2)), "active_opponent_bench",
+                    {"counters_scope": "opp",
+                     "counters_count": int(m.group(1))})]
     m = re.search(r"(?:put|place) (\d+) damage counters? on 1 of your opponent'?s? "
                   r"pok[eé]mon([^.;,()]{0,60})", low)
     if m:

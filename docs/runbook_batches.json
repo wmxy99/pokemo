@@ -86,10 +86,10 @@
    "id": 93,
    "phase": "P2",
    "theme": "静态伤害缩放：条件型",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "扩展 `_eval_condition` 条件名 + `dmg_set/dmg_plus:<n>:per:<source>` 计数源枚举；**新增条件名必须让未知条件抛错**。",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 1,
+   "note": "**落地 3 张**：Galvantula ex（`opp_active_is_ex_or_v`）、Team Rocket's Kangaskhan ex（`played_supporter_named:teamrocket`，读 `PlayerState.supporter_name`）、Pangoro（`own_bench_named_has_damage:pancham`）。**如实拒收 1 张**：Walking Wake「up to 9 damage counters on this Pokémon，按放置数缩放」——「up to」是玩家选择，且指示物与 `fp.damage` 合并，无法精确表达。",
    "cards": [
     {
      "name": "Team Rocket's Kangaskhan ex",
@@ -121,10 +121,10 @@
    "id": 94,
    "phase": "P2",
    "theme": "静态伤害缩放：计数源型",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "扩展计数源枚举（对手 ex 数量 / 本回合弃掉的具名宝可梦 / 弃掉的基本能量 / 场上道具数）。",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 3,
+   "note": "**落地 2 张**：Zoroark（`dmg_set:60:per:opp_ex_or_v`）、Bronzong（`dmg_set:40:per:both_field_tools`，引擎既有计数源首次被解析产出）。**如实拒收 3 张**：Misty's Gyarados / Mega Abomasnow ex（「弃牌库顶 N 张，按其中被弃的 X 数量缩放」需磨牌结果与伤害耦合，引擎 `mill:` 不回传计数）、Doublade（`any number of` 揭示，属批 96 交互层）。",
    "cards": [
     {
      "name": "Zoroark",
@@ -162,10 +162,10 @@
    "id": 95,
    "phase": "P2",
    "theme": "静态修正层",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "优先复用 fx 层 `static_dmg_plus/minus`、`attack_cost`、`effect_immune` hooks，禁止写第二套。 **Feraligatr 亦需本批的静态修正层**（「本回合此宝可梦的招式 +120 伤害」），其指示物侧在批 97，两族都就位才进池。",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 6,
+   "note": "**整批受阻（0 张）**。6 张各需一项**新机制**，本批未做：Iron Crown ex（按 `category=Future` 的静态加伤 + 「except any Iron Crown ex」例外）、Lillie's Clefairy ex（弱点属性改写）、Hop's Choice Band（道具**同时**改费用与加伤，`build_trainer` 只允许一个 `tool:` tag）、Kieran（回合级加伤旗标）、Archaludon ex（「下回合无弱点」+ 弃牌堆自由分配附着）、Feraligatr（自伤指示物 + 回合级加伤）。全部保持拒收，不造假 tag。",
    "cards": [
     {
      "name": "Iron Crown ex",
@@ -209,10 +209,10 @@
    "id": 96,
    "phase": "P2",
    "theme": "`any number of` 自由数量",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "**风险最高**：`any number of` 需交互层，现有 choose 类一律确定性默认。无法精确建模时允许如实拒收，但须先用测试证明「确定性默认」会造成语义偏差。",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 9,
+   "note": "**整批受阻（0 张）**：`any number of` 全部需要**交互层**（玩家自选张数），现有 `choose` 类一律确定性默认。按纪律**不以确定性默认冒充**——对攻/弃牌类（Doublade / TR Honchkrow）默认取「全部」会误弃整手，取「0」则伤害归零，两种默认都会实质改变对局结果，属静默错映射。",
    "cards": [
     {
      "name": "Alolan Exeggutor ex",
@@ -274,10 +274,10 @@
    "id": 97,
    "phase": "P2",
    "theme": "指示物目标 / 条件",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "Sinistcha 是「任意分配含**战斗位**」，`spread_free` 只覆盖后备 → 需扩目标域。本批只做**放置**，不碰翻倍。",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 6,
+   "note": "**落地 1 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`，进化触发 + 选 2 只各 2 个指示物，目标可由 `action[\"snipe\"]` 选择）。**如实拒收 6 张**：Feraligatr（同批 95 未完成的回合级加伤）、Sinistcha（「in any way you like」需**分配**语义，`counters:` 只能每目标各 N 个）、Mismagius（需 bench-only 范围 + 条件门）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
    "cards": [
     {
      "name": "Feraligatr",

@@ -9565,6 +9565,10 @@ _COUNTERS = {
     #   撤退费用用**有效值**（含场地/道具/特性修正），不能用印刷值。
     "own_ex": lambda b, p, o: sum(1 for fp in p.all_field() if fp.pdef.is_ex),
     "opp_ex": lambda b, p, o: sum(1 for fp in o.all_field() if fp.pdef.is_ex),
+    # 「for each of your opponent's Pokémon {ex} and Pokémon {V} in play」
+    # （第九十四批，Zoroark SFA 32「Illusory Hijacking」）
+    # 同上：本卡池无 V 类卡，与 `opp_ex` 当前同值；独立起名以便将来加 V 时定点修改。
+    "opp_ex_or_v": lambda b, p, o: sum(1 for fp in o.all_field() if fp.pdef.is_ex),
     "both_field_tools": lambda b, p, o: sum(
         1 for fp in p.all_field() + o.all_field() if fp.tool),
     "opp_active_retreat": lambda b, p, o: (
@@ -9612,6 +9616,14 @@ _CONDITIONS = {
     "own_active_has_damage": lambda b, p, o: p.active is not None and p.active.damage > 0,
     # 「if your opponent's Active Pokémon is a Pokémon {ex}」
     "opp_active_is_ex": lambda b, p, o: o.active is not None and bool(o.active.pdef.is_ex),
+    # 「if your opponent's Active Pokémon is a Pokémon {ex} or Pokémon {V}」
+    # （第九十三批，Galvantula ex「Charged Web」）
+    # ⚠ 本卡池（1267 张）**没有 Pokémon V**——`is_v` 这个判定在引擎里也不存在。
+    #   单独起名而**不复用** `opp_active_is_ex`，是为了让「将来加入 V 类卡」这件事
+    #   显式暴露：目前两个名字求值相同，谁改 V 支持就必须同步改这里，
+    #   而不会像复用那样把一个已经"看起来正确"的条件悄悄变错。
+    "opp_active_is_ex_or_v": lambda b, p, o: (
+        o.active is not None and bool(o.active.pdef.is_ex)),
     # 「if your opponent's Active Pokémon is an Evolution Pokémon」
     "opp_active_is_evolution": lambda b, p, o: o.active is not None and o.active.pdef.stage > 0,
     # ---- 2026-10-27 第五批：仍是「当下局面可直接读出」的条件 ----
@@ -9719,6 +9731,11 @@ _CONDITION_PARAMS = {
     "own_hand_exactly": "整数 n ≥ 0（我方手牌数 = n）",
     "opp_prizes_in": "剩余奖赏数列表（逗号分隔，任一命中）",
     "own_bench_named_all": "卡名归一化键（+ 分隔，需**全部**在后备）",
+    # ---- 第九十三批（2026-11-05）----
+    # 说明文字刻意写短：`_CONDITION_PARAMS` 会整体注入 LLM 提示词，
+    # 提示词有 9400 字符预算（见 agent/tests/test_agent.py 的论证）。
+    "own_bench_named_has_damage": "卡名子串（我方后备该名带指示物）",
+    "played_supporter_named": "卡名子串（本回合打出过该支援者）",
 }
 
 
@@ -10027,6 +10044,25 @@ def _eval_condition(battle, cond: str) -> bool:
             raise ValueError(f"条件参数非法：{cond}")
         have = [_name_key(fp.pdef.name) for fp in p.bench]
         return all(any(k in h for h in have) for k in keys)
+    # ---- 第九十三批带参条件（2026-11-05）----
+    if name == "own_bench_named_has_damage":
+        # 「If any of your Benched **Pancham** have any damage counters on them,
+        #  this attack does 120 more damage.」（Pangoro ASC 140）
+        # 数的是**只数**且限定卡名子串。不能复用 `own_bench_has_damage`
+        # （任意后备有伤）——后备上坐着别的受伤宝可梦时会**凭空加伤**。
+        if not arg:
+            raise ValueError(f"条件参数非法：{cond}")
+        return any(fp.damage > 0 and arg in _name_key(fp.pdef.name)
+                   for fp in p.bench)
+    if name == "played_supporter_named":
+        # 「If you played a Supporter card that has “Team Rocket” in its name from
+        #  your hand during this turn, this attack does 100 more damage.」
+        # （Team Rocket's Kangaskhan ex ASC 162）
+        # `supporter_name` 在打出支援者时写入、**回合开始清空**（battle.py:252），
+        # 因此天然就是「本回合」语义；空串 = 本回合没打支援者。
+        if not arg:
+            raise ValueError(f"条件参数非法：{cond}")
+        return bool(p.supporter_name) and arg in _name_key(p.supporter_name)
     if name == "opp_active_status":
         # 参数用**标准状态名**；非标准名直接抛错（拼错就等于静默不生效）
         from .rules import STATUSES as _STATUSES

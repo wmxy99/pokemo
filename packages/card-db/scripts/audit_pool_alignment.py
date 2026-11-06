@@ -357,6 +357,18 @@ def audit_extra_damage(card_name: str, item_name: str, desc: str,
 
 def _check_clause(card_name: str, item_name: str, clause: str, per,
                   effects: list, raw: str, ko_ok: bool = False) -> list:
+    # 「choose N of your opponent's Pokémon and put M damage counters on **each of
+    #  them**」（第九十七批，Team Rocket's Crobat ex）
+    # ⚠ 目标与只数都在**前一句**（choose N of …），本函数只看到尾句 `each of them`，
+    #   按 `_want_snipe` 会判成"不可精确表达"。引擎 `counters:M:scope:opp:N`
+    #   恰好就是「选 N 只、每只各 M 个」，因此按 **tag 形态**校验：
+    #   缺 scope/只数（如退化成 `counters:M` 打战斗位）才算不可表达。
+    if "each of them" in _norm(clause or raw or ""):
+        ok = re.compile(r"^counters:\d+:scope:opp:\d+$")
+        if any(ok.match(str(e)) for e in effects):
+            return []
+        return [f"{card_name} · {item_name}：目标 `each of them` 需要 "
+                f"`counters:M:scope:opp:N`（选 N 只各 M 个），实际 {list(effects)}"]
     want = _want_snipe(clause, per)
     scale = bool(re.search(r"\bfor each\b", _norm(clause)))
     if want == "none":
@@ -3479,6 +3491,67 @@ def audit_batch89(card_name: str, item_name: str, desc: str,
     return errs
 
 
+_B93_EXV = re.compile(
+    r"opponent'?s active pok[eé]mon is a pok[eé]mon \{?\s*ex\s*\}?\s*or\s*"
+    r"pok[eé]mon \{?\s*v\s*\}?", re.I)
+_B93_SUP = re.compile(
+    r"played a supporter card that has [\"“]([^\"”]{2,24})[\"”] in its name from "
+    r"your hand during this turn", re.I)
+_B93_PAN = re.compile(
+    r"if any of your benched ([a-z][a-z' ]{2,24}?) have any damage counters on them",
+    re.I)
+_B94_EXV = re.compile(
+    r"for each of your opponent'?s pok[eé]mon \{?\s*ex\s*\}?(?:\s*and\s*pok[eé]mon "
+    r"\{?\s*v\s*\})?\s*in play", re.I)
+_B94_TOOL = re.compile(
+    r"for each pok[eé]mon tool attached to all pok[eé]mon", re.I)
+
+
+def audit_batch93_94(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """第九十三/九十四批对账：条件型 / 计数源型伤害缩放
+
+    这五条句式此前一律落 `unsupported`（整卡被踢出池）。引擎侧本来就缺的是
+    **短语映射**，条件与计数源早就在 `_CONDITIONS` / `_COUNTERS` 里
+    （`opp_active_is_ex` / `opp_ex` / `both_field_tools`），本批新增了两个
+    显式命名的变体（`:ex_or_v`、`played_supporter_named:`、
+    `own_bench_named_has_damage:`）。对账在这里钉住「卡面有这句 → 必须产对应 tag」，
+    否则就是静默丢效果（伤害少算，且无从察觉）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in effects]
+    if _B93_EXV.search(d) and not any("opp_active_is_ex_or_v" in t for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面「对手战斗位是 ex/V → 加伤」"
+                    f"应产 `dmg_plus:*:if:opp_active_is_ex_or_v`，实际 {tags}")
+    m = _B93_SUP.search(d)
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", m.group(1).lower())
+        if not any(f"played_supporter_named:{key}" in t for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「本回合打过名字含"
+                        f"「{m.group(1)}」的支援者 → 加伤」应产 "
+                        f"`dmg_plus:*:if:played_supporter_named:{key}`，实际 {tags}")
+    m = _B93_PAN.search(d)
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", m.group(1).lower())
+        if not any(f"own_bench_named_has_damage:{key}" in t for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「后备 {m.group(1)} 有指示物"
+                        f" → 加伤」应产 `dmg_plus:*:if:own_bench_named_has_damage:"
+                        f"{key}`，实际 {tags}")
+    if _B94_EXV.search(d):
+        # 「{ex} and {V}」→ 独立命名的 `opp_ex_or_v`；只写 {ex} → 既有 `opp_ex`。
+        # 两者引擎侧当前同值，但**不可混用**：混用会让将来加 V 支持时，只写 {ex}
+        # 的卡跟着变错（对账在这里钉住命名，而不是只钉数值）。
+        want = "opp_ex_or_v" if re.search(r"\{v\}", d, re.I) else "opp_ex"
+        if not any(want in t for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「按对手 ex/V 只数缩放」应产 "
+                        f"`dmg_set:*:per:{want}`，实际 {tags}")
+    if _B94_TOOL.search(d) and not any("both_field_tools" in t for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面「按场上道具总数缩放」应产 "
+                    f"`dmg_set:*:per:both_field_tools`，实际 {tags}")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3540,6 +3613,7 @@ def main() -> int:
                 errs += audit_batch79(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch80_84(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch85(c["name"], it.get("name"), desc, eff)
+                errs += audit_batch93_94(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在

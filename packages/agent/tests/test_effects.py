@@ -580,10 +580,14 @@ class TestV14Modifiers(unittest.TestCase):
         #   从拒绝清单移到 `test_fifth_batch_conditions` 的正向用例。
         # ⚠ 2026-10-29（第十九批）起「额外能量（费用之外）」也已精确建模：
         #   引擎按「总能量 − 本次招式费用」求值 → 从拒绝清单移出。
+        # ⚠ 2026-11-05（第九十三批）起「{ex} 或 {V}」已**精确建模**：
+        #   引擎新增独立的 `opp_active_is_ex_or_v` 条件（与 `opp_active_is_ex`
+        #   分开命名，将来加 V 支持只改一处）→ 从拒绝清单移到正向用例
+        #   `test_batch93_94_parse.TestBatch93Conditions.test_ex_or_v_bonus`。
         texts = [
-            # {ex} 或 {V}：并集，引擎不区分 V
-            "If your opponent\u2019s Active Pok\u00e9mon is a Pok\u00e9mon {ex} or "
-            "Pok\u00e9mon {V}, this attack does 30 more damage.",
+            # 手牌数「恰好 N」：引擎只有 at_most，无 exactly → 仍必须拒绝
+            "If your opponent has exactly 2 cards in their hand, this attack "
+            "does 30 more damage.",
         ]
         for text in texts:
             with self.subTest(text=text[:40]):
@@ -2176,13 +2180,18 @@ class TestScalingCounters(unittest.TestCase):
                        "opponent\u2019s Pok\u00e9mon {ex} in play.")
         self.assertEqual(r["tags"], ["dmg_set:60:per:opp_ex"])
 
-    def test_ex_and_v_rejected(self):
-        """{ex} 与 {V} 混合：引擎没有 V 标记 → 不得只数 ex"""
+    def test_ex_and_v_uses_dedicated_counter(self):
+        """{ex} 与 {V} 混合：第九十四批起落**独立命名**的 `opp_ex_or_v`
+
+        2026-11-05 之前这里是「拒绝」用例（引擎无 V 标记）。本批起引擎新增
+        `opp_ex_or_v`，与 `opp_ex` 当前同值，但**独立命名**：将来加 V 类卡支持时
+        只改那一处，不会让已有的 `opp_ex` 静默变错。故此处从拒绝改为正向断言。
+        """
         r = self._tags("This attack does 60 damage for each of your "
                        "opponent\u2019s Pok\u00e9mon {ex} and Pok\u00e9mon {V} "
                        "in play.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["dmg_set:60:per:opp_ex_or_v"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_both_field_tools(self):
         r = self._tags("This attack does 40 more damage for each Pok\u00e9mon "

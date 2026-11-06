@@ -74,14 +74,25 @@ class TestStructure(RunbookFixture):
                             f"批 {b['id']} 缺主题")
 
     def test_status_values(self):
+        """状态三态：todo（未开工）/ done（有卡进池）/ blocked（整批如实拒收）
+
+        `blocked` 不是"没做"，而是**走完整流程后判定做不了**——必须留下
+        `actual_refused`，否则「受阻」会变成偷懒的挡箭牌。
+        """
         for b in self.batches:
-            self.assertIn(b["status"], ("todo", "done"),
+            self.assertIn(b["status"], ("todo", "done", "blocked"),
                           f"批 {b['id']} 状态非法：{b['status']}")
-            if b["status"] == "done":
-                self.assertIsNotNone(b["actual_pool"],
-                                     f"批 {b['id']} 标 done 但未填 actual_pool")
-                self.assertIsNotNone(b["actual_refused"],
-                                     f"批 {b['id']} 标 done 但未填 actual_refused")
+            if b["status"] == "todo":
+                continue
+            self.assertIsNotNone(b["actual_pool"],
+                                 f"批 {b['id']} 标 {b['status']} 但未填 actual_pool")
+            self.assertIsNotNone(b["actual_refused"],
+                                 f"批 {b['id']} 标 {b['status']} 但未填 actual_refused")
+            if b["status"] == "blocked":
+                self.assertEqual(b["actual_pool"], 0,
+                                 f"批 {b['id']} 标 blocked 却报了 {b['actual_pool']} 张进池")
+                self.assertGreater(b["actual_refused"], 0,
+                                   f"批 {b['id']} 标 blocked 却没有任何如实拒收记录")
 
 
 class TestCardsExistInDb(RunbookFixture):
@@ -99,14 +110,25 @@ class TestCardsExistInDb(RunbookFixture):
 
 
 class TestStatusMatchesDb(RunbookFixture):
-    def test_done_batches_are_ready(self):
+    def test_done_batches_match_actual_counts(self):
+        """已处理批次的「实际进池 / 如实拒收」必须与 DB 实测一致
+
+        · 进池数 ≤ actual_pool（允许**顺带解禁**：批 92 解禁了 Duosion）
+        · 未 ready 数 **必须等于** actual_refused —— 拒收数写错，
+          台账就会把「做不了」记成「已落地」。
+        """
         for b in self.batches:
-            if b["status"] != "done":
+            if b["status"] == "todo":
                 continue
-            for c in b["cards"]:
-                card = self.db[_key(c)]
-                self.assertTrue(card.get("engine_ready"),
-                                f"批 {b['id']} 已标完成，但 {c['name']} 仍未 ready")
+            ready = sum(1 for c in b["cards"] if self.db[_key(c)].get("engine_ready"))
+            unready = sum(1 for c in b["cards"] if not self.db[_key(c)].get("engine_ready"))
+            self.assertLessEqual(ready, b["actual_pool"],
+                                 f"批 {b['id']} 库里只有 {ready} 张 ready，"
+                                 f"却记 actual_pool={b['actual_pool']}")
+            self.assertEqual(unready, b["actual_refused"],
+                             f"批 {b['id']} 库里有 {unready} 张未 ready，"
+                             f"却记 actual_refused={b['actual_refused']}"
+                             f"（{sorted(c['name'] for c in b['cards'] if not self.db[_key(c)].get('engine_ready'))}）")
 
     def test_todo_cards_are_unready(self):
         """反向：待办批次里的卡如果已经 ready，说明它在别处被解禁 →

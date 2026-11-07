@@ -89,10 +89,15 @@ class TestBatch95Mismagius(unittest.TestCase):
         self.assertEqual(o["unsupported"], [])
 
     def test_unknown_condition_rejected(self):
-        """近邻：条件不可表达时必须拒收，**不得**退化成无条件放置"""
-        o = self._tags("If your opponent has exactly 3 cards in their hand, place "
-                       "4 damage counters on 1 of your opponent's Benched "
-                       "Pokémon.")
+        """近邻：条件不可表达时必须拒收，**不得**退化成无条件放置
+
+        ⚠ 2026-11-08（第一百二十批）起「opponent has **exactly** N cards in
+        hand」**已可表达**（`opp_hand_exactly:N`，Decidueye ex 用），
+        因此本条改用仍不可求值的「后备同属性」条件，保持负向覆盖。
+        """
+        o = self._tags("If your opponent's Benched Pokémon are the same type as "
+                       "your Active Pokémon, place 4 damage counters on 1 of "
+                       "your opponent's Benched Pokémon.")
         self.assertEqual(o["tags"], [])
         self.assertTrue(o["unsupported"], "条件不可表达须如实未建模")
 

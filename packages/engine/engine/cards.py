@@ -311,6 +311,10 @@ class FieldPokemon:
     atk_minus_next_n: int = 0
     atk_minus_next_until: int = 0
     self_atk_plus_next: dict = field(default_factory=dict)  # 招式键 → (n, until)
+    # 「During your next turn, this Pokémon's <招式> attack's **base damage is N**」
+    # （第一百一十九批，Watchog「Focus Energy」）—— 是**改写**不是加伤，
+    # 与 `self_atk_plus_next` 分字段存，避免「240 变成 80+240」。
+    self_atk_set_next: dict = field(default_factory=dict)   # 招式键 → (n, until)
     # ---- 下回合「受击反制」（2026-10-29 第二十九批）----
     # 「During your opponent's next turn, if **this Pokémon** is damaged by an
     #  attack (even if this Pokémon is Knocked Out), put N damage counters on the
@@ -522,6 +526,7 @@ class FieldPokemon:
         self.atk_minus_next_n = 0
         self.atk_minus_next_until = 0
         self.self_atk_plus_next.clear()
+        self.self_atk_set_next.clear()
         # 进化后不再是原效果的目标 → 下回合反制一并清除
         self.retaliate_next_n = 0
         self.retaliate_next_equal = False

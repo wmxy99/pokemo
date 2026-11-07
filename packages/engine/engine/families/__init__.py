@@ -145,6 +145,14 @@ def retreat_cost(battle, fp) -> Optional[int]:
 
 
 def attack_cost(battle, attacker, atk) -> dict:
+    """费用修正的**聚合器**（各 fx 族各报一段，这里合并）
+
+    ⚠ 必须把 ``set`` / ``omit`` 一并透传：它们是「**改写**费用」而不是
+      「加减无色」。第一版只累加 ``colorless``，于是 `self_set` / `self_omit`
+      在解析层看着正常、池子里也进了，但**运行时一点效果都没有** ——
+      花 5 张卡（Kyurem / Azumarill / Decidueye / Conkeldurr / Crawdaunt）
+      的代价换来 0 收益，且任何测试都不红。
+    """
     out = {"colorless": 0, "ignore_all": False}
     for m in modules():
         fn = getattr(m, "attack_cost", None)
@@ -154,6 +162,10 @@ def attack_cost(battle, attacker, atk) -> dict:
         out["colorless"] += int(r.get("colorless", 0) or 0)
         if r.get("ignore_all"):
             out["ignore_all"] = True
+        if r.get("set") is not None:
+            out["set"] = r["set"]
+        if r.get("omit"):
+            out["omit"] = r["omit"]
     return out
 
 

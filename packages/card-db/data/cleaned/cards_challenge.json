@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-07 10:43:10",
+  "reparsed_at": "2026-11-08 06:41:44",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1165,
+  "engine_ready": 1179,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1165,
-   "engine_approximated": 1150,
-   "engine_unmatched": 102,
-   "engine_namekey_mismatch": 11
+   "zh_backfill": 1179,
+   "engine_approximated": 1164,
+   "engine_unmatched": 88,
+   "engine_namekey_mismatch": 10
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 149,
-   "engine_tags": 1474,
-   "unsupported": 102,
+   "engine_tags": 1488,
+   "unsupported": 88,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1150,
+  "engine_approximated": 1164,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -15851,14 +15851,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Conkeldurr@TWM 105",
    "parse": {
     "items": [
      {
@@ -15896,29 +15898,27 @@
        {
         "kind": "attack",
         "name": "Gutsy Swing",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:attack_cost:self_set:0:colorless:if:own_active_status_any"
           }
          }
         ],
-        "source_text": "If this Pokémon is affected by a Special Condition, ignore all Energy in this attack’s cost."
+        "source_text": "If this Pokémon is affected by a Special Condition, ignore all Energy in this attack’s cost.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "fx:attack_cost:self_set:0:colorless:if:own_active_status_any"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -15942,31 +15942,28 @@
      {
       "kind": "attack",
       "name": "Gutsy Swing",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:attack_cost:self_set:0:colorless:if:own_active_status_any"
         }
        }
       ],
-      "source_text": "If this Pokémon is affected by a Special Condition, ignore all Energy in this attack’s cost."
+      "source_text": "If this Pokémon is affected by a Special Condition, ignore all Energy in this attack’s cost.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "status_self:confuse"
+     "status_self:confuse",
+     "fx:attack_cost:self_set:0:colorless:if:own_active_status_any"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -20450,14 +20447,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Kyurem@SFA 47",
    "parse": {
     "items": [
      {
@@ -20510,30 +20509,28 @@
        {
         "kind": "ability",
         "name": "Plasma Bane",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress"
           }
          }
         ],
-        "source_text": "If your opponent has any cards in their discard pile that have \"Colress\" in the name, this Pokémon can use the Trifrost attack for {C}."
+        "source_text": "If your opponent has any cards in their discard pile that have \"Colress\" in the name, this Pokémon can use the Trifrost attack for {C}.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -20571,32 +20568,29 @@
      {
       "kind": "ability",
       "name": "Plasma Bane",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress"
         }
        }
       ],
-      "source_text": "If your opponent has any cards in their discard pile that have \"Colress\" in the name, this Pokémon can use the Trifrost attack for {C}."
+      "source_text": "If your opponent has any cards in their discard pile that have \"Colress\" in the name, this Pokémon can use the Trifrost attack for {C}.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
      "discard_energy:all",
-     "snipe:opp:110:3"
+     "snipe:opp:110:3",
+     "fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -21329,6 +21323,7 @@
           "extra": {
            "energy_type": "grass",
            "zone": "hand",
+           "target_scope": "any",
            "heal": 30
           }
          }
@@ -21339,7 +21334,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "attach_energy:1:grass:hand:heal:30"
+       "attach_energy:1:grass:hand:target:any:heal:30"
       ],
       "cost": "",
       "unsupported": []
@@ -21378,6 +21373,7 @@
         "extra": {
          "energy_type": "grass",
          "zone": "hand",
+         "target_scope": "any",
          "heal": 30
         }
        }
@@ -21389,7 +21385,7 @@
     "errors": [],
     "engine_tags": [
      "dmg_plus:30:per:own_all_energy_grass",
-     "attach_energy:1:grass:hand:heal:30"
+     "attach_energy:1:grass:hand:target:any:heal:30"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -33639,14 +33635,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Slaking ex@SSP 147",
    "parse": {
     "items": [
      {
@@ -33684,30 +33682,29 @@
        {
         "kind": "ability",
         "name": "Born to Slack",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "attack_block_unless",
+           "cond": "opp_has_ex_or_v"
           }
          }
         ],
-        "source_text": "If your opponent has no Pokémon {ex} or Pokémon {V} in play, this Pokémon can’t attack."
+        "source_text": "If your opponent has no Pokémon {ex} or Pokémon {V} in play, this Pokémon can’t attack.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:attack_block_unless:opp_has_ex_or_v"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -33731,31 +33728,29 @@
      {
       "kind": "ability",
       "name": "Born to Slack",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "attack_block_unless",
+         "cond": "opp_has_ex_or_v"
         }
        }
       ],
-      "source_text": "If your opponent has no Pokémon {ex} or Pokémon {V} in play, this Pokémon can’t attack."
+      "source_text": "If your opponent has no Pokémon {ex} or Pokémon {V} in play, this Pokémon can’t attack.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:1"
+     "discard_energy:1",
+     "passive:attack_block_unless:opp_has_ex_or_v"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -45284,14 +45279,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Azumarill@SSP 74",
    "parse": {
     "items": [
      {
@@ -45330,30 +45327,28 @@
        {
         "kind": "ability",
         "name": "Glistening Bubbles",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play"
           }
          }
         ],
-        "source_text": "If you have any Tera Pokémon in play, this Pokémon can use the Double-Edge attack for {P}."
+        "source_text": "If you have any Tera Pokémon in play, this Pokémon can use the Double-Edge attack for {P}.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -45378,31 +45373,28 @@
      {
       "kind": "ability",
       "name": "Glistening Bubbles",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play"
         }
        }
       ],
-      "source_text": "If you have any Tera Pokémon in play, this Pokémon can use the Double-Edge attack for {P}."
+      "source_text": "If you have any Tera Pokémon in play, this Pokémon can use the Double-Edge attack for {P}.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "self:50"
+     "self:50",
+     "fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -45679,14 +45671,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Eevee@SSP 143",
    "parse": {
     "items": [
      {
@@ -45729,26 +45723,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "evolve_same_turn",
+           "cond": null,
+           "active_only": true
           }
          }
         ],
-        "source_text": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it."
+        "source_text": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:evolve_same_turn:active"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -45777,27 +45771,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "evolve_same_turn",
+         "cond": null,
+         "active_only": true
         }
        }
       ],
-      "source_text": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it."
+      "source_text": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "self:10"
+     "self:10",
+     "passive:evolve_same_turn:active"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -60073,14 +60066,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Mewtwo ex@DRI 81",
    "parse": {
     "items": [
      {
@@ -60129,30 +60124,29 @@
        {
         "kind": "ability",
         "name": "Power Saver",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "attack_block_unless",
+           "cond": "own_field_name_at_least:teamrocket:4"
           }
          }
         ],
-        "source_text": "This Pokémon can’t attack unless you have 4 or more Team Rocket’s Pokémon in play."
+        "source_text": "This Pokémon can’t attack unless you have 4 or more Team Rocket’s Pokémon in play.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:attack_block_unless:own_field_name_at_least:teamrocket:4"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -60186,32 +60180,30 @@
      {
       "kind": "ability",
       "name": "Power Saver",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "attack_block_unless",
+         "cond": "own_field_name_at_least:teamrocket:4"
         }
        }
       ],
-      "source_text": "This Pokémon can’t attack unless you have 4 or more Team Rocket’s Pokémon in play."
+      "source_text": "This Pokémon can’t attack unless you have 4 or more Team Rocket’s Pokémon in play.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
      "discard_energy:2",
-     "dmg_plus:60:per:own_discarded_this_turn"
+     "dmg_plus:60:per:own_discarded_this_turn",
+     "passive:attack_block_unless:own_field_name_at_least:teamrocket:4"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -67449,14 +67441,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Karrablast@BLK 9",
    "parse": {
     "items": [
      {
@@ -67466,59 +67460,59 @@
        {
         "kind": "ability",
         "name": "Stimulated Evolution",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "evolve_same_turn",
+           "cond": "own_field_name:shelmet",
+           "active_only": false
           }
          }
         ],
-        "source_text": "If you have Shelmet in play, this Pokémon can evolve during your first turn or the turn you play it."
+        "source_text": "If you have Shelmet in play, this Pokémon can evolve during your first turn or the turn you play it.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:evolve_same_turn:if:own_field_name:shelmet"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Stimulated Evolution",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "evolve_same_turn",
+         "cond": "own_field_name:shelmet",
+         "active_only": false
         }
        }
       ],
-      "source_text": "If you have Shelmet in play, this Pokémon can evolve during your first turn or the turn you play it."
+      "source_text": "If you have Shelmet in play, this Pokémon can evolve during your first turn or the turn you play it.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:evolve_same_turn:if:own_field_name:shelmet"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -77549,14 +77543,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Shelmet@WHT 8",
    "parse": {
     "items": [
      {
@@ -77566,59 +77562,59 @@
        {
         "kind": "ability",
         "name": "Stimulated Evolution",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "evolve_same_turn",
+           "cond": "own_field_name:karrablast",
+           "active_only": false
           }
          }
         ],
-        "source_text": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it."
+        "source_text": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:evolve_same_turn:if:own_field_name:karrablast"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Stimulated Evolution",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "evolve_same_turn",
+         "cond": "own_field_name:karrablast",
+         "active_only": false
         }
        }
       ],
-      "source_text": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it."
+      "source_text": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:evolve_same_turn:if:own_field_name:karrablast"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -77794,14 +77790,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Virizion@WHT 10",
    "parse": {
     "items": [
      {
@@ -77815,25 +77813,23 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "heal",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "heal_equal": true
           }
          }
         ],
-        "source_text": "Heal from this Pokémon the same amount of damage you did to your opponent’s Active Pokémon."
+        "source_text": "Heal from this Pokémon the same amount of damage you did to your opponent’s Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "heal:equal"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -77875,15 +77871,16 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "heal",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "heal_equal": true
         }
        }
       ],
-      "source_text": "Heal from this Pokémon the same amount of damage you did to your opponent’s Active Pokémon."
+      "source_text": "Heal from this Pokémon the same amount of damage you did to your opponent’s Active Pokémon.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -77908,14 +77905,10 @@
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
+     "heal:equal",
      "attack_lock:all:turn"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -85285,14 +85278,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Watchog@WHT 73",
    "parse": {
     "items": [
      {
@@ -85308,23 +85303,24 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "self_atk_set_next": [
+            240,
+            "hyperfang"
+           ]
           }
          }
         ],
-        "source_text": "During your next turn, this Pokémon’s Hyper Fang attack’s base damage is 240."
+        "source_text": "During your next turn, this Pokémon’s Hyper Fang attack’s base damage is 240.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "self_attack_set_next:240:name:hyperfang"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -85367,13 +85363,17 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "self_atk_set_next": [
+          240,
+          "hyperfang"
+         ]
         }
        }
       ],
-      "source_text": "During your next turn, this Pokémon’s Hyper Fang attack’s base damage is 240."
+      "source_text": "During your next turn, this Pokémon’s Hyper Fang attack’s base damage is 240.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -85397,14 +85397,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "self_attack_set_next:240:name:hyperfang",
      "coin:tails:dmg_zero"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -92509,14 +92505,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Crawdaunt@MEG 85",
    "parse": {
     "items": [
      {
@@ -92526,58 +92524,54 @@
        {
         "kind": "attack",
         "name": "Cutting Riposte",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:attack_cost:self_set:1:darkness:if:own_active_has_damage"
           }
          }
         ],
-        "source_text": "If this Pokémon has any damage counters on it, this attack can be used for {D}."
+        "source_text": "If this Pokémon has any damage counters on it, this attack can be used for {D}.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "fx:attack_cost:self_set:1:darkness:if:own_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "attack",
       "name": "Cutting Riposte",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:attack_cost:self_set:1:darkness:if:own_active_has_damage"
         }
        }
       ],
-      "source_text": "If this Pokémon has any damage counters on it, this attack can be used for {D}."
+      "source_text": "If this Pokémon has any damage counters on it, this attack can be used for {D}.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "fx:attack_cost:self_set:1:darkness:if:own_active_has_damage"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -93644,14 +93638,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Mawile ex@MEG 94",
    "parse": {
     "items": [
      {
@@ -93704,21 +93700,22 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "dmg_set_cond": [
+            30,
+            "opp_active_has_damage"
+           ]
           }
          }
         ],
-        "source_text": "If your opponent’s Active Pokémon already has any damage counters on it, this attack’s base damage is 30."
+        "source_text": "If your opponent’s Active Pokémon already has any damage counters on it, this attack’s base damage is 30.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_set:30:if:opp_active_has_damage"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -93757,23 +93754,23 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "dmg_set_cond": [
+          30,
+          "opp_active_has_damage"
+         ]
         }
        }
       ],
-      "source_text": "If your opponent’s Active Pokémon already has any damage counters on it, this attack’s base damage is 30."
+      "source_text": "If your opponent’s Active Pokémon already has any damage counters on it, this attack’s base damage is 30.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:80:per:own_prizes_taken"
+     "dmg_set:80:per:own_prizes_taken",
+     "dmg_set:30:if:opp_active_has_damage"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -134878,14 +134875,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Decidueye ex@POR 12",
    "parse": {
     "items": [
      {
@@ -134923,30 +134922,28 @@
        {
         "kind": "ability",
         "name": "Sniper’s Eye",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4"
           }
          }
         ],
-        "source_text": "If your opponent has exactly 4 cards in their hand, ignore all {C} Energy in the costs of attacks used by this Pokémon."
+        "source_text": "If your opponent has exactly 4 cards in their hand, ignore all {C} Energy in the costs of attacks used by this Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -134970,31 +134967,28 @@
      {
       "kind": "ability",
       "name": "Sniper’s Eye",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4"
         }
        }
       ],
-      "source_text": "If your opponent has exactly 4 cards in their hand, ignore all {C} Energy in the costs of attacks used by this Pokémon."
+      "source_text": "If your opponent has exactly 4 cards in their hand, ignore all {C} Energy in the costs of attacks used by this Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:1:opp"
+     "discard_energy:1:opp",
+     "fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -136603,14 +136597,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Luxio@POR 27",
    "parse": {
     "items": [
      {
@@ -136620,59 +136616,59 @@
        {
         "kind": "ability",
         "name": "Fighting Roar",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "evolve_same_turn",
+           "cond": "opp_active_is_ex",
+           "active_only": false
           }
          }
         ],
-        "source_text": "If your opponent’s Active Pokémon is a Pokémon {ex}, this Pokémon can evolve during your first turn or the turn you play it."
+        "source_text": "If your opponent’s Active Pokémon is a Pokémon {ex}, this Pokémon can evolve during your first turn or the turn you play it.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:evolve_same_turn:if:opp_active_is_ex"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Fighting Roar",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "evolve_same_turn",
+         "cond": "opp_active_is_ex",
+         "active_only": false
         }
        }
       ],
-      "source_text": "If your opponent’s Active Pokémon is a Pokémon {ex}, this Pokémon can evolve during your first turn or the turn you play it."
+      "source_text": "If your opponent’s Active Pokémon is a Pokémon {ex}, this Pokémon can evolve during your first turn or the turn you play it.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:evolve_same_turn:if:opp_active_is_ex"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

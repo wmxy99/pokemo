@@ -383,6 +383,11 @@ class Battle:
         # 招式 / 撤退（总能量计无色门槛）
         if p.active is not None:
             blocked = _NO_ATTACK_STATUS & p.active.status
+            # 「… this Pokémon can't attack」(第一百一十二批，Slaking ex「Born to
+            # Slack」/ Team Rocket's Mewtwo ex「Power Saver」）—— 卡面写的是
+            # **能不能出招**的条件，不是某一招的附加效果，故在动作生成处整只拦下。
+            if _passive_attack_blocked(self, p.active):
+                blocked = True
             turn_count = self.turn_counts[pi]
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
@@ -1395,8 +1400,33 @@ class Battle:
         只放宽「本回合**从手牌放置**」这一种；本回合已经进化过的目标不再放宽
         （卡面是 "during the turn they **play** those Pokémon"）。
         """
-        m = self._stadium_meta()
         owner = self.current if pi is None else pi
+        # ① 宝可梦**自身**的被动（第一百一十二/一百二十一批）：
+        #    「… can evolve during your first turn or the turn you play it.」
+        #    （Eevee / Karrablast / Shelmet / Luxio）——**含首个回合**，
+        #    与 Forest of Vitality 的「except during their first turn」相反。
+        for ab in (tgt.pdef.abilities or ()):
+            tag = str(getattr(ab, "tag", "") or "")
+            if not tag.startswith("passive:evolve_same_turn"):
+                continue
+            rest = tag[len("passive:evolve_same_turn"):].lstrip(":")
+            cond, need_active = None, False
+            if rest.startswith("if:"):
+                cond = rest[len("if:"):]
+            elif rest == "active":
+                # 「As long as this Pokémon is in the **Active Spot**, it can
+                # evolve during your first turn…」（Eevee）—— 后备不算。
+                need_active = True
+            elif rest:
+                raise ValueError(f"evolve_same_turn 未识别限定：{tag}")
+            if need_active and tgt is not self.players[owner].active:
+                continue
+            if cond and not _eval_condition(self, cond):
+                continue
+            if tgt.evolved_turn != self.turn_number:
+                return True
+        # ② 场地（Forest of Vitality）——**不含**首个回合
+        m = self._stadium_meta()
         return (m["kind"] == "evolve_same_turn"
                 and m["type"] is not None
                 and str(tgt.pdef.ptype).lower() == m["type"]
@@ -4544,7 +4574,14 @@ class Battle:
         mod = families.attack_cost(self, fp, atk)
         if mod.get("ignore_all"):
             return True
+        if mod.get("set") is not None:
+            # 费用**整体改写**（第一百一十二批）：引擎攻击不消耗能量
+            # （见文件头「攻击不弃能」），只在校验处改写即可，不会出现
+            # 「校验按新费用、支付按旧费用」的不一致。
+            return fp.can_pay(tuple(mod["set"]))
         cost = _cheaper_cost(atk.cost, _attack_cost_delta(self, fp))
+        if mod.get("omit"):
+            cost = tuple((t, n) for t, n in cost if t != mod["omit"])
         delta = int(mod.get("colorless") or 0)
         # 「During your opponent's next turn, attacks used by the Defending Pokémon
         # cost {C} more.」（Rillaboom）—— 按持有者回合计数到期
@@ -4776,6 +4813,10 @@ class Battle:
                                      "dmg": 0, "base": eff_base,
                                      "printed": atk.damage,
                                      "bonus": mods["plus"], "nullified": True})
+            # 「Heal from this Pokémon the same amount of damage you did …」
+            # （第一百二十批，Virizion「Giga Drain」）—— 效果在伤害之后执行，
+            # 因此把本次实际伤害记在这里供 `heal:equal` 取用。
+            self._last_damage_dealt = damage_dealt
             if not mods.get("nullify_all"):
                 self._apply_attack_effects(attacker, atk.effects,
                                            plan=action.get("targets"),
@@ -5716,7 +5757,17 @@ class Battle:
             elif tag.startswith("dmg_minus:"):
                 self._accum_dmg_minus(tag, out)
             elif tag.startswith("dmg_set:"):
-                out["set"] = self._dmg_set_value(tag)
+                # `dmg_set:N:if:<cond>`（第一百二十批，Mega Mawile ex
+                # 「If your opponent's Active Pokémon already has any damage
+                # counters on it, this attack's base damage is 30.」）——
+                # 条件不成立时**保持印刷伤害**，不是「改为 0」。
+                _dp = tag.split(":")
+                if "if" in _dp:
+                    _i = _dp.index("if")
+                    if _eval_condition(self, ":".join(_dp[_i + 1:])):
+                        out["set"] = self._dmg_set_value(":".join(_dp[:_i]))
+                else:
+                    out["set"] = self._dmg_set_value(tag)
             elif tag.startswith("coin:") or tag.startswith("coin_each:"):
                 self._resolve_coin_tag(attacker, tag, out)
             elif tag.startswith("coin_all:"):
@@ -5763,6 +5814,12 @@ class Battle:
             out["minus"] += attacker.atk_minus_next_n
             self._log("atk_minus_next_applied", {
                 "target": attacker.name, "n": attacker.atk_minus_next_n})
+        if atk is not None and attacker.self_atk_set_next:
+            _s = attacker.self_atk_set_next.get(_atk_tag_key(atk.name))
+            if _s and _s[1] > now:
+                out["set"] = _s[0]
+                self._log("self_atk_set_next_applied", {
+                    "target": attacker.name, "attack": atk.name, "n": _s[0]})
         if atk is not None and attacker.self_atk_plus_next:
             _hit = attacker.self_atk_plus_next.get(attacker._attack_key(atk.name))
             if _hit and _hit[1] > now and _hit[0]:
@@ -6492,6 +6549,11 @@ class Battle:
         prev_ok = True
         for raw_tag in effects:
             tag = raw_tag
+            if str(tag).startswith("fx:attack_cost:"):
+                # 静态费用改写（第一百一十二批）：由 `families.attack_cost`
+                # 在**合法动作校验**时读取，不是一次性动作 —— 落到
+                # `families.apply_action` 会报「未知 fx tag（无实现）」。
+                continue
             if str(tag).startswith(("use_only:", "use_not:")):
                 # 招式**使用条件**，不是效果 —— 由 `_attack_usable` 在合法动作
                 # 生成时判定；落到这里若不跳过会报「未知效果」。
@@ -6934,6 +6996,23 @@ class Battle:
                 opp.active.atk_minus_next_until = self._lock_until(1 - self.current)
                 self._log("atk_minus_next", {
                     "target": opp.active.name, "n": int(_v[1])})
+            elif tag.startswith("self_attack_set_next:"):
+                # ⚠ 招式名键用 `_atk_tag_key`（去掉所有非字母数字）：
+                #   解析侧 `_tag_name_key` 给的是 `hyperfang`，而 `_attack_key`
+                #   保留空格得到 `hyper fang` —— 两者不归一就永远取不到
+                #   （实测：伤害仍是印刷值，且没有任何报错）。
+                # 「During your next turn, this Pokémon's Hyper Fang attack's base
+                #  damage is 240.」（第一百一十九批，Watchog「Focus Energy」）
+                # ⚠ 与 plus 分开：落成加伤会让 240 变成「印刷 80 + 240」。
+                _v = tag.split(":")
+                if len(_v) < 4 or not _v[1].isdigit() or _v[2] != "name":
+                    raise ValueError(f"self_attack_set_next tag 非法：{tag}")
+                key = _atk_tag_key(":".join(_v[3:]))
+                attacker.self_atk_set_next[key] = (
+                    int(_v[1]), self._lock_until(self.current))
+                self._log("self_attack_set_next", {
+                    "target": attacker.name, "attack": ":".join(_v[3:]),
+                    "n": int(_v[1])})
             elif tag.startswith("self_attack_plus_next:"):
                 # 「During your next turn, this Pokémon's <招式> attack does N more
                 # damage (before applying Weakness and Resistance).」
@@ -8651,7 +8730,11 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
     # 2026-10-28（第九批）：`heal:all[:<scope>]` = 回满（数值位置写 `all`）。
     # 单目标/群体范围语义与 `heal:N` 完全一致，只有「回复量」不同。
     full = len(parts) > 1 and parts[1] == "all"
+    equal = len(parts) > 1 and parts[1] == "equal"
     amt = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    if equal:
+        # 「the same amount of damage you did to your opponent's Active Pokémon」
+        amt = int(getattr(battle, "_last_damage_dealt", 0) or 0)
     # 第六十二批（2026-11-04）：条件回复的两个新段
     #   · `alt:<m>` + `if_name:<key>`：「… heal 100 damage from it **instead**」
     #     （Arven's Sandwich）—— 目标是具名阵营时改用更大的值，**不是**额外再回一次。
@@ -8857,6 +8940,44 @@ def _attach_energy_from_zones(battle, p: PlayerState, target: FieldPokemon,
                         p.discard.pop(k)
                         break
     return got
+
+
+def _passive_attack_blocked(battle, fp: Optional[FieldPokemon]) -> bool:
+    """``passive:attack_block_unless:<cond>`` —— 条件不成立时**整只不能出招**
+
+    卡面原型（第一百一十二批）：
+      · Slaking ex「Born to Slack」：「If your opponent has no Pokémon {ex} or
+        Pokémon {V} in play, this Pokémon can't attack.」→ `use` 侧的**反面**
+        条件，落成 `attack_block_unless:opp_has_ex_or_v`；
+      · Team Rocket's Mewtwo ex「Power Saver」：「This Pokémon can't attack
+        unless you have 4 or more Team Rocket's Pokémon in play.」→
+        `attack_block_unless:own_field_name_at_least:teamrocket:4`。
+
+    ⚠ 不能落成 `use_not:`：那是**单招**条件，而这里是「整只宝可梦不能出招」，
+      挂在每一招上会漏掉以后新增的招式（尤其 `passive:extra_attack` 借来的）。
+    """
+    if fp is None:
+        return False
+    for ab in (fp.pdef.abilities or ()):
+        tag = str(getattr(ab, "tag", "") or "")
+        if not tag.startswith("passive:attack_block_unless:"):
+            continue
+        cond = tag[len("passive:attack_block_unless:"):]
+        if not cond:
+            raise ValueError(f"attack_block_unless 缺条件：{tag}")
+        if not _eval_condition(battle, cond):
+            return True
+    return False
+
+
+def _atk_tag_key(name) -> str:
+    """招式名 → tag 侧归一化键（只留 a-z0-9，与解析侧 `_tag_name_key` 一致）
+
+    ⚠ 不能复用 `FieldPokemon._attack_key`：那个保留空格（`hyper fang`），
+      而 tag 里存的是 `hyperfang` —— 两者不归一，`self_attack_set_next`
+      会静默取不到值（伤害停在印刷值，无报错、测试若不看数值也不会红）。
+    """
+    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
 
 
 def _attack_usable(battle, atk) -> bool:
@@ -10199,6 +10320,11 @@ _CONDITIONS = {
     "own_ko_last_turn": lambda b, p, o: b._ko_flags()[b.current] > 0,
     # 第一百零九批：只统计 **Team Rocket's** 宝可梦被击倒（TR Archer）
     "own_ko_tr_last_turn": lambda b, p, o: b._ko_tr_flags()[b.current] > 0,
+    # 第一百一十二批（Slaking ex「Born to Slack」）：「opponent has **no** Pokémon
+    # {ex} or {V} in play」—— 用**正向**条件 + `not:` 前缀表达更清楚，
+    # 但这里直接给正向布尔，避免调用方漏写 `not:`。
+    "opp_has_ex_or_v": lambda b, p, o: any(
+        fp.pdef.is_ex for fp in o.all_field()),
     # 奖励落后（对手已取得更多奖赏卡 = 我方落后）
     "own_behind_prizes": lambda b, p, o: p.prizes_left > o.prizes_left,
     "own_prizes_full": lambda b, p, o: p.prizes_left == b.cfg.prizes,
@@ -10320,6 +10446,9 @@ _CONDITION_PARAMS = {
     "own_bench_stage2_type": "energy/type name ∈ engine.cards.TYPES",
     "own_active_status_any": "状态名列表（逗号分隔，任一命中即可）",
     "own_discard_has_named": "卡名归一化子串（弃牌堆中存在）",
+    "opp_discard_has_named": "卡名归一化子串（**对手**弃牌堆中存在）",
+    "opp_hand_exactly": "整数 n ≥ 0（对手手牌数**恰好** = n）",
+    "own_field_name_at_least": "卡名归一化子串:整数 n（我方场上该名字数 ≥ n）",
     # ---- 第七批（2026-10-28）----
     "evolved_from": "卡名归一化键（本回合由该宝可梦进化而来）",
     "used_attack_last_turn": "招式名归一化键（我上回合用过）",
@@ -10368,6 +10497,7 @@ _DYNAMIC_COUNTER_RE = re.compile(
     r"(?:own|opp)_field_has_attack:[a-z0-9]+"
     r"|own_discard_has_attack:[a-z0-9]+"
     r"|own_discard_named:[a-z0-9]+"
+    r"|opp_discard_named:[a-z0-9]+"
     r"|own_discard_named_supporter:[a-z0-9]+"
     r"|both_field_named_any:[a-z0-9]+(?:\+[a-z0-9]+)*"
     r"|opp_hand_kind:(?:pokemon|trainer|energy)"
@@ -10448,6 +10578,11 @@ def _eval_counter(battle, counter: str) -> int:
     if m:
         key = m.group(1)
         return sum(1 for c in p.discard_refs
+                   if key in _name_key(_card_label(c)))
+    m = re.match(r"^opp_discard_named:([a-z0-9]+)$", counter)
+    if m:
+        key = m.group(1)
+        return sum(1 for c in o.discard_refs
                    if key in _name_key(_card_label(c)))
     m = re.match(r"^own_discard_named_supporter:([a-z0-9]+)$", counter)
     if m:
@@ -10693,6 +10828,25 @@ def _eval_condition(battle, cond: str) -> bool:
             return len(o.bench) >= n
         return _eval_counter(battle, "own_all_energy") >= n
     # ---- 第五批带参条件（2026-10-27）----
+    if name == "opp_hand_exactly":
+        # 「If your opponent has exactly 4 cards in their hand」（第一百二十批，
+        # Decidueye ex「Sniper's Eye」）。⚠ 只有 `_at_most` 不够：卡面是**恰好**。
+        if not arg.isdigit():
+            raise ValueError(f"条件参数非整数：{cond}")
+        return len(o.hand) == int(arg)
+    if name == "opp_discard_has_named":
+        # 「If your opponent has any cards in their discard pile that have
+        #  "Colress" in the name」（第一百一十二批，Kyurem「Plasma Bane」）
+        # —— 与 `own_discard_has_named` 同口径，只是换一侧。
+        return _eval_counter(battle, f"opp_discard_named:{arg}") >= 1
+    if name == "own_field_name_at_least":
+        # 「unless you have 4 or more Team Rocket's Pokémon in play」
+        # （第一百二十批，Team Rocket's Mewtwo ex「Power Saver」）
+        key, _, raw = arg.partition(":")
+        if not raw.isdigit():
+            raise ValueError(f"条件参数非整数：{cond}")
+        return sum(1 for fp in p.all_field()
+                   if key in _name_key(fp.pdef.name)) >= int(raw)
     if name in ("opp_hand_at_most", "opp_prizes_at_most", "own_prizes_exactly",
                 "opp_active_is_stage", "own_active_hp_at_most",
                 "own_deck_at_most"):

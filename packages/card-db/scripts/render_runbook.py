@@ -146,8 +146,14 @@ def render(data: dict, m: dict) -> str:
     A("| K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`） "
       "| `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |")
     A("")
+    # 「批内待做」与「批内已判拒收」必须分开说：全部批次处理完之后，剩下的卡
+    # **不是待办**，而是走完全流程后如实判定做不了（原因逐条在批次 note 里）。
+    # 混成一个数字会让台账看起来「还有 80 张排队」，与事实相反。
+    _todo_batches = [b for b in batches if b["status"] == "todo"]
+    _refused_label = "批内如实拒收" if not _todo_batches else "批次内待做"
     A(f"**口径校验（本文件自洽的判据）**：未 ready **{m['unready']}** = "
-      f"批次内待做 **{len(todo)}** + 结构性边界 **{len(structural)}** + 待新能力 **{len(deferred)}**"
+      f"{_refused_label} **{len(todo)}** + 结构性边界 **{len(structural)}** + "
+      f"待新能力 **{len(deferred)}**"
       f" = **{todo_total}** {'✅' if todo_total == m['unready'] else '❌ 需修 JSON'}。")
     A("")
     # 「已处理」= 走完全流程的批次（含整批受阻）：受阻是**如实判定**的结果，
@@ -159,9 +165,17 @@ def render(data: dict, m: dict) -> str:
       f"（完成 {len(_done)} · 整批受阻 {len(_blocked)}），"
       f"剩余**未开工** **{len(_todo)}** 批。")
     A("")
-    A(f"**终局预期**：`engine_ready` **{expected_final} / {m['total']} = {pct:.1f}%**"
-      f"（当前 {m['ready']} + 可做 {len(todo)}）；结构性 {len(structural)} 张与待新能力 "
-      f"{len(deferred)} 张永久留在池外，需引擎重构或新增承载字段才可能归零。")
+    if _todo_batches:
+        A(f"**终局预期**：`engine_ready` **{expected_final} / {m['total']} = {pct:.1f}%**"
+          f"（当前 {m['ready']} + 可做 {len(todo)}）；结构性 {len(structural)} 张与待新能力 "
+          f"{len(deferred)} 张永久留在池外，需引擎重构或新增承载字段才可能归零。")
+    else:
+        # 全部批次已处理：剩下的卡**不是待做**，而是已逐批判定做不了。
+        A(f"**终局**：`engine_ready` **{m['ready']} / {m['total']} = "
+          f"{m['ready'] / m['total'] * 100:.1f}%**（44 批全部处理完毕）。"
+          f"剩余 {len(todo)} 张已逐批**如实拒收**（原因见各批说明），"
+          f"另 {len(structural)} 张结构性边界与 {len(deferred)} 张待新能力卡"
+          f"需引擎重构（条件式 HP / 奖赏区对象 / 牌库底 / 延迟队列 / 退化等）才可能归零。")
     A("")
     A("---")
     A("")

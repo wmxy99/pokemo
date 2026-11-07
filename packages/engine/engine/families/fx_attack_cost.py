@@ -43,6 +43,40 @@ def _parse_tag(tag: str) -> tuple:
         if n <= 0:
             raise ValueError(f"attack_cost 费用增量非法：{tag}")
         return scope, n, None, None
+    if scope in ("self_set", "self_omit"):
+        # `fx:attack_cost:self_set:<n>:<color>[:if:<cond>][:name:<k>]`
+        # `fx:attack_cost:self_omit:<color>[:if:<cond>][:name:<k>]`
+        # （第一百一十二批起）——**改写**费用而不是加减：
+        #   · set  = 「can use the X attack for {C}」/「ignore all Energy in
+        #            this attack's cost」→ 费用整体换成 <n> 个 <color>（0 = 免费）；
+        #   · omit = 「ignore all {C} Energy in the costs」→ 去掉该色，其余照付。
+        # ⚠ 用「减固定值」表达 set 会在费用构成不同时算错（[C,C] 减 1 仍要 1 C，
+        #   而卡面是「整个费用改为」）。
+        # ⚠ **先**切 `:if:`：条件本身可含冒号（`opp_discard_has_named:colress`），
+        #   而 `:name:<k>` 必须排在 `if` **之前**。不先切就会把 `:name:trifrost`
+        #   吞进条件里（实测：Kyurem 的 cond 变成
+        #   `opp_discard_has_named:colress:name:trifrost`，引擎报未知计数源）。
+        _body = ":".join(parts[3:]) if parts[3:] else ""
+        if ":if:" in _body:
+            _head, _cond = _body.split(":if:", 1)
+        else:
+            _head, _cond = _body, None
+        segs = _head.split(":") if _head else []
+        val = None
+        if scope == "self_set":
+            if not segs or not segs[0].isdigit():
+                raise ValueError(f"attack_cost set 缺数值：{tag}")
+            val = int(segs[0]); segs = segs[1:]
+        if not segs:
+            raise ValueError(f"attack_cost 缺颜色：{tag}")
+        color, segs = segs[0], segs[1:]
+        cond, atk_key, i = _cond, None, 0
+        while i < len(segs):
+            if segs[i] == "name" and i + 1 < len(segs):
+                atk_key = re.sub(r"[^a-z0-9]", "", segs[i + 1].lower())
+                i += 2; continue
+            raise ValueError(f"attack_cost 未识别限定：{tag}")
+        return scope, val, (color, cond), atk_key
     if scope == "self":
         # fx:attack_cost:self:less:per:<counter>[:name:<k>]
         # ⚠ 第六十六批：``<counter>`` **本身可以含冒号**（`_eval_counter` 的
@@ -88,6 +122,30 @@ def attack_cost(battle, attacker, atk) -> dict:
             scope, n, _c, _k = _parse_tag(tag)
             if scope == "opp_basic" and attacker.stage == 0:
                 delta += n
+    # ①b/①c 攻击方自身的**费用改写**（第一百一十二批）
+    # ⚠ 来源有两处：**特性**（Kyurem / Azumarill / Decidueye，整只生效）与
+    #   **招式自身的 effects**（Conkeldurr「ignore all Energy in this attack's
+    #   cost」/ Crawdaunt「this attack can be used for {D}」，只对这一招生效）。
+    #   只扫特性会漏掉写在招式文本里的那类，且它们是**同一族**语义。
+    _atk_name = _name_key(getattr(atk, "name", ""))
+    _tag_sources = [str(getattr(ab, "tag", "") or "")
+                    for ab in attacker.pdef.abilities]
+    _tag_sources += [str(t) for t in (getattr(atk, "effects", None) or ())]
+    for tag in _tag_sources:
+        if not tag.startswith(("fx:attack_cost:self_set:",
+                               "fx:attack_cost:self_omit:")):
+            continue
+        scope, val, cspec, key = _parse_tag(tag)
+        if key is not None and key != _atk_name:
+            continue
+        color, cond = cspec
+        if cond:
+            from ..battle import _eval_condition      # 惰性导入，避免循环依赖
+            if not _eval_condition(battle, cond):
+                continue
+        if scope == "self_set":
+            return {"set": (() if not val else ((color, int(val)),))}
+        return {"omit": color}
     # ② 攻击方自身的「按计数源减费」
     _atk_name = _name_key(getattr(atk, "name", ""))
     for ab in attacker.pdef.abilities:

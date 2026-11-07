@@ -178,6 +178,15 @@ ATTACK_TAG_PREFIXES = (
     # first turn」/ Scream Tail ex「only if you go second, and only during your
     # first turn」）。引擎 `_attack_usable` 在合法动作生成时剔除，不进结算。
     "use_only:", "use_not:",
+    # 第一百一十二批（2026-11-08）：**招式自身**里的费用改写
+    # （Conkeldurr「ignore all Energy in this attack's cost」/
+    #  Crawdaunt「this attack can be used for {D}」）。该前缀此前只在特性白名单，
+    #  招式侧缺失 → 整条招式被拒。
+    "fx:",
+    # 第一百一十九批（2026-11-08）：下回合「基础伤害**改为** N」
+    # （Watchog「Focus Energy」）。与 `self_attack_plus_next:` 分开：
+    # 落成加伤会让 240 变成「印刷 80 + 240」。
+    "self_attack_set_next:",
     # 第一百零七批（2026-11-06）：招式侧弃场地（Chi-Yu「Scorching Earth」）。
     # 该 tag 此前只在特性/训练家侧存在。
     "discard_stadium",

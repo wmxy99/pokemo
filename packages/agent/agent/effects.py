@@ -3159,6 +3159,18 @@ _OPP_CHOOSE_SHUFFLE_RE = re.compile(
 # 一半效果。这里**故意不留** WR 分支，避免同一句产出两条 tag。
 
 
+def _static_cond(phrase):
+    """规则族里的条件短语 → 引擎条件名
+
+    ⚠ 必须补回 ``if `` 前缀：正则把 ``if `` 放在分组**外面**（`(?:if (.+?), )?`），
+      而 `_condition_from_text` 的多数模式以 ``if `` 开头 —— 不补就会静默返回
+      None，整条规则被当成「判不出」丢掉（Azumarill 实测）。
+    """
+    if not phrase:
+        return None
+    return _condition_from_text("if " + phrase.strip())
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -3384,6 +3396,20 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _ho:
         return {"kind": kind, "name": name, "trigger": "static",
                 "conditions": conditions, "actions": _ho,
+                "source_text": str(text or ""), "citations": []}
+    # 规则型文本（费用改写 / 禁攻 / 当回合进化，第一百一十二批起）。
+    # ⚠ 必须与既有的 `_detect_static_rules`（下回合限制 / 无视效果）**分开命名**：
+    #   第一版重名把那个探测器整个覆盖掉，14 张已进池的卡当场掉出（Shred /
+    #   Drum Beating / Sand Attack …），且测试全绿 —— 只是池子少了 14 张。
+    _vr = _detect_value_rules(t_raw, kind)
+    if _vr:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _vr,
+                "source_text": str(text or ""), "citations": []}
+    _sr = _detect_cost_rules(t_raw, kind)
+    if _sr:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _sr,
                 "source_text": str(text or ""), "citations": []}
     # 弃场地 + 封场地（第一百零七批，Chi-Yu「Scorching Earth」）。
     # 必须整段认领：两条动作要**按卡面顺序**执行，且「封锁」依赖前一步真的
@@ -5834,6 +5860,30 @@ def _condition_from_text(text: str) -> Optional[str]:
     # 泛化成 `own_field_name:astadium` 会让引擎报「无此条件」）。
     if re.search(r"if you have a stadium in play", low):
         return "stadium_in_play"
+    # ---- 静态规则族用到的几种（第一百一十二批起）----
+    m = re.search(r"opponent has any cards in their discard pile that have "
+                  r"[\u201c\u201d\"']?(?P<k>[a-z' ]+?)[\u201c\u201d\"']? in the name",
+                  low)
+    if m:
+        key = _tag_name_key(m.group("k"))
+        if key:
+            return f"opp_discard_has_named:{key}"
+    if re.search(r"opponent has no pok[eé]mon \{ex\} or pok[eé]mon \{v\}", low):
+        # 「no Pokémon {ex} or {V} in play」→ 正向条件的取反
+        return "not:opp_has_ex_or_v"
+    m = re.search(r"opponent has exactly (\d+) cards? in their hand", low)
+    if m:
+        return f"opp_hand_exactly:{int(m.group(1))}"
+    if re.search(r"this pok[eé]mon is affected by a special condition", low):
+        return "own_active_status_any"
+    if re.search(r"this pok[eé]mon has any damage counters on it", low):
+        return "own_active_has_damage"
+    m = re.search(r"unless you have (\d+) or more (?P<f>[a-z][a-z' .-]{2,24}?)"
+                  r"[\u2019']?s pok[eé]mon in play", low)
+    if m:
+        key = _tag_name_key(m.group("f"))
+        if key:
+            return f"own_field_name_at_least:{key}:{int(m.group(1))}"
     m = re.search(r"if you have (?P<mon>[a-z][a-z' .-]{2,24}?) in play", low)
     if m:
         # 「if you have Solrock in play」—— 带参条件 `own_field_name:<key>`。
@@ -7630,6 +7680,176 @@ def _detect_stadium_smash(text: str, kind: str) -> list:
                 {"play": "stadium", "until": "turn", "if_prev": True})]
 
 
+# ---- 静态规则族（第一百一十二批起）----
+# 三类**不是效果**而是规则改写 / 出招许可，必须整段认领，否则通用分支会把
+# 它们读成「无条件效果」（例：把「ignore all Energy in this attack's cost」
+# 当成免费出招=静默加强）。
+_COST_SET_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?this pok[eé]mon can use the (?P<atk>.+?) attack "
+    r"for \{(?P<e>[a-z])\}[.]$", re.I)
+_COST_IGNORE_COLOR_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?ignore all \{(?P<e>[a-z])\} energy in the costs? "
+    r"of attacks used by this pok[eé]mon[.]$", re.I)
+_COST_IGNORE_ALL_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?ignore all energy in this attack[\u2019']?s "
+    r"cost[.]$", re.I)
+_COST_SET_SELF_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?this attack can be used for \{(?P<e>[a-z])\}[.]$",
+    re.I)
+_NO_ATTACK_UNLESS_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?this pok[eé]mon can[\u2019']?t attack"
+    r"(?: unless (?P<unless>.+?))?[.]$", re.I)
+_EVOLVE_FIRST_TURN_RE = re.compile(
+    # 两种主语都要认：「this Pokémon can evolve…」与「**it** can evolve…」
+    # （Eevee 的被动主语是 it，指代前半句的 this Pokémon）。
+    r"^(?:as long as this pok[eé]mon is in the active spot, )?"
+    r"(?:if (?P<cond>.+?), )?(?:this pok[eé]mon|it) can evolve during your "
+    r"first turn or the turn you play it[.]$", re.I)
+
+
+def _detect_cost_rules(text: str, kind: str) -> list:
+    """费用改写 / 禁攻 / 当回合进化 —— 三类**规则**型文本
+
+    返回的动作交给 to_engine_tags 变成：
+      · ``fx:attack_cost:self_set:<n>:<c>[:if:<cond>][:name:<k>]``
+      · ``fx:attack_cost:self_omit:<c>[:if:<cond>]``
+      · ``passive:attack_block_unless:<cond>``
+      · ``passive:evolve_same_turn[:if:<cond>][:active]``
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+
+    m = _COST_SET_RE.match(t)
+    if m:
+        color = _EN_ENERGY_LETTER.get(m.group("e").upper())
+        key = _tag_name_key(m.group("atk"))
+        if color and key:
+            cond = _static_cond(m.group("cond"))
+            if m.group("cond") and not cond:
+                return []
+            return [act("fx", None, "self", {
+                # `:name:` 必须排在 `:if:` **之前**：条件本身含冒号，
+                # 放后面会被条件吞掉（引擎侧按「先切 if 再读 name」解析）。
+                "tag": "fx:attack_cost:self_set:1:" + color
+                       + f":name:{key}" + (f":if:{cond}" if cond else "")})]
+
+    m = _COST_IGNORE_COLOR_RE.match(t)
+    if m:
+        color = _EN_ENERGY_LETTER.get(m.group("e").upper())
+        if color:
+            cond = _condition_from_text(m.group("cond")) \
+                if m.group("cond") else None
+            if m.group("cond") and not cond:
+                return []
+            return [act("fx", None, "self", {
+                "tag": "fx:attack_cost:self_omit:" + color
+                       + (f":if:{cond}" if cond else "")})]
+
+    m = _COST_IGNORE_ALL_RE.match(t)
+    if m:
+        cond = _static_cond(m.group("cond"))
+        if m.group("cond") and not cond:
+            return []
+        return [act("fx", None, "self", {
+            "tag": "fx:attack_cost:self_set:0:colorless"
+                   + (f":if:{cond}" if cond else "")})]
+
+    m = _COST_SET_SELF_RE.match(t)
+    if m:
+        color = _EN_ENERGY_LETTER.get(m.group("e").upper())
+        if color:
+            cond = _condition_from_text(m.group("cond")) \
+                if m.group("cond") else None
+            if m.group("cond") and not cond:
+                return []
+            return [act("fx", None, "self", {
+                "tag": "fx:attack_cost:self_set:1:" + color
+                       + (f":if:{cond}" if cond else "")})]
+
+    m = _NO_ATTACK_UNLESS_RE.match(t)
+    if m:
+        # 语义必须分清两种句式（写反会让「有 ex 才能打」变成「有 ex 反而不能打」）：
+        #   · 「can't attack **unless** X」 → X 就是**许可条件**；
+        #   · 「**If** Y, can't attack」     → 许可条件 = **not Y**。
+        if m.group("unless"):
+            cond = _condition_from_text("unless " + m.group("unless"))
+        elif m.group("cond"):
+            _y = _static_cond(m.group("cond"))
+            # 条件本身可能已是 `not:…`（「has **no** ex」）—— 再加一层 `not:`
+            # 虽然求值仍正确（双重否定），但 tag 会变成 `not:not:…`，
+            # 对账与人工核对都难读。直接抵消。
+            if not _y:
+                cond = None
+            elif _y.startswith("not:"):
+                cond = _y[len("not:"):]
+            else:
+                cond = f"not:{_y}"
+        else:
+            cond = None
+        if cond:
+            return [act("passive", None, "self",
+                        {"kind": "attack_block_unless", "cond": cond})]
+        return []
+
+    m = _EVOLVE_FIRST_TURN_RE.match(t)
+    if m:
+        cond = _static_cond(m.group("cond"))
+        if m.group("cond") and not cond:
+            return []
+        active_only = bool(re.match(
+            r"^as long as this pok[eé]mon is in the active spot",
+            t, re.I))
+        return [act("passive", None, "self",
+                    {"kind": "evolve_same_turn", "cond": cond,
+                     "active_only": active_only})]
+    return []
+
+
+# ---- 数值改写族（第一百一十九/一百二十批）----
+_BASE_DAMAGE_SET_RE = re.compile(
+    r"^(?:if (?P<cond>.+?), )?this attack[\u2019']?s base damage is "
+    r"(?P<n>\d+)[.]$", re.I)
+_NEXT_BASE_DAMAGE_RE = re.compile(
+    r"^during your next turn, this pok[eé]mon[\u2019']?s (?P<atk>.+?) "
+    r"attack[\u2019']?s base damage is (?P<n>\d+)[.]$", re.I)
+_HEAL_EQUAL_RE = re.compile(
+    r"^heal from this pok[eé]mon the same amount of damage you did to your "
+    r"opponent[\u2019']?s active pok[eé]mon[.]$", re.I)
+
+
+def _detect_value_rules(text: str, kind: str) -> list:
+    """基础伤害 / 回复量的**数值改写**（第一百一十九/一百二十批）
+
+    · 「If <cond>, this attack's **base damage is 30**」（Mega Mawile ex
+      「Huge Bite」）→ ``dmg_set:30:if:<cond>``：条件不成立时**保持印刷伤害**。
+    · 「During your next turn, this Pokémon's <招式> attack's **base damage is
+      240**」（Watchog「Focus Energy」）→ ``self_attack_set_next:240:name:<k>``。
+      ⚠ 是改写不是加伤：落成 plus 会让 240 变成「印刷 80 + 240」。
+    · 「Heal from this Pokémon **the same amount of damage you did** …」
+      （Virizion「Giga Drain」）→ ``heal:equal``。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+
+    m = _BASE_DAMAGE_SET_RE.match(t)
+    if m:
+        cond = _static_cond(m.group("cond"))
+        if m.group("cond") and not cond:
+            return []
+        return [act("rule", None, "any", {
+            "dmg_set_cond": (int(m.group("n")), cond)})]
+
+    m = _NEXT_BASE_DAMAGE_RE.match(t)
+    if m:
+        key = _tag_name_key(m.group("atk"))
+        if key:
+            return [act("rule", None, "self", {
+                "self_atk_set_next": (int(m.group("n")), key)})]
+        return []
+
+    if _HEAL_EQUAL_RE.match(t):
+        return [act("heal", None, "self", {"heal_equal": True})]
+    return []
+
+
 def _detect_self_buff(text: str, kind: str) -> list:
     """自伤指示物 + 本回合自身加伤 → **单条**复合 tag（`a|b`，按卡面顺序）"""
     if kind != "ability":
@@ -8867,6 +9087,9 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"draw:{int(amt)}"
                                 + (f":if:{_cond}" if _cond else ""))
             elif t == "heal":
+                if extra.get("heal_equal"):
+                    tags.append("heal:equal")
+                    continue
                 if amt is None and extra.get("heal_all"):
                     # 全量回复：`heal:all[:<scope>][:type:<c>]`
                     sc = extra.get("heal_scope") or ""
@@ -9622,6 +9845,15 @@ def to_engine_tags(specs: list) -> dict:
                 if _tg:
                     tags.append(_tg)
             elif t == "rule":
+                if extra.get("dmg_set_cond"):
+                    _n0, _c0 = extra["dmg_set_cond"]
+                    tags.append(f"dmg_set:{int(_n0)}"
+                                + (f":if:{_c0}" if _c0 else ""))
+                    continue
+                if extra.get("self_atk_set_next"):
+                    _n0, _k0 = extra["self_atk_set_next"]
+                    tags.append(f"self_attack_set_next:{int(_n0)}:name:{_k0}")
+                    continue
                 if extra.get("discard_stadium"):
                     tags.append("discard_stadium")
                     continue
@@ -10142,6 +10374,18 @@ def to_engine_tags(specs: list) -> dict:
                                             "reason": f"状态免疫词未识别：{st}"})
                     else:
                         tags.append(f"passive:status_immune:{st}")
+                elif kind_ == "attack_block_unless" and extra.get("cond"):
+                    # `passive:attack_block_unless:<cond>`（第一百一十二批）
+                    tags.append(f"passive:attack_block_unless:{extra['cond']}")
+                elif kind_ == "evolve_same_turn":
+                    # `passive:evolve_same_turn[:if:<cond>][:active]`
+                    # （Eevee / Karrablast / Shelmet / Luxio）
+                    _tail = ""
+                    if extra.get("cond"):
+                        _tail += f":if:{extra['cond']}"
+                    elif extra.get("active_only"):
+                        _tail += ":active"
+                    tags.append("passive:evolve_same_turn" + _tail)
                 elif kind_ == "heal_on_attach" and amt is not None:
                     # `passive:heal_on_attach:<n>`（第一百零四批，Magearna）
                     tags.append(f"passive:heal_on_attach:{int(amt)}")

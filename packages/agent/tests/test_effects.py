@@ -587,9 +587,9 @@ class TestV14Modifiers(unittest.TestCase):
         #   分开命名，将来加 V 支持只改一处）→ 从拒绝清单移到正向用例
         #   `test_batch93_94_parse.TestBatch93Conditions.test_ex_or_v_bonus`。
         texts = [
-            # 手牌数「恰好 N」：引擎只有 at_most，无 exactly → 仍必须拒绝
-            "If your opponent has exactly 2 cards in their hand, this attack "
-            "does 30 more damage.",
+            # 后备与本方战斗位「同属性」：引擎没有该关系判定 → 仍必须拒绝
+            "If your opponent's Benched Pokémon are the same type as your "
+            "Active Pokémon, this attack does 30 more damage.",
         ]
         for text in texts:
             with self.subTest(text=text[:40]):

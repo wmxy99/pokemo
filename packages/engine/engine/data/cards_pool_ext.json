@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1164,
+      "kept": 1174,
       "by_Energy": 19,
-      "by_Pokemon": 981,
-      "by_Trainer": 164,
+      "by_Pokemon": 988,
+      "by_Trainer": 167,
       "skipped": {
-        "存在未建模项（整卡不收）": 86,
+        "存在未建模项（整卡不收）": 76,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -2431,6 +2431,48 @@
       "source_card_id": 63,
       "name_key": "ragingboltex",
       "uid": "Raging Bolt ex@TEF 123"
+    },
+    {
+      "name": "Hoothoot",
+      "name_zh": "咕咕",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Silent Wing",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [
+            "info:reveal_hand"
+          ],
+          "desc": "Your opponent reveals their hand.",
+          "name_zh": "寂静之翼",
+          "desc_zh": "对手展示其手牌。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "126"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 64,
+      "name_key": "hoothoot",
+      "uid": "Hoothoot@TEF 126"
     },
     {
       "name": "Pineco",
@@ -9337,6 +9379,60 @@
       "uid": "Cofagrigus@SSP 83"
     },
     {
+      "name": "Espurr",
+      "name_zh": "妙喵",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "See Through",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "info:reveal_hand"
+          ],
+          "desc": "Your opponent reveals their hand.",
+          "name_zh": "看穿",
+          "desc_zh": "对手展示其手牌。"
+        },
+        {
+          "name": "Psyshot",
+          "cost": {
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "精神射击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "84"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 220,
+      "name_key": "espurr",
+      "uid": "Espurr@SSP 84"
+    },
+    {
       "name": "Meowstic",
       "name_zh": "超能妙喵",
       "supertype": "Pokemon",
@@ -11918,6 +12014,60 @@
       "source_card_id": 276,
       "name_key": "metagross",
       "uid": "Metagross@JTG 63"
+    },
+    {
+      "name": "N’s Sigilyph",
+      "name_zh": "N 的象征鸟",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(N)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Psychic Sphere",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "精神球",
+          "desc_zh": ""
+        },
+        {
+          "name": "Victory Symbol",
+          "cost": {
+            "psychic": 1,
+            "colorless": 2
+          },
+          "damage": 0,
+          "effects": [
+            "win_if:own_prizes_eq:1"
+          ],
+          "desc": "If you use this attack when you have exactly 1 Prize card remaining, you win this game.",
+          "name_zh": "胜利象征",
+          "desc_zh": "若你在剩余恰好 1 张奖赏卡时使用此招式，你赢得此局游戏。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "JTG",
+        "number": "64"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 277,
+      "name_key": "nssigilyph",
+      "uid": "N’s Sigilyph@JTG 64"
     },
     {
       "name": "Lillie’s Cutiefly",
@@ -24609,6 +24759,59 @@
       "source_card_id": 550,
       "name_key": "haxorus",
       "uid": "Haxorus@BLK 70"
+    },
+    {
+      "name": "Pidove",
+      "name_zh": "豆豆鸽",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Scout",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "info:reveal_hand"
+          ],
+          "desc": "Your opponent reveals their hand.",
+          "name_zh": "侦察",
+          "desc_zh": "对手展示其手牌。"
+        },
+        {
+          "name": "Stampede",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 10,
+          "effects": [],
+          "desc": "",
+          "name_zh": "踩踏",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "71"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 551,
+      "name_key": "pidove",
+      "uid": "Pidove@BLK 71"
     },
     {
       "name": "Tranquill",
@@ -39144,6 +39347,62 @@
       "uid": "N's Vanillish@ASC 50"
     },
     {
+      "name": "N's Vanilluxe",
+      "name_zh": "N 的双倍多多冰",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 150,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(N)",
+      "evolves_from": "N's Vanillish",
+      "attacks": [
+        {
+          "name": "Snow Coating",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 0,
+          "effects": [
+            "counters_double:opp"
+          ],
+          "desc": "Double the number of damage counters on each of your opponent’s Pokémon.",
+          "name_zh": "雪之涂层",
+          "desc_zh": "将对手的每只宝可梦上的伤害指示物数量变为 2 倍。"
+        },
+        {
+          "name": "Blizzard",
+          "cost": {
+            "water": 1,
+            "colorless": 2
+          },
+          "damage": 120,
+          "effects": [
+            "snipe:opp_bench:10:all"
+          ],
+          "desc": "This attack also does 10 damage to each of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
+          "name_zh": "暴风雪",
+          "desc_zh": "此招式还对对手的每只后备宝可梦造成 10 点伤害。（后备宝可梦不计算弱点和抗性。）"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "51"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 864,
+      "name_key": "nsvanilluxe",
+      "uid": "N's Vanilluxe@ASC 51"
+    },
+    {
       "name": "Snom",
       "name_zh": "雪吞虫",
       "supertype": "Pokemon",
@@ -42718,6 +42977,61 @@
       "source_card_id": 942,
       "name_key": "sealeo",
       "uid": "Sealeo@SSP 44"
+    },
+    {
+      "name": "Walrein",
+      "name_zh": "帝牙海狮",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 170,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Sealeo",
+      "attacks": [
+        {
+          "name": "Frigid Fangs",
+          "cost": {
+            "water": 1
+          },
+          "damage": 60,
+          "effects": [
+            "atk_energy_block:2"
+          ],
+          "desc": "During your opponent’s next turn, Pokémon that have 2 or less Energy attached can’t use attacks. (This includes new Pokémon that come into play.)",
+          "name_zh": "冰冷之牙",
+          "desc_zh": "在对手的下个回合中，附着有 2 个或更少能量的宝可梦无法使用招式。（这包括新登场的宝可梦。）"
+        },
+        {
+          "name": "Megaton Fall",
+          "cost": {
+            "water": 2
+          },
+          "damage": 170,
+          "effects": [
+            "self:50"
+          ],
+          "desc": "This Pokémon also does 50 damage to itself.",
+          "name_zh": "百万吨坠落",
+          "desc_zh": "此宝可梦还对自己造成 50 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "45"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 943,
+      "name_key": "walrein",
+      "uid": "Walrein@SSP 45"
     },
     {
       "name": "Regice ex",
@@ -48072,6 +48386,59 @@
       "uid": "Tyrunt@POR 44"
     },
     {
+      "name": "Tyrantrum",
+      "name_zh": "怪颚龙",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 180,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Tyrunt",
+      "attacks": [
+        {
+          "name": "Wreak Havoc",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 160,
+          "effects": [
+            "coin_until_tails:mill:opp"
+          ],
+          "desc": "Flip a coin until you get tails. For each heads, discard the top card of your opponent’s deck.",
+          "name_zh": "大肆破坏",
+          "desc_zh": "反复抛硬币，直到出现反面。每次正面，弃置对手牌库顶部的 1 张卡。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Tyrannically Gutsy",
+          "name_zh": "暴君之胆",
+          "tag": "passive:hp_plus:150:if:special_energy",
+          "location": "field",
+          "desc": "If this Pokémon has any Special Energy attached, it gets +150 HP.",
+          "desc_zh": "若此宝可梦附着了特殊能量，则其 HP +150。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "POR",
+        "number": "45"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1054,
+      "name_key": "tyrantrum",
+      "uid": "Tyrantrum@POR 45"
+    },
+    {
       "name": "Hawlucha",
       "name_zh": "摔角鹰人",
       "supertype": "Pokemon",
@@ -49422,6 +49789,23 @@
       "uid": "Call Bell@SSP 165"
     },
     {
+      "name": "Dusk Ball",
+      "name_zh": "黑暗球",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "recon_bottom:7",
+      "desc": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "desc_zh": "查看你牌库下方的 7 张卡。你可以展示其中 1 只宝可梦并加入手牌。将其他卡牌洗回你的牌库。",
+      "real": {
+        "set": "SSP",
+        "number": "175"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1102,
+      "uid": "Dusk Ball@SSP 175"
+    },
+    {
       "name": "Meddling Memo",
       "name_zh": "干涉便条",
       "supertype": "Trainer",
@@ -50441,6 +50825,23 @@
       "uid": "Lillie’s Pearl@JTG 151"
     },
     {
+      "name": "Cynthia's Power Weight",
+      "name_zh": "竹兰的力量负重",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:hp_plus:70:holder:name:cynthia",
+      "desc": "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
+      "desc_zh": "此卡所附着的竹兰的宝可梦的 HP +70。",
+      "real": {
+        "set": "DRI",
+        "number": "162"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1173,
+      "uid": "Cynthia's Power Weight@DRI 162"
+    },
+    {
       "name": "Air Balloon",
       "name_zh": "气球",
       "supertype": "Trainer",
@@ -50970,6 +51371,23 @@
       "source_card_id": 1208,
       "play_cost": "discard:1",
       "uid": "Iris’s Fighting Spirit@JTG 149"
+    },
+    {
+      "name": "Ruffian",
+      "name_zh": "恶徒",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "discard_tool_senergy:1",
+      "desc": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.",
+      "desc_zh": "从对手的 1 只宝可梦上弃置 1 张宝可梦道具和 1 个特殊能量。",
+      "real": {
+        "set": "JTG",
+        "number": "157"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1209,
+      "uid": "Ruffian@JTG 157"
     },
     {
       "name": "Brock’s Scouting",

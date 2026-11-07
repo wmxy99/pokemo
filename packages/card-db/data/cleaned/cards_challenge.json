@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 06:41:44",
+  "reparsed_at": "2026-11-08 07:04:19",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1179,
+  "engine_ready": 1189,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1179,
-   "engine_approximated": 1164,
-   "engine_unmatched": 88,
-   "engine_namekey_mismatch": 10
+   "zh_backfill": 1189,
+   "engine_approximated": 1174,
+   "engine_unmatched": 78,
+   "engine_namekey_mismatch": 9
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 149,
-   "engine_tags": 1488,
-   "unsupported": 88,
+   "engine_tags": 1498,
+   "unsupported": 78,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1164,
+  "engine_approximated": 1174,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -8309,14 +8309,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Hoothoot@TEF 126",
    "parse": {
     "items": [
      {
@@ -8334,21 +8336,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "info_reveal_hand": true
           }
          }
         ],
-        "source_text": "Your opponent reveals their hand."
+        "source_text": "Your opponent reveals their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "info:reveal_hand"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -8363,21 +8363,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "info_reveal_hand": true
         }
        }
       ],
-      "source_text": "Your opponent reveals their hand."
+      "source_text": "Your opponent reveals their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "info:reveal_hand"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -31690,14 +31688,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Espurr@SSP 84",
    "parse": {
     "items": [
      {
@@ -31715,21 +31715,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "info_reveal_hand": true
           }
          }
         ],
-        "source_text": "Your opponent reveals their hand."
+        "source_text": "Your opponent reveals their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "info:reveal_hand"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -31744,21 +31742,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "info_reveal_hand": true
         }
        }
       ],
-      "source_text": "Your opponent reveals their hand."
+      "source_text": "Your opponent reveals their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "info:reveal_hand"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -40218,14 +40214,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "N’s Sigilyph@JTG 64",
    "parse": {
     "items": [
      {
@@ -40243,21 +40241,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "win_if_prizes": 1
           }
          }
         ],
-        "source_text": "If you use this attack when you have exactly 1 Prize card remaining, you win this game."
+        "source_text": "If you use this attack when you have exactly 1 Prize card remaining, you win this game.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "win_if:own_prizes_eq:1"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -40272,21 +40268,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "win_if_prizes": 1
         }
        }
       ],
-      "source_text": "If you use this attack when you have exactly 1 Prize card remaining, you win this game."
+      "source_text": "If you use this attack when you have exactly 1 Prize card remaining, you win this game.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "win_if:own_prizes_eq:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -75948,14 +75942,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Pidove@BLK 71",
    "parse": {
     "items": [
      {
@@ -75973,21 +75969,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "info_reveal_hand": true
           }
          }
         ],
-        "source_text": "Your opponent reveals their hand."
+        "source_text": "Your opponent reveals their hand.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "info:reveal_hand"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -76002,21 +75996,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "info_reveal_hand": true
         }
        }
       ],
-      "source_text": "Your opponent reveals their hand."
+      "source_text": "Your opponent reveals their hand.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "info:reveal_hand"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -114624,14 +114616,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "N's Vanilluxe@ASC 51",
    "parse": {
     "items": [
      {
@@ -114649,21 +114643,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "counters_double": true
           }
          }
         ],
-        "source_text": "Double the number of damage counters on each of your opponent’s Pokémon."
+        "source_text": "Double the number of damage counters on each of your opponent’s Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "counters_double:opp"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -114711,11 +114703,12 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "counters_double": true
         }
        }
       ],
-      "source_text": "Double the number of damage counters on each of your opponent’s Pokémon."
+      "source_text": "Double the number of damage counters on each of your opponent’s Pokémon.",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -114742,14 +114735,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "counters_double:opp",
      "snipe:opp_bench:10:all"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -124557,14 +124546,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Walrein@SSP 45",
    "parse": {
     "items": [
      {
@@ -124582,21 +124573,19 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "atk_energy_block": 2
           }
          }
         ],
-        "source_text": "During your opponent’s next turn, Pokémon that have 2 or less Energy attached can’t use attacks. (This includes new Pokémon that come into play.)"
+        "source_text": "During your opponent’s next turn, Pokémon that have 2 or less Energy attached can’t use attacks. (This includes new Pokémon that come into play.)",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "atk_energy_block:2"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -124640,11 +124629,12 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "atk_energy_block": 2
         }
        }
       ],
-      "source_text": "During your opponent’s next turn, Pokémon that have 2 or less Energy attached can’t use attacks. (This includes new Pokémon that come into play.)"
+      "source_text": "During your opponent’s next turn, Pokémon that have 2 or less Energy attached can’t use attacks. (This includes new Pokémon that come into play.)",
+      "citations": []
      },
      {
       "kind": "attack",
@@ -124667,14 +124657,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "atk_energy_block:2",
      "self:50"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -139101,14 +139087,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Tyrantrum@POR 45",
    "parse": {
     "items": [
      {
@@ -139152,26 +139140,25 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "passive",
+          "amount": 150,
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "hp_plus",
+           "cond": "special_energy"
           }
          }
         ],
-        "source_text": "If this Pokémon has any Special Energy attached, it gets +150 HP."
+        "source_text": "If this Pokémon has any Special Energy attached, it gets +150 HP.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:hp_plus:150:if:special_energy"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -139201,27 +139188,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "passive",
+        "amount": 150,
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "hp_plus",
+         "cond": "special_energy"
         }
        }
       ],
-      "source_text": "If this Pokémon has any Special Energy attached, it gets +150 HP."
+      "source_text": "If this Pokémon has any Special Energy attached, it gets +150 HP.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "coin_until_tails:mill:opp"
+     "coin_until_tails:mill:opp",
+     "passive:hp_plus:150:if:special_energy"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -144684,14 +144669,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "查看你牌库下方的 7 张卡。你可以展示其中 1 只宝可梦并加入手牌。将其他卡牌洗回你的牌库。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dusk Ball@SSP 175",
    "parse": {
     "items": [
      {
@@ -144709,23 +144696,21 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "recon_bottom": 7
           }
          }
         ],
-        "source_text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck."
+        "source_text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "recon_bottom:7"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -144740,21 +144725,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "recon_bottom": 7
         }
        }
       ],
-      "source_text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck."
+      "source_text": "Look at the bottom 7 cards of your deck. You may reveal a Pokémon you find there and put it into your hand. Shuffle the other cards back into your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "recon_bottom:7"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151785,14 +151768,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "此卡所附着的竹兰的宝可梦的 HP +70。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Cynthia's Power Weight@DRI 162",
    "parse": {
     "items": [
      {
@@ -151806,27 +151791,26 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "tool",
+          "amount": 70,
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "hp_plus",
+           "holder_name": "cynthia"
           }
          }
         ],
-        "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP."
+        "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "tool:hp_plus:70:holder:name:cynthia"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -151837,25 +151821,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "tool",
+        "amount": 70,
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "hp_plus",
+         "holder_name": "cynthia"
         }
        }
       ],
-      "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP."
+      "source_text": "The Cynthia's Pokémon this card is attached to gets +70 HP.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "tool:hp_plus:70:holder:name:cynthia"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -155424,14 +155407,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从对手的 1 只宝可梦上弃置 1 张宝可梦道具和 1 个特殊能量。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Ruffian@JTG 157",
    "parse": {
     "items": [
      {
@@ -155449,23 +155434,21 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "discard_tool_senergy": 1
           }
          }
         ],
-        "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."
+        "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "discard_tool_senergy:1"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -155480,21 +155463,19 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "discard_tool_senergy": 1
         }
        }
       ],
-      "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon."
+      "source_text": "Discard a Pokémon Tool and a Special Energy from 1 of your opponent's Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "discard_tool_senergy:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

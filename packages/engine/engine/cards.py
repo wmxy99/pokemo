@@ -364,8 +364,14 @@ class FieldPokemon:
         # 道具的 +HP 在这里叠加（道具是**中途附着**的，不能在 make_pokemon 时固化）
         # 特殊能量（Grow Grass）同样中途附着，故一并在此计算
         return (self.pdef.hp + self.bonus_hp
-                + _tool_value("" if self.tool_disabled else self.tool, "hp_plus")
-                + special_energy.hp_plus(self))
+                + _tool_hp_plus(self)
+                + special_energy.hp_plus(self)
+                # 条件式 +HP（第一百三十四批）：判据只依赖**本只身上**的附着卡
+                # （自身能量 / 特殊能量），因此可以在这里现算，不需要 battle 上下文，
+                # 也不会出现「刷新点漏一处 → 血量上限漂移」。
+                # 队伍级（「all of your Pokémon get +N HP」）不在此列 —— 那种必须
+                # 由 battle._refresh_stadium_hp 统一重算，见该函数注释。
+                + cond_hp_bonus(self))
 
     @property
     def hp_remaining(self) -> int:
@@ -568,6 +574,71 @@ def _tool_value(tag: Optional[str], kind: str) -> int:
     return 0
 
 
+def _hp_cond_ok(fp: "FieldPokemon", cond: str) -> bool:
+    """条件式 +HP 的条件求值（只支持**只依赖本只附着卡**的形态）
+
+    支持：
+      · ``special_energy``       本只身上有任意特殊能量
+      · ``energy:<type>``        本只身上有该属性的能量（基本 + 特殊合计）
+    未知形态一律返回 False —— **宁可不加血，也不静默多给上限**（多给上限会让
+    「被打到 0」变成「还活着」，是极难发现的错）。
+    """
+    c = str(cond or "").strip().lower()
+    if not c:
+        return True
+    if c == "special_energy":
+        return bool(fp.senergy)
+    if c.startswith("energy:"):
+        want = c.split(":", 1)[1].strip()
+        return bool(want) and fp.energy_counts().get(want, 0) > 0
+    return False
+
+
+def cond_hp_bonus(fp: "FieldPokemon") -> int:
+    """``passive:hp_plus:<n>:if:<cond>`` 的现值（无条件形态不在此处，见 bonus_hp）"""
+    total = 0
+    for ab in fp.pdef.abilities:
+        tag = str(getattr(ab, "tag", "") or "")
+        if not tag.startswith("passive:hp_plus:"):
+            continue
+        raw = tag.split(":")
+        if len(raw) < 5 or raw[3] != "if":
+            continue
+        if not raw[2].isdigit():
+            continue
+        if _hp_cond_ok(fp, ":".join(raw[4:])):
+            total += int(raw[2])
+    return total
+
+
+def _name_key_simple(name: str) -> str:
+    """卡名归一化（只留小写字母数字）—— 道具 ``holder:name:<k>`` 比对用"""
+    return "".join(ch for ch in str(name or "").lower() if ch.isalnum())
+
+
+def _tool_hp_plus(fp: "FieldPokemon") -> int:
+    """道具提供的 +HP，支持 ``holder:name:<k>`` 限定（第一百三十四批）
+
+    · ``tool:hp_plus:N``                    → 无条件 +N
+    · ``tool:hp_plus:N:holder:name:cynthia`` → 仅当**持有者**卡名以该键开头
+      （Cynthia's Power Weight：「The **Cynthia's Pokémon** this card is attached
+      to gets +70 HP.」—— 不判持有者就变成「谁挂上都 +70」，属静默加强）
+    """
+    tag = "" if fp.tool_disabled else fp.tool
+    n = _tool_value(tag, "hp_plus")
+    if not n:
+        return 0
+    parts = str(tag).split(":")
+    if "holder" in parts:
+        i = parts.index("holder")
+        if i + 2 >= len(parts) or parts[i + 1] != "name":
+            return 0            # 限定形态不认识 → **不生效**
+        if not _name_key_simple(fp.pdef.name).startswith(
+                _name_key_simple(parts[i + 2])):
+            return 0
+    return n
+
+
 def make_pokemon(pdef: PokemonDef) -> FieldPokemon:
     """把物种定义实例化到场上（并落**静态、无条件**的特性修正）
 
@@ -579,7 +650,9 @@ def make_pokemon(pdef: PokemonDef) -> FieldPokemon:
     fp = FieldPokemon(pdef=pdef)
     for ab in pdef.abilities:
         tag = str(getattr(ab, "tag", "") or "")
-        if tag.startswith("passive:hp_plus:"):
+        # ⚠ 条件式（`…:if:<cond>`）**不进** bonus_hp：它随时可能因附着变化而变，
+        #   固化进来就会在「能量被弃掉」之后仍然多给血（`max_hp` 里现算）。
+        if tag.startswith("passive:hp_plus:") and ":if:" not in tag:
             raw = tag.split(":")
             if len(raw) > 2 and raw[2].isdigit():
                 fp.bonus_hp += int(raw[2])

@@ -389,6 +389,13 @@ class Battle:
             if _passive_attack_blocked(self, p.active):
                 blocked = True
             turn_count = self.turn_counts[pi]
+            # 按附着能量数全队禁攻（第一百三十四批，Walrein「Frigid Fangs」）：
+            # 卡面「Pokémon that have 2 or less Energy attached can't use attacks」
+            # —— 判据是**这只身上**的能量数，被封锁方为整名玩家（含新上场者）。
+            _eab = getattr(p, "atk_energy_block_n", 0)
+            if _eab and getattr(p, "atk_energy_block_until", 0) > turn_count \
+                    and p.active.total_energy() <= _eab:
+                blocked = True
             if not blocked:
                 for ai, atk in enumerate(p.active.pdef.attacks):
                     # 跨回合攻击封锁（`attack_lock:*`）：即使能量足够也不得出手
@@ -2264,6 +2271,19 @@ class Battle:
             placed = self._trainer_discard_search_energy(p, tag, hi)
         elif tag.startswith("search_energy:"):
             placed = self._trainer_search_energy(p, tag)
+        elif tag.startswith("recon_bottom:"):
+            # 「Look at the bottom N cards of your deck. You may reveal a
+            #  Pokémon you find there and put it into your hand. Shuffle the
+            #  other cards back into your deck.」（Dusk Ball）
+            # ⚠ 与 `recon:`（**牌库顶**）方向相反。前缀 `recon_bottom:` **不**被
+            #   `startswith("recon:")` 命中（第 6 位是 `_` 不是 `:`），必须独立分支。
+            placed = self._trainer_recon_bottom(p, tag)
+        elif tag.startswith("discard_tool_senergy:"):
+            # 「Discard a Pokémon Tool and a Special Energy from 1 of your
+            #  opponent's Pokémon.」（Ruffian）
+            # ⚠ 两个条件必须**落在同一只**身上（卡面「from 1 of …」）；拆成两次
+            #   递归挑选会变成「可以分跨两只」—— 静默加强。
+            placed = self._trainer_discard_tool_senergy(opp)
         elif tag.startswith("recon:"):
             # 检视牌库顶（2026-10-30 第二十批）：Pokégear 3.0 / Bug Catching Set /
             # Drayton / Hassel / Grimsley's Move / Waitress
@@ -3369,6 +3389,60 @@ class Battle:
                                           "left": len(pl.hand)})
             done.append(moved)
         return tuple(done)
+
+    def _trainer_recon_bottom(self, p: PlayerState, tag: str) -> str:
+        """检视**牌库底** N 张，取 1 张宝可梦入手，其余洗回（Dusk Ball）
+
+        牌库表示法：`deck[-1]` 是**顶**，`deck[0]` 是**底** —— 因此「底部 N 张」
+        是 `deck[:n]`。取走后其余牌按卡面「shuffle the other cards back into
+        your deck」整库洗牌（不是放回底部：这两者在「已知底部信息」上不同）。
+        """
+        parts = str(tag).split(":")
+        n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 7
+        n = min(n, len(p.deck))
+        if n <= 0:
+            raise ValueError("牌库为空")
+        bottom = p.deck[:n]
+        top = p.deck[n:]
+        pick = next((c for c in bottom if isinstance(c, PokeRef)), None)
+        if pick is None:
+            # 「You may」—— 没有宝可梦就是**不做**：牌序保持原样（不洗库）。
+            self._log("recon_bottom", {"player": self.current, "look": n,
+                                       "got": None})
+            return f"bottom{n} none"
+        bottom.remove(pick)
+        p.hand.append(pick)
+        p.deck = top + bottom
+        self.rng.shuffle(p.deck)
+        self._log("recon_bottom", {"player": self.current, "look": n,
+                                   "got": _card_label(pick)})
+        return f"bottom{n} got 1"
+
+    def _trainer_discard_tool_senergy(self, opp: PlayerState) -> str:
+        """弃对手**同一只**身上的 1 张道具 + 1 张特殊能量（Ruffian）
+
+        没有任一只同时满足「有道具 且 有特殊能量」时**什么都不做**（卡面要求
+        两者都能弃才有效果；拆开弃会被静默加强）。
+        """
+        for fp in opp.all_field():
+            if not fp.tool or not fp.senergy:
+                continue
+            name = fp.tool_name or fp.tool
+            ref = fp.tool_ref
+            _drop_tool(fp)
+            if ref is not None:
+                self._to_discard(opp, ref)
+            else:
+                opp.discard.append(str(name or "Pokémon Tool"))
+            _discard_special_energy(self, opp, fp, 1)
+            self._log("discard_tool_senergy", {"player": self.current,
+                                               "owner": opp.name,
+                                               "target": fp.name,
+                                               "tool": name})
+            return f"{fp.name}:tool+senergy"
+        self._log("discard_tool_senergy", {"player": self.current,
+                                          "owner": opp.name, "target": None})
+        return "none"
 
     def _do_opp_hand(self, p: PlayerState, tag: str, action: dict) -> str:
         """对手手牌操作（``opp_hand:<op>:<sel>[:<n>|:all]``）—— **我方选**口径
@@ -5158,7 +5232,9 @@ class Battle:
                 base = 0
                 for ab in fp.pdef.abilities:
                     tag = str(getattr(ab, "tag", "") or "")
-                    if tag.startswith("passive:hp_plus:"):
+                    # 条件式 +HP（`:if:`）由 `cards.cond_hp_bonus` 在 `max_hp`
+                    # 里现算 —— 这里再算一遍会**重复计**（上限突然翻倍）。
+                    if tag.startswith("passive:hp_plus:") and ":if:" not in tag:
                         raw = tag.split(":")
                         if len(raw) > 2 and raw[2].isdigit():
                             base += int(raw[2])
@@ -6919,6 +6995,55 @@ class Battle:
                 attacker.clear_status()
                 self._log("cure", {"player": self.current,
                                    "target": attacker.name, "cleared": had})
+            elif tag.startswith("info:"):
+                # 纯信息类效果（第一百三十四批）：
+                # 「Your opponent reveals their hand.」（Hoothoot / Espurr / Pidove）
+                # 本引擎是**完美信息**的：双方牌库/手牌本来对决策方完全可见，
+                # 「展示手牌」不改变任何状态 —— 因此等价于「无状态变化」。
+                # ⚠ 这是**显式建模的等价**，不是「未建模当无事发生」：解析层只有在
+                #   整句恰好是这一句时才产出本 tag（见 `_detect_reveal_hand`），
+                #   带任何附加动作的写法一律不认领（宁可整卡拒收）。
+                self._log("info", {"player": self.current,
+                                   "target": attacker.name,
+                                   "what": tag[len("info:"):]})
+            elif tag.startswith("counters_double"):
+                # 「Double the number of damage counters on each of your
+                #  opponent's Pokémon.」（N's Vanilluxe「Snow Coating」）
+                # 指示物数 = 伤害/10；必须**按指示物翻倍**再乘回 10，直接
+                # `dmg * 2` 会把「非 10 的余数」也翻倍（本引擎里招式伤害都是
+                # 10 的倍数，但仍按卡面口径精确计算，避免以后引入非整十伤害时静默错）。
+                _cd = 0
+                for _f in opp.all_field():
+                    _d = int(_f.damage)
+                    _new = (_d // 10) * 2 * 10 + _d % 10
+                    if _new != _d:
+                        _f.damage = _new
+                        _cd += 1
+                self._log("counters_double", {"player": self.current,
+                                              "targets": _cd})
+            elif tag.startswith("atk_energy_block:"):
+                # 「During your opponent's next turn, Pokémon that have N or
+                #  less Energy attached can't use attacks. (This includes new
+                #  Pokémon that come into play.)」（Walrein「Frigid Fangs」）
+                _v = tag.split(":")
+                if len(_v) < 2 or not _v[1].isdigit():
+                    raise ValueError(f"atk_energy_block tag 非法：{tag}")
+                opp.atk_energy_block_n = int(_v[1])
+                opp.atk_energy_block_until = self._lock_until(1 - self.current)
+                self._log("atk_energy_block", {
+                    "player": 1 - self.current, "n": int(_v[1])})
+            elif tag.startswith("win_if:own_prizes_eq:"):
+                # 「If you use this attack when you have exactly 1 Prize card
+                #  remaining, you win this game.」（N's Sigilyph「Victory Symbol」）
+                # ⚠ 只在**恰好**该奖赏数时成立；条件不成立时本招什么都不做
+                #   （卡面没有别的效果）—— 绝不当成「按普通招式结算」。
+                _n = int(tag.split(":")[-1])
+                if p.prizes_left == _n:
+                    self._finish(self.current, "victory_symbol",
+                                 {"attack": attacker.name, "prizes": _n})
+                    return
+                self._log("win_if_skip", {"player": self.current,
+                                          "need": _n, "have": p.prizes_left})
             elif tag.startswith("heal:"):
                 # 范围（全体/后备/属性限定）由 `_apply_heal` 统一解释；
                 # 无 scope 时回复攻击方自身（历史语义，保持不变）

@@ -55,8 +55,18 @@ class TestOppDiscard(unittest.TestCase):
         self.assertEqual(_tags("Discard 2 cards from your hand.")["tags"],
                          ["discard:2"])
 
-    def test_pure_reveal_still_unmodeled(self):
-        """只有揭示、无后续操作 → 状态变化为零，**故意**保持未建模（C5）"""
+    def test_pure_reveal_is_info_only(self):
+        """只有揭示 → `info:reveal_hand`（第一百三十四批改判）
+
+        旧口径：状态变化为零 → **故意**保持未建模（C5「不拿进池但无效果充数」）。
+        改判理由：本引擎是**完美信息**的（双方手牌/牌库对决策方完全可见），
+        「展示手牌」在状态层面等价于无效果 —— 但**等价要显式写出来**：
+        现在落 `info:reveal_hand`，引擎有对应派发与日志，因此
+        「进池 + 永远不会调用到」与「未建模」可区分（对账能看出来）。
+        ⚠ 仍然**不得**落成任何 `opp_hand:` / 弃牌类 tag（那才是造假）。
+        """
         r = _tags("Your opponent reveals their hand.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["info:reveal_hand"])
+        self.assertFalse(any(t.startswith("opp_hand:") for t in r["tags"]),
+                         "纯展示不得落成手牌操作 tag")
+        self.assertEqual(r["unsupported"], [])

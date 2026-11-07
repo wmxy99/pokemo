@@ -43,12 +43,16 @@ class TestEachPlayerShuffleDraw(unittest.TestCase):
 
 
 class TestToolHpPlus(unittest.TestCase):
-    """第六十九批：道具 +HP（**阵营限定必须拒绝**）
+    """第六十九批：道具 +HP（阵营限定必须带**持有者限定**）
 
-    ⚠ 核实时发现的关键纪律：`tool:hp_plus:N` 在引擎里由 `_tool_value()` 无条件
-    取值，**没有持有者归属元数据**。因此「The Cynthia's / Team Rocket's Pokémon …
-    gets +N HP」只能给**该阵营**持有者加血，落成 `tool:hp_plus:N` 会让**任意**
-    持有者都加血（静默加强）→ 必须如实拒收（原 `out.append` + 落守卫的行为是对的）。
+    ⚠ 原始纪律：`tool:hp_plus:N` 在引擎里由 `_tool_value()` 取值，**没有持有者归属
+    元数据**。因此「The Cynthia's / Team Rocket's Pokémon … gets +N HP」只能给
+    **该阵营**持有者加血，落成裸 `tool:hp_plus:N` 会让**任意**持有者都加血
+    （静默加强）→ 当时只能如实拒收。
+
+    第一百三十四批起：引擎补了 `cards._tool_hp_plus()`（判 `holder:name:<k>`），
+    所以现在**必须**产带限定的 tag；下面两条用例的断言随之改判，但守的性质没变 ——
+    「不得落到无条件形态」。
     """
 
     def test_plain_holder_modeled(self):
@@ -58,14 +62,17 @@ class TestToolHpPlus(unittest.TestCase):
         self.assertEqual(r["tags"], ["tool:hp_plus:30"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_faction_qualifier_refused(self):
-        """「Cynthia's / Team Rocket's」限定 → 引擎判不出持有者阵营 → 必须拒收"""
-        for holder in ("The Cynthia’s", "The Team Rocket’s"):
+    def test_faction_qualifier_modeled_with_holder(self):
+        """「Cynthia's / Team Rocket's」限定 → **必须**带 `holder:name:` 限定"""
+        for holder, key in (("The Cynthia’s", "cynthia"),
+                            ("The Team Rocket’s", "teamrocket")):
             with self.subTest(holder=holder):
                 r = _tags(f"{holder} Pokémon this card is attached to "
                           "gets +70 HP.", kind="item", name="Tool")
+                self.assertEqual(
+                    r["tags"], [f"tool:hp_plus:70:holder:name:{key}"])
+                # 关键负向性质：**不得**退化成无条件形态
                 self.assertNotIn("tool:hp_plus:70", r["tags"])
-                self.assertTrue(r["unsupported"])
 
     def test_extra_clause_refused(self):
         """+HP 之后还有未建模从句 → 整张放弃（不能部分实现冒充已实现）"""

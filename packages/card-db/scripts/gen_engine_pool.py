@@ -160,7 +160,12 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "shuffle_both_coin_draw:",
                 # 2026-11-03 第四十六批：全队限时减伤（Iron Defender）/
                 # 单体限时护盾 + 奖赏数打出前置条件（Acerola's Mischief）
-                "team_shield:", "shield_choose:")
+                "team_shield:", "shield_choose:",
+                # 第一百三十四批（2026-11-08）：看**牌库底** N 张取 1 张
+                # （Dusk Ball）与「同一只身上的道具 + 特殊能量一起弃」（Ruffian）。
+                # ⚠ `recon_bottom:` **不**被 `recon:` 覆盖（第 6 位是 `_`），
+                #   漏写就是静默丢弃（卡凭空消失，对账也看不出来）。
+                "recon_bottom:", "discard_tool_senergy:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -187,6 +192,11 @@ ATTACK_TAG_PREFIXES = (
     # （Watchog「Focus Energy」）。与 `self_attack_plus_next:` 分开：
     # 落成加伤会让 240 变成「印刷 80 + 240」。
     "self_attack_set_next:",
+    # 第一百三十四批（2026-11-08）：四类整句规则 —— 纯信息类展示手牌 /
+    # 指示物翻倍 / 能量数禁攻 / 奖赏条件胜利。
+    # ⚠ `info:` 是**完美信息等价**（引擎里显式记 no-op 日志），不写进这里
+    #   就会让「整句展示手牌」的卡永远在池外（Hoothoot / Espurr / Pidove）。
+    "info:", "counters_double:", "atk_energy_block:", "win_if:",
     # 第一百零七批（2026-11-06）：招式侧弃场地（Chi-Yu「Scorching Earth」）。
     # 该 tag 此前只在特性/训练家侧存在。
     "discard_stadium",

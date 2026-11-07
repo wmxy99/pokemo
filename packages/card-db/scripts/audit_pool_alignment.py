@@ -3284,16 +3284,28 @@ def audit_batch68_77(card_name: str, item_name: str, desc: str,
                         f"… draws {m.group(1)}」应为 `{want}`，实际 "
                         f"{[t for t in tags if 'shuffle_draw' in t] or '无'}")
 
-    # ② tool:hp_plus:N —— **阵营限定必须拒绝**（引擎 `_tool_value()` 无归属元数据）
+    # ② tool:hp_plus:N —— 阵营限定**必须带 `holder:name:` 限定**
+    #    （第一百三十四批：引擎已补 `_tool_hp_plus()` 持有者判定；此前是
+    #     「无归属元数据 → 整卡不得落」的硬拒收，现在放通**带限定**的形态，
+    #     但**仍然拒绝**无条件形态 —— 那会给任意持有者加血（静默加强）。）
     m = _B69_HP_PLUS.search(d)
     if m:
         n = int(m.group("n"))
         has = any("tool:hp_plus" in t for t in tags)
         faction = m.group("faction")
-        if faction and has:
+        _qualified = any(
+            t.startswith(f"tool:hp_plus:{n}:holder:name:")
+            for t in tags)
+        if faction and has and not _qualified:
             errs.append(f"{card_name} · {item_name}：卡面是**阵营限定** +HP"
-                        f"（the {faction}'s Pokémon），引擎无持有者归属元数据 → "
-                        "不得落 `tool:hp_plus`（会给任意持有者加血 = 静默加强）")
+                        f"（the {faction}'s Pokémon），落 `tool:hp_plus` 却不带 "
+                        f"`holder:name:` → 会给任意持有者加血（静默加强）")
+        elif faction and not any("tool:hp_plus" in t for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「the {faction}'s "
+                        f"Pokémon … gets +{n} HP」应为 "
+                        f"`tool:hp_plus:{n}:holder:name:"
+                        f"{re.sub(r'[^a-z0-9]', '', str(faction).lower())}`，"
+                        f"实际 {[t for t in tags if 'hp_plus' in t] or '无'}")
         elif not faction and not has:
             errs.append(f"{card_name} · {item_name}：卡面「… gets +{n} HP」应为 "
                         f"`tool:hp_plus:{n}`，实际 "

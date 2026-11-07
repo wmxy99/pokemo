@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1179（93.1%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **88** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 88） |
-| 引擎池 | **1164** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1189（93.8%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **78** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 78） |
+| 引擎池 | **1174** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **88** = 批内如实拒收 **80** + 结构性边界 **6** + 待新能力 **2** = **88** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **78** = 批内如实拒收 **72** + 结构性边界 **4** + 待新能力 **2** = **78** ✅。
 
-**规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 32 · 整批受阻 12），剩余**未开工** **0** 批。
+**规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 37 · 整批受阻 7），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1179 / 1267 = 93.1%**（44 批全部处理完毕）。剩余 80 张已逐批**如实拒收**（原因见各批说明），另 6 张结构性边界与 2 张待新能力卡需引擎重构（条件式 HP / 奖赏区对象 / 牌库底 / 延迟队列 / 退化等）才可能归零。
+**终局**：`engine_ready` **1189 / 1267 = 93.8%**（44 批全部处理完毕）。剩余 72 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 2 张待新能力卡需引擎重构（条件式 HP / 奖赏区对象 / 牌库底 / 延迟队列 / 退化等）才可能归零。
 
 ---
 
@@ -363,7 +363,7 @@
 
 ## 5. 阶段 P4 · D 档「差最后一块」（第 112–120 批，9 批，39 槽位）
 
-杠杆最高：多数子句已能单独产 tag，前面族就位后会批量收敛。 已完成 6/9 批。
+杠杆最高：多数子句已能单独产 tag，前面族就位后会批量收敛。 已完成 7/9 批。
 
 ### 第 112 批 · 自身弃能代价（5 张）· ✅ 已完成
 
@@ -417,20 +417,20 @@
 
 > **落地 1 张**：Mega Mawile ex（`dmg_set:80:per:own_prizes_taken` + `dmg_set:30:if:opp_active_has_damage` —— 新增**条件基础伤害**）。**如实拒收 6 张**：Scovillain ex / Carbink（`Double Type` 双属性改写需类型层）、Lycanroc（进化触发贴 Spiky 能量需特殊能量按名附着）、Golduck（Damp：屏蔽「自爆型」特性需特性属性标记）、Gengar（被击倒时回手需击倒后去向改写）、Team Rocket's Articuno（拦「攻击效果」而非伤害，需效果免疫层）。
 
-### 第 116 批 · 对手下回合限制（6 张）· ⛔ 受阻 · 整批如实拒收
+### 第 116 批 · 对手下回合限制（6 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Sylveon ex | SSP | 86 | D（兜底·复合句） |  |
 | Team Rocket's Moltres ex | DRI | 31 | D（兜底·复合句） |  |
 | Ethan's Sudowoodo | DRI | 93 | D（兜底·复合句） |  |
-| Walrein | SSP | 45 | D（兜底·复合句） |  |
+| Walrein | SSP | 45 | done（已完成） |  |
 | Palafin ex | TWM | 61 | D（兜底·复合句） |  |
 | Revavroom ex | SFA | 15 | D（兜底·复合句） |  |
 
-**实际结果**：进池 **0** 张，如实拒收 **6** 张。
+**实际结果**：进池 **1** 张，如实拒收 **5** 张。
 
-> **整批受阻（0 张）**：六张都缺**事件/延迟层** —— Sylveon ex（选 2 只后备洗回牌库 + 「上回合用过则不能用」的跨回合招式记忆）、TR Moltres ex（弃**具名**能量后击倒对手战斗位，需能量按 tag 筛选 + `if_prev` 击倒）、Ethan's Sudowoodo（复制对手招式 + 抛币门，引擎 `borrow_attack` 不支持 coin 嵌套）、Walrein（「下回合 ≤2 能量的宝可梦不能出招」= 全局动态禁攻）、Palafin ex（`Hero's Spirit` 是登场限制，属结构性边界）、Revavroom ex（「弃掉自身及全部附着卡」需自身离场动作）。
+> **部分完成（1 张进池 / 5 张如实拒收）**：Walrein 已进池 —— 「下回合 ≤2 能量的宝可梦不能出招」落成 `atk_energy_block:2`（**玩家级**、含之后上场者；逐只写会漏掉换上来的那只）。其余 5 张仍缺事件/延迟层：Sylveon ex（选 2 只后备洗回 + 上回合招式记忆）、TR Moltres ex（按 tag 筛能量 + `if_prev` 击倒）、Ethan's Sudowoodo（coin 嵌套的复制招式）、Palafin ex（登场限制，结构性）、Revavroom ex（自身离场动作）。
 
 ### 第 117 批 · 特殊进化 / 对手交互（3 张）· ⛔ 受阻 · 整批如实拒收
 
@@ -475,21 +475,21 @@
 | Cetitan ex | DRI | 65 | D（兜底·复合句） |  |
 | Team Rocket's Mewtwo ex | DRI | 81 | done（已完成） |  |
 | Virizion | WHT | 10 | done（已完成） |  |
-| Tyrantrum | POR | 45 | D（兜底·复合句） |  |
+| Tyrantrum | POR | 45 | done（已完成） |  |
 | Decidueye ex | POR | 12 | done（已完成） |  |
 | Shiftry | TEF | 5 | D（兜底·复合句） |  |
 | Iron Thorns ex | TWM | 77 | D（兜底·复合句） |  |
 | Antique Sail Fossil | POR | 69 | D（兜底·复合句） |  |
 
-**实际结果**：进池 **3** 张，如实拒收 **5** 张。
+**实际结果**：进池 **4** 张，如实拒收 **4** 张。
 
-> **落地 3 张**：Team Rocket's Mewtwo ex（`passive:attack_block_unless:own_field_name_at_least:teamrocket:4`）、Virizion（`heal:equal` —— 回复量 = 本次实际伤害）、Decidueye ex（`fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4` —— 新增**恰好 N 张手牌**条件与「忽略某色费用」）。**如实拒收 5 张**：Cetitan ex / Antique Sail Fossil（拦对手道具效果）、Tyrantrum（条件 +150 HP，引擎刻意不支持条件式上限）、Shiftry（「选 3 只后备、其余洗回牌库」需选择界面）、Iron Thorns ex（`Initialization`：规则框宝可梦无特性 except Future，需 rule_box 判定扩到场地外）。
+> **落地 3 张**：Team Rocket's Mewtwo ex（`passive:attack_block_unless:own_field_name_at_least:teamrocket:4`）、Virizion（`heal:equal` —— 回复量 = 本次实际伤害）、Decidueye ex（`fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4` —— 新增**恰好 N 张手牌**条件与「忽略某色费用」）。**如实拒收 5 张**：Cetitan ex / Antique Sail Fossil（拦对手道具效果）、Tyrantrum（条件 +150 HP，引擎刻意不支持条件式上限）、Shiftry（「选 3 只后备、其余洗回牌库」需选择界面）、Iron Thorns ex（`Initialization`：规则框宝可梦无特性 except Future，需 rule_box 判定扩到场地外）。 第一百三十四批补充：Tyrantrum 补 `passive:hp_plus:150:if:special_energy`（条件式 +HP，判据只依赖**本只**附着卡，故在 `max_hp` 现算、特殊能量被弃即回落）。
 
 ---
 
 ## 6. 阶段 P5 · C 档逐句判读 + 结构性建档（第 121–133 批，13 批，23 槽位）
 
-兜底 reason 说不清缺什么，需人工判读；最后收尾。 已完成 6/13 批。
+兜底 reason 说不清缺什么，需人工判读；最后收尾。 已完成 10/13 批。
 
 ### 第 121 批 · 特殊进化条件（3 张）· ✅ 已完成
 
@@ -503,31 +503,31 @@
 
 > **落地 3 张**：Karrablast / Shelmet（`passive:evolve_same_turn:if:own_field_name:shelmet|karrablast`）、Luxio（`…:if:opp_active_is_ex`）。全部复用本阶段新增的**当回合进化**被动（含首个回合，与 Forest of Vitality 的「except first turn」相反）。
 
-### 第 122 批 · 揭示对手手牌（4 张）· ⛔ 受阻 · 整批如实拒收
+### 第 122 批 · 揭示对手手牌（4 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Hoothoot | TEF | 126 | C（兜底·单句） |  |
-| Espurr | SSP | 84 | C（兜底·单句） |  |
-| Pidove | BLK | 71 | C（兜底·单句） |  |
+| Hoothoot | TEF | 126 | done（已完成） |  |
+| Espurr | SSP | 84 | done（已完成） |  |
+| Pidove | BLK | 71 | done（已完成） |  |
 | Mandibuzz | WHT | 64 | C（兜底·单句） |  |
 
-**实际结果**：进池 **0** 张，如实拒收 **4** 张。
+**实际结果**：进池 **3** 张，如实拒收 **1** 张。
 
-> **整批受阻（0 张）**：Hoothoot / Espurr / Pidove 的「对手展示手牌」是**纯信息效果**（不改状态）；引擎内 AI 已全知，落成 no-op 会让「未建模」变成「假装建模」，按纪律不认领。Mandibuzz 另有「从对手手牌把基础宝可梦放到其后备」，需对手手牌→场上动作。
+> **部分完成（3 张进池 / 1 张拒收）**：Hoothoot / Espurr / Pidove 的「对手展示手牌」落成 `info:reveal_hand`。**改判理由（第一百三十四批）**：引擎是完美信息的，展示不改变任何状态 —— 旧口径「一律不认领」会让这三张卡永远在池外；现在落成**显式建模的等价**（引擎有派发与日志、对账可查），与「未建模当无事发生」可区分。Mandibuzz 仍缺「对手手牌 → 放到对手后备」的动作。
 
-### 第 123 批 · 奖赏区操作（4 张）· ⛔ 受阻 · 整批如实拒收
+### 第 123 批 · 奖赏区操作（4 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| N’s Sigilyph | JTG | 64 | C（兜底·单句） |  |
+| N’s Sigilyph | JTG | 64 | done（已完成） |  |
 | Team Rocket's Blipbug | DRI | 15 | C（兜底·单句） |  |
 | Redeemable Ticket | JTG | 156 | C（兜底·单句） |  |
 | Team Rocket's Bother-Bot | DRI | 172 | C（兜底·单句） |  |
 
-**实际结果**：进池 **0** 张，如实拒收 **4** 张。
+**实际结果**：进池 **1** 张，如实拒收 **3** 张。
 
-> **整批受阻（0 张）**：四张都要**奖赏区内部**操作 —— Victory Symbol（剩 1 张奖赏时直接获胜 = 胜负判定改写）、Blipbug（看 1 张背面奖赏）、Redeemable Ticket（奖赏洗回牌库底再重发）、Bother-Bot（翻面 + 与手牌交换）。引擎的 `prizes_left` 只是计数，没有奖赏卡对象。
+> **部分完成（1 张进池 / 3 张拒收）**：N's Sigilyph「Victory Symbol」落成 `win_if:own_prizes_eq:1`（恰好剩 1 张奖赏时使用即获胜；条件不成立时本招**什么都不做**，不得按普通招式结算）。其余 3 张仍需：对手牌库顶 10 张里取招式（TR Persian ex）、翻阅对手面朝下奖赏卡（Blipbug / Bother-Bot）、奖赏卡洗回牌库重发（Redeemable Ticket）。
 
 ### 第 124 批 · 能量提供规则（3 张）· ⛔ 受阻 · 整批如实拒收
 
@@ -541,28 +541,28 @@
 
 > **整批受阻（0 张）**：Boomerang Energy（被招式效果弃置时回到手牌，需特殊能量「离场后去向」钩子）、Meganium（基础 {G} 能量提供 {G}{G}，需能量提供倍率层）、Smeargle（抛 3 币、按正面数从弃牌堆附着并自由分配）。
 
-### 第 125 批 · 牌库底 / 顶检视（3 张）· ⛔ 受阻 · 整批如实拒收
+### 第 125 批 · 牌库底 / 顶检视（3 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Misty's Psyduck | DRI | 45 | C（兜底·单句） |  |
-| Dusk Ball | SSP | 175 | C（兜底·单句） |  |
+| Dusk Ball | SSP | 175 | done（已完成） |  |
 | Gumshoos | MEG | 110 | C（兜底·单句） |  |
 
-**实际结果**：进池 **0** 张，如实拒收 **3** 张。
+**实际结果**：进池 **1** 张，如实拒收 **2** 张。
 
-> **整批受阻（0 张）**：Misty's Psyduck / Dusk Ball / Gumshoos 都要**牌库底**存取（弃底牌、看底 7 张、手牌与牌库顶交换）；引擎只有 `deck` 单端列表 + 洗牌。
+> **部分完成（1 张进池 / 2 张拒收）**：Dusk Ball 落成 `recon_bottom:7`（看**牌库底** 7 张取 1 张宝可梦，其余洗回；与 `recon:` 的牌库顶方向相反，前缀不互相覆盖）。Misty's Psyduck（弃牌库底 + 自身放回牌库顶）与 Gumshoos（手牌与牌库顶互换）仍需「牌库底」写入动作 + 选择层。
 
-### 第 126 批 · 道具触发式（2 张）· ⛔ 受阻 · 整批如实拒收
+### 第 126 批 · 道具触发式（2 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Heavy Baton | TEF | 151 | C（兜底·单句） |  |
-| Ruffian | JTG | 157 | C（兜底·单句） |  |
+| Ruffian | JTG | 157 | done（已完成） |  |
 
-**实际结果**：进池 **0** 张，如实拒收 **2** 张。
+**实际结果**：进池 **1** 张，如实拒收 **1** 张。
 
-> **整批受阻（0 张）**：Heavy Baton（道具持有者被击倒时把 3 张基本能量移到后备，需道具 on_ko 钩子 + 撤退费=4 的持有者限定）、Ruffian（**同时**弃对手 1 只身上的道具**和**特殊能量；训练家只有一个卡级 tag，现有 `discard_tool_or_senergy` 是二选一，语义不同）。
+> **部分完成（1 张进池 / 1 张拒收）**：Ruffian 落成 `discard_tool_senergy:1` —— **同一只**身上同时弃道具与特殊能量，缺一即不做（拆成两次挑选会变成「可跨两只」，静默加强）。Heavy Baton 仍需道具 `on_ko` 钩子 + 撤退费=4 的持有者限定。
 
 ### 第 127 批 · 条件费用 / 特性触发（2 张）· ✅ 已完成
 
@@ -636,8 +636,6 @@
 | 卡 | series | number | 引擎限制 |
 |---|---|---|---|
 | Ludicolo | JTG | 37 | 全队 +HP：`_refresh_stadium_hp` 仅回合开始/场地变更时重算，场上可改变 `max_hp` 的约 30 处变更无统一入口 → 会延迟/残留 |
-| Cynthia's Power Weight | DRI | 162 | 同上（+70 HP） |
-| N's Vanilluxe | ASC | 51 | 指示物翻倍：`fp.damage` 同时承载攻击伤害与指示物，翻倍会连攻击伤害一起翻 |
 | Psyduck | ASC | 39 | 需要全局规则层（场上所有宝可梦失去特性） |
 | Milotic | TWM | 50 | 需要全局规则层（对手区域流转禁止） |
 | Anthea & Concordia | ASC | 182 | 6 张具名宝可梦 gate 未建模；`_split_play_gate` 不认识会静默丢弃 → 会变成无条件 +3 奖赏 |
@@ -719,17 +717,17 @@
 | 113 | P4 | 自伤 | 2 | 2 | 0 | ✅ 完成 |
 | 114 | P4 | 自身治疗 / 自身状态 | 2 | 1 | 1 | ✅ 完成 |
 | 115 | P4 | 静态伤害缩放 D 组 | 7 | 1 | 6 | ✅ 完成 |
-| 116 | P4 | 对手下回合限制 | 6 | 0 | 6 | ⛔ 受阻 |
+| 116 | P4 | 对手下回合限制 | 6 | 1 | 5 | ✅ 完成 |
 | 117 | P4 | 特殊进化 / 对手交互 | 3 | 0 | 3 | ⛔ 受阻 |
 | 118 | P4 | 能量附着 / 移动 | 3 | 0 | 3 | ⛔ 受阻 |
 | 119 | P4 | 牌库顶 / 底操作 | 3 | 1 | 2 | ✅ 完成 |
-| 120 | P4 | 杂项收尾 | 8 | 3 | 5 | ✅ 完成 |
+| 120 | P4 | 杂项收尾 | 8 | 4 | 4 | ✅ 完成 |
 | 121 | P5 | 特殊进化条件 | 3 | 3 | 0 | ✅ 完成 |
-| 122 | P5 | 揭示对手手牌 | 4 | 0 | 4 | ⛔ 受阻 |
-| 123 | P5 | 奖赏区操作 | 4 | 0 | 4 | ⛔ 受阻 |
+| 122 | P5 | 揭示对手手牌 | 4 | 3 | 1 | ✅ 完成 |
+| 123 | P5 | 奖赏区操作 | 4 | 1 | 3 | ✅ 完成 |
 | 124 | P5 | 能量提供规则 | 3 | 0 | 3 | ⛔ 受阻 |
-| 125 | P5 | 牌库底 / 顶检视 | 3 | 0 | 3 | ⛔ 受阻 |
-| 126 | P5 | 道具触发式 | 2 | 0 | 2 | ⛔ 受阻 |
+| 125 | P5 | 牌库底 / 顶检视 | 3 | 1 | 2 | ✅ 完成 |
+| 126 | P5 | 道具触发式 | 2 | 1 | 1 | ✅ 完成 |
 | 127 | P5 | 条件费用 / 特性触发 | 2 | 1 | 1 | ✅ 完成 |
 | 128 | P5 | 延迟到回合末 | 1 | 0 | 1 | ⛔ 受阻 |
 | 129 | P5 | 条件 +HP（单只） | 1 | 0 | 1 | ⛔ 受阻 |
@@ -738,18 +736,18 @@
 | 132 | P5 | 结构性建档 · 全局规则层（Psyduck / Milotic） | 0 | 0 | 0 | ✅ 完成 |
 | 133 | P5 | 结构性建档 · gate 类（Anthea & Concordia）+ 边界收尾 | 0 | 0 | 0 | ✅ 完成 |
 
-> 台账的「计划张数」只计**卡槽**；第 130–133 批是结构性建档批（0 槽），涉及的 6 张统一列在 §7，不重复计入槽位。
+> 台账的「计划张数」只计**卡槽**；第 130–133 批是结构性建档批（0 槽），涉及的 4 张统一列在 §7，不重复计入槽位。
 
 **口径核对**：
 
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 56 张 |
-| 批次内待做 | 80 | 全部未 ready |
-| 结构性边界 | 6 | 不承载 tag，仅建档 |
+| 批次唯一卡 | 136 | 其中已完成 64 张 |
+| 批次内待做 | 72 | 全部未 ready |
+| 结构性边界 | 4 | 不承载 tag，仅建档 |
 | 待新能力 | 2 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **88** | 应等于基线 88 |
+| **合计（= 未 ready 卡数）** | **78** | 应等于基线 78 |
 
 ---
 

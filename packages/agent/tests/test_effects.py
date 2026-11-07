@@ -790,12 +790,17 @@ class TestV14Modifiers(unittest.TestCase):
             "that player shuffles their deck.", kind="stadium", name="X")
         self.assertEqual(r["tags"], [])
 
-    def test_tool_faction_qualifier_still_refused(self):
-        """按**卡名阵营**限定的（Team Rocket's / Hop's）仍拒绝：引擎无卡名归属元数据"""
+    def test_tool_faction_qualifier_now_qualified(self):
+        """按**卡名阵营**限定的（Team Rocket's / Hop's）：第一百三十四批起产带限定 tag
+
+        旧口径是「引擎无卡名归属元数据 → 必须拒收」。本批给引擎补了
+        `cards._tool_hp_plus()`（比对持有者卡名前缀），因此现在应当产
+        `tool:hp_plus:N:holder:name:<k>`；守的性质不变 —— **不得**无条件生效。
+        """
         r = self._tags("The Team Rocket\u2019s Pok\u00e9mon this card is attached to "
                        "gets +30 HP.", kind="item", name="TR Tool")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["tool:hp_plus:30:holder:name:teamrocket"])
+        self.assertNotIn("tool:hp_plus:30", r["tags"])
 
     def test_static_modifiers_self_scope(self):
         """S1 静态修正层：常驻自身修正 → `passive:*`（与时限护盾严格区分）"""

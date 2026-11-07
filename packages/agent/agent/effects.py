@@ -3171,6 +3171,102 @@ def _static_cond(phrase):
     return _condition_from_text("if " + phrase.strip())
 
 
+# ---------------- 第一百三十四批（2026-11-08）：六类「单句精确」规则 ----------------
+# 这一批的共同点：卡面**整句**就是一个可精确求值的规则，且引擎已（或只需极小改动）
+# 能执行。因此一律**整句精确匹配**（`^…$`）：任何附加从句都不认领 → 整卡如实拒收，
+# 绝不把「多句」文本截成其中一句来进池（那正是静默丢规则的老路）。
+#
+# 1) 纯信息类「对手展示手牌」：本引擎是完美信息的，展示不改变任何状态。
+#    标记成 `info:reveal_hand` 是**显式建模的等价**（引擎里有对应派发与日志），
+#    不是「未建模当无事发生」——后者连 tag 都不产出，对账看不出来。
+_INFO_REVEAL_RE = re.compile(
+    r"^your opponent reveals? (?:his or her |their )?hand\.?$", re.I)
+
+# 2) 「Double the number of damage counters on each of your opponent's Pokémon.」
+#    （N's Vanilluxe「Snow Coating」）—— 指示物数翻倍，按 10 为一枚换算。
+_COUNTERS_DOUBLE_RE = re.compile(
+    r"^double the number of damage counters on each of your opponent'?s "
+    r"pok[eé]mon\.?$", re.I)
+
+# 3) 「During your opponent's next turn, Pokémon that have N or less Energy
+#     attached can't use attacks. (This includes new Pokémon that come into
+#     play.)」（Walrein「Frigid Fangs」）—— 判据是能量数，作用面是**整名玩家**。
+_ATK_EN_BLOCK_RE = re.compile(
+    r"^during your opponent'?s next turn, pok[eé]mon that have (\d+) or less "
+    r"energy attached can'?t use attacks\.?\s*\(this includes new pok[eé]mon "
+    r"that come into play\.?\)$", re.I)
+
+# 4) 「If you use this attack when you have exactly N Prize cards remaining,
+#     you win this game.」（N's Sigilyph「Victory Symbol」）
+_WIN_IF_RE = re.compile(
+    r"^if you use this attack when you have exactly (\d+) prize cards? "
+    r"remaining, you win this game\.?$", re.I)
+
+# 5) 条件式 +HP（第一百三十四批）：判据只依赖**本只身上**的附着卡，因此可以在
+#    `FieldPokemon.max_hp` 里现算（见 cards.cond_hp_bonus），不需要刷新点。
+#    「If this Pokémon has any Special Energy attached, it gets +N HP.」
+#    （Tyrantrum「Tyrannically Gutsy」）
+_HP_PLUS_SPECIAL_RE = re.compile(
+    r"^if this pok[eé]mon has any special energy attached, it gets \+(\d+) "
+    r"hp\.?$", re.I)
+
+# 6) 训练家「看**牌库底** N 张取 1 张宝可梦」（Dusk Ball）
+_RECON_BOTTOM_RE = re.compile(
+    r"^look at the bottom (\d+) cards of your deck\. you may reveal a "
+    r"pok[eé]mon you find there and put it into your hand\. shuffle the other "
+    r"cards back into your deck\.?$", re.I)
+
+# 7) 「Discard a Pokémon Tool and a Special Energy from 1 of your opponent's
+#     Pokémon.」（Ruffian）—— 两个条件必须落在**同一只**身上。
+_RUFFIAN_RE = re.compile(
+    r"^discard a pok[eé]mon tool and a special energy from 1 of your "
+    r"opponent'?s pok[eé]mon\.?$", re.I)
+
+# 8) 道具「The <阵营>'s Pokémon this card is attached to gets +N HP.」
+#    （Cynthia's Power Weight）—— 不判持有者就变成「谁挂上都加」。
+_TOOL_HP_HOLDER_RE = re.compile(
+    r"^the ([a-z][a-z' ]{1,24}?)'s pok[eé]mon this card is attached to gets "
+    r"\+(\d+) hp\.?$", re.I)
+
+
+def _detect_b134(text: str, kind: str) -> list:
+    """第一百三十四批的八类单句规则（整句精确匹配，否则不产出）"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind == "attack":
+        if _INFO_REVEAL_RE.match(t):
+            return [act("rule", None, "any", {"info_reveal_hand": True})]
+        if _COUNTERS_DOUBLE_RE.match(t):
+            return [act("rule", None, "any", {"counters_double": True})]
+        m = _ATK_EN_BLOCK_RE.match(t)
+        if m:
+            return [act("rule", None, "any",
+                        {"atk_energy_block": int(m.group(1))})]
+        m = _WIN_IF_RE.match(t)
+        if m:
+            return [act("rule", None, "any",
+                        {"win_if_prizes": int(m.group(1))})]
+        return []
+    if kind == "ability":
+        m = _HP_PLUS_SPECIAL_RE.match(t)
+        if m:
+            return [act("passive", int(m.group(1)), "self",
+                        {"kind": "hp_plus", "cond": "special_energy"})]
+        return []
+    if kind in ("item", "supporter", "stadium", "tool"):
+        m = _RECON_BOTTOM_RE.match(t)
+        if m:
+            return [act("rule", None, "any",
+                        {"recon_bottom": int(m.group(1))})]
+        if _RUFFIAN_RE.match(t):
+            return [act("rule", None, "any", {"discard_tool_senergy": 1})]
+        m = _TOOL_HP_HOLDER_RE.match(t)
+        if m:
+            return [act("tool", int(m.group(2)), "self",
+                        {"kind": "hp_plus", "holder_name": _k(m.group(1))})]
+        return []
+    return []
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -3398,9 +3494,17 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                 "conditions": conditions, "actions": _ho,
                 "source_text": str(text or ""), "citations": []}
     # 规则型文本（费用改写 / 禁攻 / 当回合进化，第一百一十二批起）。
-    # ⚠ 必须与既有的 `_detect_static_rules`（下回合限制 / 无视效果）**分开命名**：
-    #   第一版重名把那个探测器整个覆盖掉，14 张已进池的卡当场掉出（Shred /
+    # ⚠ 必须与既有的 `_detect_static_rules`（下回合限制 / 无视效果）**分开命名**：    #   第一版重名把那个探测器整个覆盖掉，14 张已进池的卡当场掉出（Shred /
     #   Drum Beating / Sand Attack …），且测试全绿 —— 只是池子少了 14 张。
+    # 第一百三十四批：八类「整句精确」规则（纯信息 / 指示物翻倍 / 能量禁攻 /
+    # 奖赏胜利 / 牌库底取牌 / 双弃同目标 / 条件 +HP / 道具阵营 +HP）。
+    # 位置在 `_detect_value_rules` 之前：这些文本里出现的 "attacks"、"energy"
+    # 等词会被后面的宽口径规则族误读成「静态伤害增减」或「费用改写」。
+    _b134 = _detect_b134(t_raw, kind)
+    if _b134:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _b134,
+                "source_text": str(text or ""), "citations": []}
     _vr = _detect_value_rules(t_raw, kind)
     if _vr:
         return {"kind": kind, "name": name, "trigger": "on_use",
@@ -9845,6 +9949,30 @@ def to_engine_tags(specs: list) -> dict:
                 if _tg:
                     tags.append(_tg)
             elif t == "rule":
+                # ---- 第一百三十四批（整句规则，先于其它 extra 判定）----
+                if extra.get("info_reveal_hand"):
+                    # 完美信息等价（不改变状态）：仍需产出 tag，否则
+                    # 「整句展示手牌」会被当成未建模而整卡拒收（Hoothoot 三张）。
+                    tags.append("info:reveal_hand")
+                    continue
+                if extra.get("counters_double"):
+                    tags.append("counters_double:opp")
+                    continue
+                if extra.get("atk_energy_block") is not None:
+                    tags.append(f"atk_energy_block:"
+                                f"{int(extra['atk_energy_block'])}")
+                    continue
+                if extra.get("win_if_prizes") is not None:
+                    tags.append(f"win_if:own_prizes_eq:"
+                                f"{int(extra['win_if_prizes'])}")
+                    continue
+                if extra.get("recon_bottom") is not None:
+                    tags.append(f"recon_bottom:{int(extra['recon_bottom'])}")
+                    continue
+                if extra.get("discard_tool_senergy") is not None:
+                    tags.append(f"discard_tool_senergy:"
+                                f"{int(extra['discard_tool_senergy'])}")
+                    continue
                 if extra.get("dmg_set_cond"):
                     _n0, _c0 = extra["dmg_set_cond"]
                     tags.append(f"dmg_set:{int(_n0)}"
@@ -10279,6 +10407,11 @@ def to_engine_tags(specs: list) -> dict:
                     if k == "retreat_less" and extra.get("low_hp"):
                         tags.append(f"tool:retreat_less:{int(amt)}"
                                     f":lowhp:{int(extra['low_hp'])}")
+                    elif k == "hp_plus" and extra.get("holder_name"):
+                        # `tool:hp_plus:<n>:holder:name:<k>`（第一百三十四批）
+                        # 只对**指定阵营**的持有者生效（Cynthia's Power Weight）。
+                        tags.append(f"tool:hp_plus:{int(amt)}"
+                                    f":holder:name:{extra['holder_name']}")
                     else:
                         tags.append(f"tool:{k}:{int(amt)}")
                 elif k == "cost_less" and amt is not None:
@@ -10360,7 +10493,14 @@ def to_engine_tags(specs: list) -> dict:
                         {"type": t, "reason": f"受击反应形态未建模（{k}）"})
             elif t == "passive":
                 kind_ = extra.get("kind")
-                if kind_ == "extra_attack":
+                if kind_ == "hp_plus" and amt is not None:
+                    # `passive:hp_plus:<n>[:if:<cond>]`（第一百三十四批）
+                    # ⚠ 带条件的形态**不能**写成无条件的 `passive:hp_plus:N`：
+                    #   那样会在「没有特殊能量」时也加血（静默多给上限）。
+                    _c = str(extra.get("cond") or "")
+                    tags.append(f"passive:hp_plus:{int(amt)}"
+                                + (f":if:{_c}" if _c else ""))
+                elif kind_ == "extra_attack":
                     # 「If Festival Grounds is in play, this Pokémon may use an
                     # attack it has twice.」（第六十一批，Festival Lead）
                     # 是被动**额度**，不是可发动特性 —— 进 legals 会让随机对局

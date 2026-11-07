@@ -109,6 +109,15 @@ class PlayerState:
     # attack it has twice.」）打破了这个前提 —— 必须显式记账，否则「续攻」与
     # 「无限攻」只差一个判断。
     attacks_this_turn: int = 0
+    # ---- 按「附着能量数」全队禁攻（2026-11-08 第一百三十四批）----
+    # 「During your opponent's next turn, Pokémon that have 2 or less Energy
+    #  attached can't use attacks. (This includes new Pokémon that come into
+    #  play.)」（Walrein「Frigid Fangs」）
+    # 挂在**被封锁方**的玩家状态上而不是逐只 `attack_lock_all_until`：
+    # 卡面明确「包括之后上场的宝可梦」，逐只写会漏掉换上来的那只（静默削弱）。
+    # 到期口径同其它跨回合锁：`until = 施加时该方 turn_counts + 2`。
+    atk_energy_block_n: int = 0
+    atk_energy_block_until: int = 0
 
     # ---- 便捷查询 ----
     @property

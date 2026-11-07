@@ -85,12 +85,18 @@ class TestRealCards(unittest.TestCase):
 
 
 class TestRevealOnlyNotMapped(unittest.TestCase):
-    """只有揭示、没有后续操作 → 继续未建模（C5：不拿「进池但无效果」充数）"""
+    """只有揭示、没有后续操作 → 落 `info:reveal_hand`（第一百三十四批改判）
 
-    def test_see_through_has_no_opp_hand_tag(self):
+    旧口径「继续未建模」的理由是「不拿**进池但无效果**充数」。改判后仍然守住
+    同一条底线：**不得**落成 `opp_hand:` 之类的操作 tag（那才是「进池但行为错」）；
+    `info:reveal_hand` 是完美信息下的**显式**等价，引擎里真有派发与日志。
+    """
+
+    def test_see_through_has_only_info_tag(self):
         r = _tags(SEE_THROUGH, "attack")
         self.assertEqual([t for t in r["tags"] if t.startswith("opp_hand:")], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["info:reveal_hand"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestNegativeGuards(unittest.TestCase):

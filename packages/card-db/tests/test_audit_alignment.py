@@ -1665,11 +1665,17 @@ class TestAuditBatch68_77(unittest.TestCase):
         self.assertTrue(any("阵营限定" in e for e in errs), errs)
 
     def test_b69_faction_refused_ok(self):
-        """如实拒收（无 tag）→ 不报错"""
-        self.assertEqual(A.audit_batch68_77(
+        """第一百三十四批起：阵营限定**无 tag** 是缺陷（不再是「合法拒收」）
+
+        旧口径是「引擎没有归属元数据 → 该卡本来就进不了池，所以不报错」。
+        本批给引擎补了 `holder:name:` 判定后，正确做法是**产带限定的 tag**；
+        「什么都不产」意味着这张卡白丢在池外 —— 必须报出来。
+        """
+        errs = A.audit_batch68_77(
             "Cynthia's Power Weight", "X",
             "The Cynthia’s Pokémon this card is attached to gets +70 HP.",
-            []), [])
+            [])
+        self.assertTrue(any("holder:name:cynthia" in e for e in errs), errs)
 
     def test_b69_plain_tagged_ok(self):
         """无阵营限定 +HP → tag 正确"""
@@ -2068,6 +2074,43 @@ class TestBatch93_94(unittest.TestCase):
         errs = A.audit_batch93_94("Bronzong", "Tool Drop", self.TOOL,
                                   ["dmg_set:40:per:own_field_tools"])
         self.assertTrue(any("both_field_tools" in e for e in errs), errs)
+
+
+class TestBatch134(unittest.TestCase):
+    """第一百三十四批：道具 +HP 的**阵营限定**从「硬拒收」改为「必须带持有者限定」
+
+    背景：`tool:hp_plus:N` 的引擎实现原先没有归属元数据，所以对账里写死
+    「阵营限定 → 不得落 tag」。本批给引擎补了 `holder:name:<k>` 判定后，
+    放行口变成**带限定**的形态 —— 但**无条件的 `tool:hp_plus:N` 仍须拒绝**
+    （那会给任意持有者加血 = 静默加强）。这三条用例钉住这个边界。
+    """
+
+    FACTION = ("The Cynthia's Pokémon this card is attached to gets +70 HP.")
+    PLAIN = ("The Pokémon this card is attached to gets +70 HP.")
+
+    def test_qualified_tag_passes(self):
+        errs = A.audit_batch68_77(
+            "Cynthia's Power Weight", "Cynthia's Power Weight", self.FACTION,
+            ["tool:hp_plus:70:holder:name:cynthias"])
+        self.assertEqual(errs, [])
+
+    def test_unqualified_tag_flagged(self):
+        errs = A.audit_batch68_77(
+            "Cynthia's Power Weight", "Cynthia's Power Weight", self.FACTION,
+            ["tool:hp_plus:70"])
+        self.assertTrue(any("holder:name" in e for e in errs), errs)
+
+    def test_missing_tag_flagged(self):
+        errs = A.audit_batch68_77(
+            "Cynthia's Power Weight", "Cynthia's Power Weight", self.FACTION, [])
+        self.assertTrue(any("tool:hp_plus:70" in e for e in errs), errs)
+
+    def test_plain_hp_still_requires_tag(self):
+        """无阵营限定的 +HP 口径不变（不得因为本批改动而放松）"""
+        self.assertEqual(
+            A.audit_batch68_77("X", "X", self.PLAIN, ["tool:hp_plus:70"]), [])
+        errs = A.audit_batch68_77("X", "X", self.PLAIN, [])
+        self.assertTrue(any("tool:hp_plus:70" in e for e in errs), errs)
 
 
 if __name__ == "__main__":

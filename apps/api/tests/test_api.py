@@ -1519,9 +1519,11 @@ class TestCardLibrary(unittest.TestCase):
         h = user_headers()
         text = "\n".join([
             "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",
-            # 样本卡随建模推进更换：Brilliant Blender 已在第八十三批落地，
-            # 改用 Dusk Ball（检视牌库底，需底部检索机制，长期未建模）。
-            "4 Dusk Ball", "4 Hyper Aroma", "8 Basic {P} Energy",
+            # 样本卡随建模推进更换（历史上换过两次：Brilliant Blender 第八十三批
+            # 落地 → Dusk Ball → **Heavy Baton**，第一百三十四批把 Dusk Ball 的
+            # `recon_bottom:` 也建了）。选「长期未建模」的卡才能守住本用例的语义：
+            # Heavy Baton 需要道具 `on_ko` 钩子，属结构性缺口。
+            "4 Heavy Baton", "4 Hyper Aroma", "8 Basic {P} Energy",
             "8 Basic {R} Energy", "4 好朋友宝芬", "4 高级球", "4 破坏之锤",
             "2 老大的指令", "3 博士的研究", "4 奇树", "2 神奇糖果",
             "4 Night Stretcher", "4 Counter Catcher",
@@ -1530,9 +1532,9 @@ class TestCardLibrary(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         j = r.json()
         by = {e["name"]: e for e in j["parsed"]}
-        self.assertTrue(by["Dusk Ball"]["matched"], "卡库独有卡应被识别")
-        self.assertFalse(by["Dusk Ball"]["meta"]["engine_ready"])
-        self.assertEqual(by["Dusk Ball"]["meta"]["source"], "card-db")
+        self.assertTrue(by["Heavy Baton"]["matched"], "卡库独有卡应被识别")
+        self.assertFalse(by["Heavy Baton"]["meta"]["engine_ready"])
+        self.assertEqual(by["Heavy Baton"]["meta"]["source"], "card-db")
         self.assertTrue(any("引擎未实现卡" in w for w in j["warnings"]), j["warnings"])
         # engine_ready 统计不再恒等于总数（此前的漏算已修）
         self.assertGreater(j["summary"]["not_implemented"], 0)

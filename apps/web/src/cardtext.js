@@ -183,6 +183,8 @@ export const TRAINER_TAG_DESC = {
   prize_bonus: (a) => ({ zh: `本回合内，对手战斗宝可梦被指定的己方宝可梦招式击倒时，多拿 ${argOf(a)} 张奖赏卡。`, en: `During this turn, take ${argOf(a)} more Prize card(s) when the opponent’s Active is Knocked Out by the specified Pokémon’s attack.` }),
   energy_move: (a) => ({ zh: `在己方宝可梦之间移动至多 ${argOf(a)} 个能量。`, en: `Move up to ${argOf(a)} Energy between your Pokémon.` }),
   recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),
+  recon_bottom: (a) => ({ zh: `查看牌库底 ${argOf(a)} 张，可取其中 1 张宝可梦加入手牌，其余洗回牌库。`, en: `Look at the bottom ${argOf(a)} cards, take a Pokémon into your hand, then shuffle the rest back.` }),
+  discard_tool_senergy: () => ({ zh: '弃掉对手 1 只宝可梦身上的 1 张道具与 1 张特殊能量。', en: 'Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.' }),
   search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),
   attach: (a, _x, parts) => {
     const tv = (parts || []).find((x) => TY[x] && x !== 'any')

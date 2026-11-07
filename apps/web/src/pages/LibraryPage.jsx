@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { Pill, StatCard, Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 import { CardArt } from '../cardart.jsx'
+import { navigate } from '../router.jsx'
 
 /** 能量/属性代码 → 中文展示（与引擎 energy 代码同源） */
 const ENERGY_LABEL = {
@@ -181,21 +182,70 @@ function CardDetail({ card, onClose }) {
   )
 }
 
-export default function LibraryPage({ onMsg }) {
-  const [q, setQ] = useState('')
-  const [supertype, setSupertype] = useState('')
-  const [type, setType] = useState('')
-  const [subtype, setSubtype] = useState('')
-  const [series, setSeries] = useState('')
-  const [engineReady, setEngineReady] = useState('')
-  const [sort, setSort] = useState('id')
-  const [page, setPage] = useState(1)
+// ── URL ⇄ 筛选条件 ───────────────────────────────────────────────────────
+// 卡库的筛选全部放 query string（`?q=皮卡丘&series=SSP&page=2`）：收藏、分享、
+// 刷新、前进后退四种场景行为一致。页面内**不再留第二份筛选状态**——两份状态
+// 正是「刷新后筛选被重置」「后退一格筛选乱跳」的根因。
+const FILTER_DEFAULTS = {
+  q: '', supertype: '', type: '', subtype: '', series: '',
+  engine_ready: '', sort: 'id', page: 1,
+}
+
+function queryToState(query = {}) {
+  return {
+    q: query.q || '',
+    supertype: query.supertype || '',
+    type: query.type || '',
+    subtype: query.subtype || '',
+    series: query.series || '',
+    engine_ready: query.engine_ready || '',
+    sort: query.sort || 'id',
+    page: Math.max(1, Number(query.page) || 1),
+    card: query.card || '',
+  }
+}
+
+/** 只写非默认值，保持链接短（`sort=id` / `page=1` 不进 URL） */
+function stateToQueryString(st) {
+  const qs = new URLSearchParams()
+  Object.keys(FILTER_DEFAULTS).forEach((k) => {
+    const v = st[k]
+    if (v === undefined || v === null || v === '') return
+    if (k === 'page' && Number(v) === 1) return
+    if (k === 'sort' && v === 'id') return
+    qs.set(k, String(v))
+  })
+  if (st.card) qs.set('card', st.card)
+  return qs.toString()
+}
+
+export default function LibraryPage({ onMsg, route }) {
+  const st = queryToState(route && route.query)
+  const { q, supertype, type, subtype, series, sort, page } = st
+  const engineReady = st.engine_ready
 
   const [data, setData] = useState(null)
   const [stats, setStats] = useState(null)
   const [detail, setDetail] = useState(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+
+  /** 改 URL（replace：翻页/输入不该在历史里堆几十条） */
+  function setQuery(patch, { resetPage = true } = {}) {
+    const next = { ...st, ...patch }
+    if (resetPage && !('page' in patch)) next.page = 1
+    const qs = stateToQueryString(next)
+    navigate(qs ? `/library?${qs}` : '/library', { replace: true })
+  }
+  // 局部 setter：保持各输入框原有的调用方式，改动面压到最小
+  const setQ = (v) => setQuery({ q: v })
+  const setSupertype = (v) => setQuery({ supertype: v })
+  const setType = (v) => setQuery({ type: v })
+  const setSubtype = (v) => setQuery({ subtype: v })
+  const setSeries = (v) => setQuery({ series: v })
+  const setEngineReady = (v) => setQuery({ engine_ready: v })
+  const setSort = (v) => setQuery({ sort: v })
+  const setPage = (v) => setQuery({ page: typeof v === 'function' ? v(page) : v }, { resetPage: false })
 
   // 统计与系列选项（只取一次）
   useEffect(() => {
@@ -218,9 +268,16 @@ export default function LibraryPage({ onMsg }) {
     return () => { alive = false }
   }, [query])
 
-  // 条件变化 → 回到第 1 页
-  useEffect(() => { setPage(1) },
-    [q, supertype, type, subtype, series, engineReady, sort])
+  // 卡详情也可深链接：`?card=<id>` 打开同一张卡（发给别人看某张卡）
+  const cardParam = st.card
+  useEffect(() => {
+    if (!cardParam) { setDetail(null); return undefined }
+    let alive = true
+    api.cardDetail(cardParam)
+      .then((r) => { if (alive) setDetail(r) })
+      .catch((e) => { if (alive) onMsg?.(e.message, 'err') })
+    return () => { alive = false }
+  }, [cardParam])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const seriesOptions = useMemo(
     () => Object.keys(stats?.by_series || {}), [stats])
@@ -229,11 +286,9 @@ export default function LibraryPage({ onMsg }) {
   const total = data?.total ?? 0
   const pages = data?.pages ?? 1
 
-  async function openDetail(id) {
-    try {
-      setDetail(await api.cardDetail(id))
-    } catch (e) { onMsg?.(e.message, 'err') }
-  }
+  // 详情开合 = 改 URL（`?card=` 在，面板就在），交给上面的 effect 统一加载
+  function openDetail(id) { setQuery({ card: id }, { resetPage: false }) }
+  function closeDetail() { setQuery({ card: '' }, { resetPage: false }) }
 
   return (
     <div>
@@ -370,7 +425,7 @@ export default function LibraryPage({ onMsg }) {
         </div>
       </div>
 
-      <CardDetail card={detail} onClose={() => setDetail(null)} />
+      <CardDetail card={detail} onClose={closeDetail} />
     </div>
   )
 }

@@ -297,6 +297,9 @@ def get_state(bid: str, p: Principal = Depends(current_user)):
     return {"id": bid, "seed": s["seed"], "turn": view["turn"],
             "phase": view["phase"], "winner": battle.winner,
             "finished": battle.finished,
+            # 玩家阵营：深链接恢复时前端要用它判定胜负归属（0/1），
+            # 缺这个字段前端只能假设 0 —— 玩家执后手时会把胜负显示反
+            "player_side": s["player_side"],
             # 可用指令清单（中文可读）——可直接作为 command 提交
             "commands": battle.command_catalog() if my_turn else [],
             "view": view}

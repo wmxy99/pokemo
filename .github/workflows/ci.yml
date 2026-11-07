@@ -82,7 +82,16 @@ jobs:
           cd packages/card-db
           python -c "import sys; sys.path.insert(0,'.'); from pokelab.db import init_db; print('[db] 建表数:', init_db())"
           python scripts/import_challenge_dataset.py --db-only
-      - name: Run API tests (131)
+      # SPA 深链接回退（tests/test_spa_routes.py）需要磁盘上有一个 dist 外壳。
+      # api job 不跑 npm（省时间），这里造**最小占位产物** —— 测的是回退逻辑
+      # （无后缀→index.html / 真文件→按文件 / 缺失 .js→404），不是 bundle 内容。
+      # 不造占位的话这 4 条会 skip：CI 上永远绿的守卫等于没有守卫。
+      - name: Stub web dist (SPA 回退测试的前置产物)
+        run: |
+          mkdir -p apps/web/dist/assets
+          printf '<!doctype html><div id="root"></div>' > apps/web/dist/index.html
+          printf 'console.log("stub")\n' > apps/web/dist/assets/stub-ci.js
+      - name: Run API tests (142)
         run: |
           cd apps/api
           python -m unittest discover -s tests -v
@@ -141,6 +150,10 @@ jobs:
         run: node apps/web/e2e/check_i18n.cjs
       - name: plays.js 目标语义（引擎 target 语义 ↔ UI 高亮/文案对账）
         run: node apps/web/e2e/plays_check.cjs
+      - name: 路由守卫（链接目标必须命中路由表）
+        run: |
+          node apps/web/e2e/routes_check.cjs --self-test
+          node apps/web/e2e/routes_check.cjs
 
   redline:
     runs-on: ubuntu-latest

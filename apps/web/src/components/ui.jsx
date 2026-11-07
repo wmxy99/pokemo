@@ -1,5 +1,6 @@
 import React from 'react'
 import { t } from '../i18n.js'
+import { Link } from '../router.jsx'
 
 /** 基础 UI 组件（UI 规范 §4 四态 / §6 反馈 / §8 a11y） */
 
@@ -60,14 +61,23 @@ export function SsePill({ state }) {
   )
 }
 
-/** 页内分段标签：同一导航入口下的子页面切换（保留各子页面的挂载状态） */
+/** 页内分段标签：同一导航入口下的子页面切换（保留各子页面的挂载状态）
+ *
+ * 给了 `it.to` 就渲染成真链接（子页面是路由的一部分，可复制/新开）；
+ * 没给则退回按钮（未接路由的局部切换）。
+ */
 export function SegTabs({ items, value, onChange, label }) {
   return (
     <div className="seg-tabs" role="tablist" aria-label={label}>
-      {items.map((it) => (
-        <button key={it.v} role="tab" aria-selected={value === it.v}
-          onClick={() => onChange(it.v)}>{it.label}</button>
-      ))}
+      {items.map((it) => (it.to
+        ? (
+          <Link key={it.v} role="tab" aria-selected={value === it.v} to={it.to}
+            onClick={() => onChange && onChange(it.v)}>{it.label}</Link>
+        )
+        : (
+          <button key={it.v} role="tab" aria-selected={value === it.v}
+            onClick={() => onChange(it.v)}>{it.label}</button>
+        )))}
     </div>
   )
 }

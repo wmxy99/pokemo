@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { StatCard, Pill, ErrBar, LogBlock, Spinner, SsePill } from '../components/ui.jsx'
 import { TaskTable } from '../components/tasks.jsx'
 import { openJobStream } from '../sse.js'
+import { navigate } from '../router.jsx'
 
 /**
  * 后台页面（UI 规范 §4.2）
@@ -56,7 +57,7 @@ function TrainingOverview({ jobs = [] }) {
   )
 }
 
-export function TrainingPage({ onMsg, authed }) {
+export function TrainingPage({ onMsg, authed, jobId }) {
   const [jobs, setJobs] = useState([])
   const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({ stage1_episodes: 200, stage2_episodes: 0, stage3_episodes: 0, bc_episodes: 40, features: 'legacy' })
@@ -66,6 +67,16 @@ export function TrainingPage({ onMsg, authed }) {
 
   async function load() { try { setJobs((await api.listTrain()).jobs || []) } catch { /* 忽略 */ } }
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t) }, [])
+
+  // 深链接恢复：`/train/<jobId>` 直接展开该任务的监控面板（刷新/分享一致）
+  useEffect(() => {
+    if (!jobId) return undefined
+    let alive = true
+    api.trainStatus(jobId)
+      .then((s) => { if (alive) setDetail(s) })
+      .catch((e) => { if (alive) onMsg(`该训练任务不可用：${e.message}`, 'err') })
+    return () => { alive = false }
+  }, [jobId])   // eslint-disable-line react-hooks/exhaustive-deps
   // 实时进度：SSE（心跳 + 断线续传）优先，异常自动回退轮询（2s）
   useEffect(() => {
     if (!detail || detail.status !== 'running') return undefined
@@ -97,6 +108,7 @@ export function TrainingPage({ onMsg, authed }) {
       const r = await api.submitTrain({ ...form, stage1_episodes: Number(form.stage1_episodes), stage2_episodes: Number(form.stage2_episodes), stage3_episodes: Number(form.stage3_episodes), bc_episodes: Number(form.bc_episodes) })
       onMsg(`训练任务已启动 ${r.id}（子进程 run_k1_longtrain.py）`)
       setDetail(await api.trainStatus(r.id)); load()
+      navigate(`/train/${r.id}`)   // 地址栏跟随任务，刷新/分享都能回到这条曲线
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) } finally { setBusy(false) }
   }
 
@@ -168,7 +180,7 @@ export function TrainingPage({ onMsg, authed }) {
 
       <div className="card" style={{ gridColumn: '1 / -1' }}>
         <h3>训练任务列表</h3>
-        <TaskTable jobs={jobs} onView={(j) => api.trainStatus(j.id).then(setDetail)} />
+        <TaskTable jobs={jobs} onView={(j) => navigate(`/train/${j.id}`)} />
       </div>
       </div>
     </div>

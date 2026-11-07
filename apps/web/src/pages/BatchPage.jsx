@@ -4,6 +4,7 @@ import { t } from '../i18n.js'
 import { TaskCard, TaskTable, QuotaHint } from '../components/tasks.jsx'
 import { EmptyState, LogBlock, ErrBar, Pill, SsePill } from '../components/ui.jsx'
 import { openJobStream } from '../sse.js'
+import { navigate } from '../router.jsx'
 
 /**
  * 批量对战（PRD F6/F7）
@@ -11,7 +12,7 @@ import { openJobStream } from '../sse.js'
  * - **卡组池矩阵任务**：decks_a × decks_b 全对位 × games_each（直出 F7 胜率矩阵）
  * - 进行中任务：SSE 实时进度（EventSource），失败自动回退轮询；可取消（保留已完成 K4）
  */
-export default function BatchPage({ onMsg }) {
+export default function BatchPage({ onMsg, jobId }) {
   const [mode, setMode] = useState('pair')          // pair | pool
   const [deckA, setDeckA] = useState('lightning')
   const [deckB, setDeckB] = useState('draco')
@@ -38,6 +39,20 @@ export default function BatchPage({ onMsg }) {
     const t2 = setInterval(refresh, 5000)
     return () => clearInterval(t2)
   }, [])
+
+  // 深链接恢复：`/batch/<jobId>` 直接展开该任务（刷新、分享、后退三者一致）
+  useEffect(() => {
+    if (!jobId) return undefined
+    let alive = true
+    setReport('')
+    api.batchStatus(jobId)
+      .then((s) => { if (alive) setDetail(s) })
+      .catch((e) => { if (alive) onMsg(`该任务不可用：${e.message}`, 'err') })
+    return () => { alive = false }
+  }, [jobId])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 打开某个任务 = 改 URL（详情由上面的 effect 统一加载，避免两处各写一遍） */
+  function openJob(id) { setReport(''); navigate(`/batch/${id}`) }
 
   // 运行中任务：优先 SSE 实时进度（心跳 + 断线续传），异常回退轮询
   useEffect(() => {
@@ -77,14 +92,14 @@ export default function BatchPage({ onMsg }) {
           seed_start: Number(seed),
         })
         onMsg(`卡组池任务已提交 ${r.id}（${r.pairs} 对位 / ${r.total_games} 局）`, 'ok')
-        setDetail(await api.batchStatus(r.id))
+        setDetail(await api.batchStatus(r.id)); openJob(r.id)
       } else {
         const payload = { deck_a: deckA, deck_b: deckB, games: Number(games), seed_start: Number(seed) }
         if (deckA.startsWith('deck_')) { payload.deck_a_id = deckA; delete payload.deck_a }
         if (deckB.startsWith('deck_')) { payload.deck_b_id = deckB; delete payload.deck_b }
         const r = await api.submitBatch(payload)
         onMsg(`任务已提交 ${r.id}（≤500 局 · 并发≤2 · 日配额≤10）`, 'ok')
-        setDetail(await api.batchStatus(r.id))
+        setDetail(await api.batchStatus(r.id)); openJob(r.id)
       }
       refresh()
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) } finally { setBusy(false) }
@@ -261,13 +276,13 @@ export default function BatchPage({ onMsg }) {
       <div className="card" style={{ gridColumn: '1 / -1' }}>
         <h3>任务列表（近 50） <span className="pill sm">运行中任务自动 SSE 实时刷新</span></h3>
         <TaskTable jobs={[...running, ...history]}
-          onView={(j) => { setReport(''); api.batchStatus(j.id).then(setDetail) }}
+          onView={(j) => openJob(j.id)}
           extraCols={[{ label: '类型', render: (j) => (j.params && j.params.pool) ? '池矩阵' : '单对位' }]} />
         {running.length > 0 && <div className="row" style={{ marginTop: 10 }}>
           {running.map((j) => (
             <TaskCard key={j.id} job={j} progress={detail && detail.id === j.id ? detail.progress : j.progress}
               etaText="剩余局数 × 经验单局时"
-              onView={(x) => api.batchStatus(x.id).then(setDetail)}
+              onView={(x) => openJob(x.id)}
               onCancel={cancel} />
           ))}
         </div>}

@@ -39,6 +39,7 @@ node e2e/shoot_pages.cjs http://127.0.0.1:8000 dist/shots
 |---|---|:---:|
 | `check_i18n.cjs` | zh/en 键一致性守卫（**CI 会跑，无需浏览器**） | 否 |
 | `plays_check.cjs` | `plays.js` 目标语义对账（引擎 target 语义 ↔ UI 高亮/文案）+ 训练家/特性 tag 文案覆盖（**CI 会跑，无需浏览器**） | 否 |
+| `routes_check.cjs` | 路由守卫：源码里所有 `to=` / `to:` / `navigate()` 目标必须命中 `src/router.jsx` 路由表（拼错 `/decksx` 会变红）；`--self-test` 校验匹配器本身（**CI 会跑，无需浏览器**） | 否 |
 | `battle_target_check.cjs` | 目标语义端到端：点「老大的指令」→ 高亮的卡必须就是实际换上场的卡 | 是 |
 | `replay_frames_check.cjs` | 逐帧回放：**回放条可见期间**棋盘对手区出现 ≥2 个不同状态（旧实现此时恒为 1） | 是 |
 | `check_render.cjs` | `/app/` 渲染自检：控制台/网络/运行时错误收集 + 截图 | 是 |
@@ -58,8 +59,10 @@ node e2e/shoot_pages.cjs http://127.0.0.1:8000 dist/shots
 
 ## 与 CI 的关系
 
-CI（`.github/workflows/ci.yml` 的 `web-build` job）执行 **`check_i18n.cjs` 与
-`plays_check.cjs`** 两个纯 Node 文本/逻辑检查（不装浏览器、不依赖被测服务）。
+CI（`.github/workflows/ci.yml` 的 `web-build` job）执行 **`check_i18n.cjs`、
+`plays_check.cjs` 与 `routes_check.cjs`** 三个纯 Node 文本/逻辑检查（不装浏览器、不依赖被测服务）。
+其中 `routes_check.cjs` 会先跑 `--self-test`（喂非法路由必须被拒），再做真源码扫描 ——
+守卫自身写坏了必须有办法发现，否则「永远绿」比没有守卫更危险。
 其余脚本是本地/手动验证工具：CI 环境没有本机 Chrome，且这些脚本需要前后端同时在线，
 因此不纳入自动流水线。改动 UI 时请在本地跑一遍受影响的脚本，并把结论写进 PR 描述。
 

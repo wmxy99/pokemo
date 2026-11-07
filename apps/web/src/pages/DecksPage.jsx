@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { Pill, ErrBar, LogBlock, Spinner } from '../components/ui.jsx'
 import { CardArt } from '../cardart.jsx'
+import { navigate } from '../router.jsx'
 
 const DECK_SIZE = 60
 const MAX_COPIES = 4
@@ -41,7 +42,7 @@ function cardView(c) {
   }
 }
 
-export default function DecksPage({ onMsg, onGoBattle }) {
+export default function DecksPage({ onMsg, onGoBattle, deckId }) {
   const [name, setName] = useState('新卡组')
   const [selected, setSelected] = useState([])
   const [q, setQ] = useState('')
@@ -140,27 +141,45 @@ export default function DecksPage({ onMsg, onGoBattle }) {
   }
 
   async function editDeck(id) {
-    try {
-      const d = await api.getDeck(id)
-      setName(d.name || '我的卡组')
-      setSelected((d.cards || []).map((e) => {
-        const pr = e.meta?.printing || {}
-        return {
-          name: e.name,
-          uid: e.uid || e.meta?.uid || e.name,
-          series: pr.set || '',
-          number: pr.number || '',
-          display: e.display || e.meta?.name_zh || e.name,
-          supertype: e.meta?.supertype,
-          subtype: e.meta?.subtype,
-          types: e.meta?.types,
-          count: e.count,
-        }
-      }))
-      setRes(null); setOpeningRes(null)
-      onMsg('已载入到编排区')
-    } catch (e) { onMsg(e.message, 'err') }
+    // 已经是 URL 里的那一套 → 直接重载（否则点「编辑」毫无反应）；
+    // 否则改 URL，由下面的 effect 统一加载（刷新/分享/后退走同一条路）
+    if (deckId === id) {
+      try { applyDeck(await api.getDeck(id)); onMsg('已载入到编排区') }
+      catch (e) { onMsg(e.message, 'err') }
+      return
+    }
+    navigate(`/decks/${id}`)
   }
+
+  /** 把接口返回的卡组铺到编排区（深链接与「编辑」共用） */
+  function applyDeck(d) {
+    setName(d.name || '我的卡组')
+    setSelected((d.cards || []).map((e) => {
+      const pr = e.meta?.printing || {}
+      return {
+        name: e.name,
+        uid: e.uid || e.meta?.uid || e.name,
+        series: pr.set || '',
+        number: pr.number || '',
+        display: e.display || e.meta?.name_zh || e.name,
+        supertype: e.meta?.supertype,
+        subtype: e.meta?.subtype,
+        types: e.meta?.types,
+        count: e.count,
+      }
+    }))
+    setRes(null); setOpeningRes(null)
+  }
+
+  // 深链接恢复：`/decks/<id>` 直接把该卡组铺进编排区
+  useEffect(() => {
+    if (!deckId) return undefined
+    let alive = true
+    api.getDeck(deckId)
+      .then((d) => { if (alive) { applyDeck(d); onMsg(`已载入卡组「${d.name || deckId}」`) } })
+      .catch((e) => { if (alive) onMsg(`卡组不可用：${e.message}`, 'err') })
+    return () => { alive = false }
+  }, [deckId])   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function doOpening(id) {
     setBusy(true)

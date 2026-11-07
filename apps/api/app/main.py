@@ -136,6 +136,37 @@ def _pick_web_dist():
 
 _WEB_DIST = _pick_web_dist()
 if _WEB_DIST is not None:
+    from fastapi.responses import FileResponse  # noqa: E402
     from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+    _WEB_ROOT = _WEB_DIST.resolve()
+
+    @app.get("/app", include_in_schema=False)
+    @app.get("/app/{full_path:path}", include_in_schema=False)
+    def _spa_entry(full_path: str = ""):
+        """前端单页应用入口（含 SPA **深链接回退**）
+
+        为什么不再只靠 ``StaticFiles(html=True)``：前端已改成 history 路由，
+        ``GET /app/battles/<id>`` 这种地址在磁盘上没有同名文件，StaticFiles 会
+        直接 404 —— 表现为「地址栏能进，一刷新就白屏」，分享出去的深链接等于废的。
+
+        规则（顺序不能颠倒）：
+          ① 命中磁盘上的真实文件（``assets/*.js|css``）→ 原样返回；
+          ② 带点后缀的路径仍按真 404 处理：**绝不能**把 ``/app/assets/x.js``
+             回退成 index.html —— 浏览器会把 HTML 当 JS 执行（Mismatched tag），
+             而且真正的构建产物缺失会被这条回退掩盖，排查成本极高；
+          ③ 其余路径 → index.html，由前端路由自己解析。
+
+        路径穿越（``/app/../secret``）由 ``_WEB_ROOT`` 前缀校验挡掉。
+        """
+        if full_path:
+            target = (_WEB_ROOT / full_path).resolve()
+            if target.is_file() and str(target).startswith(str(_WEB_ROOT)):
+                return FileResponse(target)
+            if Path(full_path).suffix:
+                raise HTTPException(404, "Not Found")
+        return FileResponse(_WEB_ROOT / "index.html")
+
+    # 兜底挂载（HEAD / 目录索引等仍走 StaticFiles；GET 已被上面的路由接管）
     app.mount("/app", StaticFiles(directory=str(_WEB_DIST), html=True),
               name="web")

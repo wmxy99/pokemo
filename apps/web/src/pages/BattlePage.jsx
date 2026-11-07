@@ -9,12 +9,13 @@ import { actionContext } from '../names.js'
 import { planForHand, passAction, describeActionTarget, isFieldTarget, targetSide } from '../plays.js'
 import { flyCard, floatText, fieldSlotEl, handCardEl } from '../anim.js'
 import { Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
+import { navigate } from '../router.jsx'
 
 const K3_MS = 2000   // K3 兜底下限：>2s 禁用动作 + 提示（UI 规范 §4.1.1）
 const REPLAY_MS = 520  // 对手每个动作的回放停留时长（太短看不清、太长拖沓）
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export default function BattlePage({ onMsg, onGoDecks }) {
+export default function BattlePage({ onMsg, onGoDecks, battleId }) {
   const [deckA, setDeckA] = useState('lightning')
   const [deckB, setDeckB] = useState('fire')
   const [myDecks, setMyDecks] = useState([])
@@ -38,6 +39,45 @@ export default function BattlePage({ onMsg, onGoDecks }) {
   useEffect(() => {
     api.myDecks().then((r) => setMyDecks(r.decks || [])).catch(() => {})
   }, [])
+
+  // ── 深链接恢复：`/battles/<id>` 直接回到那一局 ────────────────────────
+  // URL 是唯一真相：刷新页面、把链接发给别人、点浏览器后退，都回到同一局。
+  // 对局会话存在服务端内存（store.battle_sessions），服务重启后会 404 ——
+  // 这种情况明确说「链接已失效」并留出口，而不是停在空白棋盘上。
+  const loadedRef = useRef(null)
+  useEffect(() => {
+    if (!battleId) { loadedRef.current = null; return undefined }
+    if (loadedRef.current === battleId) return undefined
+    // 刚由本页创建的对局：state 里已经是这一局，不必再拉一次（会覆盖回合日志）
+    if (state && state.id === battleId) { loadedRef.current = battleId; return undefined }
+    let alive = true
+    setBusy(true); setErr(null)
+    api.battleState(battleId)
+      .then((r) => {
+        if (!alive) return
+        loadedRef.current = battleId
+        prevDmg.current = new Map()      // 恢复局面时不得沿用手上的战损基线
+        setState({
+          id: r.id, seed: r.seed, player_side: r.player_side,
+          view: r.view, winner: r.winner, finished: r.finished,
+        })
+        setCommands(r.commands || [])
+        setLog([`… 已从链接恢复对局 ${r.id}（seed=${r.seed}）`])
+        setPending(null); setSelHand(-1); setZoomCard(null); setCmdErr(null)
+        setReplaying(false); setFramedReplay(false); setHitName(null)
+      })
+      .catch((e) => {
+        if (!alive) return
+        setErr({
+          code: e.status || 'ERR',
+          message: e.status === 404
+            ? '该对局已失效（服务重启会清空会话内存），请新开一局'
+            : e.message,
+        })
+      })
+      .finally(() => { if (alive) setBusy(false) })
+    return () => { alive = false }
+  }, [battleId])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // 战损演出：对比上一帧，让刚受伤的宝可梦抖一下**并飘出伤害数字**；
   // 血量归零则额外飘「已倒下」。纯视觉，不改数据。
@@ -107,6 +147,9 @@ export default function BattlePage({ onMsg, onGoDecks }) {
       setReplaying(false); setHitName(null); setFramedReplay(false)
       prevDmg.current = new Map()   // 新对局必须清空战损基线，否则会出现错误伤害数
       onMsg(`对局已创建 seed=${r.seed}`, 'ok')
+      loadedRef.current = r.id
+      // 地址栏跟随对局：刷新、复制链接、走后都会回到这一局（覆盖旧 id，避免历史里堆积失效对局）
+      navigate(`/battles/${r.id}`, { replace: true })
       if (steps.length) {
         const ctx = actionContext(r.view)
         await replayFrames(steps, (x) => verbLabel(x, ctx))
@@ -346,6 +389,13 @@ export default function BattlePage({ onMsg, onGoDecks }) {
         </h3>
 
         {err && <ErrBar code={err.code} message={err.message} onRetry={() => create()} />}
+        {err && !state && (
+          <div className="row">
+            <button className="ghost sm" onClick={() => navigate('/battles', { replace: true })}>
+              返回新建对局
+            </button>
+          </div>
+        )}
         {slow && <div className="alert warn" role="alert">决策超过 {K3_MS / 1000}s，仍在计算</div>}
 
         {!view && !busy && (

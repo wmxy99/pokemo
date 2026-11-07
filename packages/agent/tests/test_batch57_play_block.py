@@ -43,9 +43,18 @@ class TestPlayBlock(unittest.TestCase):
                   "cards from their hand.", kind="attack")["tags"],
             ["play_lock:item:opp:turn"])
 
-    def test_ace_spec_rejected(self):
-        """{ACE SPEC} 引擎判不出来（无卡牌子类）→ 如实未建模，不静默放行"""
+    def test_ace_spec_modeled_behind_dataset_guard(self):
+        """{ACE SPEC} 禁打：第一百零七批起建模（Genesect「ACE Nullifier」）
+
+        决策反转留痕：旧口径拒绝它的理由是「引擎判不出 ACE SPEC 卡牌子类」。
+        现在引擎按 `subtype` 判（`battle._is_acespec` / `fx_play_block`），
+        而**当前数据集一张 ACE SPEC 都没有** → 该锁定恒不生效，与卡面等价。
+
+        ⚠ 这是**有前提的等价**：`test_batch107_engine` 里有数据集守卫，一旦
+          出现 ACE SPEC 卡立刻失败，强制回来补真实判定与对局用例。
+        生效时机是「持有者贴着道具」（`:tool`），不是「在战斗位」。
+        """
         r = _tags("If this Pokémon has a Pokémon Tool attached, your opponent "
                   "can’t play any {ACE SPEC} cards from their hand.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["fx:play_block:acespec:tool"])
+        self.assertEqual(r["unsupported"], [])

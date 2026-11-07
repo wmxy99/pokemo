@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-06 14:23:07",
+  "reparsed_at": "2026-11-07 10:43:10",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1143,
+  "engine_ready": 1165,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1143,
-   "engine_approximated": 1128,
-   "engine_unmatched": 124,
-   "engine_namekey_mismatch": 16
+   "zh_backfill": 1165,
+   "engine_approximated": 1150,
+   "engine_unmatched": 102,
+   "engine_namekey_mismatch": 11
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 138,
-   "engine_tags": 1455,
-   "unsupported": 126,
+   "errors": 149,
+   "engine_tags": 1474,
+   "unsupported": 102,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1128,
+  "engine_approximated": 1150,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -9789,7 +9789,7 @@
        {
         "kind": "ability",
         "name": "Rapid Vernier",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -9801,9 +9801,11 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may switch it with your Active Pokémon. If you do, you may move any amount of Energy from your other Pokémon to this Pokémon."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "switch_self"
+       "on_bench_act:switch_self"
       ],
       "cost": "",
       "unsupported": []
@@ -9831,7 +9833,7 @@
      {
       "kind": "ability",
       "name": "Rapid Vernier",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -9844,11 +9846,12 @@
      }
     ],
     "errors": [
-     "[0] action.type 非法：attack_lock"
+     "[0] action.type 非法：attack_lock",
+     "[0] trigger 非法：on_bench"
     ],
     "engine_tags": [
      "attack_lock:all:turn",
-     "switch_self"
+     "on_bench_act:switch_self"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -10628,14 +10631,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Drilbur@TEF 85",
    "parse": {
     "items": [
      {
@@ -10645,7 +10650,7 @@
        {
         "kind": "ability",
         "name": "Dig Dig Dig",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -10660,22 +10665,21 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
+      "engine_tags": [
+       "on_bench_act:search_discard:3:energy:type:fighting"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Dig Dig Dig",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -10690,14 +10694,13 @@
       "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck."
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
+    "errors": [
+     "[0] trigger 非法：on_bench"
     ],
+    "engine_tags": [
+     "on_bench_act:search_discard:3:energy:type:fighting"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -17084,7 +17087,7 @@
        {
         "kind": "ability",
         "name": "Impromptu Carrier",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -17099,9 +17102,11 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "attach_energy:1:deck"
+       "on_bench_act:attach_energy:1:deck"
       ],
       "cost": "",
       "unsupported": []
@@ -17131,7 +17136,7 @@
      {
       "kind": "ability",
       "name": "Impromptu Carrier",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -17146,10 +17151,12 @@
       "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] trigger 非法：on_bench"
+    ],
     "engine_tags": [
      "discard_energy:1:opp:special",
-     "attach_energy:1:deck"
+     "on_bench_act:attach_energy:1:deck"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -19043,7 +19050,7 @@
        {
         "kind": "ability",
         "name": "Battle-Hardened",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -19059,9 +19066,11 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may attach up to 2 Basic {F} Energy cards from your hand to this Pokémon."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "attach_energy:2:fighting:hand"
+       "on_bench_act:attach_energy:2:fighting:hand"
       ],
       "cost": "",
       "unsupported": []
@@ -19090,7 +19099,7 @@
      {
       "kind": "ability",
       "name": "Battle-Hardened",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -19106,10 +19115,12 @@
       "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may attach up to 2 Basic {F} Energy cards from your hand to this Pokémon."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] trigger 非法：on_bench"
+    ],
     "engine_tags": [
      "dmg_plus:30:per:opp_active_counters",
-     "attach_energy:2:fighting:hand"
+     "on_bench_act:attach_energy:2:fighting:hand"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -20001,14 +20012,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Pecharunt ex@SFA 39",
    "parse": {
     "items": [
      {
@@ -20054,42 +20067,31 @@
         "kind": "ability",
         "name": "Subjugating Chains",
         "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "conditions": [],
         "actions": [
          {
-          "type": "switch",
+          "type": "switch_choose",
           "amount": null,
-          "target": "self"
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+           "type": "darkness",
+           "except": "pecharunt",
+           "then": "poison"
           }
          }
         ],
-        "source_text": "Once during your turn, you may switch 1 of your Benched {D} Pokémon, except any Pecharunt {ex}, with your Active Pokémon. If you do, the new Active Pokémon is now Poisoned. You can’t use more than 1 Subjugating Chains Ability each turn."
+        "source_text": "Once during your turn, you may switch 1 of your Benched {D} Pokémon, except any Pecharunt {ex}, with your Active Pokémon. If you do, the new Active Pokémon is now Poisoned. You can’t use more than 1 Subjugating Chains Ability each turn.",
+        "citations": []
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] action.type 非法：switch_choose"
+      ],
       "engine_tags": [
-       "switch_self"
+       "switch_choose:darkness:except:pecharunt:then:poison"
       ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -20121,42 +20123,31 @@
       "kind": "ability",
       "name": "Subjugating Chains",
       "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "conditions": [],
       "actions": [
        {
-        "type": "switch",
+        "type": "switch_choose",
         "amount": null,
-        "target": "self"
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+         "type": "darkness",
+         "except": "pecharunt",
+         "then": "poison"
         }
        }
       ],
-      "source_text": "Once during your turn, you may switch 1 of your Benched {D} Pokémon, except any Pecharunt {ex}, with your Active Pokémon. If you do, the new Active Pokémon is now Poisoned. You can’t use more than 1 Subjugating Chains Ability each turn."
+      "source_text": "Once during your turn, you may switch 1 of your Benched {D} Pokémon, except any Pecharunt {ex}, with your Active Pokémon. If you do, the new Active Pokémon is now Poisoned. You can’t use more than 1 Subjugating Chains Ability each turn.",
+      "citations": []
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：switch_choose"
+    ],
     "engine_tags": [
      "dmg_set:60:per:opp_prizes_taken",
-     "switch_self"
+     "switch_choose:darkness:except:pecharunt:then:poison"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -20210,14 +20201,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Genesect@SFA 40",
    "parse": {
     "items": [
      {
@@ -20227,59 +20220,57 @@
        {
         "kind": "ability",
         "name": "ACE Nullifier",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "tag": "fx:play_block:acespec:tool",
+           "family": "play_block"
           }
          }
         ],
-        "source_text": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand."
+        "source_text": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.",
+        "fx_family": "play_block"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "fx:play_block:acespec:tool"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "ACE Nullifier",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "tag": "fx:play_block:acespec:tool",
+         "family": "play_block"
         }
        }
       ],
-      "source_text": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand."
+      "source_text": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.",
+      "fx_family": "play_block"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     }
+    "engine_tags": [
+     "fx:play_block:acespec:tool"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -21279,14 +21270,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Hydrapple ex@SCR 14",
    "parse": {
     "items": [
      {
@@ -21327,13 +21320,7 @@
         "kind": "ability",
         "name": "Ripening Charge",
         "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "conditions": [],
         "actions": [
          {
           "type": "attach",
@@ -21341,32 +21328,21 @@
           "target": "self",
           "extra": {
            "energy_type": "grass",
-           "zone": "hand"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "self",
-          "extra": {
-           "note": "回复范围/限定不可精确表达（B4）"
+           "zone": "hand",
+           "heal": 30
           }
          }
         ],
-        "source_text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."
+        "source_text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "attach_energy:1:grass:hand"
+       "attach_energy:1:grass:hand:heal:30"
       ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "回复范围/限定不可精确表达（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -21393,13 +21369,7 @@
       "kind": "ability",
       "name": "Ripening Charge",
       "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "conditions": [],
       "actions": [
        {
         "type": "attach",
@@ -21407,32 +21377,21 @@
         "target": "self",
         "extra": {
          "energy_type": "grass",
-         "zone": "hand"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "self",
-        "extra": {
-         "note": "回复范围/限定不可精确表达（B4）"
+         "zone": "hand",
+         "heal": 30
         }
        }
       ],
-      "source_text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."
+      "source_text": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
      "dmg_plus:30:per:own_all_energy_grass",
-     "attach_energy:1:grass:hand"
+     "attach_energy:1:grass:hand:heal:30"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "回复范围/限定不可精确表达（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -24772,14 +24731,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Noctowl@SCR 115",
    "parse": {
     "items": [
      {
@@ -24806,15 +24767,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "evolve_act:search_trainer:2"
+       "evolve_act:search_trainer:2:gate:tera_in_play"
       ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "condition",
-        "reason": "进化触发特性的前置条件未建模（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -24838,14 +24794,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "evolve_act:search_trainer:2"
+     "evolve_act:search_trainer:2:gate:tera_in_play"
     ],
-    "unsupported": [
-     {
-      "type": "condition",
-      "reason": "进化触发特性的前置条件未建模（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -25245,14 +25196,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Terapagos ex@SCR 128",
    "parse": {
     "items": [
      {
@@ -25275,7 +25228,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "首回合招式使用限制（需招式静态条件层，B5）"
+           "use_not": "went_second_first_turn"
           }
          },
          {
@@ -25294,14 +25247,10 @@
       ],
       "errors": [],
       "engine_tags": [
+       "use_not:went_second_first_turn",
        "dmg_set:30:per:own_bench"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "首回合招式使用限制（需招式静态条件层，B5）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -25381,7 +25330,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "首回合招式使用限制（需招式静态条件层，B5）"
+         "use_not": "went_second_first_turn"
         }
        },
        {
@@ -25436,16 +25385,12 @@
     ],
     "errors": [],
     "engine_tags": [
+     "use_not:went_second_first_turn",
      "dmg_set:30:per:own_bench",
      "shield:prevent_all:from:basic_non_colorless",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "首回合招式使用限制（需招式静态条件层，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -28692,7 +28637,7 @@
        {
         "kind": "ability",
         "name": "Sudden Shearing",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -28708,9 +28653,11 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent’s deck."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "mill:1:opp"
+       "on_bench_act:mill:1:opp"
       ],
       "cost": "",
       "unsupported": []
@@ -28739,7 +28686,7 @@
      {
       "kind": "ability",
       "name": "Sudden Shearing",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -28755,10 +28702,12 @@
       "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent’s deck."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] trigger 非法：on_bench"
+    ],
     "engine_tags": [
      "dmg_plus:30:per:opp_prizes_taken",
-     "mill:1:opp"
+     "on_bench_act:mill:1:opp"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -30189,7 +30138,7 @@
        {
         "kind": "ability",
         "name": "Snow Sink",
-        "trigger": "on_use",
+        "trigger": "on_bench",
         "conditions": [],
         "actions": [
          {
@@ -30204,9 +30153,11 @@
         "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "discard_stadium"
+       "on_bench_act:discard_stadium"
       ],
       "cost": "",
       "unsupported": []
@@ -30234,7 +30185,7 @@
      {
       "kind": "ability",
       "name": "Snow Sink",
-      "trigger": "on_use",
+      "trigger": "on_bench",
       "conditions": [],
       "actions": [
        {
@@ -30249,10 +30200,12 @@
       "source_text": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] trigger 非法：on_bench"
+    ],
     "engine_tags": [
      "bounce:energy:self:1",
-     "discard_stadium"
+     "on_bench_act:discard_stadium"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -37025,14 +36978,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Hoothoot@PRE 77",
    "parse": {
     "items": [
      {
@@ -37042,59 +36997,57 @@
        {
         "kind": "ability",
         "name": "Insomnia",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "passive",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+           "kind": "status_immune",
+           "status": "sleep"
           }
          }
         ],
-        "source_text": "This Pokémon can’t be Asleep."
+        "source_text": "This Pokémon can’t be Asleep.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:status_immune:sleep"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Insomnia",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "passive",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
+         "kind": "status_immune",
+         "status": "sleep"
         }
        }
       ],
-      "source_text": "This Pokémon can’t be Asleep."
+      "source_text": "This Pokémon can’t be Asleep.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "状态词非主动施加（免疫/追加伤害/换位触发，B4）"
-     }
+    "engine_tags": [
+     "passive:status_immune:sleep"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -40621,14 +40574,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lillie’s Comfey@JTG 68",
    "parse": {
     "items": [
      {
@@ -40654,13 +40609,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "search_bench:all:basic:name_has:lillies"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -40729,14 +40681,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "search_bench:all:basic:name_has:lillies",
      "bounce:to_hand:self"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -42914,14 +42862,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Magearna@JTG 107",
    "parse": {
     "items": [
      {
@@ -42960,26 +42910,24 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
+          "type": "passive",
+          "amount": 90,
           "target": "self",
           "extra": {
-           "note": "回复范围/限定不可精确表达（B4）"
+           "kind": "heal_on_attach"
           }
          }
         ],
-        "source_text": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon."
+        "source_text": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:heal_on_attach:90"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "回复范围/限定不可精确表达（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -43004,27 +42952,24 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
+        "type": "passive",
+        "amount": 90,
         "target": "self",
         "extra": {
-         "note": "回复范围/限定不可精确表达（B4）"
+         "kind": "heal_on_attach"
         }
        }
       ],
-      "source_text": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon."
+      "source_text": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "draw:2"
+     "draw:2",
+     "passive:heal_on_attach:90"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "回复范围/限定不可精确表达（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -64144,14 +64089,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Koffing@DRI 125",
    "parse": {
     "items": [
      {
@@ -64165,11 +64112,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "on_damaged",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+           "kind": "search_bench",
+           "n": 2,
+           "name_has": "koffing"
           }
          }
         ],
@@ -64177,14 +64126,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "on_damaged:search_bench:2:name_has:koffing"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -64195,11 +64141,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "on_damaged",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+         "kind": "search_bench",
+         "n": 2,
+         "name_has": "koffing"
         }
        }
       ],
@@ -64207,13 +64155,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-     }
+    "engine_tags": [
+     "on_damaged:search_bench:2:name_has:koffing"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -71460,14 +71405,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Musharna@BLK 36",
    "parse": {
     "items": [
      {
@@ -71493,13 +71440,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "search_trainer:all:name_has:fennel"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -71568,14 +71512,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "search_trainer:all:name_has:fennel",
      "sleep"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -91248,14 +91188,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lunatone@MEG 74",
    "parse": {
     "items": [
      {
@@ -91266,44 +91208,28 @@
         "kind": "ability",
         "name": "Lunar Cycle",
         "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "conditions": [],
         "actions": [
-         {
-          "type": "discard",
-          "amount": 1,
-          "target": "hand",
-          "extra": {
-           "hand_energy_type": "fighting",
-           "required": false
-          }
-         },
          {
           "type": "draw",
           "amount": 3,
-          "target": "deck"
+          "target": "deck",
+          "extra": {
+           "cond": "own_field_name:solrock"
+          }
          }
         ],
-        "source_text": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn."
+        "ability_cost": "discard_hand_energy:1:fighting",
+        "source_text": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "discard_hand_energy:1:type:fighting",
-       "draw:3"
+       "draw:3:if:own_field_name:solrock"
       ],
-      "cost": "",
-      "unsupported": [
-       {
-        "type": "ability_cost",
-        "reason": "特性发动代价形态未识别（B4）"
-       }
-      ]
+      "cost": "discard_hand_energy:1:fighting",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -91311,43 +91237,27 @@
       "kind": "ability",
       "name": "Lunar Cycle",
       "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "conditions": [],
       "actions": [
-       {
-        "type": "discard",
-        "amount": 1,
-        "target": "hand",
-        "extra": {
-         "hand_energy_type": "fighting",
-         "required": false
-        }
-       },
        {
         "type": "draw",
         "amount": 3,
-        "target": "deck"
+        "target": "deck",
+        "extra": {
+         "cond": "own_field_name:solrock"
+        }
        }
       ],
-      "source_text": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn."
+      "ability_cost": "discard_hand_energy:1:fighting",
+      "source_text": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "discard_hand_energy:1:type:fighting",
-     "draw:3"
+     "draw:3:if:own_field_name:solrock"
     ],
-    "unsupported": [
-     {
-      "type": "ability_cost",
-      "reason": "特性发动代价形态未识别（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -96513,14 +96423,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Chi-Yu@MEG 31",
    "parse": {
     "items": [
      {
@@ -96538,21 +96450,32 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "discard_stadium": true
+          }
+         },
+         {
+          "type": "play_lock",
+          "amount": null,
+          "target": "active_opponent",
+          "extra": {
+           "play": "stadium",
+           "until": "turn",
+           "if_prev": true
           }
          }
         ],
-        "source_text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn."
+        "source_text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：play_lock"
+      ],
+      "engine_tags": [
+       "discard_stadium",
+       "play_lock:stadium:opp:turn:if_prev"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -96567,21 +96490,32 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "discard_stadium": true
+        }
+       },
+       {
+        "type": "play_lock",
+        "amount": null,
+        "target": "active_opponent",
+        "extra": {
+         "play": "stadium",
+         "until": "turn",
+         "if_prev": true
         }
        }
       ],
-      "source_text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn."
+      "source_text": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     }
+    "errors": [
+     "[0] action.type 非法：play_lock"
     ],
+    "engine_tags": [
+     "discard_stadium",
+     "play_lock:stadium:opp:turn:if_prev"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -104475,14 +104409,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Heracross ex@PFL 4",
    "parse": {
     "items": [
      {
@@ -104498,9 +104434,9 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+           "dmg_plus_prev_taken": true
           }
          }
         ],
@@ -104508,13 +104444,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_plus_prev_taken"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -104556,9 +104489,9 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+         "dmg_plus_prev_taken": true
         }
        }
       ],
@@ -104585,14 +104518,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "dmg_plus_prev_taken",
      "mill:2:opp"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -116578,14 +116507,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Rotom@ASC 92",
    "parse": {
     "items": [
      {
@@ -116611,13 +116542,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索数量由计数源决定（B4）"
-       }
-      ]
+      "engine_tags": [
+       "search_bench:all:name_has:rotom"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -116700,14 +116628,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "search_bench:all:name_has:rotom",
      "dmg_set:30:per:own_field_tools"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索数量由计数源决定（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -127821,14 +127745,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Scream Tail ex@TWM 94",
    "parse": {
     "items": [
      {
@@ -127842,11 +127768,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "play_lock",
           "amount": null,
-          "target": "any",
+          "target": "active_opponent",
           "extra": {
-           "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+           "play": "supporter",
+           "until": "turn"
           }
          },
          {
@@ -127854,25 +127781,21 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "首回合招式使用限制（需招式静态条件层，B5）"
+           "use_only": "went_second_first_turn"
           }
          }
         ],
         "source_text": "You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next turn."
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-       },
-       {
-        "type": "rule",
-        "reason": "首回合招式使用限制（需招式静态条件层，B5）"
-       }
-      ]
+      "errors": [
+       "[0] action.type 非法：play_lock"
+      ],
+      "engine_tags": [
+       "play_lock:supporter:opp:turn",
+       "use_only:went_second_first_turn"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -127911,11 +127834,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "play_lock",
         "amount": null,
-        "target": "any",
+        "target": "active_opponent",
         "extra": {
-         "note": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
+         "play": "supporter",
+         "until": "turn"
         }
        },
        {
@@ -127923,7 +127847,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "首回合招式使用限制（需招式静态条件层，B5）"
+         "use_only": "went_second_first_turn"
         }
        }
       ],
@@ -127947,20 +127871,15 @@
       "source_text": "Discard an Energy from your opponent’s Active Pokémon."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] action.type 非法：play_lock"
+    ],
     "engine_tags": [
+     "play_lock:supporter:opp:turn",
+     "use_only:went_second_first_turn",
      "discard_energy:1:opp"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5）"
-     },
-     {
-      "type": "rule",
-      "reason": "首回合招式使用限制（需招式静态条件层，B5）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -141577,14 +141496,8 @@
        {
         "kind": "ability",
         "name": "Last-Ditch Catch",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_bench",
+        "conditions": [],
         "actions": [
          {
           "type": "search",
@@ -141598,9 +141511,11 @@
         "source_text": "Once during your turn, when you play this Pokémon from your hand onto your Bench, you may use this Ability. Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck. You can’t use more than 1 Ability that has “Last-Ditch” in its name each turn."
        }
       ],
-      "errors": [],
+      "errors": [
+       "[0] trigger 非法：on_bench"
+      ],
       "engine_tags": [
-       "search_trainer:1"
+       "on_bench_act:search_trainer:1"
       ],
       "cost": "",
       "unsupported": []
@@ -141627,14 +141542,8 @@
      {
       "kind": "ability",
       "name": "Last-Ditch Catch",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_bench",
+      "conditions": [],
       "actions": [
        {
         "type": "search",
@@ -141648,10 +141557,12 @@
       "source_text": "Once during your turn, when you play this Pokémon from your hand onto your Bench, you may use this Ability. Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck. You can’t use more than 1 Ability that has “Last-Ditch” in its name each turn."
      }
     ],
-    "errors": [],
+    "errors": [
+     "[0] trigger 非法：on_bench"
+    ],
     "engine_tags": [
      "bounce:to_hand:self",
-     "search_trainer:1"
+     "on_bench_act:search_trainer:1"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -150058,14 +149969,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Team Rocket’s Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Team Rocket’s Pokémon is Knocked Out), the Attacking Pokémon is now Asleep.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "若此卡所附着的火箭队的宝可梦位于战斗区，并受到对手宝可梦的招式伤害（即使该火箭队的宝可梦被击倒），则进行攻击的宝可梦现在处于睡眠状态。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket’s Hypnotizer@ASC 206",
    "parse": {
     "items": [
      {
@@ -150079,11 +149992,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "tool",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+           "kind": "on_damaged_status",
+           "status": "sleep",
+           "holder_faction": "teamrocket"
           }
          }
         ],
@@ -150091,15 +150006,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "tool:on_damaged:status:sleep:holder:faction:teamrocket"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -150110,11 +150022,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "tool",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
+         "kind": "on_damaged_status",
+         "status": "sleep",
+         "holder_faction": "teamrocket"
         }
        }
       ],
@@ -150122,13 +150036,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4）"
-     }
+    "engine_tags": [
+     "tool:on_damaged:status:sleep:holder:faction:teamrocket"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -153611,14 +153522,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Heal all damage from 1 of your Pokémon that has 30 HP or less remaining.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "回复你的 1 只剩余 HP 为 30 或更少的宝可梦的所有伤害。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Bianca’s Devotion@TEF 142",
    "parse": {
     "items": [
      {
@@ -153632,11 +153545,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "heal",
           "amount": null,
           "target": "self",
           "extra": {
-           "note": "全量回复（范围/后续不可精确表达 · B4）"
+           "heal_scope": "choose",
+           "heal_all": true,
+           "maxleft": 30
           }
          }
         ],
@@ -153644,15 +153559,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "heal:all:choose:maxleft:30"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "全量回复（范围/后续不可精确表达 · B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -153663,11 +153575,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "heal",
         "amount": null,
         "target": "self",
         "extra": {
-         "note": "全量回复（范围/后续不可精确表达 · B4）"
+         "heal_scope": "choose",
+         "heal_all": true,
+         "maxleft": 30
         }
        }
       ],
@@ -153675,13 +153589,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "全量回复（范围/后续不可精确表达 · B4）"
-     }
+    "engine_tags": [
+     "heal:all:choose:maxleft:30"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156313,14 +156224,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if any of your Team Rocket’s Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你的任意火箭队的宝可梦在对手的上个回合中被击倒时，才能使用此卡。\n\n每位玩家将手牌洗回牌库。然后，你抽 5 张牌，对手抽 3 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Archer@DRI 170",
    "parse": {
     "items": [
      {
@@ -156334,39 +156247,32 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "draw",
           "amount": null,
-          "target": "deck",
+          "target": "both_split",
           "extra": {
-           "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "split": [
+            5,
+            3
+           ],
+           "shuffle_both": true
           }
          }
         ],
-        "source_text": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
+        "source_text": "Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards.",
+        "citations": [],
+        "play_gate": "own_ko_tr_last_turn"
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：both_split"
+      ],
+      "engine_tags": [
+       "shuffle_draw_split:5:3"
+      ],
       "play_cost": "",
-      "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-       },
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "own_ko_tr_last_turn",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -156377,37 +156283,30 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "draw",
         "amount": null,
-        "target": "deck",
+        "target": "both_split",
         "extra": {
-         "note": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "split": [
+          5,
+          3
+         ],
+         "shuffle_both": true
         }
        }
       ],
-      "source_text": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards."
+      "source_text": "Each player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards.",
+      "citations": [],
+      "play_gate": "own_ko_tr_last_turn"
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抽牌句式不可精确表达（按计数/对手同抽/条件追加/分支替换，B4）"
-     },
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "errors": [
+     "[0] action.target 非法：both_split"
     ],
+    "engine_tags": [
+     "shuffle_draw_split:5:3"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -158581,14 +158480,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你的剩余奖赏卡多于对手时，才能使用此卡。\n\n从你的弃牌堆中将最多 2 张基本能量卡附着于你的 1 只 2 阶进化宝可梦。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Rosa's Encouragement@POR 84",
    "parse": {
     "items": [
      {
@@ -158602,11 +158503,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "attach",
+          "amount": 2,
+          "target": "self",
           "extra": {
-           "note": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
+           "energy_type": "any",
+           "zone": "discard",
+           "target_scope": "stage2"
           }
          }
         ],
@@ -158616,15 +158519,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "attach:2:any:discard:target:stage2"
+      ],
       "play_cost": "",
       "play_gate": "own_behind_prizes",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -158635,11 +158535,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "attach",
+        "amount": 2,
+        "target": "self",
         "extra": {
-         "note": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
+         "energy_type": "any",
+         "zone": "discard",
+         "target_scope": "stage2"
         }
        }
       ],
@@ -158649,13 +158551,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "附着目标限定（1 of your Stage N Pokémon）未建模（B5）"
-     }
+    "engine_tags": [
+     "attach:2:any:discard:target:stage2"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -161009,14 +160908,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Confused Pokémon (both yours and your opponent’s) don’t recover from that Special Condition when they evolve or devolve.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "处于混乱状态的宝可梦（双方的）在进化或退化时不会从该特殊状态中恢复。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dizzying Valley@PFL 88",
    "parse": {
     "items": [
      {
@@ -161030,11 +160931,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "target": null,
+          "type": "stadium",
           "amount": null,
+          "target": "any",
           "extra": {
-           "note": "场地形态未建模（S3 未覆盖）"
+           "kind": "keep_confuse"
           }
          }
         ],
@@ -161042,15 +160943,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "stadium:keep_confuse"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "场地形态未建模（S3 未覆盖）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -161061,11 +160959,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "target": null,
+        "type": "stadium",
         "amount": null,
+        "target": "any",
         "extra": {
-         "note": "场地形态未建模（S3 未覆盖）"
+         "kind": "keep_confuse"
         }
        }
       ],
@@ -161073,13 +160971,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "场地形态未建模（S3 未覆盖）"
-     }
+    "engine_tags": [
+     "stadium:keep_confuse"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -161107,14 +161002,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Attacks used by each Tera Pokémon in play (both yours and your opponent’s) cost {C} more.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "场上的每只太晶宝可梦（双方的）使用的招式的能量费用增加 {C}。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Nighttime Mine@ASC 197",
    "parse": {
     "items": [
      {
@@ -161128,11 +161025,11 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "target": null,
-          "amount": null,
+          "type": "stadium",
+          "amount": 1,
+          "target": "any",
           "extra": {
-           "note": "场地形态未建模（S3 未覆盖）"
+           "kind": "tera_cost_up"
           }
          }
         ],
@@ -161140,15 +161037,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "stadium:tera_cost_up:1"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "场地形态未建模（S3 未覆盖）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -161159,11 +161053,11 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "target": null,
-        "amount": null,
+        "type": "stadium",
+        "amount": 1,
+        "target": "any",
         "extra": {
-         "note": "场地形态未建模（S3 未覆盖）"
+         "kind": "tera_cost_up"
         }
        }
       ],
@@ -161171,13 +161065,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "场地形态未建模（S3 未覆盖）"
-     }
+    "engine_tags": [
+     "stadium:tera_cost_up:1"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

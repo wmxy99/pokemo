@@ -50,6 +50,15 @@ def _spec(tag: str) -> dict:
     }
 
 
+# 「If this Pokémon has a Pokémon Tool attached, your opponent can't play any
+#  {ACE SPEC} cards from their hand.」（第一百零七批，Genesect「ACE Nullifier」）
+# ⚠ 与上面三条的生效时机不同：不是「在战斗位」，而是「**持有者贴着道具**」
+#   → 引擎 `where` 段写 `tool`，由 `blocked_play` 判 `holder.tool`。
+_ACE_TOOL = re.compile(
+    r"^if this " + _POKE + r" has a " + _POKE + r" tool attached, your opponent "
+    r"can'?t play any \{ace spec\} cards? from their hand[.]$", re.I)
+
+
 def detect(text: str, kind: str = "attack", name: str = "") -> dict | None:
     if kind != "ability":
         return None
@@ -58,6 +67,8 @@ def detect(text: str, kind: str = "attack", name: str = "") -> dict | None:
         return _spec("fx:play_block:item:active")
     if _ITEM_TOOL.match(t):
         return _spec("fx:play_block:item+tool:active")
+    if _ACE_TOOL.match(t):
+        return _spec("fx:play_block:acespec:tool")
     m = _ABILITY_POKE.match(t)
     if m:
         key = _name_key(m.group("faction") + "s")

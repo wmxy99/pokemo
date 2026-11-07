@@ -17,24 +17,24 @@
 
 ---
 
-## 0. 基线（2026-11-06 实测，不得凭记忆填写）
+## 0. 基线（2026-11-07 实测，不得凭记忆填写）
 
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1143（90.2%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **124** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 126） |
-| 引擎池 | **1128** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1165（91.9%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **102** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 102） |
+| 引擎池 | **1150** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **124** = 批次内待做 **116** + 结构性边界 **6** + 待新能力 **2** = **124** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **102** = 批次内待做 **94** + 结构性边界 **6** + 待新能力 **2** = **102** ✅。
 
-**规划**：第 90–133 批共 **44 批**；已处理 **12** 批（完成 11 · 整批受阻 1），剩余**未开工** **32** 批。
+**规划**：第 90–133 批共 **44 批**；已处理 **22** 批（完成 20 · 整批受阻 2），剩余**未开工** **22** 批。
 
-**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（当前 1143 + 可做 116）；结构性 6 张与待新能力 2 张永久留在池外，需引擎重构或新增承载字段才可能归零。
+**终局预期**：`engine_ready` **1259 / 1267 = 99.4%**（当前 1165 + 可做 94）；结构性 6 张与待新能力 2 张永久留在池外，需引擎重构或新增承载字段才可能归零。
 
 ---
 
@@ -190,7 +190,7 @@
 
 ## 4. 阶段 P3 · B 档小族（一族一批）（第 98–111 批，14 批，41 槽位）
 
-族太散，是 P2 之后最慢的一段。 已完成 4/14 批。
+族太散，是 P2 之后最慢的一段。 已完成 13/14 批。
 
 ### 第 98 批 · 附加伤害目标扩展（3 张）· ✅ 已完成
 
@@ -204,16 +204,20 @@
 
 > **落地 2 张**：Shaymin（`snipe:opp_bench:60:1:target:ex`）、Flygon ex（`snipe:opp:100:all:target:ex` + 无视弱抗）——引擎第四十一批就有 `:target:ex` 目标筛选，缺的是「{ex} or/and {V}」并集写法的**短语映射**。**如实拒收 1 张**：Wellspring Mask Ogerpon ex（「可以洗回 3 个能量，若如此做才对后备 +120」= 可选代价与效果耦合，需交互层）。
 
-### 第 99 批 · 检索去向 / 数量由计数定（6 张）· 待办
+### 第 99 批 · 检索去向 / 数量由计数定（6 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Drilbur | TEF | 85 | B（有具体缺口·可归族） |  |
+| Drilbur | TEF | 85 | done（已完成） |  |
 | Palafin | TWM | 60 | B（有具体缺口·可归族） |  |
-| Lillie’s Comfey | JTG | 68 | B（有具体缺口·可归族） |  |
-| Musharna | BLK | 36 | B（有具体缺口·可归族） |  |
-| Rotom | ASC | 92 | B（有具体缺口·可归族） |  |
+| Lillie’s Comfey | JTG | 68 | done（已完成） |  |
+| Musharna | BLK | 36 | done（已完成） |  |
+| Rotom | ASC | 92 | done（已完成） |  |
 | Grumpig | MEG | 63 | B（有具体缺口·可归族） |  |
+
+**实际结果**：进池 **4** 张，如实拒收 **2** 张。
+
+> **落地 4 张**：Drilbur（`on_bench_act:search_discard:3:energy:type:fighting` —— 新增**上场触发**包装层，与 `evolve_act:` 同构；不包就是普通 field 特性，会变成「每回合白弃 3 张牌库」）、Lillie's Comfey（`search_bench:all:basic:name_has:lillies`）、Musharna（`search_trainer:all:name_has:fennel`）、Rotom（`search_bench:all:name_has:rotom`）—— 后三张补齐 `any number of` 的**具名**形态与 `:name_has:` 子串筛选。**如实拒收 2 张**：Palafin（「检索 Palafin ex 并**替换自身**，保留附着卡/伤害/状态」需场上实例替换，引擎没有该机制）、Grumpig（「检视牌库顶 4 张，把其中任意张 Basic Energy **自由分配**附着」需分配界面，`recon:` 的 `dest:attach` 只支持单目标）。
 
 ### 第 100 批 · 抛币嵌套子效果（3 张）· ✅ 已完成
 
@@ -227,22 +231,30 @@
 
 > **落地 1 张**：Vanilluxe（`coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze`）——引擎早已支持多币阈值，缺的是「If **either** of them is heads」这句措辞（此前只认 both/all/at least）。**如实拒收 2 张**：Team Rocket's Great Ball（抛币两侧各检索不同类别，需 coin 嵌套检索）、Lucian（双手牌洗回 + 抛币抽牌，多段复合）。
 
-### 第 101 批 · 受击历史 `on_damaged`（3 张）· 待办
+### 第 101 批 · 受击历史 `on_damaged`（3 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Team Rocket's Koffing | DRI | 125 | B（有具体缺口·可归族） |  |
-| Mega Heracross ex | PFL | 4 | B（有具体缺口·可归族） |  |
-| Team Rocket’s Hypnotizer | ASC | 206 | B（有具体缺口·可归族） |  |
+| Team Rocket's Koffing | DRI | 125 | done（已完成） |  |
+| Mega Heracross ex | PFL | 4 | done（已完成） |  |
+| Team Rocket’s Hypnotizer | ASC | 206 | done（已完成） |  |
 
-### 第 102 批 · 特殊进化驱动 / 进化触发特性（2 张）· 待办
+**实际结果**：进池 **3** 张，如实拒收 **0** 张。
+
+> **落地 3 张**：Team Rocket's Koffing（`on_damaged:search_bench:2:name_has:koffing`）、Mega Heracross ex（`dmg_plus_prev_taken`）、Team Rocket's Hypnotizer（`tool:on_damaged:status:sleep:holder:faction:teamrocket`）。新增三件：`FieldPokemon.dmg_taken_prev/mark`（回合开始把上回合累计量滚过来，**先快照再清零**）、`on_damaged` 的 `search_bench` kind、道具受击的 `status` kind + 阵营持有者限定。
+
+### 第 102 批 · 特殊进化驱动 / 进化触发特性（2 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Archeops | WHT | 51 | B（有具体缺口·可归族） |  |
-| Noctowl | SCR | 115 | B（有具体缺口·可归族） |  |
+| Noctowl | SCR | 115 | done（已完成） |  |
 
-### 第 103 批 · 能量代价 / 提供规则（3 张）· 待办
+**实际结果**：进池 **1** 张，如实拒收 **1** 张。
+
+> **落地 1 张**：Noctowl（`evolve_act:search_trainer:2:gate:tera_in_play` —— 进化触发特性新增**前置门** `:gate:`，条件不满足整条不执行）。**如实拒收 1 张**：Archeops（「devolve 1 of your opponent's evolved Pokémon」需退化机制，引擎只有正向进化 `evolve_to`，反向要重建物种与附着关系）。
+
+### 第 103 批 · 能量代价 / 提供规则（3 张）· ⛔ 受阻 · 整批如实拒收
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
@@ -250,13 +262,21 @@
 | Mega Eelektross ex | ASC | 61 | B（有具体缺口·可归族） |  |
 | Dialga | MEG | 95 | B（有具体缺口·可归族） |  |
 
-### 第 104 批 · 回复范围 / 全量回复（3 张）· 待办
+**实际结果**：进池 **0** 张，如实拒收 **3** 张。
+
+> **整批受阻（0 张）**：三张都要「**可选**能量代价」这一交互层 —— Mega Charizard X ex（弃**任意数量** {R} 能量、按弃掉张数缩放）、Mega Eelektross ex（可选弃 2 {L} → 麻痹）、Dialga（可选把全部能量洗回牌库 → +80）。用确定性默认冒充会实质改变对局（「全弃」把能量打空、「不弃」白丢效果），属静默错映射 → 全部如实拒收。
+
+### 第 104 批 · 回复范围 / 全量回复（3 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Hydrapple ex | SCR | 14 | B（有具体缺口·可归族） |  |
-| Magearna | JTG | 107 | B（有具体缺口·可归族） |  |
-| Bianca’s Devotion | TEF | 142 | B（有具体缺口·可归族） |  |
+| Hydrapple ex | SCR | 14 | done（已完成） |  |
+| Magearna | JTG | 107 | done（已完成） |  |
+| Bianca’s Devotion | TEF | 142 | done（已完成） |  |
+
+**实际结果**：进池 **3** 张，如实拒收 **0** 张。
+
+> **落地 3 张**：Hydrapple ex（`attach_energy:1:grass:hand:target:any:heal:30` —— 附能后回复**同一目标**，`:heal:` 挂在 attach tag 上保住了「that Pokémon」的指代）、Magearna（`passive:heal_on_attach:90` —— 手牌附能时的被动钩子，持有者须在战斗位）、Bianca's Devotion（`heal:all:choose:maxleft:30` —— `heal:all` 新增 `:maxleft:` 目标上限，超出时引擎回 0 而不是照常回满）。
 
 ### 第 105 批 · 区分基本 / 特殊能量（2 张）· ✅ 已完成
 
@@ -269,36 +289,50 @@
 
 > **落地 1 张**：Enhanced Hammer（`discard_energy:1:opp:special:any`）——`senergy` 是**卡**列表，引擎本就能区分特殊/基本；缺的是训练家侧出口：该前缀此前只在 `ATTACK_TAG_PREFIXES`，训练家白名单没有 → `build_trainer` 整卡拒收（进池后还会报「未知训练家 tag」）。**如实拒收 1 张**：Megaton Blower（同时弃**全部**道具 + **全部**特殊能量 + 一张场地，需复合训练家 tag）。
 
-### 第 106 批 · 场地形态（S3 扩展）（2 张）· 待办
+### 第 106 批 · 场地形态（S3 扩展）（2 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Dizzying Valley | PFL | 88 | B（有具体缺口·可归族） |  |
-| Nighttime Mine | ASC | 197 | B（有具体缺口·可归族） |  |
+| Dizzying Valley | PFL | 88 | done（已完成） |  |
+| Nighttime Mine | ASC | 197 | done（已完成） |  |
 
-### 第 107 批 · 对手手牌禁打层（3 张）· 待办
+**实际结果**：进池 **2** 张，如实拒收 **0** 张。
 
-| 卡 | series | number | 分层 | 备注 |
-|---|---|---|---|---|
-| Genesect | SFA | 40 | B（有具体缺口·可归族） |  |
-| Chi-Yu | MEG | 31 | B（有具体缺口·可归族） |  |
-| Scream Tail ex | TWM | 94 | B（有具体缺口·可归族） | 跨批 → 108 |
+> **落地 2 张**：Nighttime Mine（`stadium:tera_cost_up:1` —— 场地抬高**双方** Tera 宝可梦招式 `{C}` 费用，接进 `families.attack_cost`）、Dizzying Valley（`stadium:keep_confuse` —— 进化时按场地**保留混乱**；`evolve_to` 会清空全部状态，故先记再补）。
 
-### 第 108 批 · 首回合 / 招式静态条件（2 张）· 待办
+### 第 107 批 · 对手手牌禁打层（3 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Terapagos ex | SCR | 128 | B（有具体缺口·可归族） |  |
-| Scream Tail ex | TWM | 94 | B（有具体缺口·可归族） | 跨批 → 107 |
+| Genesect | SFA | 40 | done（已完成） |  |
+| Chi-Yu | MEG | 31 | done（已完成） |  |
+| Scream Tail ex | TWM | 94 | done（已完成） | 跨批 → 108 |
 
-### 第 109 批 · 打出前置 gate（2 张）· 待办
+**实际结果**：进池 **3** 张，如实拒收 **0** 张。
+
+> **落地 3 张**：Genesect（`fx:play_block:acespec:tool` —— 禁打层新增 ACE SPEC 类别 + 「持有者贴道具」生效时机）、Chi-Yu（`discard_stadium` + `play_lock:stadium:opp:turn:if_prev` —— 招式侧新增弃场地，且**没弃到就不封锁**）、Scream Tail ex（`play_lock:supporter:opp:turn` + `use_only:went_second_first_turn`）。新增 3 个手牌禁打字段（supporter/stadium/acespec）与招式**静态使用条件** `use_only:`/`use_not:`。⚠ ACE SPEC 当前数据集一张都没有 → 该锁定恒不生效，这是**有前提的等价**，由 `test_batch107_engine` 的数据集守卫钉住。
+
+### 第 108 批 · 首回合 / 招式静态条件（2 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Team Rocket's Archer | DRI | 170 | B（有具体缺口·可归族） |  |
-| Rosa's Encouragement | POR | 84 | B（有具体缺口·可归族） |  |
+| Terapagos ex | SCR | 128 | done（已完成） |  |
+| Scream Tail ex | TWM | 94 | done（已完成） | 跨批 → 107 |
 
-> **Anthea & Concordia 警示**：gate「6 张具名宝可梦在场」未建模；`_split_play_gate` 只剥认识的 gate，不认识的会留在 text → 认领前必须检查 `can use this card only if` 是否残留，残留即整卡拒收（否则 = 无条件 +3 奖赏的静默 buff）。 **（Anthea & Concordia 已改列结构性边界 §7，本批不再计入槽位）**
+**实际结果**：进池 **2** 张，如实拒收 **0** 张。
+
+> **落地 2 张**：Terapagos ex（`use_not:went_second_first_turn` + 既有 `shield:` / `passive:bench_immune_dmg`）、Scream Tail ex（同上 `use_only:`，跨批与 107 共用）。
+
+### 第 109 批 · 打出前置 gate（2 张）· ✅ 已完成
+
+| 卡 | series | number | 分层 | 备注 |
+|---|---|---|---|---|
+| Team Rocket's Archer | DRI | 170 | done（已完成） |  |
+| Rosa's Encouragement | POR | 84 | done（已完成） |  |
+
+**实际结果**：进池 **2** 张，如实拒收 **0** 张。
+
+> **落地 2 张**：Team Rocket's Archer（`shuffle_draw_split:5:3` + 新门槛 `own_ko_tr_last_turn` —— 只统计 **Team Rocket's** 宝可梦被击倒，不能并进 `own_ko_last_turn`，否则门槛被放宽）、Rosa's Encouragement（`attach:2:any:discard:target:stage2` + 既有 `own_behind_prizes` 门槛；训练家侧此前**没有** `attach:` 派发分支）。
 
 ### 第 110 批 · 抽牌分支 / 延迟队列（3 张）· ✅ 已完成
 
@@ -312,14 +346,18 @@
 
 > **落地 1 张**：Team Rocket's Ariana（`draw_to_branch:5:8:if:own_all_name:teamrockets`）——新增「分支替换的抽到 N 张」：两条 `draw_to` 叠加与卡面等价（只补不弃），不需要回合状态。**如实拒收 2 张**：Amarys（回合末延迟弃手牌，需延迟队列）、Lucian（抛币嵌套抽牌）。
 
-### 第 111 批 · 状态 / 免疫类 / 特性代价（4 张）· 待办
+### 第 111 批 · 状态 / 免疫类 / 特性代价（4 张）· ✅ 已完成
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Pecharunt ex | SFA | 39 | B（有具体缺口·可归族） |  |
-| Hoothoot | PRE | 77 | B（有具体缺口·可归族） |  |
+| Pecharunt ex | SFA | 39 | done（已完成） |  |
+| Hoothoot | PRE | 77 | done（已完成） |  |
 | Mismagius ex | PFL | 36 | B（有具体缺口·可归族） |  |
-| Lunatone | MEG | 74 | B（有具体缺口·可归族） |  |
+| Lunatone | MEG | 74 | done（已完成） |  |
+
+**实际结果**：进池 **3** 张，如实拒收 **1** 张。
+
+> **落地 3 张**：Pecharunt ex（`switch_choose:darkness:except:pecharunt:then:poison` —— 带属性/例外筛选的换位 + 换入后状态，目标由 `action["bench"]` 指定）、Hoothoot（`passive:status_immune:sleep` —— 状态免疫按**具体状态**判定，`status=None` 时只有 `all` 形态算数）、Lunatone（`draw:3:if:own_field_name:solrock` + 代价 `discard_hand_energy:1:fighting` —— 代价句从「只认 must」扩到 `may`，并新增具名在场条件）。**如实拒收 1 张**：Mismagius ex（「对手战斗位**撤退到后备**时，其新战斗位混乱」需对手撤退事件钩子）。
 
 ---
 
@@ -588,19 +626,19 @@
 | 96 | P2 | `any number of` 自由数量 | 9 | 0 | 9 | ⛔ 受阻 |
 | 97 | P2 | 指示物目标 / 条件 | 7 | 3 | 4 | ✅ 完成 |
 | 98 | P3 | 附加伤害目标扩展 | 3 | 2 | 1 | ✅ 完成 |
-| 99 | P3 | 检索去向 / 数量由计数定 | 6 |  |  | 待办 |
+| 99 | P3 | 检索去向 / 数量由计数定 | 6 | 4 | 2 | ✅ 完成 |
 | 100 | P3 | 抛币嵌套子效果 | 3 | 1 | 2 | ✅ 完成 |
-| 101 | P3 | 受击历史 `on_damaged` | 3 |  |  | 待办 |
-| 102 | P3 | 特殊进化驱动 / 进化触发特性 | 2 |  |  | 待办 |
-| 103 | P3 | 能量代价 / 提供规则 | 3 |  |  | 待办 |
-| 104 | P3 | 回复范围 / 全量回复 | 3 |  |  | 待办 |
+| 101 | P3 | 受击历史 `on_damaged` | 3 | 3 | 0 | ✅ 完成 |
+| 102 | P3 | 特殊进化驱动 / 进化触发特性 | 2 | 1 | 1 | ✅ 完成 |
+| 103 | P3 | 能量代价 / 提供规则 | 3 | 0 | 3 | ⛔ 受阻 |
+| 104 | P3 | 回复范围 / 全量回复 | 3 | 3 | 0 | ✅ 完成 |
 | 105 | P3 | 区分基本 / 特殊能量 | 2 | 1 | 1 | ✅ 完成 |
-| 106 | P3 | 场地形态（S3 扩展） | 2 |  |  | 待办 |
-| 107 | P3 | 对手手牌禁打层 | 3 |  |  | 待办 |
-| 108 | P3 | 首回合 / 招式静态条件 | 2 |  |  | 待办 |
-| 109 | P3 | 打出前置 gate | 2 |  |  | 待办 |
+| 106 | P3 | 场地形态（S3 扩展） | 2 | 2 | 0 | ✅ 完成 |
+| 107 | P3 | 对手手牌禁打层 | 3 | 3 | 0 | ✅ 完成 |
+| 108 | P3 | 首回合 / 招式静态条件 | 2 | 2 | 0 | ✅ 完成 |
+| 109 | P3 | 打出前置 gate | 2 | 2 | 0 | ✅ 完成 |
 | 110 | P3 | 抽牌分支 / 延迟队列 | 3 | 1 | 2 | ✅ 完成 |
-| 111 | P3 | 状态 / 免疫类 / 特性代价 | 4 |  |  | 待办 |
+| 111 | P3 | 状态 / 免疫类 / 特性代价 | 4 | 3 | 1 | ✅ 完成 |
 | 112 | P4 | 自身弃能代价 | 5 |  |  | 待办 |
 | 113 | P4 | 自伤 | 2 |  |  | 待办 |
 | 114 | P4 | 自身治疗 / 自身状态 | 2 |  |  | 待办 |
@@ -631,11 +669,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 20 张 |
-| 批次内待做 | 116 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 42 张 |
+| 批次内待做 | 94 | 全部未 ready |
 | 结构性边界 | 6 | 不承载 tag，仅建档 |
 | 待新能力 | 2 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **124** | 应等于基线 124 |
+| **合计（= 未 ready 卡数）** | **102** | 应等于基线 102 |
 
 ---
 

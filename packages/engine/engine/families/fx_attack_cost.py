@@ -99,4 +99,11 @@ def attack_cost(battle, attacker, atk) -> dict:
             continue                     # 卡面限定了招式名（如「Blood Moon」）
         from ..battle import _eval_counter           # 惰性导入，避免循环依赖
         delta -= int(_eval_counter(battle, counter))
+    # ③ 场地：**双方** Tera 宝可梦的招式 +{C}（第一百零六批，Nighttime Mine）
+    #    卡面「each Tera Pokémon in play (both yours and your opponent's)」——
+    #    不看归属，只看攻击方是不是 Tera。
+    _m = battle._stadium_meta()
+    if _m.get("kind") == "tera_cost_up" and _m.get("n"):
+        if str(getattr(attacker.pdef, "category", "") or "").startswith("Tera"):
+            delta += int(_m["n"])
     return {"colorless": delta} if delta else {}

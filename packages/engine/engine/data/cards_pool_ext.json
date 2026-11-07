@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1128,
+      "kept": 1150,
       "by_Energy": 19,
-      "by_Pokemon": 951,
-      "by_Trainer": 158,
+      "by_Pokemon": 967,
+      "by_Trainer": 164,
       "skipped": {
-        "存在未建模项（整卡不收）": 122,
+        "存在未建模项（整卡不收）": 100,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -2813,7 +2813,7 @@
         {
           "name": "Rapid Vernier",
           "name_zh": "高速游标",
-          "tag": "switch_self",
+          "tag": "on_bench_act:switch_self",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may switch it with your Active Pokémon. If you do, you may move any amount of Energy from your other Pokémon to this Pokémon.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置于后备时，你可以将此宝可梦与你的战斗宝可梦互换。若如此做，你可以将你的其他宝可梦身上任意数量的能量移动到这只宝可梦身上。",
@@ -3074,6 +3074,57 @@
       "source_card_id": 80,
       "name_key": "ironcrownex",
       "uid": "Iron Crown ex@TEF 81"
+    },
+    {
+      "name": "Drilbur",
+      "name_zh": "螺钉地鼠",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Sand Spray",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "沙尘喷射",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Dig Dig Dig",
+          "name_zh": "挖挖挖",
+          "tag": "on_bench_act:search_discard:3:energy:type:fighting",
+          "location": "field",
+          "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for up to 3 Basic {F} Energy cards and discard them. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置于后备时，你可以从牌库中检索至多 3 张基本 {F} 能量卡并弃置它们。然后洗牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TEF",
+        "number": "85"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 81,
+      "name_key": "drilbur",
+      "uid": "Drilbur@TEF 85"
     },
     {
       "name": "Excadrill",
@@ -4650,7 +4701,7 @@
         {
           "name": "Impromptu Carrier",
           "name_zh": "临时搬运",
-          "tag": "attach_energy:1:deck",
+          "tag": "on_bench_act:attach_energy:1:deck",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may search your deck for a Pokémon Tool card and attach it to this Pokémon. Then, shuffle your deck.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从牌库中检索 1 张宝可梦道具卡并附着于此宝可梦。然后洗牌。",
@@ -5236,7 +5287,7 @@
         {
           "name": "Battle-Hardened",
           "name_zh": "久经沙场",
-          "tag": "attach_energy:2:fighting:hand",
+          "tag": "on_bench_act:attach_energy:2:fighting:hand",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may attach up to 2 Basic {F} Energy cards from your hand to this Pokémon.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以从手牌中把最多 2 张基本 {F} 能量卡附着于此宝可梦。",
@@ -5470,6 +5521,109 @@
       "source_card_id": 139,
       "name_key": "munkidoriex",
       "uid": "Munkidori ex@SFA 37"
+    },
+    {
+      "name": "Pecharunt ex",
+      "name_zh": "桃歹郎 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 190,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Irritated Outburst",
+          "cost": {
+            "darkness": 2
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_set:60:per:opp_prizes_taken"
+          ],
+          "desc": "This attack does 60 damage for each Prize card your opponent has taken.",
+          "name_zh": "焦躁爆发",
+          "desc_zh": "对手每获得 1 张奖赏卡，此招式就造成 60 点伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Subjugating Chains",
+          "name_zh": "征服锁链",
+          "tag": "switch_choose:darkness:except:pecharunt:then:poison",
+          "location": "field",
+          "desc": "Once during your turn, you may switch 1 of your Benched {D} Pokémon, except any Pecharunt {ex}, with your Active Pokémon. If you do, the new Active Pokémon is now Poisoned. You can’t use more than 1 Subjugating Chains Ability each turn.",
+          "desc_zh": "在你的回合中，你可以使用 1 次，将后备的 1 只 {D} 宝可梦（桃歹郎 ex 除外）与自己的战斗宝可梦互换。若这样做，新的战斗宝可梦现在处于中毒状态。每回合只能使用 1 次征服锁链特性。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SFA",
+        "number": "39"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 141,
+      "name_key": "pecharuntex",
+      "uid": "Pecharunt ex@SFA 39"
+    },
+    {
+      "name": "Genesect",
+      "name_zh": "盖诺赛克特",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Magnetic Blast",
+          "cost": {
+            "metal": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "磁力爆破",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "ACE Nullifier",
+          "name_zh": "ACE 无效化",
+          "tag": "fx:play_block:acespec:tool",
+          "location": "field",
+          "desc": "If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.",
+          "desc_zh": "若此宝可梦附着了宝可梦道具，则对手无法从手牌中打出任何 {ACE SPEC} 卡。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SFA",
+        "number": "40"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 142,
+      "name_key": "genesect",
+      "uid": "Genesect@SFA 40"
     },
     {
       "name": "Varoom",
@@ -5753,6 +5907,58 @@
       "source_card_id": 149,
       "name_key": "applin",
       "uid": "Applin@SCR 12"
+    },
+    {
+      "name": "Hydrapple ex",
+      "name_zh": "蜜集大蛇 ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 330,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Dipplin",
+      "attacks": [
+        {
+          "name": "Syrup Storm",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_plus:30:per:own_all_energy_grass"
+          ],
+          "desc": "This attack does 30 more damage for each {G} Energy attached to all of your Pokémon.",
+          "name_zh": "糖浆风暴",
+          "desc_zh": "自己所有宝可梦身上每附着 1 个 {G} 能量，此招式就造成 +30 伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Ripening Charge",
+          "name_zh": "成熟充能",
+          "tag": "attach_energy:1:grass:hand:heal:30",
+          "location": "field",
+          "desc": "Once during your turn, you may attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.",
+          "desc_zh": "在你的回合中，你可以使用 1 次，从手牌中把 1 张基本 {G} 能量卡附着于自己的 1 只宝可梦。若以此方式将能量附着于宝可梦，则回复那只宝可梦的 30 点伤害。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SCR",
+        "number": "14"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 150,
+      "name_key": "hydrappleex",
+      "uid": "Hydrapple ex@SCR 14"
     },
     {
       "name": "Scorbunny",
@@ -6831,6 +7037,56 @@
       "uid": "Hoothoot@SCR 114"
     },
     {
+      "name": "Noctowl",
+      "name_zh": "猫头夜鹰",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Hoothoot",
+      "attacks": [
+        {
+          "name": "Speed Wing",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 60,
+          "effects": [],
+          "desc": "",
+          "name_zh": "疾速之翼",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Jewel Seeker",
+          "name_zh": "宝石搜寻者",
+          "tag": "evolve_act:search_trainer:2:gate:tera_in_play",
+          "location": "field",
+          "desc": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to 2 Trainer cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，当你从手牌打出此宝可梦以进化自己的 1 只宝可梦时，若你场上有太晶宝可梦，则你可以使用 1 次，从牌库中检索最多 2 张训练家卡，展示后加入手牌。然后洗牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SCR",
+        "number": "115"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 173,
+      "name_key": "noctowl",
+      "uid": "Noctowl@SCR 115"
+    },
+    {
       "name": "Fan Rotom",
       "name_zh": "旋转洛托姆",
       "supertype": "Pokemon",
@@ -6933,6 +7189,64 @@
       "source_card_id": 175,
       "name_key": "bouffalant",
       "uid": "Bouffalant@SCR 119"
+    },
+    {
+      "name": "Terapagos ex",
+      "name_zh": "太乐巴戈斯 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 230,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Unified Beatdown",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 30,
+          "effects": [
+            "use_not:went_second_first_turn",
+            "dmg_set:30:per:own_bench"
+          ],
+          "desc": "If you go second, you can’t use this attack during your first turn. This attack does 30 damage for each of your Benched Pokémon.",
+          "name_zh": "团结痛击",
+          "desc_zh": "若你是后攻，则你无法在自己的首个回合中使用此招式。自己的后备宝可梦每有 1 只，此招式就造成 30 点伤害。"
+        },
+        {
+          "name": "Crown Opal",
+          "cost": {
+            "grass": 1,
+            "water": 1,
+            "lightning": 1
+          },
+          "damage": 180,
+          "effects": [
+            "shield:prevent_all:from:basic_non_colorless"
+          ],
+          "desc": "During your opponent’s next turn, prevent all damage done to this Pokémon by attacks from Basic non-{C} Pokémon.",
+          "name_zh": "王冠欧泊",
+          "desc_zh": "在对手的下个回合中，防止非 {C} 的基础宝可梦的招式对此宝可梦造成的所有伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SCR",
+        "number": "128"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 176,
+      "name_key": "terapagosex",
+      "uid": "Terapagos ex@SCR 128"
     },
     {
       "name": "Exeggcute",
@@ -7884,7 +8198,7 @@
         {
           "name": "Sudden Shearing",
           "name_zh": "突然剪切",
-          "tag": "mill:1:opp",
+          "tag": "on_bench_act:mill:1:opp",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent’s deck.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以弃置对手牌库上方的 1 张卡。",
@@ -8382,7 +8696,7 @@
         {
           "name": "Snow Sink",
           "name_zh": "雪之沉陷",
-          "tag": "discard_stadium",
+          "tag": "on_bench_act:discard_stadium",
           "location": "field",
           "desc": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Stadium in play.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦放置到后备时，你可以弃置场上 1 张竞技场。",
@@ -10260,6 +10574,56 @@
       "uid": "Umbreon ex@PRE 60"
     },
     {
+      "name": "Hoothoot",
+      "name_zh": "咕咕",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Tackle",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "撞击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Insomnia",
+          "name_zh": "失眠",
+          "tag": "passive:status_immune:sleep",
+          "location": "field",
+          "desc": "This Pokémon can’t be Asleep.",
+          "desc_zh": "此宝可梦无法处于睡眠状态。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "PRE",
+        "number": "77"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 250,
+      "name_key": "hoothoot",
+      "uid": "Hoothoot@PRE 77"
+    },
+    {
       "name": "Regigigas",
       "name_zh": "雷吉奇卡斯",
       "supertype": "Pokemon",
@@ -11435,6 +11799,61 @@
       "uid": "Lillie’s Cutiefly@JTG 66"
     },
     {
+      "name": "Lillie’s Comfey",
+      "name_zh": "莉莉艾的花疗环环",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Lillie)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Inviting Flowers",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:all:basic:name_has:lillies"
+          ],
+          "desc": "You may search your deck for any number of Basic Lillie’s Pokémon and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "邀约之花",
+          "desc_zh": "你可以从牌库中检索任意数量的基础莉莉艾的宝可梦，并将它们放到你的后备。然后洗牌。"
+        },
+        {
+          "name": "Fade Out",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 30,
+          "effects": [
+            "bounce:to_hand:self"
+          ],
+          "desc": "Put this Pokémon and all attached cards into your hand.",
+          "name_zh": "淡出",
+          "desc_zh": "将此宝可梦和其身上附着的所有卡放入你的手牌。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "JTG",
+        "number": "68"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 280,
+      "name_key": "lilliescomfey",
+      "uid": "Lillie’s Comfey@JTG 68"
+    },
+    {
       "name": "Swinub",
       "name_zh": "小山猪",
       "supertype": "Pokemon",
@@ -12175,6 +12594,58 @@
       "source_card_id": 296,
       "name_key": "nsklinklang",
       "uid": "N’s Klinklang@JTG 105"
+    },
+    {
+      "name": "Magearna",
+      "name_zh": "玛机雅娜",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 90,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Spike Draw",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "draw:2"
+          ],
+          "desc": "Draw 2 cards.",
+          "name_zh": "尖刺抽取",
+          "desc_zh": "抽 2 张牌。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Auto Heal",
+          "name_zh": "自动回复",
+          "tag": "passive:heal_on_attach:90",
+          "location": "field",
+          "desc": "As long as this Pokémon is in the Active Spot, whenever you attach an Energy card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon.",
+          "desc_zh": "只要此宝可梦位于战斗区，每当你从手牌中将 1 张能量卡附着于你的 1 只宝可梦时，回复该宝可梦的 90 点伤害。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "107"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 297,
+      "name_key": "magearna",
+      "uid": "Magearna@JTG 107"
     },
     {
       "name": "Hop’s Corviknight",
@@ -19555,6 +20026,57 @@
       "uid": "Team Rocket's Muk@DRI 124"
     },
     {
+      "name": "Team Rocket's Koffing",
+      "name_zh": "火箭队的瓦斯弹",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Team Rocket)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Leaking Gas",
+          "cost": {
+            "darkness": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "泄漏瓦斯",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Smog Signals",
+          "name_zh": "烟雾信号",
+          "tag": "on_damaged:search_bench:2:name_has:koffing",
+          "location": "field",
+          "desc": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), search your deck for up to 2 Pokémon that have “Koffing” in their name and put them onto your Bench. Then, shuffle your deck.",
+          "desc_zh": "若此宝可梦位于战斗区，且被对手的宝可梦的招式造成伤害（即使此宝可梦被击倒），从牌库中检索最多 2 只名称中含有「瓦斯弹」的宝可梦，将它们放置到你的后备。然后洗牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "DRI",
+        "number": "125"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 461,
+      "name_key": "teamrocketskoffing",
+      "uid": "Team Rocket's Koffing@DRI 125"
+    },
+    {
       "name": "Team Rocket's Weezing",
       "name_zh": "火箭队的双弹瓦斯",
       "supertype": "Pokemon",
@@ -22120,6 +22642,61 @@
       "source_card_id": 516,
       "name_key": "munna",
       "uid": "Munna@BLK 35"
+    },
+    {
+      "name": "Musharna",
+      "name_zh": "梦梦蚀",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Munna",
+      "attacks": [
+        {
+          "name": "Dream Calling",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_trainer:all:name_has:fennel"
+          ],
+          "desc": "You may search your deck for any number of Fennel cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+          "name_zh": "唤梦",
+          "desc_zh": "你可以从牌库中检索任意数量的玛珂莫卡，展示它们，并加入手牌。然后洗牌。"
+        },
+        {
+          "name": "Sleep Pulse",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 50,
+          "effects": [
+            "sleep"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Asleep.",
+          "name_zh": "睡眠脉冲",
+          "desc_zh": "对手的战斗宝可梦现在处于睡眠状态。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "BLK",
+        "number": "36"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 517,
+      "name_key": "musharna",
+      "uid": "Musharna@BLK 36"
     },
     {
       "name": "Solosis",
@@ -29509,6 +30086,56 @@
       "uid": "Hariyama@MEG 73"
     },
     {
+      "name": "Lunatone",
+      "name_zh": "月石",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Power Gem",
+          "cost": {
+            "fighting": 2
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "力量宝石",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Lunar Cycle",
+          "name_zh": "月之周期",
+          "tag": "draw:3:if:own_field_name:solrock",
+          "location": "field",
+          "desc": "Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t use more than 1 Lunar Cycle Ability each turn.",
+          "desc_zh": "在你的回合中，若你场上有太阳岩，你可以从手牌弃置 1 张基本 {F} 能量卡，以使用此特性。抽 3 张牌。每回合只能使用 1 次「月之周期」特性。",
+          "cost": "discard_hand_energy:1:fighting"
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "74"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 675,
+      "name_key": "lunatone",
+      "uid": "Lunatone@MEG 74"
+    },
+    {
       "name": "Solrock",
       "name_zh": "太阳岩",
       "supertype": "Pokemon",
@@ -31316,6 +31943,49 @@
       "source_card_id": 718,
       "name_key": "centiskorch",
       "uid": "Centiskorch@MEG 30"
+    },
+    {
+      "name": "Chi-Yu",
+      "name_zh": "古玉鱼",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Scorching Earth",
+          "cost": {
+            "fire": 1
+          },
+          "damage": 40,
+          "effects": [
+            "discard_stadium",
+            "play_lock:stadium:opp:turn:if_prev"
+          ],
+          "desc": "If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn.",
+          "name_zh": "灼热大地",
+          "desc_zh": "若对手的场上有竞技场卡，将其弃置。若这样做，对手在其下个回合中无法从手牌使用任何竞技场卡。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "31"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 719,
+      "name_key": "chiyu",
+      "uid": "Chi-Yu@MEG 31"
     },
     {
       "name": "Mantine",
@@ -34108,6 +34778,61 @@
       "source_card_id": 780,
       "name_key": "vileplume",
       "uid": "Vileplume@PFL 3"
+    },
+    {
+      "name": "Mega Heracross ex",
+      "name_zh": "超级赫拉克罗斯 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 280,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Juggernaut Horn",
+          "cost": {
+            "grass": 2
+          },
+          "damage": 100,
+          "effects": [
+            "dmg_plus_prev_taken"
+          ],
+          "desc": "If this Pokémon was damaged by an attack during your opponent’s last turn, this attack does that much more damage.",
+          "name_zh": "重装之角",
+          "desc_zh": "若此宝可梦在上个对手回合中受到过招式伤害，此招式的伤害增加相同数值。"
+        },
+        {
+          "name": "Mountain Ramming",
+          "cost": {
+            "grass": 3
+          },
+          "damage": 170,
+          "effects": [
+            "mill:2:opp"
+          ],
+          "desc": "Discard the top 2 cards of your opponent’s deck.",
+          "name_zh": "山岳冲撞",
+          "desc_zh": "弃置对手牌库上方的 2 张卡。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "4"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 781,
+      "name_key": "megaheracrossex",
+      "uid": "Mega Heracross ex@PFL 4"
     },
     {
       "name": "Lotad",
@@ -38298,6 +39023,61 @@
       "source_card_id": 876,
       "name_key": "mismagius",
       "uid": "Mismagius@ASC 86"
+    },
+    {
+      "name": "Rotom",
+      "name_zh": "洛托姆",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 60,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Roto Call",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "search_bench:all:name_has:rotom"
+          ],
+          "desc": "You may search your deck for any number of Pokémon that have “Rotom” in their name and put them onto your Bench. Then, shuffle your deck.",
+          "name_zh": "洛托呼叫",
+          "desc_zh": "你可以从牌库中检索任意数量名称中含有「洛托姆」的宝可梦，并放置于你的后备。然后洗牌。"
+        },
+        {
+          "name": "Gadget Show",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 30,
+          "effects": [
+            "dmg_set:30:per:own_field_tools"
+          ],
+          "desc": "This attack does 30 damage for each Pokémon Tool attached to all of your Pokémon.",
+          "name_zh": "小工具秀",
+          "desc_zh": "附着于你所有宝可梦的宝可梦道具每有 1 个，此招式造成 30 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "92"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 877,
+      "name_key": "rotom",
+      "uid": "Rotom@ASC 92"
     },
     {
       "name": "Hop's Phantump",
@@ -42527,6 +43307,63 @@
       "source_card_id": 968,
       "name_key": "dachsbunex",
       "uid": "Dachsbun ex@SCR 67"
+    },
+    {
+      "name": "Scream Tail ex",
+      "name_zh": "吼叫尾 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 190,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Ancient",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Scream",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "play_lock:supporter:opp:turn",
+            "use_only:went_second_first_turn"
+          ],
+          "desc": "You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next turn.",
+          "name_zh": "吼叫",
+          "desc_zh": "只有当你后攻时，且仅在你的第一个回合中，你才能使用此招式。对手在其下个回合中无法从手牌打出任何支援者卡。"
+        },
+        {
+          "name": "Crunch",
+          "cost": {
+            "psychic": 1,
+            "colorless": 2
+          },
+          "damage": 120,
+          "effects": [
+            "discard_energy:1:opp"
+          ],
+          "desc": "Discard an Energy from your opponent’s Active Pokémon.",
+          "name_zh": "咬碎",
+          "desc_zh": "从对手的战斗宝可梦上弃置 1 个能量。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "94"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 969,
+      "name_key": "screamtailex",
+      "uid": "Scream Tail ex@TWM 94"
     },
     {
       "name": "Fezandipiti",
@@ -47190,7 +48027,7 @@
         {
           "name": "Last-Ditch Catch",
           "name_zh": "绝境捕捉",
-          "tag": "search_trainer:1",
+          "tag": "on_bench_act:search_trainer:1",
           "location": "field",
           "desc": "Once during your turn, when you play this Pokémon from your hand onto your Bench, you may use this Ability. Search your deck for a Supporter card, reveal it, and put it into your hand. Then, shuffle your deck. You can’t use more than 1 Ability that has “Last-Ditch” in its name each turn.",
           "desc_zh": "在你的回合中，当你从手牌将此宝可梦打到后备区时，你可以使用 1 次此特性。从牌库中检索 1 张支援者卡，展示并加入手牌。然后洗牌。每回合你只能使用 1 次名称中含有「绝境」的特性。",
@@ -48603,6 +49440,23 @@
       "uid": "Lumiose Galette@POR 78"
     },
     {
+      "name": "Team Rocket’s Hypnotizer",
+      "name_zh": "火箭队的催眠器",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:on_damaged:status:sleep:holder:faction:teamrocket",
+      "desc": "If the Team Rocket’s Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Team Rocket’s Pokémon is Knocked Out), the Attacking Pokémon is now Asleep.",
+      "desc_zh": "若此卡所附着的火箭队的宝可梦位于战斗区，并受到对手宝可梦的招式伤害（即使该火箭队的宝可梦被击倒），则进行攻击的宝可梦现在处于睡眠状态。",
+      "real": {
+        "set": "ASC",
+        "number": "206"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1154,
+      "uid": "Team Rocket’s Hypnotizer@ASC 206"
+    },
+    {
       "name": "Survival Brace",
       "name_zh": "生存支架",
       "supertype": "Trainer",
@@ -49097,6 +49951,23 @@
       "uid": "Salvatore@TEF 160"
     },
     {
+      "name": "Bianca’s Devotion",
+      "name_zh": "白露的奉献",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "heal:all:choose:maxleft:30",
+      "desc": "Heal all damage from 1 of your Pokémon that has 30 HP or less remaining.",
+      "desc_zh": "回复你的 1 只剩余 HP 为 30 或更少的宝可梦的所有伤害。",
+      "real": {
+        "set": "TEF",
+        "number": "142"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1190,
+      "uid": "Bianca’s Devotion@TEF 142"
+    },
+    {
       "name": "Carmine",
       "name_zh": "丹瑜",
       "supertype": "Trainer",
@@ -49474,6 +50345,24 @@
       "uid": "Team Rocket's Ariana@DRI 171"
     },
     {
+      "name": "Team Rocket's Archer",
+      "name_zh": "火箭队的阿波罗",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "shuffle_draw_split:5:3",
+      "desc": "You can use this card only if any of your Team Rocket’s Pokémon were Knocked Out during your opponent’s last turn.\n\nEach player shuffles their hand into their deck. Then, you draw 5 cards, and your opponent draws 3 cards.",
+      "desc_zh": "仅当你的任意火箭队的宝可梦在对手的上个回合中被击倒时，才能使用此卡。\n\n每位玩家将手牌洗回牌库。然后，你抽 5 张牌，对手抽 3 张牌。",
+      "real": {
+        "set": "DRI",
+        "number": "170"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1217,
+      "play_gate": "own_ko_tr_last_turn",
+      "uid": "Team Rocket's Archer@DRI 170"
+    },
+    {
       "name": "Team Rocket's Giovanni",
       "name_zh": "火箭队的坂木",
       "supertype": "Trainer",
@@ -49796,6 +50685,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1238,
       "uid": "Tarragon@POR 85"
+    },
+    {
+      "name": "Rosa's Encouragement",
+      "name_zh": "鸣依的鼓励",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "attach:2:any:discard:target:stage2",
+      "desc": "You can use this card only if you have more Prize cards remaining than your opponent.\n\nAttach up to 2 Basic Energy cards from your discard pile to 1 of your Stage 2 Pokémon.",
+      "desc_zh": "仅当你的剩余奖赏卡多于对手时，才能使用此卡。\n\n从你的弃牌堆中将最多 2 张基本能量卡附着于你的 1 只 2 阶进化宝可梦。",
+      "real": {
+        "set": "POR",
+        "number": "84"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1240,
+      "play_gate": "own_behind_prizes",
+      "uid": "Rosa's Encouragement@POR 84"
     },
     {
       "name": "Jacinthe",
@@ -50204,6 +51111,40 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1264,
       "uid": "Battle Cage@PFL 85"
+    },
+    {
+      "name": "Dizzying Valley",
+      "name_zh": "眩晕山谷",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:keep_confuse",
+      "desc": "Confused Pokémon (both yours and your opponent’s) don’t recover from that Special Condition when they evolve or devolve.",
+      "desc_zh": "处于混乱状态的宝可梦（双方的）在进化或退化时不会从该特殊状态中恢复。",
+      "real": {
+        "set": "PFL",
+        "number": "88"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1265,
+      "uid": "Dizzying Valley@PFL 88"
+    },
+    {
+      "name": "Nighttime Mine",
+      "name_zh": "夜间矿山",
+      "supertype": "Trainer",
+      "kind": "stadium",
+      "tag": "stadium:tera_cost_up:1",
+      "desc": "Attacks used by each Tera Pokémon in play (both yours and your opponent’s) cost {C} more.",
+      "desc_zh": "场上的每只太晶宝可梦（双方的）使用的招式的能量费用增加 {C}。",
+      "real": {
+        "set": "ASC",
+        "number": "197"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1266,
+      "uid": "Nighttime Mine@ASC 197"
     },
     {
       "name": "Lumiose City",

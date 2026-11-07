@@ -112,15 +112,23 @@ class TestBatch83SearchDiscard(unittest.TestCase):
         self.assertEqual(r["tags"], ["search_discard:5"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_drilbur_bench_trigger_refused(self):
-        """上场触发 + Basic {F} Energy 筛选 → 本批如实拒绝"""
+    def test_drilbur_bench_trigger_now_modeled(self):
+        """上场触发 + Basic {F} Energy 筛选 → 第一百批起建模
+
+        决策反转留痕：第八十三批只做了**训练家卡级**的「检索后弃置」
+        （Brilliant Blender），特性侧的上场触发没有钩子 → 当时如实拒绝。
+        第一百批补了 `on_bench_act:` 包装层（与 `evolve_act:` 同构，只在
+        **放到后备那一刻**执行一次），并给 `search_discard` 加了类别/属性筛选。
+
+        ⚠ 包装层不能省：不包就是普通 field 特性 → 每回合白弃 3 张牌库。
+        """
         r = _m("When you play this Pokémon from your hand onto your Bench "
                "during your turn, you may search your deck for up to 3 "
                "Basic {F} Energy cards and discard them. Then, shuffle your "
                "deck.", kind="ability")
-        self.assertFalse([x for x in r["tags"]
-                          if x.startswith("search_discard")])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(
+            r["tags"], ["on_bench_act:search_discard:3:energy:type:fighting"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_into_hand_not_rebranded(self):
         r = _m("Search your deck for up to 5 cards and put them into your "

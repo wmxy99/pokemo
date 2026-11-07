@@ -295,6 +295,15 @@ class FieldPokemon:
     # 「During your next turn, this Pokémon's <招式> attack does N more damage」
     #  → 记在**自己**身上，按招式名匹配
     # 到期口径同 `attack_lock_*`：`until = 施加时 owner 的 turn_counts + 2`。
+    # ---- 受击历史（2026-11-06 第九十九批）----
+    # 「If this Pokémon was damaged by an attack during your opponent's last turn,
+    #  this attack does **that much** more damage.」（Mega Heracross ex）
+    # `dmg_taken_mark` 累积「自本回合开始以来被**招式**打掉的伤害」；
+    # 回合开始时滚到 `dmg_taken_prev` 并清零 —— 因此在**自己回合内**读到的
+    # `dmg_taken_prev` 恰好是「对手上个回合打掉的血量」。
+    # ⚠ 不能用单个字段 + 回合开始清零：清零会把**正要用的值**擦掉。
+    dmg_taken_mark: int = 0
+    dmg_taken_prev: int = 0
     dmg_taken_plus_next_n: int = 0
     dmg_taken_plus_next_until: int = 0
     # 到期口径按**施加者**（= 原攻击方）的 turn_counts；只有该方回合内生效。

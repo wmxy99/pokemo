@@ -170,6 +170,17 @@ ATTACK_TAG_PREFIXES = (
     "cure:",
     "discard_energy:", "switch_self", "gust", "attach", "move_damage:",
     "recover:", "dmg_plus:", "dmg_set:", "dmg_minus:", "dmg_zero",
+    # 第一百零一批（2026-11-06）：按「上回合受到的招式伤害量」加伤
+    # （Mega Heracross ex「Juggernaut Horn」）。无冒号形态，故按整串匹配。
+    "dmg_plus_prev_taken",
+    # 第一百零七/一百零八批（2026-11-06）：招式**静态使用条件**
+    # （Terapagos ex「If you go second, you can't use this attack during your
+    # first turn」/ Scream Tail ex「only if you go second, and only during your
+    # first turn」）。引擎 `_attack_usable` 在合法动作生成时剔除，不进结算。
+    "use_only:", "use_not:",
+    # 第一百零七批（2026-11-06）：招式侧弃场地（Chi-Yu「Scorching Earth」）。
+    # 该 tag 此前只在特性/训练家侧存在。
+    "discard_stadium",
     "ignore_weakness",
     "ignore_resistance",
     "coin:", "coin_each:", "coin_all:", "coin_until_tails:", "shield:", "evolve_from_deck", "mill:",
@@ -287,6 +298,10 @@ ABILITY_TAG_PREFIXES = (
     "heal:",
     # 第十批（2026-10-28）：进化触发 / 被击倒触发
     "evolve_act:", "on_ko:", "ko_prize_plus:",
+    # 第一百批（2026-11-06）：上场触发（Drilbur「Dig Dig Dig」）——
+    # 「When you play this Pokémon from your hand onto your Bench …」。
+    # 不包这一层就是普通 field 特性 = **每回合**都能再发动一次。
+    "on_bench_act:",
     # 特性检索铺场（2026-10-27）
     "search_bench:",
     # 受击反应特性（2026-10-27）：`on_damaged:<kind>:<arg>`
@@ -305,7 +320,11 @@ ABILITY_TAG_PREFIXES = (
     "counters:",
     # 第四十四批（2026-11-03）：特性侧抛币（Dustox「Boisterous Wind」）——
     # `coin:heads:bounce:energy:opp_active:1`，由 `_do_ability` 抛一次后派发
-    "coin:"
+    "coin:",
+    # 第一百一十一批（2026-11-06）：换位并指定属性/例外，换入后施加状态
+    # （Pecharunt ex「Subjugating Chains」）。引擎侧 `_ability_legals` 会按
+    # 后备位置逐条列动作，不写前缀 → 整卡在池外**静默消失**。
+    "switch_choose:",
 )
 
 # 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）

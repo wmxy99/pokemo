@@ -51,6 +51,11 @@ class PlayerState:
     # 只在该玩家**下一个回合**生效（与 FieldPokemon 的 attack/retreat lock 同窗口）。
     item_lock_until: int = 0
     evolution_lock_until: int = 0
+    # 第一百零七批（2026-11-06）：手牌禁打的另外三类
+    # （Chi-Yu 封场地 / Scream Tail ex 封支援者 / Genesect 封 ACE SPEC）。
+    supporter_lock_until: int = 0
+    stadium_lock_until: int = 0
+    acespec_lock_until: int = 0
     # ---- 回合历史（2026-10-28 第七批）----
     # 「during your last turn」类条件：每回合开始把「本回合」滚到「上回合」
     turn_attacks: list = field(default_factory=list)      # 本回合用过的招式名

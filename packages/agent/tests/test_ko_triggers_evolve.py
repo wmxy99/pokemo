@@ -81,14 +81,22 @@ class TestEvolveChainParse(unittest.TestCase):
         self.assertEqual(_tags(SILCOON)["tags"],
                          ["evolve_act:search_bench:1:name:silcoon+cascoon"])
 
-    def test_condition_keeps_card_unmodeled(self):
-        """Noctowl「if you have any Tera Pokémon in play」→ 条件层未建模"""
+    def test_condition_modeled_as_gate(self):
+        """Noctowl 的 Tera 前置条件 → 第一百零二批起 `:gate:tera_in_play`
+
+        决策反转留痕：旧口径说「引擎没有条件层」。现在 `evolve_act:` 接受
+        `:gate:<cond>`（`_eval_condition` 可精确求值），不满足时整条不执行。
+
+        ⚠ 认不出的条件仍必须整卡拒收 —— 无条件放通等于「有没有 Tera 都能检索」。
+        """
         r = _tags("Once during your turn, when you play this Pokémon from your "
                   "hand to evolve 1 of your Pokémon, if you have any Tera "
                   "Pokémon in play, you may search your deck for up to 2 "
                   "Trainer cards, reveal them, and put them into your hand. "
                   "Then, shuffle your deck.")
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["evolve_act:search_trainer:2:gate:tera_in_play"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_unknown_followup_rejected(self):
         """回满后接「each of your Pokémon」——对象不配套 → 整卡保持未建模

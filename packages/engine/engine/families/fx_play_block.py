@@ -37,9 +37,12 @@ def _parse_tag(tag: str) -> dict:
     if len(parts) < 4 or parts[0] != "fx" or parts[1] != "play_block":
         raise ValueError(f"非法 play_block tag：{tag}")
     what, when = parts[2], parts[3]
-    if when not in ("active", "always"):
+    # `tool` = 「只要持有者身上贴着道具就生效」（第一百零七批，Genesect
+    # 「ACE Nullifier」：「If this Pokémon has a Pokémon Tool attached, …」）
+    if when not in ("active", "always", "tool"):
         raise ValueError(f"play_block 生效时机非法：{tag}")
-    info = {"what": what, "active_only": when == "active", "except": None}
+    info = {"what": what, "active_only": when == "active",
+            "tool_only": when == "tool", "except": None}
     i = 4
     while i < len(parts):
         if parts[i] == "except":
@@ -49,13 +52,20 @@ def _parse_tag(tag: str) -> dict:
             i += 2
         else:
             raise ValueError(f"未识别的 play_block 限定：{tag}")
-    if what not in _KINDS and what != "ability_pokemon":
+    if what not in _KINDS and what not in ("ability_pokemon", "acespec"):
         raise ValueError(f"未识别的 play_block 对象：{tag}")
     return info
 
 
 def _card_matches(info: dict, card) -> bool:
     what = info["what"]
+    if what == "acespec":
+        # ⚠ 当前数据集**没有** ACE SPEC 卡（见 battle._is_acespec 注释），因此
+        # 这条封锁现在不会拦下任何东西 —— 这是**有前提的等价**，由
+        # `test_batch107_engine` 的数据集守卫钉住（出现 ACE SPEC 即失败）。
+        tdef = getattr(card, "tdef", None)
+        return "acespec" in str(getattr(tdef, "subtype", "") or "").lower(
+        ).replace(" ", "")
     if what in _KINDS:
         kind = str(getattr(getattr(card, "tdef", None), "kind", "") or "")
         return kind in _KINDS[what]
@@ -89,6 +99,8 @@ def blocked_play(battle, p, card) -> bool:
                 continue
             info = _parse_tag(tag)
             if info["active_only"] and holder is not o.active:
+                continue
+            if info.get("tool_only") and not holder.tool:
                 continue
             if _card_matches(info, card):
                 battle._log("blocked_play", {"player": idx,

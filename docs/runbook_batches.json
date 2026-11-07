@@ -356,10 +356,10 @@
    "id": 99,
    "phase": "P3",
    "theme": "检索去向 / 数量由计数定",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 4,
+   "actual_refused": 2,
+   "note": "**落地 4 张**：Drilbur（`on_bench_act:search_discard:3:energy:type:fighting` —— 新增**上场触发**包装层，与 `evolve_act:` 同构；不包就是普通 field 特性，会变成「每回合白弃 3 张牌库」）、Lillie's Comfey（`search_bench:all:basic:name_has:lillies`）、Musharna（`search_trainer:all:name_has:fennel`）、Rotom（`search_bench:all:name_has:rotom`）—— 后三张补齐 `any number of` 的**具名**形态与 `:name_has:` 子串筛选。**如实拒收 2 张**：Palafin（「检索 Palafin ex 并**替换自身**，保留附着卡/伤害/状态」需场上实例替换，引擎没有该机制）、Grumpig（「检视牌库顶 4 张，把其中任意张 Basic Energy **自由分配**附着」需分配界面，`recon:` 的 `dest:attach` 只支持单目标）。",
    "cards": [
     {
      "name": "Drilbur",
@@ -432,10 +432,10 @@
    "id": 101,
    "phase": "P3",
    "theme": "受击历史 `on_damaged`",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Team Rocket's Koffing（`on_damaged:search_bench:2:name_has:koffing`）、Mega Heracross ex（`dmg_plus_prev_taken`）、Team Rocket's Hypnotizer（`tool:on_damaged:status:sleep:holder:faction:teamrocket`）。新增三件：`FieldPokemon.dmg_taken_prev/mark`（回合开始把上回合累计量滚过来，**先快照再清零**）、`on_damaged` 的 `search_bench` kind、道具受击的 `status` kind + 阵营持有者限定。",
    "cards": [
     {
      "name": "Team Rocket's Koffing",
@@ -461,10 +461,10 @@
    "id": 102,
    "phase": "P3",
    "theme": "特殊进化驱动 / 进化触发特性",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Noctowl（`evolve_act:search_trainer:2:gate:tera_in_play` —— 进化触发特性新增**前置门** `:gate:`，条件不满足整条不执行）。**如实拒收 1 张**：Archeops（「devolve 1 of your opponent's evolved Pokémon」需退化机制，引擎只有正向进化 `evolve_to`，反向要重建物种与附着关系）。",
    "cards": [
     {
      "name": "Archeops",
@@ -484,10 +484,10 @@
    "id": 103,
    "phase": "P3",
    "theme": "能量代价 / 提供规则",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 3,
+   "note": "**整批受阻（0 张）**：三张都要「**可选**能量代价」这一交互层 —— Mega Charizard X ex（弃**任意数量** {R} 能量、按弃掉张数缩放）、Mega Eelektross ex（可选弃 2 {L} → 麻痹）、Dialga（可选把全部能量洗回牌库 → +80）。用确定性默认冒充会实质改变对局（「全弃」把能量打空、「不弃」白丢效果），属静默错映射 → 全部如实拒收。",
    "cards": [
     {
      "name": "Mega Charizard X ex",
@@ -513,10 +513,10 @@
    "id": 104,
    "phase": "P3",
    "theme": "回复范围 / 全量回复",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Hydrapple ex（`attach_energy:1:grass:hand:target:any:heal:30` —— 附能后回复**同一目标**，`:heal:` 挂在 attach tag 上保住了「that Pokémon」的指代）、Magearna（`passive:heal_on_attach:90` —— 手牌附能时的被动钩子，持有者须在战斗位）、Bianca's Devotion（`heal:all:choose:maxleft:30` —— `heal:all` 新增 `:maxleft:` 目标上限，超出时引擎回 0 而不是照常回满）。",
    "cards": [
     {
      "name": "Hydrapple ex",
@@ -565,10 +565,10 @@
    "id": 106,
    "phase": "P3",
    "theme": "场地形态（S3 扩展）",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Nighttime Mine（`stadium:tera_cost_up:1` —— 场地抬高**双方** Tera 宝可梦招式 `{C}` 费用，接进 `families.attack_cost`）、Dizzying Valley（`stadium:keep_confuse` —— 进化时按场地**保留混乱**；`evolve_to` 会清空全部状态，故先记再补）。",
    "cards": [
     {
      "name": "Dizzying Valley",
@@ -588,10 +588,10 @@
    "id": 107,
    "phase": "P3",
    "theme": "对手手牌禁打层",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Genesect（`fx:play_block:acespec:tool` —— 禁打层新增 ACE SPEC 类别 + 「持有者贴道具」生效时机）、Chi-Yu（`discard_stadium` + `play_lock:stadium:opp:turn:if_prev` —— 招式侧新增弃场地，且**没弃到就不封锁**）、Scream Tail ex（`play_lock:supporter:opp:turn` + `use_only:went_second_first_turn`）。新增 3 个手牌禁打字段（supporter/stadium/acespec）与招式**静态使用条件** `use_only:`/`use_not:`。⚠ ACE SPEC 当前数据集一张都没有 → 该锁定恒不生效，这是**有前提的等价**，由 `test_batch107_engine` 的数据集守卫钉住。",
    "cards": [
     {
      "name": "Genesect",
@@ -617,10 +617,10 @@
    "id": 108,
    "phase": "P3",
    "theme": "首回合 / 招式静态条件",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Terapagos ex（`use_not:went_second_first_turn` + 既有 `shield:` / `passive:bench_immune_dmg`）、Scream Tail ex（同上 `use_only:`，跨批与 107 共用）。",
    "cards": [
     {
      "name": "Terapagos ex",
@@ -640,10 +640,10 @@
    "id": 109,
    "phase": "P3",
    "theme": "打出前置 gate",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "**Anthea & Concordia 警示**：gate「6 张具名宝可梦在场」未建模；`_split_play_gate` 只剥认识的 gate，不认识的会留在 text → 认领前必须检查 `can use this card only if` 是否残留，残留即整卡拒收（否则 = 无条件 +3 奖赏的静默 buff）。 **（Anthea & Concordia 已改列结构性边界 §7，本批不再计入槽位）**",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Team Rocket's Archer（`shuffle_draw_split:5:3` + 新门槛 `own_ko_tr_last_turn` —— 只统计 **Team Rocket's** 宝可梦被击倒，不能并进 `own_ko_last_turn`，否则门槛被放宽）、Rosa's Encouragement（`attach:2:any:discard:target:stage2` + 既有 `own_behind_prizes` 门槛；训练家侧此前**没有** `attach:` 派发分支）。",
    "cards": [
     {
      "name": "Team Rocket's Archer",
@@ -692,10 +692,10 @@
    "id": 111,
    "phase": "P3",
    "theme": "状态 / 免疫类 / 特性代价",
-   "status": "todo",
-   "actual_pool": null,
-   "actual_refused": null,
-   "note": "",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 1,
+   "note": "**落地 3 张**：Pecharunt ex（`switch_choose:darkness:except:pecharunt:then:poison` —— 带属性/例外筛选的换位 + 换入后状态，目标由 `action[\"bench\"]` 指定）、Hoothoot（`passive:status_immune:sleep` —— 状态免疫按**具体状态**判定，`status=None` 时只有 `all` 形态算数）、Lunatone（`draw:3:if:own_field_name:solrock` + 代价 `discard_hand_energy:1:fighting` —— 代价句从「只认 must」扩到 `may`，并新增具名在场条件）。**如实拒收 1 张**：Mismagius ex（「对手战斗位**撤退到后备**时，其新战斗位混乱」需对手撤退事件钩子）。",
    "cards": [
     {
      "name": "Pecharunt ex",

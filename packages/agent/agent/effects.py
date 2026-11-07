@@ -525,7 +525,30 @@ def _detect_on_damaged(text: str, kind: str = "ability") -> list:
                                 "counters": int(m.group(1))}))
                 continue
             return []
+        if kind == "attack":
+            # 「If this Pokémon was damaged by an attack during your opponent's
+            #  last turn, this attack does **that much** more damage.」
+            # （第一百零一批，Mega Heracross ex「Juggernaut Horn」）
+            # 数值 = 攻击方上回合受到的招式伤害量，由引擎 `dmg_plus_prev_taken`
+            # 现算（回合开始时把 mark 滚到 prev）。
+            if re.search(r"this attack does that much more damage", low):
+                out.append(act("rule", None, "self",
+                               {"dmg_plus_prev_taken": True}))
+                continue
+            return []
         if kind != "ability":
+            return []
+        # 「search your deck for up to N Pokémon that have "X" in their name and
+        #  put them onto your Bench」（第一百零一批，Team Rocket's Koffing）
+        _m = re.search(r"search your deck for up to (\d+) pok[eé]mon that have "
+                       r"[“\"']?([a-z' ]+?)[”\"']? in their name", low)
+        if _m:
+            key = _tag_name_key(_m.group(2))
+            if key:
+                out.append(act("on_damaged", None, "active_opponent",
+                               {"kind": "search_bench", "n": int(_m.group(1)),
+                                "name_has": key}))
+                continue
             return []
         # ⚠ 顺序：`counter_per` 必须先于普通 counter —— 后者会匹配到前半句
         #   「put 2 damage counters on the Attacking Pokémon」，再把 for each 当
@@ -669,7 +692,13 @@ _PLAY_COST_ENERGY = re.compile(
 # ⚠ 必须**先剥句**再解析：留在文本里会被通用 discard 分支读成一个动作，
 # 挤掉主效果 tag（特性只认一个 tag），且执行顺序会跑到效果之后。
 _ABILITY_COST_RE = re.compile(
-    r"^you must (?P<clause>.+?) in order to use this ability[.]\s*", re.I)
+    # `must` 与 `may` 都是**代价**：「you may discard … in order to use this
+    # Ability」里的 may 只是「可以选择不发动」，不是「可以免费发动」。
+    # 引擎侧只在**发动时**扣代价、付不出就不列动作，语义一致。
+    # （第一百一十一批，Lunatone「Lunar Cycle」实测：只认 must 会把代价句留在
+    #  正文里，被通用 discard 分支读成一个效果 → 免费发动 + 挤掉主效果。）
+    r"^you (?:must|may) (?P<clause>.+?) in order to use this ability[.]\s*",
+    re.I)
 _ABILITY_COST_ENERGY_SELF = re.compile(
     r"^discard (?:a|an) basic \{([a-z])\} energy(?: card)? from this pok[eé]mon$",
     re.I)
@@ -1195,6 +1224,11 @@ _PLAY_GATE_PATTERNS = (    # 「any of your Pokémon were Knocked Out during you
     (re.compile(r"^you can use this card only if any of your pok[eé]mon were "
                 r"knocked out during your opponent'?s last turn[.]\s*", re.I),
      "own_ko_last_turn"),
+    # 第一百零九批（TR Archer）：只算 **Team Rocket's** 宝可梦被击倒。
+    # ⚠ 不能退化成上面那条「任意己方宝可梦」——门槛被放宽 = 静默加强。
+    (re.compile(r"^you can use this card only if any of your team rocket'?s "
+                r"pok[eé]mon were knocked out during your opponent'?s last "
+                r"turn[.]\s*", re.I), "own_ko_tr_last_turn"),
     # 「you have any Tera Pokémon in play」（含后备 —— 与 `own_bench_tera` 不同）
     (re.compile(r"^you can use this card only if you have any tera pok[eé]mon "
                 r"in play[.]\s*", re.I), "tera_in_play"),
@@ -2128,6 +2162,21 @@ _ITEM_LOCK_RE = re.compile(
 _EVOLUTION_LOCK_RE = re.compile(
     r"during your opponent'?s next turn,?\s*(?:they|your opponent) "
     r"can'?t play any pok[eé]mon from their hand to evolve", re.I)
+# 第一百零七批（2026-11-06）：支援者 / 场地两类（Scream Tail ex / Chi-Yu）。
+# ⚠ 与 `fx:play_block:` 的**常驻**形态是两回事：这里封的是「下个回合」。
+# ⚠ 语序**两种**都要认：前置（during your opponent's next turn, …）与后置
+#   （… from their hand **during their next turn**）。Scream Tail ex / Chi-Yu
+#   都是后置写法，只认前置会静默漏锁。
+_SUPPORTER_LOCK_RE = re.compile(
+    r"during your opponent'?s next turn,?\s*(?:they|your opponent) "
+    r"can'?t play any supporter cards? from their hand|"
+    r"can'?t play any supporter cards? from their hand during their next turn",
+    re.I)
+_STADIUM_LOCK_RE = re.compile(
+    r"during your opponent'?s next turn,?\s*(?:they|your opponent) "
+    r"can'?t play any stadium cards? from their hand|"
+    r"can'?t play any stadium cards? from their hand during their next turn",
+    re.I)
 # 已识别为「伤害增减」但引擎**没有**静态修正层的写法（2026-10-27）：
 # 这些句子不含 weakness/resistance，若只靠 `_EN_MODIFY_RE` 会漏登记，
 # 导致「锁已建模、减伤却没建模」的卡被静默收进池。命中即如实登记。
@@ -2453,6 +2502,20 @@ def _detect_lock_actions(text: str, kind: str,
                        {"play": "evolution", "until": "turn"}))
         spans.append(m.span())
 
+    for m in _SUPPORTER_LOCK_RE.finditer(t):
+        out.append(act("play_lock", None, "active_opponent",
+                       {"play": "supporter", "until": "turn"}))
+        spans.append(m.span())
+
+    for m in _STADIUM_LOCK_RE.finditer(t):
+        _ex = {"play": "stadium", "until": "turn"}
+        # 「…, discard it. **If you do,** your opponent can't play any Stadium …」
+        # （Chi-Yu）—— 没弃到场地就没有锁。用 `:if_prev` 串起前一个动作。
+        if re.search(r"if you do,?\s*$", t[:m.start()], re.I):
+            _ex["if_prev"] = True
+        out.append(act("play_lock", None, "active_opponent", _ex))
+        spans.append(m.span())
+
     # 「Choose 1 of opponent's Active Pokémon's attacks … that Pokémon can't use
     # that attack」→ scope=opp_name（对手战斗位**指定**招式，招式名运行时选择）。
     # 必须放在最后：它认领整段，避免被上面的 named/all 分支漏判或重复登记。
@@ -2534,6 +2597,11 @@ _CONDITION_PHRASES = (
     (r"if you have any benched", "own_has_bench"),
     (r"if you have more prize cards? remaining", "own_behind_prizes"),
     (r"if you have all (?:of )?your prize cards", "own_prizes_full"),
+    # 「if you have any Tera Pokémon in play」（第一百零二批，Noctowl「Jewel
+    # Seeker」）—— 含后备。与 `own_bench_tera`（只看后备）不同。
+    (r"if you have any tera pok[eé]mon in play", "tera_in_play"),
+    # 「if you have <具名> in play」（第一百一十一批，Lunatone「Lunar Cycle」）
+    # —— 带参，由 `_condition_from_text` 的专用分支处理，不在此表。
 )
 
 def _discard_target_of(text: str, m) -> str:
@@ -2696,6 +2764,46 @@ def _multi_search_alts(text: str) -> Optional[list]:
         kinds.append(found)
     # 至少两类才算「逐类别各取」；单类别交给通用检索路径（避免改变既有口径）
     return kinds if len(kinds) >= 2 else None
+
+
+def _search_any_named(src: str):
+    """「any number of <具名> Pokémon/cards」→ dict | None（第一百/一百零一批）
+
+    三种写法都要认：
+      · ``any number of Basic Lillie's Pokémon``（Lillie's Comfey）
+      · ``any number of Pokémon that have "Rotom" in their name``（Rotom）
+      · ``any number of Fennel cards``（Musharna）
+
+    ⚠ 为什么「任意张」这次**不需要交互层**（与 `any number of` 弃牌类不同）：
+    备选集合被**卡名**封死，而且这是**检索**——拿到手/铺上场都是纯增益，
+    不存在「取 0 更好」的场合（与 Precious Trolley 的 `search_bench:all` 同口径）。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(src or "")).strip()
+    m = re.search(r"any number of (?:basic )?pok[eé]mon that have "
+                  r"[\u201c\u201d\"']?(?P<a>[a-z' ]+?)[\u201c\u201d\"']? "
+                  r"in their name", t, re.I)
+    if m:
+        key = _tag_name_key(m.group("a"))
+        return ({"name_has": key, "basic": False, "kind": "pokemon"}
+                if key else None)
+    m = re.search(r"any number of (?P<b>basic )?(?P<c>[a-z][a-z' ]+?) "
+                  r"(?P<k>pok[eé]mon|cards)\b", t, re.I)
+    if m:
+        nm = m.group("c").strip()
+        # 「any number of **Basic Energy** cards」这类是**类别**而不是卡名：
+        # 当成 `name_has:energy` 会变成「检索任意能量入手」，与原句语义不同
+        # （实测把 Energy Search Pro 的「不同属性各 1 张」错落成 name_has）。
+        if nm.lower() in ("pokemon", "pok\u00e9mon", "energy", "basic energy",
+                          "trainer", "item", "tool", "stadium", "supporter",
+                          "card", "cards") or "energy" in nm.lower():
+            return None
+        key = _tag_name_key(nm)
+        if not key:
+            return None
+        return {"name_has": key, "basic": bool(m.group("b")),
+                "kind": ("pokemon" if m.group("k").lower().startswith("pok")
+                         else "trainer")}
+    return None
 
 
 def _search_destination(text: str, pos: int) -> str:
@@ -3248,6 +3356,50 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _sb,
                 "source_text": str(text or ""), "citations": []}
+    # 状态免疫（第一百一十一批，Hoothoot「Insomnia」）：「This Pokémon can't be
+    # Asleep.」—— 常驻被动。必须在这里认领：通用状态分支看到 "asleep" 会先判
+    # 「非主动施加」并登记未建模，整卡被拒。
+    _si = _detect_status_immune(t_raw, kind)
+    if _si:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _si,
+                "source_text": str(text or ""), "citations": []}
+    # 带筛选的换位 + 换入后状态（第一百一十一批，Pecharunt ex）。
+    # 同样必须前置：通用分支会把 "switch 1 of your Benched …" 认成 `switch_self`
+    # （语义是「**持有者自己**从后备换上来」），并把 "is now Poisoned" 当非主动
+    # 施加拒收 → 两个错叠在一起。
+    _swc = _detect_switch_choose(t_raw, kind)
+    if _swc:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _swc,
+                "source_text": str(text or ""), "citations": []}
+    # 附能 + 回复**同一目标**（第一百零四批，Hydrapple ex「Ripening Charge」）。
+    _ah = _detect_attach_heal(t_raw, kind)
+    if _ah:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _ah,
+                "source_text": str(text or ""), "citations": []}
+    # 附能触发回复（第一百零四批，Magearna「Auto Heal」）。
+    _ho = _detect_heal_on_attach(t_raw, kind)
+    if _ho:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _ho,
+                "source_text": str(text or ""), "citations": []}
+    # 弃场地 + 封场地（第一百零七批，Chi-Yu「Scorching Earth」）。
+    # 必须整段认领：两条动作要**按卡面顺序**执行，且「封锁」依赖前一步真的
+    # 弃掉了场地（`:if_prev`）。零散追加会排错序（实测把锁排到了弃置之前）。
+    _ss = _detect_stadium_smash(t_raw, kind)
+    if _ss:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _ss,
+                "source_text": str(text or ""), "citations": []}
+    # 特性代价 + 具名在场条件 + 抽牌（第一百一十一批，Lunatone「Lunar Cycle」）。
+    _sol = _detect_solrock_draw(t_raw, kind)
+    if _sol:
+        return {"kind": kind, "name": name, "trigger": "static",
+                "conditions": conditions, "actions": _sol[0],
+                "ability_cost": _sol[1],
+                "source_text": str(text or ""), "citations": []}
     # 被击倒触发 / 进化触发 +「in this way」后续（2026-10-28 第十批）：
     # 这类文本含**触发从句 + 条件后续**，通用分支会把后续当成无条件动作 →
     # 必须在最前面整段认领（认不出则不产出，整卡如实未建模）。
@@ -3661,6 +3813,17 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                 actions.append(act("heal", None, "self",
                                    {"heal_scope": "mega", "heal_all": True,
                                     "to_hand": True}))
+                _handled = True
+            _ml = re.search(r"heal all damage from 1 of your pok[eé]mon that has "
+                            r"(\d+) hp or less remaining", t, re.I)
+            if not _handled and _ml:
+                # 「Heal all damage from 1 of your Pokémon that has 30 HP or less
+                #  remaining.」（第一百零四批，Bianca's Devotion）
+                # 范围 = 己方 1 只，但**带剩余 HP 上限**：超出上限时该卡本就不
+                # 该能打，引擎侧回 0（`_apply_heal` 的 `:maxleft:`）。
+                actions.append(act("heal", None, "self",
+                                   {"heal_scope": "choose", "heal_all": True,
+                                    "maxleft": int(_ml.group(1))}))
                 _handled = True
             if not _handled:
                 _scope, _pt = _heal_scope_of(t[_ma.start():])
@@ -4121,8 +4284,23 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 「… to **1 of your Stage 2 Pokémon**」（Rosa's Encouragement）——目标有限定，
     # 而通用 `attach:` 只按「任意己方位置」列目标 ⇒ 落成 `attach:2:discard` 就是
     # 静默加强（卡面只许附给二阶）。目标限定层未建模，如实整句登记。
-    if kind in ("item", "supporter", "stadium", "tool") \
-            and _ATTACH_STAGE_LIMIT.match(_norm_prose(t)):
+    _asl = (kind in ("item", "supporter", "stadium", "tool")
+            and _ATTACH_STAGE_LIMIT.match(_norm_prose(t)))
+    if _asl:
+        # 「attach up to 2 Basic Energy cards from your discard pile to 1 of your
+        #  **Stage 2** Pokémon.」（第一百零九批，Rosa's Encouragement）
+        # 引擎 `_attach_target_fp` 新增 `target:stage<N>`（候选限该阶段）。
+        _mst = re.search(r"to 1 of your stage (\d) pok[eé]mon",
+                         _norm_prose(t), re.I)
+        _mn = re.search(r"attach up to (\d+) basic energy cards?", t, re.I)
+        _stage = int(_mst.group(1)) if _mst else None
+        if _stage and _stage == 2 and _mn:
+            return {"kind": kind, "name": name, "trigger": "on_use",
+                    "conditions": conditions,
+                    "actions": [act("attach", int(_mn.group(1)), "self",
+                                    {"energy_type": "any", "zone": "discard",
+                                     "target_scope": f"stage{_stage}"})],
+                    "source_text": str(text or ""), "citations": []}
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions,
                 "actions": [act("rule", None, "any", {
@@ -4378,13 +4556,30 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _UNMODELED_DAMAGE_MOD_RE.search(modify_norm):
         actions.append(act("rule", None, "any",
                            {"note": "静态伤害增减（需引擎静态修正层，B4）"}))
-    if _STATIC_PLAY_LOCK_RE.search(modify_norm):
+    # 第一百零六批起：item / evolution / supporter / stadium 四类「下个回合禁打」
+    # 都已建模（`play_lock:<kind>:opp:turn`），只剩 ACE SPEC / 「有特性的宝可梦」
+    # 这类没有筛选层的形态仍须如实登记 —— 否则「锁已建模」会被这条兜底再登记成
+    # 未建模，整卡白拒。
+    _lock_modeled = bool(
+        _ITEM_LOCK_RE.search(modify_norm)
+        or _EVOLUTION_LOCK_RE.search(modify_norm)
+        or _SUPPORTER_LOCK_RE.search(modify_norm)
+        or _STADIUM_LOCK_RE.search(modify_norm))
+    if _STATIC_PLAY_LOCK_RE.search(modify_norm) and not _lock_modeled:
         actions.append(act("rule", None, "any",
-                           {"note": "手牌禁打（Supporter/Stadium/ACE SPEC/"
-                                    "特性宝可梦等，需对手手牌禁用层，B5）"}))
-    if _FIRST_TURN_ATTACK_RE.search(modify_norm):
-        actions.append(act("rule", None, "any",
-                           {"note": "首回合招式使用限制（需招式静态条件层，B5）"}))
+                           {"note": "手牌禁打（ACE SPEC/特性宝可梦等，需对手手牌"
+                                    "禁用层，B5）"}))
+    # 首回合招式使用限制（Terapagos ex / Scream Tail ex）：第一百零七批起由
+    # `use_not:` / `use_only:` 承载（引擎在合法动作生成时剔除）。
+    _ftm = _FIRST_TURN_ATTACK_RE.search(modify_norm)
+    if _ftm:
+        if re.search(r"can use this attack only if you go second", modify_norm,
+                     re.I):
+            actions.append(act("rule", None, "any",
+                               {"use_only": "went_second_first_turn"}))
+        else:
+            actions.append(act("rule", None, "any",
+                               {"use_not": "went_second_first_turn"}))
     # 「You can use this card only if …」= 打出的**前置条件**（Morty's Conviction
     # 的弃 1 手牌 / Unfair Stamp 的上回合被击倒）。引擎没有「打牌前置条件」层 →
     # 放通等于白送（代价/门槛静默消失），必须如实登记。
@@ -4489,6 +4684,11 @@ def _early_trigger_of(lower: str) -> Optional[str]:
     if re.search(r"when you play .{0,40}to evolve", lower) or \
             re.search(r"when you evolve", lower):
         return "on_evolve"
+    if re.search(r"when you play this pok[eé]mon from your hand onto your bench",
+                 lower):
+        # 「上场触发」（第一百批）：与进化触发**不同事件**，不能复用
+        # `evolve_act:`（那会在进化时执行，而本卡是「从手牌放到后备」）。
+        return "on_bench"
     return None
 
 
@@ -5630,6 +5830,19 @@ def _condition_from_text(text: str) -> Optional[str]:
                   r"damage counters on them", low)
     if m:
         return f"own_bench_named_has_damage:{_k(m.group(1))}"
+    # 「if you have a Stadium in play」是**类别**条件，不是卡名（Dhelmise 实测：
+    # 泛化成 `own_field_name:astadium` 会让引擎报「无此条件」）。
+    if re.search(r"if you have a stadium in play", low):
+        return "stadium_in_play"
+    m = re.search(r"if you have (?P<mon>[a-z][a-z' .-]{2,24}?) in play", low)
+    if m:
+        # 「if you have Solrock in play」—— 带参条件 `own_field_name:<key>`。
+        # ⚠ 冠词开头的（a/an/any）一定是**类别**而非卡名，交出给通用表处理。
+        _nm = m.group("mon").strip()
+        if not re.match(r"^(?:a|an|any)\b", _nm):
+            key = _tag_name_key(_nm)
+            if key:
+                return f"own_field_name:{key}"
     for pat, cond in _CONDITION_PHRASES:
         if re.search(pat, low):
             return cond
@@ -5951,6 +6164,19 @@ def _detect_stadium(text: str) -> list:
     t = _norm_apostrophe(text)
     low = t.lower()
 
+    # ---- 第一百零六批（2026-11-06）：招式费用 / 进化时状态保留 ----
+    # Nighttime Mine：「Attacks used by each Tera Pokémon in play (both yours and
+    # your opponent's) cost {C} more.」—— 只看攻击方是不是 Tera、不看归属。
+    if re.search(r"attacks used by each tera pok[eé]mon in play \(both yours and "
+                 r"your opponent'?s\) cost \{c\} more", low):
+        return [act("stadium", 1, "any", {"kind": "tera_cost_up"})]
+    # Dizzying Valley：「Confused Pokémon (both yours and your opponent's) don't
+    # recover from that Special Condition when they evolve or devolve.」
+    if re.search(r"confused pok[eé]mon \(both yours and your opponent'?s\) "
+                 r"don'?t recover from that special condition when they evolve "
+                 r"or devolve", low):
+        return [act("stadium", None, "any", {"kind": "keep_confuse"})]
+
     # ---- 第九批（2026-10-28）：静态规则改写类场地 ----
     # 只认**范围唯一**的整句；阵营限定（Steven's / N's / Hop's）由卡名前缀精确判定，
     # 引擎侧与 `_name_key` 同口径（"N's Pokémon" → 前缀 "ns"）。
@@ -6209,14 +6435,27 @@ def _detect_tool_hook(text: str) -> list:
     # 卡名/阵营限定（`the Team Rocket's Pokémon` / `the Hop's Pokémon`）需要按卡名
     # 归属判定，引擎没有这套元数据 → 一律放弃。
     holder_color = None
+    holder_faction = None
     mh = re.search(r"the\s+\{([a-z])\}\s*pok[eé]mon this card is attached to", low)
     if mh:
         holder_color = _EN_SYMBOL_COLOR.get(mh.group(1).upper())
         if not holder_color:
             return []
-    elif re.search(r"the\s+(?!retreat cost)(?!cost)[a-z][a-z' ]{2,24}"
-                   r"pok[eé]mon this card is attached to", low):
-        return []
+    else:
+        # 阵营限定（`the Team Rocket's Pokémon this card is attached to`）：
+        # 引擎 `_tool_meta` 早就有 `holder:faction:<key>`（`_qual_ok` 按卡名
+        # 归一化前缀判定），只是解析侧一直整条拒收 → 第一百零一批起放行。
+        _mf = re.search(r"the\s+(?!retreat cost)(?!cost)(?P<fac>[a-z][a-z' ]{2,24}?)"
+                        r"\s*pok[eé]mon this card is attached to", low)
+        if _mf:
+            _fk = _tag_name_key(_mf.group("fac"))
+            # "team rocket's" → "teamrockets" → 去掉所有格尾 s
+            holder_faction = _fk[:-1] if _fk.endswith("s") else _fk
+        elif re.search(r"the\s+(?!retreat cost)(?!cost)[a-z][a-z' ]{2,24}"
+                       r"pok[eé]mon this card is attached to", low):
+            return []
+        else:
+            holder_faction = None
 
     # B1 满 HP 免击倒（Survival Brace）
     m = re.search(r"has full hp and would be knocked out", low)
@@ -6242,6 +6481,17 @@ def _detect_tool_hook(text: str) -> list:
     #   所以是「攻击方 → 攻击方自己的后备」，不是跨方移动。
     if re.search(r"move an energy from the attacking pok[eé]mon", low):
         return [act("tool", 1, "self", {"kind": "on_damaged_move_energy"})]
+
+    # B4 受伤时让**攻击方**陷入状态（第一百零一批，Team Rocket's Hypnotizer）
+    _ms = re.search(r"the attacking pok[eé]mon is now "
+                    r"(asleep|poisoned|burned|confused|paralyzed)", low)
+    if _ms:
+        _st = _STATUS_WORD_TO_TAG.get(_ms.group(1))
+        if not _st:
+            return []
+        return [act("tool", None, "self",
+                    {"kind": "on_damaged_status", "status": _st,
+                     "holder_faction": holder_faction})]
 
     # B3 受伤时把伤害指示物放到攻击方（Deluxe Bomb）
     m = re.search(r"(?:put|place) (\d+) damage counters? on the attacking pok[eé]mon",
@@ -7206,6 +7456,178 @@ _SELF_BUFF_RE = re.compile(
     r"pok[eé]mon\. if you do, during this turn, attacks used by this "
     r"pok[eé]mon do (\d+) more damage to your opponent'?s active "
     r"pok[eé]mon \(before applying weakness and resistance\)\.$", re.I)
+
+
+# 「This Pokémon can't be Asleep.」（第一百一十一批，Hoothoot「Insomnia」）
+_STATUS_IMMUNE_SELF_RE = re.compile(
+    r"^this pok[eé]mon can'?t be (asleep|poisoned|burned|confused|paralyzed)[.]$",
+    re.I)
+
+
+def _detect_status_immune(text: str, kind: str) -> list:
+    """卡面「This Pokémon can't be <状态>.」→ `passive:status_immune:<s>`
+
+    ⚠ 与「cure（清除已中状态）」是**相反**语义：免疫是「永远施加不上」，
+    clear 是「已经中了再解」。落错方向会让免疫者在被施加时**照样中招**。
+    ⚠ 也不能落成 `status_self:`（那是「让自己陷入该状态」，方向反 180°）。
+    """
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _STATUS_IMMUNE_SELF_RE.match(t)
+    if not m:
+        return []
+    st = _STATUS_WORD_TO_TAG.get(m.group(1).lower())
+    if not st:
+        return []
+    return [act("passive", None, "self",
+                {"kind": "status_immune", "status": st})]
+
+
+# 「switch 1 of your Benched {D} Pokémon, except any X {ex}, with your Active
+#  Pokémon. If you do, the new Active Pokémon is now Poisoned.」
+# （第一百一十一批，Pecharunt ex「Subjugating Chains」）
+_SWITCH_CHOOSE_RE = re.compile(
+    r"^once during your turn, you may switch 1 of your benched \{([a-z])\}.{0,4}?"
+    r"pok[eé]mon, except any (?P<exc>[a-z][a-z .'-]*?) \{(?:ex|v)\}, with your "
+    r"active pok[eé]mon[.]\s*if you do, the new active pok[eé]mon is now "
+    r"(?P<st>poisoned|burned|asleep|confused|paralyzed)[.](?:\s*you can'?t use "
+    r"more than 1 .*? each turn[.])?$", re.I)
+
+
+def _detect_switch_choose(text: str, kind: str) -> list:
+    """带属性/例外筛选的换位 + 换入后状态 → `switch_choose:<type>:...:then:<s>`"""
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _SWITCH_CHOOSE_RE.match(t)
+    if not m:
+        return []
+    color = _EN_SYMBOL_COLOR.get(m.group(1).upper())
+    exc = _tag_name_key(m.group("exc"))
+    st = _STATUS_WORD_TO_TAG.get(m.group("st").lower())
+    if not color or not exc or not st:
+        return []
+    return [act("switch_choose", None, "self",
+                {"type": color, "except": exc, "then": st})]
+
+
+# 「if you have Solrock in play, you may discard a Basic {F} Energy card from your
+#  hand in order to use this Ability. Draw 3 cards.」（第一百一十一批，Lunatone）
+_SOLROCK_DRAW_RE = re.compile(
+    r"^once during your turn, if you have (?P<mon>[a-z][a-z' .-]{2,24}?) in play, "
+    r"you may discard (?:a|an) basic \{(?P<e>[a-z])\} energy card from your hand "
+    r"in order to use this ability[.]\s*draw (?P<n>\d+) cards?[.]"
+    # 尾部常跟一句「You can't use more than 1 <名> Ability each turn.」——
+    # 那是**额度**限制，不是效果；不吸收就会整段失配（Lunatone 实测）。
+    r"(?:\s*you can'?t use more than 1 .*? each turn[.])?$", re.I)
+
+
+def _detect_solrock_draw(text: str, kind: str) -> list:
+    """具名在场条件 + 弃手牌能量代价 + 抽牌 → `([draw 动作], ability_cost)`
+
+    条件写成 `draw:N:if:own_field_name:<key>`：引擎 `_draw_spec` 会求值，
+    合法动作生成也会剔除（条件不成立时**根本不列**这个动作）。
+    ⚠ 不能只产 `draw:N`：那等于「有没有 Solrock 都能抽」，静默加强。
+    """
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _SOLROCK_DRAW_RE.match(t)
+    if not m:
+        return []
+    key = _tag_name_key(m.group("mon"))
+    color = _EN_ENERGY_LETTER.get(m.group("e").upper())
+    if not key or not color:
+        return []
+    return ([act("draw", int(m.group("n")), "deck",
+                 {"cond": f"own_field_name:{key}"})],
+            f"discard_hand_energy:1:{color}")
+
+
+# 「… attach a Basic {G} Energy card from your hand to 1 of your Pokémon. If you
+#  attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.」
+_ATTACH_HEAL_RE = re.compile(
+    r"^once during your turn, you may attach a basic \{(?P<e>[a-z])\} energy "
+    r"card from your hand to 1 of your pok[eé]mon[.]\s*if you attached energy "
+    r"to a pok[eé]mon in this way, heal (?P<n>\d+) damage from that "
+    r"pok[eé]mon[.]$", re.I)
+
+
+def _detect_attach_heal(text: str, kind: str) -> list:
+    """附能手牌能量 + 回复**被附能的那只** → 单条 `attach_energy:…:heal:N`
+
+    ⚠ 「that Pokémon」指**被附能的目标**，不是特性持有者。分成两条 tag 会
+      丢掉这层指代（`heal:` 默认回持有者），等于回错对象。
+    """
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _ATTACH_HEAL_RE.match(t)
+    if not m:
+        return []
+    color = _EN_ENERGY_LETTER.get(m.group("e").upper())
+    if not color:
+        return []
+    # ⚠ 动作类型是 `attach`：发射层按「kind == ability 且非 on_evolve」自动前缀成
+    #   `attach_energy:`。写成 `attach_energy` 会报「引擎未建模该动作类型」。
+    return [act("attach", 1, "self",
+                {"energy_type": color, "zone": "hand",
+                 # 「to **1 of your** Pokémon」= 己方任意一只（含后备）；
+                 # 省略 target 会默认附给特性持有者 → 回复目标也跟着错。
+                 "target_scope": "any",
+                 "heal": int(m.group("n"))})]
+
+
+# 「As long as this Pokémon is in the Active Spot, whenever you attach an Energy
+#  card from your hand to 1 of your Pokémon, heal 90 damage from that Pokémon.」
+_HEAL_ON_ATTACH_RE = re.compile(
+    r"^as long as this pok[eé]mon is in the active spot, whenever you attach an "
+    r"energy card from your hand to 1 of your pok[eé]mon, heal (?P<n>\d+) damage "
+    r"from that pok[eé]mon[.]$", re.I)
+
+
+def _detect_heal_on_attach(text: str, kind: str) -> list:
+    """附能即回复（常驻被动）→ `passive:heal_on_attach:<n>`
+
+    ⚠ 是**被动钩子**，不是可发动特性：落成普通 field 特性会变成「每回合主动
+      点一次回 90」，强度与触发时机双错。
+    """
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _HEAL_ON_ATTACH_RE.match(t)
+    if not m:
+        return []
+    return [act("passive", int(m.group("n")), "self",
+                {"kind": "heal_on_attach"})]
+
+
+# 「If your opponent has a Stadium in play, discard it. If you do, your opponent
+#  can't play any Stadium cards from their hand during their next turn.」
+_STADIUM_SMASH_RE = re.compile(
+    r"^if your opponent has a stadium in play, discard it[.]\s*if you do, "
+    r"your opponent can'?t play any stadium cards? from their hand during "
+    r"their next turn[.]$", re.I)
+
+
+def _detect_stadium_smash(text: str, kind: str) -> list:
+    """弃对手场地 + 封对手场地 → **有序**两条动作（第一百零七批，Chi-Yu）
+
+    顺序与依赖都必须精确：
+      · 先 `discard_stadium`（真的把场地弃掉）；
+      · 再 `play_lock:stadium:opp:turn:if_prev` —— `:if_prev` 保证「没弃到
+        场地就不封锁」（卡面写 "If you do"）。少了它就会「空场也照样封」，
+        多了顺序问题就会「先封后弃」，两者都是静默错算。
+    """
+    if kind != "attack":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if not _STADIUM_SMASH_RE.match(t):
+        return []
+    return [act("rule", None, "any", {"discard_stadium": True}),
+            act("play_lock", None, "active_opponent",
+                {"play": "stadium", "until": "turn", "if_prev": True})]
 
 
 def _detect_self_buff(text: str, kind: str) -> list:
@@ -8455,6 +8877,9 @@ def to_engine_tags(specs: list) -> dict:
                     # `:energy` = 回复后把该目标的全部能量收回手牌（Wally's
                     # Compassion）。训练家只有单 tag，故与回复合并在一条 tag 里，
                     # `:energy` 隐含「仅当真的回复过才执行」。
+                    if extra.get("maxleft"):
+                        # 「… that has N HP or less remaining」（Bianca's Devotion）
+                        tail += f":maxleft:{int(extra['maxleft'])}"
                     if extra.get("to_hand"):
                         tail += ":energy"
                     else:
@@ -8490,12 +8915,18 @@ def to_engine_tags(specs: list) -> dict:
                 zsuffix = f":{zone}" if zone else ""
                 if extra.get("target_scope") == "bench":
                     zsuffix += ":target:bench"
+                elif extra.get("target_scope"):
+                    # `target:stage2` / `target:any` …,由 `_attach_target_fp` 解释
+                    zsuffix += f":target:{extra['target_scope']}"
                 if kind == "ability":
                     if trigger == "on_evolve":
                         tags.append(f"evolve_attach:{n}{suffix}"
                                     f"{zsuffix or ':discard'}")
                     else:
-                        tags.append(f"attach_energy:{n}{suffix}{zsuffix}")
+                        _heal_tail = (f":heal:{int(extra['heal'])}"
+                                      if extra.get("heal") else "")
+                        tags.append(f"attach_energy:{n}{suffix}{zsuffix}"
+                                    f"{_heal_tail}")
                 else:
                     tags.append(f"attach:{n}{suffix}{zsuffix}")
             elif t == "discard":
@@ -8922,6 +9353,21 @@ def to_engine_tags(specs: list) -> dict:
                         # ⚠ 不能退化成 `search_energy:<n>:distinct`（n 是常数）：
                         # 牌库里有 3 种属性时 n=2 会少拿、n=8 会拿不到。
                         tags.append("search_energy:all:distinct")
+                    elif _search_any_named(src) and dest in ("bench", "hand"):
+                        # 「any number of <具名> …」（第一百/一百零一批）
+                        _san = _search_any_named(src)
+                        _tg = None
+                        if dest == "bench":
+                            _tg = ("search_bench:all"
+                                   + (":basic" if _san["basic"] else "")
+                                   + f":name_has:{_san['name_has']}")
+                        elif _san["kind"] == "trainer":
+                            _tg = f"search_trainer:all:name_has:{_san['name_has']}"
+                        if _tg:
+                            tags.append(_tg)
+                        else:
+                            unsupported.append(
+                                {"type": t, "reason": "具名任意张检索去向未建模（B4）"})
                     elif dynamic_n:
                         # B2 剩余（2026-10-28）：「Search your deck for a number of
                         # cards up to the number of your Benched Pokémon」（Scrafty）
@@ -8936,6 +9382,20 @@ def to_engine_tags(specs: list) -> dict:
                         else:
                             unsupported.append(
                                 {"type": t, "reason": "检索数量由计数源决定（B4）"})
+                    elif re.search(r"energy cards? and discard them", src, re.I):
+                        # 「search your deck for up to 3 Basic {F} Energy cards
+                        #  **and discard them**」（第一百批，Drilbur「Dig Dig
+                        #  Dig」）—— 去向是弃牌堆。不筛选属性就会把任意 3 张
+                        # 弃掉（弃错牌库 = 静默改资源）。
+                        _tm = re.search(r"\{([a-z])\}", src, re.I)
+                        _et = (_EN_ENERGY_LETTER.get(_tm.group(1).upper())
+                               if _tm else None)
+                        if _et is None:
+                            unsupported.append(
+                                {"type": t, "reason": "检索弃置的属性未识别（B4）"})
+                        else:
+                            tags.append(f"search_discard:{int(n)}:energy"
+                                        f":type:{_et}")
                     elif dest == "evolve":
                         # 「检索可进化此宝可梦的卡并直接进化」——引擎已有该机制
                         if "evolve_from_deck" not in tags:
@@ -9144,7 +9604,38 @@ def to_engine_tags(specs: list) -> dict:
                     _pt = extra.get("ptype")
                     tags.append(f"recover:{n}:{kd}"
                                 + (f":type:{_pt}" if _pt else ""))
+            elif t == "switch_choose":
+                # `switch_choose:<type>[:except:<key>][:then:<status>]`
+                # （第一百一十一批，Pecharunt ex）—— 目标由玩家指定
+                # （`action["bench"]`），引擎按后备位置逐条列合法动作。
+                _ty = str(extra.get("type") or "any")
+                _tg = f"switch_choose:{_ty}"
+                if extra.get("except"):
+                    _tg += f":except:{extra['except']}"
+                if extra.get("then"):
+                    if extra["then"] not in ENGINE_STATUS_TAGS:
+                        unsupported.append(
+                            {"type": t, "reason": f"换入后状态未识别：{extra['then']}"})
+                        _tg = None
+                    else:
+                        _tg += f":then:{extra['then']}"
+                if _tg:
+                    tags.append(_tg)
             elif t == "rule":
+                if extra.get("discard_stadium"):
+                    tags.append("discard_stadium")
+                    continue
+                if extra.get("use_only"):
+                    tags.append(f"use_only:{extra['use_only']}")
+                    continue
+                if extra.get("use_not"):
+                    tags.append(f"use_not:{extra['use_not']}")
+                    continue
+                if extra.get("dmg_plus_prev_taken"):
+                    # 「this attack does that much more damage」（第一百零一批，
+                    # Mega Heracross ex）—— 数值 = 攻击方**上回合**受到的招式伤害。
+                    tags.append("dmg_plus_prev_taken")
+                    continue
                 # 复合动作（第九十五批）：一次卡面文本 = 多条 tag 的**有序**序列，
                 # 用 `|` 拼成**单条** tag（训练家/特性都只认一个卡级 tag；
                 # 拆成两条会被整卡拒收或只执行第一条）。
@@ -9438,14 +9929,16 @@ def to_engine_tags(specs: list) -> dict:
                 if tgt != "active_opponent":
                     unsupported.append({"type": t,
                                         "reason": "手牌禁打目标未识别"})
-                elif play_ not in ("item", "evolution"):
+                elif play_ not in ("item", "evolution", "supporter",
+                                   "stadium"):
                     unsupported.append({"type": t,
                                         "reason": "手牌禁打类别未识别"})
                 elif extra.get("until") != "turn":
                     unsupported.append({"type": t,
                                         "reason": "手牌禁打时限未识别"})
                 else:
-                    tags.append(f"play_lock:{play_}:opp:turn")
+                    tags.append(f"play_lock:{play_}:opp:turn"
+                                + (":if_prev" if extra.get("if_prev") else ""))
             elif t == "shield":
                 kind_ = extra.get("kind")
                 if kind_ == "reduce":
@@ -9494,6 +9987,12 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(tail)
                 elif k == "no_bench_counters":
                     tags.append("stadium:no_bench_counters")
+                elif k == "tera_cost_up" and amt is not None:
+                    # `stadium:tera_cost_up:1`（第一百零六批，Nighttime Mine）
+                    tags.append(f"stadium:tera_cost_up:{int(amt)}")
+                elif k == "keep_confuse":
+                    # `stadium:keep_confuse`（第一百零六批，Dizzying Valley）
+                    tags.append("stadium:keep_confuse")
                 elif k == "dmg_reduce" and amt is not None and extra.get("ptype"):
                     tags.append(f"stadium:dmg_reduce:{int(amt)}:type:{extra['ptype']}")
                 elif k in ("poison_extra", "on_bench_basic") and amt is not None \
@@ -9560,6 +10059,14 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append("tool:no_retreat")
                 elif k == "on_damaged_draw" and amt is not None:
                     tags.append(f"tool:on_damaged:draw:{int(amt)}")
+                elif k == "on_damaged_status":
+                    # `tool:on_damaged:status:<s>[:holder:faction:<k>]`
+                    # （第一百零一批，Team Rocket's Hypnotizer）
+                    _tail = ""
+                    if extra.get("holder_faction"):
+                        _tail = f":holder:faction:{extra['holder_faction']}"
+                    tags.append(f"tool:on_damaged:status:"
+                                f"{extra.get('status')}{_tail}")
                 elif k == "on_damaged_move_energy":
                     tags.append("tool:on_damaged:move_energy:1")
                 elif k == "on_damaged_counter" and amt is not None:
@@ -9601,6 +10108,18 @@ def to_engine_tags(specs: list) -> dict:
                     # ``for each {M} Energy attached to this Pokémon``
                     tags.append(f"on_damaged:counter_per:{int(amt or 0) // 10}:"
                                 f"{extra['per_energy']}")
+                elif k == "search_bench":
+                    # 「search your deck for up to N Pokémon that have "X" in
+                    #  their name and put them onto your Bench」（第一百零一批，
+                    #  Team Rocket's Koffing）—— 受击即检索铺场。
+                    _n0 = extra.get("n")
+                    _nk = str(extra.get("name_has") or "")
+                    if not isinstance(_n0, int) or not _nk:
+                        unsupported.append(
+                            {"type": t, "reason": "受击检索形态未识别（B4）"})
+                    else:
+                        tags.append(f"on_damaged:search_bench:{_n0}"
+                                    f":name_has:{_nk}")
                 elif k == "discard_energy":
                     tags.append(f"on_damaged:discard_energy:"
                                 f"{int(amt or 1)}")
@@ -9615,6 +10134,17 @@ def to_engine_tags(specs: list) -> dict:
                     # 是被动**额度**，不是可发动特性 —— 进 legals 会让随机对局
                     # 报「未知 field tag」。
                     tags.append("passive:extra_attack")
+                elif kind_ == "status_immune":
+                    # 「This Pokémon can't be Asleep.」（第一百一十一批，Hoothoot）
+                    st = str(extra.get("status") or "")
+                    if st not in ENGINE_STATUS_TAGS:
+                        unsupported.append({"type": t,
+                                            "reason": f"状态免疫词未识别：{st}"})
+                    else:
+                        tags.append(f"passive:status_immune:{st}")
+                elif kind_ == "heal_on_attach" and amt is not None:
+                    # `passive:heal_on_attach:<n>`（第一百零四批，Magearna）
+                    tags.append(f"passive:heal_on_attach:{int(amt)}")
                 elif kind_ == "bench_immune":
                     tags.append("passive:bench_immune")
                 elif kind_ == "bench_immune_dmg":
@@ -9850,6 +10380,13 @@ def to_engine_tags(specs: list) -> dict:
         # 为什么必须包裹：引擎的 field 特性是「每回合一次」，而这些特性卡面是
         # 「when you play this Pokémon from your hand to evolve …」——不包裹就等于
         # 每回合免费再用一次（Kadabra「Psychic Draw」实测）。
+        if kind == "ability" and trigger == "on_bench":
+            # 上场触发同样必须包一层（否则变成每回合一次的 field 特性）
+            _nb = tags[_tag_start:]
+            if _nb:
+                del tags[_tag_start:]
+                tags.append("on_bench_act:"
+                            + "|".join(dict.fromkeys(str(x) for x in _nb)))
         if kind == "ability" and trigger == "on_evolve":
             new_tags = tags[_tag_start:]
             if new_tags and not all(str(x).startswith("evolve_attach:")
@@ -9862,11 +10399,22 @@ def to_engine_tags(specs: list) -> dict:
             if s.get("conditions") or re.search(
                     r"\bif you have\b|\bif your opponent has\b|\bunless\b",
                     _src0, re.I):
-                # 进化触发特性带前置条件（如 Noctowl「若有 Tera 宝可梦在场」）
-                # → 引擎无该条件层，如实登记（整卡不收），绝不无条件放通。
-                unsupported.append(
-                    {"type": "condition",
-                     "reason": "进化触发特性的前置条件未建模（B4）"})
+                # 进化触发特性的**前置条件**（第一百零二批，Noctowl「Jewel
+                # Seeker」：「…, if you have any Tera Pokémon in play, …」）。
+                # 能在引擎 `_eval_condition` 里精确求值的，写成
+                # `evolve_act:…:gate:<cond>`；认不出的仍如实登记（整卡不收）
+                # —— 绝不能无条件放通（那是「有没有 Tera 都能检索」）。
+                _gm = re.search(
+                    r"\bif (?P<c>you have [^.]+? in play|"
+                    r"your opponent has [^.]+? in play)", _src0, re.I)
+                _gc = (_condition_from_text("if " + _gm.group("c"))
+                       if _gm else None)
+                if _gc and tags and str(tags[-1]).startswith("evolve_act:"):
+                    tags[-1] = f"{tags[-1]}:gate:{_gc}"
+                else:
+                    unsupported.append(
+                        {"type": "condition",
+                         "reason": "进化触发特性的前置条件未建模（B4）"})
             _src = str(s.get("source_text") or "")
             if re.search(r"you may also use this ability if", _src, re.I):
                 # Flygon「…也可在**战斗位被击倒**时再用一次」：第二个触发时机用

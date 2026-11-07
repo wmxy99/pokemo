@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-06 14:23:08
+- 生成时间：2026-11-07 10:43:11
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **126** 条 · 已映射 tag 1455 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1143 张**
-- 解析层面「无未建模动作」卡：997 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **102** 条 · 已映射 tag 1474 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1165 张**
+- 解析层面「无未建模动作」卡：1019 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -24,31 +24,21 @@
 | B4 | scaling_damage | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（damage counter you placed in t） |
 | B4 | static_lock | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
-| B4 | type:condition | `condition` | 1 | 1 | 进化触发特性的前置条件未建模（B4） |
 | B4 | coin_flip | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B4 | type:ability_cost | `ability_cost` | 1 | 1 | 特性发动代价形态未识别（B4） |
 | B5 | S6 | `rule` | 37 | 37 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 9 | 9 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 5 | 5 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | B5 | S2 | `rule` | 5 | 5 | 静态/未建模（英文） |
-| B5 | S6 | `rule` | 2 | 2 | 首回合招式使用限制（需招式静态条件层，B5） |
-| B5 | S6 | `rule` | 2 | 2 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
-| B5 | S3 | `rule` | 2 | 2 | 场地形态未建模（S3 未覆盖） |
 | B5 | S4 | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B5 | S2 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S1 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S1 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B5 | S3 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
-| B5 | S6 | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
+| B5 | S6 | `rule` | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B5 | S6 | `rule` | 1 | 1 | 放置伤害指示物：目标/条件未识别（that Pokémon） |
-| B5 | S6 | `rule` | 1 | 1 | 手牌禁打（Supporter/Stadium/ACE SPEC/特性宝可梦等，需对手手牌禁用层，B5） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
 | B5 | S2 | `rule` | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
-| B5 | S2 | `rule` | 1 | 1 | 受击/受击历史从句（is|was damaged by an attack）需引擎 on_damaged 或回合级历史（B4） |
 | B5 | S2 | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
-| B5 | S6 | `rule` | 1 | 1 | 全量回复（范围/后续不可精确表达 · B4） |
 | B5 | S5 | `rule` | 1 | 1 | 打出前置条件（You can use this card only if …）未建模（B5） |
 
 ## 2. 代表性卡面（逐子类抽样，便于核对）
@@ -70,17 +60,9 @@
 
 - `Wellspring Mask Ogerpon ex`（厄诡椪（井之面具）ex）：You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t ap
 
-**B4 · type:condition**（1 条）
-
-- `Noctowl`（猫头夜鹰）：Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for
-
 **B4 · coin_flip**（1 条）
 
 - `Ethan's Sudowoodo`（阿响的树才怪）：Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.
-
-**B4 · type:ability_cost**（1 条）
-
-- `Lunatone`（月石）：Once during your turn, if you have Solrock in play, you may discard a Basic {F} Energy card from your hand in order to use this Ability. Draw 3 cards. You can’t
 
 **B5 · S6**（37 条）
 
@@ -106,28 +88,9 @@
 - `Heavy Baton`（沉重接力棒）：If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's
 - `Cynthia's Power Weight`（竹兰的力量负重）：The Cynthia's Pokémon this card is attached to gets +70 HP.
 
-**B5 · S6**（2 条）
-
-- `Terapagos ex`（太乐巴戈斯 ex）：If you go second, you can’t use this attack during your first turn. This attack does 30 damage for each of your Benched Pokémon.
-- `Scream Tail ex`（吼叫尾 ex）：You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next t
-
-**B5 · S6**（2 条）
-
-- `Hoothoot`（咕咕）：This Pokémon can’t be Asleep.
-- `Mismagius ex`（梦妖魔 ex）：As long as this Pokémon is in the Active Spot, whenever your opponent’s Active Pokémon moves to the Bench during their turn, their new Active Pokémon is now Con
-
-**B5 · S3**（2 条）
-
-- `Dizzying Valley`（眩晕山谷）：Confused Pokémon (both yours and your opponent's) don't recover from that Special Condition when they evolve or devolve.
-- `Nighttime Mine`（夜间矿山）：Attacks used by each Tera Pokémon in play (both yours and your opponent's) cost {C} more.
-
 **B5 · S4**（1 条）
 
 - `Boomerang Energy`（回旋镖能量）：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
-
-**B5 · S2**（1 条）
-
-- `Genesect`（盖诺赛克特）：If this Pokémon has a Pokémon Tool attached, your opponent can’t play any {ACE SPEC} cards from their hand.
 
 **B5 · S1**（1 条）
 
@@ -145,21 +108,13 @@
 
 - `Cetitan ex`（浩大鲸 ex）：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
 
-**B5 · S3**（1 条）
-
-- `Chi-Yu`（古玉鱼）：If your opponent has a Stadium in play, discard it. If you do, your opponent can’t play any Stadium cards from their hand during their next turn.
-
 **B5 · S6**（1 条）
 
-- `Mega Heracross ex`（超级赫拉克罗斯 ex）：If this Pokémon was damaged by an attack during your opponent’s last turn, this attack does that much more damage.
+- `Mismagius ex`（梦妖魔 ex）：As long as this Pokémon is in the Active Spot, whenever your opponent’s Active Pokémon moves to the Bench during their turn, their new Active Pokémon is now Con
 
 **B5 · S6**（1 条）
 
 - `Team Rocket's Dugtrio`（火箭队的三地鼠）：Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.
-
-**B5 · S6**（1 条）
-
-- `Scream Tail ex`（吼叫尾 ex）：You can use this attack only if you go second, and only during your first turn. Your opponent can’t play any Supporter cards from their hand during their next t
 
 **B5 · S6**（1 条）
 
@@ -171,15 +126,7 @@
 
 **B5 · S2**（1 条）
 
-- `Team Rocket’s Hypnotizer`（火箭队的催眠器）：If the Team Rocket's Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Team Rocket's
-
-**B5 · S2**（1 条）
-
 - `Hop’s Choice Band`（赫普的讲究头带）：Attacks used by the Hop's Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent's Active Pokémon (before applying Weakness and R
-
-**B5 · S6**（1 条）
-
-- `Bianca’s Devotion`（白露的奉献）：Heal all damage from 1 of your Pokémon that has 30 HP or less remaining.
 
 **B5 · S5**（1 条）
 

@@ -101,6 +101,20 @@ class Battle:
     # S3：场地「每回合一次」的使用计数（按玩家；回合开始清零）
     _stadium_used = None      # list[int] 惰性创建，兼容 object.__new__ 装配
 
+    def _ko_tr_flags(self) -> list:
+        """按所属方计数的「**Team Rocket's** 宝可梦被招式击倒」标记
+
+        第一百零九批（Team Rocket's Archer）：「only if any of your Team
+        Rocket's Pokémon were Knocked Out during your opponent's last turn.」
+        ⚠ 不能复用 `_ko_flags`（那是**任意**己方宝可梦）—— 用它会放宽门槛，
+          让这张卡在本不该能打的时候能打（静默加强）。
+        """
+        v = getattr(self, "_ko_tr_by_attack", None)
+        if v is None:
+            v = [0, 0]
+            self._ko_tr_by_attack = v
+        return v
+
     def _ko_flags(self) -> list:
         """按宝可梦所属方计数的「被招式击倒」标记（惰性创建，实例隔离）"""
         v = self._ko_by_attack
@@ -267,6 +281,10 @@ class Battle:
         for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
             fp.just_played = False
             fp.ability_used.clear()
+            # 受击历史（第九十九批）：把「本回合累计」滚成「对手上回合累计」。
+            # ⚠ 顺序不能反 —— 先清零再快照会让 Mega Heracross ex 永远读到 0。
+            fp.dmg_taken_prev = fp.dmg_taken_mark
+            fp.dmg_taken_mark = 0
         # v1.4 护盾：语义为「（在对手的）下个回合内有效」→ 该玩家**本回合开始**时失效。
         # 若在 A 的回合给 A 上盾，则 B 回合期间盾仍在，A 再次开始时清除（正确）。
         for fp in p.all_field():
@@ -279,6 +297,7 @@ class Battle:
             fp.shield_prevent_qual = ""
         # v1.4「上回合被击倒」标记：该方回合开始即清零（卡面为「对手的上个回合」）
         self._ko_flags()[self.current] = 0
+        self._ko_tr_flags()[self.current] = 0
         if not p.has_pokemon:
             self._finish(1 - self.current, "no_pokemon", {"loser": self.current})
             return
@@ -370,6 +389,15 @@ class Battle:
                     # 跨回合攻击封锁（`attack_lock:*`）：即使能量足够也不得出手
                     if p.active.attack_locked(atk.name, turn_count):
                         continue
+                    # 招式**静态使用条件**（第一百零七/一百零八批）：
+                    #   `use_only:<cond>` 只在条件成立时可用（Scream Tail ex
+                    #   「only if you go second, and only during your first turn」）
+                    #   `use_not:<cond>`  条件成立时不可用（Terapagos ex
+                    #   「If you go second, you can't use this attack during
+                    #   your first turn」）
+                    # 不在合法动作表里剔除，AI 就会在首回合打出规则上不可用的招式。
+                    if not _attack_usable(self, atk):
+                        continue
                     _scope = _borrow_scope(atk)
                     _opts = self._borrow_options(p, opp, p.active, atk)
                     if _scope is not None:
@@ -450,7 +478,8 @@ class Battle:
                     continue
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
                 if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
-                                      "evolve_act:", "passive:", "on_damaged:",
+                                      "evolve_act:", "on_bench_act:",
+                                      "passive:", "on_damaged:",
                                       "on_ko:", "ko_prize_plus:",
                                       # 第五十批：被击倒时的奖赏减少也是**被动**钩子
                                       # （在 `_resolve_ko` 里读），不可主动发动。
@@ -488,6 +517,31 @@ class Battle:
                            if len(_sp) > 2 and _sp[1] == "if" else None)
                     if _sc is not None and not _eval_condition(self, _sc):
                         continue
+                if ab.tag.startswith("switch_choose:"):
+                    # 「switch 1 of your Benched {D} Pokémon, except any X, with
+                    #  your Active Pokémon」（第一百一十一批，Pecharunt ex）——
+                    # 需玩家指定换上哪只：逐个**合法**后备位置各列一条。
+                    # ⚠ 不能只列一条「后备第一只」：换错一只等于位置全乱，
+                    #   而且属性/例外筛选会让部分位置非法。
+                    _sc2 = ab.tag.split(":")
+                    _sty2 = _sc2[1].lower() if len(_sc2) > 1 else ""
+                    _exc2 = (_sc2[_sc2.index("except") + 1]
+                             if "except" in _sc2 else None)
+                    if p.active is None:
+                        continue
+                    _ok_bi = [i for i, x in enumerate(p.bench)
+                              if (_sty2 in ("any", "")
+                                  or str(x.pdef.ptype).lower() == _sty2)
+                              and not (_exc2 and _norm_ex_key(x) == _exc2)]
+                    if not _ok_bi:
+                        continue
+                    for _bi2 in _ok_bi:
+                        out.append({"verb": "ability", "name": ab.name,
+                                    "name_zh": ab.name_zh,
+                                    "display": ab.name_zh or ab.name,
+                                    "pos": tpos, "tag": ab.tag,
+                                    "bench": _bi2})
+                    continue
                 if ab.tag.startswith(("discard_opp_random:", "shuffle_opp_hand:")):
                     if not opp.hand:
                         continue
@@ -638,6 +692,14 @@ class Battle:
                     and p.item_lock_until > self.turn_counts[self.current]:
                 continue
             if kind == "supporter" and p.supporter_used:
+                continue
+            # 跨回合手牌禁打（第一百零七批）
+            _tc = self.turn_counts[self.current]
+            if kind == "supporter" and getattr(p, "supporter_lock_until", 0) > _tc:
+                continue
+            if kind == "stadium" and getattr(p, "stadium_lock_until", 0) > _tc:
+                continue
+            if _is_acespec(c) and getattr(p, "acespec_lock_until", 0) > _tc:
                 continue
             # 静态禁令（「对手不能从手牌打出物品卡」等）
             if families.blocked_play(self, p, c):
@@ -1200,6 +1262,25 @@ class Battle:
         if not p.attach_energy_to(target, self.cfg, index=idx):
             raise ValueError("手牌无能量")
         p.attached_energy_this_turn = 1
+        # 「As long as this Pokémon is in the Active Spot, whenever you attach an
+        #  Energy card from your hand to 1 of your Pokémon, heal N damage from that
+        #  Pokémon.」（第一百零四批，Magearna「Auto Heal」）
+        # ⚠ 目标是**被附能的那只**，不是持有者；且持有者必须在**战斗位**。
+        for _h in p.all_field():
+            if _h is not p.active:
+                continue
+            for _ab in (_h.pdef.abilities or ()):
+                _tg = str(getattr(_ab, "tag", "") or "")
+                if not _tg.startswith("passive:heal_on_attach:"):
+                    continue
+                _n = int(_tg.split(":")[2]) if len(_tg.split(":")) > 2 else 0
+                _before = target.damage
+                target.damage = max(0, target.damage - _n)
+                if _before != target.damage:
+                    self._log("heal", {"player": self.current,
+                                       "target": target.name,
+                                       "n": _before - target.damage,
+                                       "by": "passive_attach"})
         detail = special_energy.on_attach(self, p, target, ref.edef)
         self._log("attach", {"player": self.current, "target": target.name,
                              "etype": (ref.edef.tag or ref.edef.type),
@@ -1348,7 +1429,16 @@ class Battle:
             raise ValueError("进化链不匹配")
         old_name = tgt.name
         p.hand.pop(hi)
+        # Dizzying Valley：「Confused Pokémon don't recover from that Special
+        # Condition when they evolve or devolve.」（第一百零六批）
+        # `evolve_to` 会清空全部状态，因此**先记再补**；只补混乱，别的状态照常清。
+        _keep_confuse = ("confuse" in tgt.status
+                         and self._stadium_meta()["kind"] == "keep_confuse")
         tgt.evolve_to(c.pdef)
+        if _keep_confuse:
+            tgt.status.add("confuse")
+            self._log("status_kept", {"target": tgt.name, "status": "confuse",
+                                      "by": "stadium"})
         tgt.evolved_turn = self.turn_number
         tgt.evolved_from_name = old_name
         self._log("evolve", {"player": self.current, "from": old_name,
@@ -1377,7 +1467,20 @@ class Battle:
                 # 进化触发特性的**任意效果序列**（2026-10-28 第十批）：
                 # `evolve_act:<tag1>|<tag2>` 按序执行（`|` 分隔），由
                 # `_apply_attack_effects` 统一结算（含 `:if_prev` 条件后续）。
-                subs = tuple(s for s in tag[len("evolve_act:"):].split("|") if s)
+                _ea_body = tag[len("evolve_act:"):]
+                # 进化触发特性的**前置条件**（第一百零二批，Noctowl「Jewel
+                # Seeker」：「…, if you have any Tera Pokémon in play, you may
+                # search…」）。不满足时整条不执行 —— 解析侧只在条件可精确求值
+                # 时才产出 `:gate:`，认不出的一律整卡拒收。
+                _ea_gate = None
+                if ":gate:" in _ea_body:
+                    _ea_body, _ea_gate = _ea_body.split(":gate:", 1)
+                if _ea_gate and not _eval_condition(self, _ea_gate):
+                    self._log("ability", {"player": self.current, "name": ab.name,
+                                          "from": fp.name, "trigger": "on_evolve",
+                                          "detail": f"gate_false:{_ea_gate}"})
+                    continue
+                subs = tuple(s for s in _ea_body.split("|") if s)
                 if not subs:
                     continue
                 self._log("ability", {"player": self.current, "name": ab.name,
@@ -1485,6 +1588,64 @@ class Battle:
                 detail = self._opp_shuffle_draw(tag)
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("switch_choose:"):
+                # 「switch 1 of your Benched {D} Pokémon, except any Pecharunt
+                #  {ex}, with your Active Pokémon. If you do, the new Active
+                #  Pokémon is now Poisoned.」（第一百一十一批，Pecharunt ex）
+                # 形态：`switch_choose:<type|any>[:except:<namekey>][:then:<status>]`
+                _sc = tag.split(":")
+                _sty = _sc[1].lower()
+                _exc, _then = None, None
+                _i = 2
+                while _i + 1 < len(_sc):
+                    if _sc[_i] == "except":
+                        _exc = _sc[_i + 1]
+                    elif _sc[_i] == "then":
+                        _then = _sc[_i + 1]
+                    else:
+                        raise ValueError(f"switch_choose 未识别限定：{tag}")
+                    _i += 2
+                if _then is not None and _then not in STATUSES:
+                    raise ValueError(f"switch_choose 状态非法：{tag}")
+                if p.active is None:
+                    raise ValueError("无战斗位")
+                # 目标必须由玩家指定（action["bench"]），无默认值 —— 换错一只
+                # 等于把整盘位置换乱，不能拿「后备第一只」冒充。
+                _bi = action.get("bench") if isinstance(action, dict) else None
+                if _bi is None:
+                    raise ValueError("switch_choose 需要指定后备位置")
+                _bi = int(_bi)
+                if not (0 <= _bi < len(p.bench)):
+                    raise ValueError("换位目标越界")
+                _inc = p.bench[_bi]
+                if _sty not in ("any", "") \
+                        and str(_inc.pdef.ptype).lower() != _sty:
+                    raise ValueError("换上的宝可梦属性不符")
+                if _exc:
+                    # 卡面「except any Pecharunt {ex}」：解析侧给的键是
+                    # `pecharunt`（`{ex}` 在花括号里，不属于名字），而引擎卡名
+                    # 键是 `pecharuntex` → 必须剥掉尾部 `ex` 再比，否则例外失效。
+                    _nk = _name_key(_inc.pdef.name)
+                    if _nk.endswith("ex"):
+                        _nk = _nk[:-2]
+                    if _nk == _exc:
+                        raise ValueError("该宝可梦被例外排除")
+                _old = p.active
+                _old.clear_status()
+                _old.clear_active_locks()
+                p.active = p.bench.pop(_bi)
+                p.bench.append(_old)
+                p.active.moved_active_turn = self.turn_number
+                self._log("switch", {"player": self.current, "name": name,
+                                     "from": fp.name, "out": _old.name,
+                                     "in": p.active.name, "side": "ability"})
+                if _then and not self._status_blocked(p.active, _then):
+                    p.active.status.add(_then)
+                    self._log("status", {"player": self.current,
+                                         "target": p.active.name,
+                                         "status": _then,
+                                         "from": name})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("switch_self"):
                 # 后备特性自换位（Linoone「Excited Dash」）：持有者必须在后备。
@@ -1641,6 +1802,16 @@ class Battle:
                                                 allow_special=":anyenergy" in tag)
                 if not got:
                     raise ValueError("无可附着的能量（指定区域为空）")
+                _hl = _attach_heal_of(tag)
+                if _hl:
+                    # 附能成功才回复（卡面 "If you attached Energy …"）
+                    _before = _tfp.damage
+                    _tfp.damage = max(0, _tfp.damage - _hl)
+                    if _before != _tfp.damage:
+                        self._log("heal", {"player": self.current,
+                                           "target": _tfp.name,
+                                           "n": _before - _tfp.damage,
+                                           "by": "attach"})
                 _ac = _attach_counters_of(tag)
                 if _ac:
                     # Toxtricity：「If you attached Energy …, place 2 damage
@@ -1721,7 +1892,7 @@ class Battle:
                                           "by": "effect_immune",
                                           "effect": "ability_status"})
                     return {"ok": True, "event": self.events[-1]}
-                if self._status_blocked(opp.active):
+                if self._status_blocked(opp.active, tag):
                     self._log("blocked", {"target": opp.active.name,
                                           "by": "status_immune",
                                           "effect": "status"})
@@ -1967,6 +2138,21 @@ class Battle:
             raise ValueError(f"未知 recon 余牌去向：{spec['rest']}")
         return f"top{n} {dest} {got}/{sel}"
 
+    def _check_play_locks(self, p: PlayerState, c) -> None:
+        """手牌禁打（跨回合）—— `_trainer_legals` 与 `_do_trainer` 共用
+
+        ⚠ 两处都要查：只在 legals 查，非法动作仍可能被外部直接构造出来；
+        只在 `_do_trainer` 查，AI 会把「必然失败」的动作当成合法动作反复尝试。
+        """
+        _tc = self.turn_counts[self.current]
+        kind = str(getattr(getattr(c, "tdef", None), "kind", "") or "")
+        if kind == "supporter" and getattr(p, "supporter_lock_until", 0) > _tc:
+            raise ValueError("本回合无法打出支援者（手牌禁打）")
+        if kind == "stadium" and getattr(p, "stadium_lock_until", 0) > _tc:
+            raise ValueError("本回合无法打出场地（手牌禁打）")
+        if _is_acespec(c) and getattr(p, "acespec_lock_until", 0) > _tc:
+            raise ValueError("本回合无法打出 ACE SPEC（手牌禁打）")
+
     def _do_trainer(self, p: PlayerState, action: dict) -> dict:
         hi = _hand_index_from_action(p.hand, action)
         if hi is None:
@@ -1982,6 +2168,8 @@ class Battle:
         if kind in ("item", "tool") \
                 and p.item_lock_until > self.turn_counts[self.current]:
             raise ValueError("本回合无法打出手牌中的物品卡（物品封锁）")
+        # 第一百零七批：支援者 / 场地 / ACE SPEC 三类跨回合手牌禁打
+        self._check_play_locks(p, c)
         # 静态禁令（「你的对手不能从手牌打出物品卡」等，效果族提供）
         if families.blocked_play(self, p, c):
             raise ValueError("场上效果禁止打出该卡")
@@ -2069,8 +2257,7 @@ class Battle:
         elif tag.startswith("search_discard:"):
             # 第八十三批：检索至多 N 张直接弃置（Brilliant Blender）。
             # 派发须排在 `search_*` 通用族之后但早于 `tool:` 等无关分支。
-            _sdp = tag.split(":")
-            _sraw = _sdp[1] if len(_sdp) > 1 else "1"
+            _sraw = tag.split(":", 1)[1] if ":" in tag else "1"
             placed = f"search discard {_search_discard(self, p, _sraw)}"
         elif tag.startswith("tool:"):
             placed = self._trainer_attach_tool(p, c, tag,
@@ -2282,6 +2469,21 @@ class Battle:
             p.prize_bonus_tera = bool(len(_pb) > 2 and _pb[2] == "tera")
             p.prize_bonus_until = self.turn_number
             placed = f"prize bonus {p.prize_bonus_n} this turn"
+        elif tag.startswith("attach:"):
+            # 训练家附能（第一百零九批，Rosa's Encouragement）：
+            # `attach:<n>:<type>:<zone>[:target:<scope>]`。
+            # 引擎此前只有特性侧（`attach_energy:`）与招式侧，训练家侧**没有**
+            # 这一支 —— 卡能进池，打出时报「未知训练家 tag」。
+            _an, _aet, _azn = _parse_attach_tag(tag)
+            _atfp = _attach_target_fp(tag, p, action, None)
+            if _atfp is None:
+                placed = "attach 0 (no target)"
+            else:
+                _got = _attach_energy_from_zones(self, p, _atfp, _an, _aet,
+                                                 _azn or "discard")
+                placed = f"attach {_got} -> {_atfp.name}"
+                self._log("attach", {"player": self.current,
+                                     "target": _atfp.name, "n": _got})
         elif tag.startswith("fx:"):
             placed = families.apply_action(
                 self, tag, {"kind": "trainer", "card": c, "action": action,
@@ -3985,12 +4187,18 @@ class Battle:
         basic_only = "basic" in parts[2:]
         ptype = None
         names = None
+        name_has = None
         for i, x in enumerate(parts):
             if x == "type" and i + 1 < len(parts):
                 ptype = parts[i + 1].lower()
             if x == "name" and i + 1 < len(parts):
                 # 指定卡名（可 `+` 并联，如 "Silcoon or a Cascoon"）
                 names = [s for s in parts[i + 1].split("+") if s]
+            if x == "name_has" and i + 1 < len(parts):
+                # 「Pokémon that have "Rotom" in their name」/「Basic Lillie's
+                # Pokémon」/「Pokémon that have "Koffing" in their name」
+                # （第一百/一百零一批）—— **子串**匹配，不是精确名。
+                name_has = parts[i + 1]
         placed = 0
         for i in reversed(range(len(p.deck))):
             if placed >= n or not self._bench_has_room(p):
@@ -4003,6 +4211,8 @@ class Battle:
             if ptype and str(c.pdef.ptype).lower() != ptype:
                 continue
             if names and _name_key(c.pdef.name) not in names:
+                continue
+            if name_has and name_has not in _name_key(c.pdef.name):
                 continue
             fp = make_pokemon(p.deck.pop(i).pdef)
             fp.just_played = True
@@ -4076,13 +4286,21 @@ class Battle:
         applied = []
         if opp.active is None or opp.active.is_ko:
             return ""
-        if self._status_blocked(opp.active):
+        # 逐状态判定（第一百一十一批）：被动免疫可能**只针对某一个状态**
+        # （Hoothoot 只免疫睡眠）。整条拦下会把「灼伤 + 睡眠」一起丢掉，
+        # 反过来整条放行又会把睡眠静默施加到免疫者身上 —— 两种都不行。
+        _blocked = {st for st in parts if self._status_blocked(opp.active, st)}
+        if _blocked and len(_blocked) == len(parts):
             self._log("blocked", {"target": opp.active.name,
                                   "by": "status_immune"})
             return "no effect"
         for st in parts:
             if st not in STATUSES:
                 raise ValueError(f"未知状态：{st}")
+            if st in _blocked:
+                self._log("blocked", {"target": opp.active.name,
+                                      "by": "status_immune", "status": st})
+                continue
             opp.active.status.add(st)
             applied.append(st)
         self._log("status", {"player": 1 - self.current,
@@ -4215,7 +4433,17 @@ class Battle:
             self._log("search", {"player": self.current, "n": 0,
                                  "kind": _search_kind_of(tag), "reason": "n=0"})
             return f"search 0 {_search_kind_of(tag)} to hand"
-        found = _take_kind_from_deck(p, n, _search_kind_of(tag), _search_filter(tag))
+        flt = _search_filter(tag)
+        # 「any number of Fennel cards」（第一百批，Musharna「Dream Calling」）：
+        # 按**卡名子串**筛选。不筛就变成「任意 N 张训练家」——静默放宽范围。
+        _nh = None
+        _tp = str(tag).split(":")
+        if "name_has" in _tp:
+            _nh = _tp[_tp.index("name_has") + 1]
+        if _nh:
+            flt = dict(flt)
+            flt["name_has"] = _nh
+        found = _take_kind_from_deck(p, n, _search_kind_of(tag), flt)
         if not found:
             # 同上：「up to N」失败也算合法（招式/特性照常结算）
             self._log("search", {"player": self.current, "n": 0,
@@ -4531,6 +4759,9 @@ class Battle:
                 damage_dealt = dmg or 0
                 if dmg:
                     defender.damage += dmg
+                    # 受击历史（第九十九批）：只记**招式**造成的伤害
+                    # （自伤/指示物走别的通道，不计入「damaged by an attack」）。
+                    defender.dmg_taken_mark += dmg
                 self._log("damage", {"target": defender.name,
                                      "player": 1 - self.current,
                                      "dmg": dmg, "base": eff_base,
@@ -4972,11 +5203,33 @@ class Battle:
             return False
         return fp is not None and fp.total_energy() > 0
 
-    def _status_blocked(self, fp: Optional[FieldPokemon]) -> bool:
-        """特殊状态是否**不能施加**到该宝可梦（化石 / Festival Grounds）"""
+    def _status_blocked(self, fp: Optional[FieldPokemon],
+                        status: Optional[str] = None) -> bool:
+        """特殊状态是否**不能施加**到该宝可梦
+
+        三个来源：
+          · 化石卡（不能受任何特殊状态）
+          · Festival Grounds（附着了能量的宝可梦不受特殊状态）
+          · 卡面常驻被动 ``passive:status_immune:<status>|all``
+            （第一百一十一批，Hoothoot「Insomnia」= ``sleep``）
+
+        ``status=None`` 表示「调用方没指定具体状态」，此时只有 ``all`` 形态算数 ——
+        绝不能把「只免疫睡眠」当成「免疫全部」。
+        """
         if fp is None:
             return False
-        return bool(getattr(fp, "fossil", False)) or self._stadium_status_immune(fp)
+        if getattr(fp, "fossil", False) or self._stadium_status_immune(fp):
+            return True
+        for ab in (getattr(fp.pdef, "abilities", None) or ()):
+            tag = str(getattr(ab, "tag", "") or "")
+            if not tag.startswith("passive:status_immune:"):
+                continue
+            what = tag.split(":")[2].lower()
+            if what == "all":
+                return True
+            if status and what == str(status).lower():
+                return True
+        return False
 
     def _recover_stadium_statuses(self) -> None:
         """Festival Grounds：「recovers from all Special Conditions」
@@ -5101,6 +5354,8 @@ class Battle:
                                           "player": owner})
 
     def _on_bench_placed(self, owner: int, fp: FieldPokemon) -> None:
+        # 上场触发特性先执行（与场地伤害无关，不能受下面 `return` 影响）
+        self._trigger_bench_abilities(owner, fp)
         """场地：宝可梦被放到后备时触发的伤害（Risky Ruins）
 
         tag：``stadium:on_bench_basic:<n>:type:<c>``
@@ -5121,6 +5376,30 @@ class Battle:
                                       "dmg": m["n"]})
         if fp.is_ko:
             self._resolve_ko(owner, fp)
+
+    def _trigger_bench_abilities(self, owner: int, fp: FieldPokemon) -> None:
+        """「When you play this Pokémon from your hand onto your Bench during your
+        turn, you may …」（第一百批，Drilbur「Dig Dig Dig」）
+
+        tag：``on_bench_act:<tag1>|<tag2>`` —— 与 ``evolve_act:`` 同构：只在
+        **放到后备那一刻**执行一次。
+
+        ⚠ 为什么必须包一层：不包就是普通 field 特性 → **每回合都能发动一次**，
+        一张「上场检索弃 3 能量」的卡会变成「每回合白弃 3 张牌库」。
+        """
+        if owner != self.current:
+            return
+        for ab in (fp.pdef.abilities or ()):
+            tag = str(getattr(ab, "tag", "") or "")
+            if not tag.startswith("on_bench_act:"):
+                continue
+            subs = tuple(x for x in tag[len("on_bench_act:"):].split("|") if x)
+            if not subs:
+                continue
+            self._log("ability", {"player": owner, "name": ab.name,
+                                  "from": fp.name, "trigger": "on_bench",
+                                  "detail": "|".join(subs)})
+            self._apply_attack_effects(fp, subs, action={})
 
     # ---------- S2 第二阶段：道具触发钩子 ----------
     def _tool_reduce_vs(self, defender: FieldPokemon,
@@ -5214,6 +5493,22 @@ class Battle:
                 self._log("tool_trigger", {"player": owner, "tool": defender.tool_name,
                                            "kind": "move_energy", "n": moved,
                                            "target": defender.name})
+        elif kind == "status" and parts[3] in STATUSES:
+            # 「the Attacking Pokemon is now Asleep」（第一百零一批，
+            # Team Rocket's Hypnotizer）—— 目标恒为**攻击方**（不是持有者），
+            # 且必须过一遍状态免疫判定（否则会把状态硬塞给免疫者）。
+            _st = parts[3]
+            if self._status_blocked(attacker, _st) \
+                    or families.effect_immune(self, attacker, "ability"):
+                self._log("blocked", {"target": attacker.name,
+                                      "by": "status_immune",
+                                      "effect": "tool_status"})
+            else:
+                attacker.status.add(_st)
+                self._log("tool_trigger", {
+                    "player": owner, "tool": defender.tool_name,
+                    "kind": "status", "status": _st,
+                    "target": attacker.name})
         elif kind == "counter" and n > 0:
             attacker.damage += n
             self._log("damage", {"target": attacker.name, "player": self.current,
@@ -5293,6 +5588,16 @@ class Battle:
                         "per": int(_pp[2]) * 10, "count": cnt})
                     if attacker.is_ko:
                         self._resolve_ko(self.current, attacker)
+            elif kind == "search_bench":
+                # 「search your deck for up to N Pokémon that have "Koffing" in
+                #  their name and put them onto your Bench」（第一百零一批，
+                #  Team Rocket's Koffing）—— 复用 `_search_bench` 的
+                #  `:name:<key>` 精确名与新增的 `:name_has:<key>` 子串两种筛选。
+                _sb = "search_bench:" + ":".join(parts[2:])
+                detail = self._search_bench(self.players[owner], _sb)
+                self._log("ability_trigger", {
+                    "player": owner, "ability": ab.name,
+                    "kind": "search_bench", "detail": detail})
             elif kind == "discard_energy" and arg.isdigit():
                 n = int(arg)
                 avail = min(n, attacker.total_energy())
@@ -5381,7 +5686,15 @@ class Battle:
                "nullify_all": False,
                "ignore_weakness": False, "ignore_resistance": False, "coins": []}
         for tag in effects or ():
-            if tag == "dmg_zero":
+            if tag == "dmg_plus_prev_taken":
+                # 「If this Pokémon was damaged by an attack during your
+                # opponent's last turn, this attack does **that much** more
+                # damage.」（第一百零一批，Mega Heracross ex）
+                # 取**攻击方自己**的受击量，读 `prev`（对手上回合）而非 `mark`。
+                out["plus"] += attacker.dmg_taken_prev
+                self._log("dmg_prev_taken", {"target": attacker.name,
+                                             "n": attacker.dmg_taken_prev})
+            elif tag == "dmg_zero":
                 out["zero"] = True
             elif tag.startswith("nullify_if:"):
                 # 招式失败门（2026-10-28）：「If <条件> / If you don't …, this
@@ -6179,9 +6492,21 @@ class Battle:
         prev_ok = True
         for raw_tag in effects:
             tag = raw_tag
+            if str(tag).startswith(("use_only:", "use_not:")):
+                # 招式**使用条件**，不是效果 —— 由 `_attack_usable` 在合法动作
+                # 生成时判定；落到这里若不跳过会报「未知效果」。
+                continue
             if str(tag).startswith("pre:"):
                 # 已在 `_do_attack` 的**伤害前阶段**执行过（2026-10-29 第二十五批）。
                 # 明确跳过，避免以后误当成「未知 tag 被静默忽略」。
+                continue
+            if tag == "discard_stadium":
+                # 「If your opponent has a Stadium in play, discard it.」
+                # （第一百零七批，Chi-Yu「Scorching Earth」）——招式侧此前没有
+                # 这一支（只有特性/训练家侧有），不补就会「只锁不弃」。
+                _nm = self._apply_discard_stadium()
+                self._log("discard_stadium", {"player": self.current,
+                                              "name": _nm})
                 continue
             if str(tag).endswith(":if_pre_tool"):
                 # 「If you discarded a Pokémon Tool in this way, …」（N's Joltik）——
@@ -6224,14 +6549,19 @@ class Battle:
                         self._log("blocked", {"target": opp.active.name,
                                               "by": "prevent_all"})
                         continue
-                    if self._status_blocked(opp.active):
+                    # 逐状态判定（第一百一十一批）：同训练家侧口径
+                    _ms = str(tag).split(":", 1)[1].split("+")
+                    _mb = {x for x in _ms if self._status_blocked(opp.active, x)}
+                    if _mb and len(_mb) == len(_ms):
                         self._log("blocked", {"target": opp.active.name,
                                               "by": "status_immune"})
                         continue
                     _ap = []
-                    for _st0 in str(tag).split(":", 1)[1].split("+"):
+                    for _st0 in _ms:
                         if _st0 not in STATUSES:
                             raise ValueError(f"未知状态：{_st0}")
+                        if _st0 in _mb:
+                            continue
                         opp.active.status.add(_st0)
                         _ap.append(_st0)
                     self._log("status", {"player": 1 - self.current,
@@ -6243,9 +6573,9 @@ class Battle:
                         self._log("blocked", {"target": opp.active.name,
                                               "by": "prevent_all"})
                         continue
-                    if self._status_blocked(opp.active):
+                    if self._status_blocked(opp.active, tag):
                         # 化石卡 / Festival Grounds：「can't be affected by any
-                        # Special Conditions」
+                        # Special Conditions」；或卡面被动（只免疫某一个）
                         self._log("blocked", {"target": opp.active.name,
                                               "by": "status_immune"})
                         continue
@@ -6386,9 +6716,10 @@ class Battle:
                     self._log("blocked", {"target": opp.active.name,
                                           "by": "prevent_all"})
                     continue
-                if self._status_blocked(opp.active):
+                if self._status_blocked(opp.active, _pick):
                     self._log("blocked", {"target": opp.active.name,
-                                          "by": "status_immune"})
+                                          "by": "status_immune",
+                                          "status": _pick})
                     continue
                 opp.active.status.add(_pick)
                 self._log("status", {"player": 1 - self.current,
@@ -6933,6 +7264,13 @@ class Battle:
                 detail = self._search_bench(p, tag)
                 self._log("search_bench", {"player": self.current,
                                            "detail": detail})
+            elif tag.startswith("search_discard:"):
+                # 「search … and discard them」（第一百批，Drilbur）——
+                # ⚠ 必须排在通用 `search_` 之前：`search_discard` 也以
+                #   `search_` 开头，落到通用分支会变成**入手**（静默加强）。
+                detail = f"search discard {_search_discard(self, p, tag.split(':', 1)[1])}"
+                self._log("search_discard", {"player": self.current,
+                                             "detail": detail})
             elif tag.startswith("search_top:"):
                 # 第七十九批：招式侧「检索 2 张放回牌库顶」（Dialga）
                 detail = self._search_top(p, tag)
@@ -7099,13 +7437,16 @@ class Battle:
         owner = 1 - self.current
         target = self.players[owner]
         until = self._lock_until(owner)
-        if kind == "item":
-            target.item_lock_until = max(target.item_lock_until, until)
-        elif kind == "evolution":
-            target.evolution_lock_until = max(target.evolution_lock_until,
-                                              until)
-        else:
+        _field = {"item": "item_lock_until",
+                  "evolution": "evolution_lock_until",
+                  # 第一百零七批：Chi-Yu 封场地 / Scream Tail ex 封支援者 /
+                  # Genesect 封 ACE SPEC（后者在解析侧另有常量形态）
+                  "supporter": "supporter_lock_until",
+                  "stadium": "stadium_lock_until",
+                  "acespec": "acespec_lock_until"}.get(kind)
+        if _field is None:
             raise ValueError(f"未知 play_lock 类别：{tag}")
+        setattr(target, _field, max(getattr(target, _field), until))
         self._log("play_lock", {"player": self.current, "target": owner,
                                 "kind": kind})
 
@@ -7698,6 +8039,8 @@ class Battle:
         # （dmg_plus:N:if:opp_ko_last_turn）使用；在受害者回合开始清零。
         if self._ko_from_attack:
             self._ko_flags()[owner] += 1
+            if _name_key(fp.name).startswith("teamrocket"):
+                self._ko_tr_flags()[owner] += 1
         # 2026-11-02：Mega ex 被击倒时对手取 **3** 张（此前一律按 ex 的 2 张，
         # 导致卡池准入直接把整个 Mega 族拒收）。判定顺序必须先 mega 再 ex ——
         # Mega ex 的 `is_ex` 同样为 True（它确实是 ex 的一种，条件 tag 仍要算 ex）。
@@ -8316,6 +8659,7 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
     #     Energy attached」）。不满足时这张卡本来就不该能打，走到这里是调用方漏了
     #     legals 过滤 —— 回 0，而不是照常回血。
     alt_n, need_c, name_key = 0, None, None
+    maxleft = 0
     scope, ptype = "", None
     i = 2
     while i < len(parts):
@@ -8329,6 +8673,10 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
             continue
         if parts[i] == "if_name" and i + 1 < len(parts):
             name_key = re.sub(r"[^a-z0-9]", "", parts[i + 1].lower())
+            i += 2
+            continue
+        if parts[i] == "maxleft" and i + 1 < len(parts):
+            maxleft = int(parts[i + 1]) if parts[i + 1].isdigit() else 0
             i += 2
             continue
         if parts[i] == "need":
@@ -8363,6 +8711,12 @@ def _apply_heal(battle, p: PlayerState, tag: str, *,
         fp = _field_at(p, int((action or {}).get("target", 0)))
         if fp is None or not _ok(fp):
             raise ValueError("回复目标无效（未指定或属性不符）")
+        # 「… that has N HP or less remaining.」（第一百零四批，Bianca's Devotion）
+        # 剩余 HP 超出上限 → 该卡本来就不该能打；回 0 而不是照常回血
+        # （与 `:need:` 同口径：调用方漏了过滤时**不产生效果**）。
+        if maxleft and fp.max_hp - fp.damage > maxleft:
+            battle._log("no_effect", {"tag": tag, "reason": "目标剩余 HP 超出上限"})
+            return 0, 0
         targets = [fp]
     elif scope == "bench_one":
         cands = [fp for fp in p.bench if _ok(fp)]
@@ -8505,6 +8859,36 @@ def _attach_energy_from_zones(battle, p: PlayerState, target: FieldPokemon,
     return got
 
 
+def _attack_usable(battle, atk) -> bool:
+    """招式静态使用条件（`use_only:` / `use_not:`）是否满足
+
+    未知前缀一律**忽略**（不是条件）；条件不可求值时抛错（`_eval_condition`
+    的既有纪律：绝不当成 False，否则卡会静默变成「永远不可用」）。
+    """
+    for tag in (getattr(atk, "effects", None) or ()):
+        t = str(tag)
+        if t.startswith("use_only:"):
+            if not _eval_condition(battle, t[len("use_only:"):]):
+                return False
+        elif t.startswith("use_not:"):
+            if _eval_condition(battle, t[len("use_not:"):]):
+                return False
+    return True
+
+
+def _is_acespec(card) -> bool:
+    """是否 ACE SPEC 卡（第一百零七批）
+
+    当前数据集**没有任何 ACE SPEC 卡**（`subtype` 只有 Item / Pokémon Tool /
+    Supporter / Stadium），因此本函数恒为 False —— 这是**有前提的等价**：
+    `test_batch107_engine` 有一条守卫，一旦数据集出现 ACE SPEC 就立刻失败，
+    强制回来补真实判定，而不是让「禁打 ACE SPEC」静默变成「什么都禁不了」。
+    """
+    tdef = getattr(card, "tdef", None)
+    return "acespec" in str(getattr(tdef, "subtype", "") or "").lower().replace(
+        " ", "")
+
+
 def _search_kind_of(tag: str) -> str:
     """search_* tag → 检索类别（pokemon|trainer|any）"""
     if tag.startswith("search_pokemon:"):
@@ -8629,6 +9013,9 @@ def _take_kind_from_deck(p: PlayerState, n: int, kind: str,
             continue
         if flt and kind == "pokemon" and not _poke_matches_filter(c, flt):
             continue
+        if flt and flt.get("name_has"):
+            if flt["name_has"] not in _card_name_key(c):
+                continue
         p.hand.append(p.deck.pop(i))
         got += 1
     return got
@@ -8716,6 +9103,16 @@ def _attach_target_fp(tag: str, p: PlayerState,
     if kind == "any":
         fp = _field_at(p, want) if want >= 0 else None
         return fp if fp is not None else (p.active or (p.bench[0] if p.bench else None))
+    if kind == "stage2":
+        # 「attach … to 1 of your **Stage 2** Pokémon.」（第一百零九批，
+        # Rosa's Encouragement）—— 候选限 stage == 2；没有则该效果不执行。
+        cands = [fp for fp in p.all_field() if fp.stage == 2]
+        if not cands:
+            return None
+        fp = _field_at(p, want) if want >= 0 else None
+        if fp is not None and fp.stage == 2:
+            return fp
+        return cands[0]
     if kind == "bench_type" and i + 2 < len(parts):
         color = parts[i + 2].lower()
         cands = [b for b in p.bench if str(b.pdef.ptype).lower() == color]
@@ -8723,6 +9120,21 @@ def _attach_target_fp(tag: str, p: PlayerState,
             return None
         return cands[want - 1] if 1 <= want <= len(cands) else cands[0]
     return None
+
+
+def _attach_heal_of(tag: str) -> int:
+    """``:heal:<n>`` = 附能成功后**回复该目标** n 点（第一百零四批，Hydrapple ex）
+
+    卡面：「attach a Basic {G} Energy card from your hand to 1 of your Pokémon.
+    **If you attached Energy to a Pokémon in this way, heal 30 damage from that
+    Pokémon.**」——「那个目标」是关键：不能回成持有者自己。
+    """
+    parts = str(tag or "").split(":")
+    if "heal" in parts:
+        i = parts.index("heal")
+        if i + 1 < len(parts) and parts[i + 1].isdigit():
+            return int(parts[i + 1])
+    return 0
 
 
 def _attach_counters_of(tag: str) -> int:
@@ -9440,14 +9852,44 @@ def _search_discard(battle, p: PlayerState, raw: str) -> int:
     `search_top` 同口径）；`up to N` 取卡面允许的最大合法值。取到卡才洗牌
     —— 空集合的「顺手洗牌」也是静默改状态。
     """
-    n = 999 if raw == "all" else int(raw)
-    take = min(n, len(p.deck))
-    picked = [p.deck.pop() for _ in range(take)]
+    parts = str(raw).split(":")
+    n = 999 if parts[0] == "all" else int(parts[0])
+    # 类别/属性筛选（第一百/一百零一批，Drilbur「Dig Dig Dig」）：
+    # `search_discard:3:energy:type:fighting` —— 卡面明写「Basic {F} Energy」，
+    # 不筛选就会把任意 3 张弃掉（弃错牌库 = 静默改资源）。
+    kind, ptype = "any", None
+    i = 1
+    while i < len(parts):
+        if parts[i] == "type" and i + 1 < len(parts):
+            ptype = parts[i + 1].lower()
+            i += 2
+            continue
+        if parts[i] in ("energy", "pokemon", "trainer", "any") and i == 1:
+            kind = parts[i]
+            i += 1
+            continue
+        raise ValueError(f"search_discard 参数非法：{raw}")
+    from .cards import EnergyRef, PokeRef, TrainerRef
+    picked = []
+    for idx in reversed(range(len(p.deck))):
+        if len(picked) >= n:
+            break
+        c = p.deck[idx]
+        if kind == "energy" and not isinstance(c, EnergyRef):
+            continue
+        if kind == "pokemon" and not isinstance(c, PokeRef):
+            continue
+        if kind == "trainer" and not isinstance(c, TrainerRef):
+            continue
+        if ptype and kind == "energy" \
+                and str(getattr(c.edef, "type", "")).lower() != ptype:
+            continue
+        picked.append(p.deck.pop(idx))
     for ref in picked:
         battle._to_discard(p, ref)
-    if take:
+    if picked:
         battle.rng.shuffle(p.deck)
-    return take
+    return len(picked)
 
 
 def _energy_self_to_deck(battle, p: PlayerState,
@@ -9755,6 +10197,8 @@ _CONDITIONS = {
     # 「if any of your Pokémon were Knocked Out ... during your opponent's last turn」
     "opp_ko_last_turn": lambda b, p, o: b._ko_flags()[1 - b.current] > 0,
     "own_ko_last_turn": lambda b, p, o: b._ko_flags()[b.current] > 0,
+    # 第一百零九批：只统计 **Team Rocket's** 宝可梦被击倒（TR Archer）
+    "own_ko_tr_last_turn": lambda b, p, o: b._ko_tr_flags()[b.current] > 0,
     # 奖励落后（对手已取得更多奖赏卡 = 我方落后）
     "own_behind_prizes": lambda b, p, o: p.prizes_left > o.prizes_left,
     "own_prizes_full": lambda b, p, o: p.prizes_left == b.cfg.prizes,
@@ -10141,6 +10585,15 @@ def _eval_condition(battle, cond: str) -> bool:
         return p.active is not None and any(
             re.sub(r"[^a-z0-9]", "", str(ref.edef.tag)) == want
             for ref in p.active.senergy)
+    if name == "own_field_name":
+        # 「if you have **Solrock** in play」（第一百一十一批，Lunatone
+        # 「Lunar Cycle」）—— 与 `own_bench_name`（只看后备）不同：这里是
+        # 「in play」= 战斗位 + 后备。用**子串**匹配卡名归一化键，与
+        # `_search_bench` 的 `name_has` 同口径（"Solrock" 也命中 "Solrock ex"）。
+        key = arg.strip().lower()
+        if not key:
+            raise ValueError(f"条件缺参数：{cond}")
+        return any(key in _name_key(fp.pdef.name) for fp in p.all_field())
     if name == "own_discard_basic_energy_at_least":
         color, _, raw_n = arg.partition(":")
         if not raw_n.isdigit():
@@ -10462,6 +10915,16 @@ def _tool_meta(tag: Optional[str]) -> dict:
 
 
 _QUAL_ARGS = ("name", "status", "faction")
+
+
+def _norm_ex_key(fp) -> str:
+    """卡名归一化键去掉尾部 `ex`（「Pecharunt {ex}」→ `pecharunt`）
+
+    卡面写 `{ex}` 时它属于**规则框**而非名字，解析侧产出的键因此不带 `ex`；
+    而引擎里卡名本身就是「Pecharunt ex」。凡是要跟解析侧键对齐的地方都用这个。
+    """
+    k = _name_key(fp.pdef.name)
+    return k[:-2] if k.endswith("ex") else k
 
 
 def _qual_ok(qual, fp: Optional[FieldPokemon]) -> bool:

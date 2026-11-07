@@ -107,7 +107,8 @@ class TestPoolTagVocabulary(unittest.TestCase):
 
     def test_no_unknown_ability_passive_tags(self):
         """受击反应 tag 的形态必须严格是 `<kind>:<arg>[:<extra>]`（错位会静默不触发）"""
-        allowed = {"status", "counter", "discard_energy"}
+        # 第一百零一批新增 `search_bench:<n>:name_has:<key>`（TR Koffing）
+        allowed = {"status", "counter", "discard_energy", "search_bench"}
         bad = []
         for name, item, tag in self._iter_tags():
             if not tag.startswith("on_damaged:"):
@@ -118,6 +119,13 @@ class TestPoolTagVocabulary(unittest.TestCase):
                 if len(parts) != 4 or not parts[2].isdigit() \
                         or parts[3] not in CARD_TYPES:
                     bad.append(f"{name} · {item}：{tag}（counter_per 形态非法）")
+                continue
+            # 第一百零一批：`search_bench:<n>:name_has:<key>` —— 受击即检索铺场。
+            # ⚠ 缺 `name_has` 会退化成「检索任意 N 只」，静默放宽范围。
+            if parts[1:2] == ["search_bench"]:
+                if len(parts) != 5 or not parts[2].isdigit() \
+                        or parts[3] != "name_has" or not parts[4]:
+                    bad.append(f"{name} · {item}：{tag}（search_bench 形态非法）")
                 continue
             if len(parts) != 3 or parts[1] not in allowed:
                 bad.append(f"{name} · {item}：{tag}")

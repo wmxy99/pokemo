@@ -236,9 +236,12 @@ def _expand_evolve_act(effects: list) -> list:
     out: list = []
     for t in effects or []:
         s = str(t)
-        if s.startswith("evolve_act:"):
+        # 第一百批起还有**上场触发**包装层 `on_bench_act:`（同构于 evolve_act）
+        _wrap = next((w for w in ("evolve_act:", "on_bench_act:")
+                      if s.startswith(w)), None)
+        if _wrap:
             out.append(s)
-            out.extend(x for x in s[len("evolve_act:"):].split("|") if x)
+            out.extend(x for x in s[len(_wrap):].split("|") if x)
         else:
             out.append(s)
     return out
@@ -370,10 +373,20 @@ def _expand_compound(effects: list) -> list:
     out: list = []
     for e in effects or []:
         t = str(e)
-        if "|" in t and not t.startswith(("coin", "evolve_act:")):
-            out.extend(x for x in t.split("|") if x)
+        # **触发器包装层**（第一百批/一百零二批）：`evolve_act:a|b` /
+        # `on_bench_act:a|b` 里的 `|` 是子效果分隔符，包装前缀只是「什么时候
+        # 执行」。不剥掉包装，所有按前缀判断的规则都会报「缺 tag」的假错误
+        # （实测：Farfetch'd 的 attach / Durant ex 的 mill / TR Koffing 的
+        #  search_bench 三张卡同时被误报）。
+        for _wrap in ("evolve_act:", "on_bench_act:"):
+            if t.startswith(_wrap):
+                out.extend(x for x in t[len(_wrap):].split("|") if x)
+                break
         else:
-            out.append(t)
+            if "|" in t and not t.startswith("coin"):
+                out.extend(x for x in t.split("|") if x)
+            else:
+                out.append(t)
     return out
 
 
@@ -1511,9 +1524,21 @@ def audit_search_kind(card_name: str, item_name: str, desc: str,
                         f"→ 应为 `attach:…`，实际 {got}")
         return errs
     if "onto your bench" in clause or "onto their bench" in clause:
-        if not any(str(t).startswith("search_bench") for t in effects):
+        # 第一百零一批起还有**受击检索铺场**（`on_damaged:search_bench:…`，
+        # Team Rocket's Koffing）—— 用 `startswith` 会把它判成「缺 tag」。
+        if not any("search_bench" in str(t) for t in effects):
             errs.append(f"{card_name} · {item_name}：检索后**铺到后备**"
                         f"→ 应为 `search_bench:…`，实际 {got}")
+        return errs
+
+    # ---- ①b 去向是**弃牌堆**（search_discard）----
+    # 「search your deck for up to N … **and discard them**」（Drilbur）：
+    # 分类规则只覆盖「入手」形态，拿它要求 `search_energy` 是错的口径 ——
+    # 弃置去向必须显式写在 tag 里（`search_discard:N:energy:type:<t>`）。
+    if re.search(r"and discard them", _norm(desc or ""), re.I):
+        if not any(str(t).startswith("search_discard") for t in effects):
+            errs.append(f"{card_name} · {item_name}：检索后**弃置**→ 应为 "
+                        f"`search_discard:…`，实际 {got_hand}")
         return errs
 
     # ---- ② 类别（仅「入手」形态）----
@@ -1702,7 +1727,11 @@ def audit_static_immune(card_name: str, item_name: str, desc: str,
                 errs.append(f"{card_name} · {item_name}：`{tag}` 是自身免伤，"
                             f"卡面却未写 to this Pokémon")
             rest = ":".join(parts[3:])
-            for src, rx in _IMM_SRC_TEXT.items():
+            # ⚠ 必须**从长到短**匹配：`from:basic` 是 `from:basic_non_colorless`
+            #   的**子串**，按字典顺序先命中 `basic` 就会拿错卡面短语
+            #   （Terapagos ex「Basic non-{C} Pokémon」被误报来源不符）。
+            for src, rx in sorted(_IMM_SRC_TEXT.items(),
+                                  key=lambda kv: -len(kv[0])):
                 if f"from:{src}" not in tag:
                     continue
                 if not re.search(rx, low):
@@ -1716,7 +1745,8 @@ def audit_static_immune(card_name: str, item_name: str, desc: str,
                 errs.append(f"{card_name} · {item_name}：`{tag}` 限定无规则框，"
                             f"卡面却未写 Rule Box")
         elif "shield:prevent_all" in tag:
-            for src, rx in _IMM_SRC_TEXT.items():
+            for src, rx in sorted(_IMM_SRC_TEXT.items(),
+                                  key=lambda kv: -len(kv[0])):
                 if f"from:{src}" not in tag:
                     continue
                 if not re.search(rx, low):
@@ -2638,7 +2668,9 @@ _GUST_CONFUSE = re.compile(
     r"if you do, the new active pok[eé]mon is now (\w+)", re.I)
 _RESEARCH = re.compile(r"discard your hand and draw (\d+) cards?", re.I)
 _ABILITY_COST_SENT = re.compile(
-    r"you must (.+?) in order to use this ability", re.I)
+    # `must` 与 `may` 都是**代价**：may 只表示「可以选择不发动」，不是
+    # 「可以免费发动」。解析侧同步支持（第一百一十一批，Lunatone）。
+    r"you (?:must|may) (.+?) in order to use this ability", re.I)
 
 _STATUS_WORDS = {"asleep": "sleep", "burned": "burn", "confused": "confuse",
                  "paralyzed": "paralyze", "poisoned": "poison"}
@@ -2961,7 +2993,10 @@ _HEAL_NEED_RE = re.compile(r"that has (\d+) or more energy attached", re.I)
 _HEAL_ALT_RE = re.compile(
     r"if that pok[eé]mon is an (.+?) pok[eé]mon, heal (\d+) damage .* instead", re.I)
 _PLAY_GATE_OK = {"opp_ko_last_turn", "tera_in_play", "went_second_first_turn",
-                 "own_behind_prizes", "own_ko_last_turn"}
+                 "own_behind_prizes", "own_ko_last_turn",
+                 # 第一百零九批（TR Archer）：只算 Team Rocket's 宝可梦被击倒。
+                 # ⚠ 不能并进 `own_ko_last_turn` —— 门槛范围不同。
+                 "own_ko_tr_last_turn"}
 
 
 def _draw_cond_key(m) -> str | None:

@@ -45,11 +45,18 @@ class TestHealAllParse(unittest.TestCase):
         self.assertEqual(r["tags"], ["coin_all:2:heads:heal:all:choose"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_hp_condition_rejected(self):
+    def test_hp_condition_modeled_as_maxleft(self):
+        """「… that has 30 HP or less remaining」→ 第一百零四批起 `:maxleft:30`
+
+        决策反转留痕：旧口径把它当「范围/后续不可精确表达」整卡拒收。
+        现在 `heal:all` 支持 `:maxleft:<n>`：剩余 HP 超出上限时引擎回 0
+        （与 `:need:` 同口径 —— 调用方漏了过滤时**不产生效果**），
+        而不是「照常回满」（那会把一张限定卡变成万能回满）。
+        """
         r = _tags("Heal all damage from 1 of your Pokémon that has 30 HP or "
                   "less remaining.", kind="supporter")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["heal:all:choose:maxleft:30"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestKnockoutParse(unittest.TestCase):

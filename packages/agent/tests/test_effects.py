@@ -438,11 +438,13 @@ class TestV14Modifiers(unittest.TestCase):
         全部必须留下 unsupported，整卡不进池。
         """
         # 检索：数量自由 + 卡名筛选
+        # 第一百批起：落 `search_bench:all:…:name_has:rotom`（**不压成固定数**）
         r = self._tags("You may search your deck for any number of Pok\u00e9mon "
                        "that have \u201cRotom\u201d in their name and put them "
                        "onto your Bench. Then, shuffle your deck.")
-        self.assertEqual(r["tags"], [], "不得产出固定数量的检索 tag")
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["search_bench:all:name_has:rotom"],
+                         "应为 `all` + 卡名筛选，不得产出固定数量")
+        self.assertEqual(r["unsupported"], [], "该形态已完整建模")
 
         # 附着 / 移动 / 弃牌：任意数量子句不得被静默丢弃
         for text in (
@@ -772,10 +774,13 @@ class TestV14Modifiers(unittest.TestCase):
         for text, name, bad in cases:
             with self.subTest(name=name):
                 r = self._tags(text, kind="stadium", name=name)
-                self.assertEqual(r["tags"], [], f"{name} 不得产出任何 tag")
-                self.assertFalse(any(t.startswith(bad) for t in r["tags"]),
-                                 f"{name} 不得落成 `{bad}`")
-                self.assertTrue(r["unsupported"], "必须如实登记未建模")
+                # 第一百零六批起 Dizzying Valley 已精确建模为
+                # `stadium:keep_confuse`（进化不解除混乱）—— 它**不再是**通用
+                # 解析的兜底结果，而是场地专属 kind。
+                self.assertEqual(r["tags"], ["stadium:keep_confuse"])
+                self.assertFalse(any(t == bad for t in r["tags"]),
+                                 f"{name} 不得落成裸 `{bad}` 状态")
+                self.assertEqual(r["unsupported"], [])
 
     def test_stadium_lumiose_needs_turn_ends_clause(self):
         """负向守卫：少了「their turn ends」就不是 Lumiose 形态（不得硬套 end）"""
@@ -1668,13 +1673,19 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["tags"], ["retaliate_next:equal"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_search_reaction_still_unmodeled(self):
-        """受击即检索（Koffing）需要新钩子 → 仍如实未建模"""
+    def test_search_reaction_now_modeled(self):
+        """受击即检索（Koffing）→ 第一百零一批起 `on_damaged:search_bench:`
+
+        决策反转留痕：旧口径要求「受击即检索」的新钩子。现在 `on_damaged:`
+        新增 `search_bench` kind，检索目标用 `:name_has:` **子串**筛选
+        （卡面 "have Koffing in their name"，不是精确名）。
+        """
         r = self._tags(self.P + "search your deck for up to 2 Pok\u00e9mon that "
                                 "have \u201cKoffing\u201d in their name and put "
                                 "them onto your Bench. Then, shuffle your deck.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["on_damaged:search_bench:2:name_has:koffing"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_prevent_damage_reaction_modeled_as_coin_prevent(self):
         """抛币免伤（第四十五批）：由 `passive:coin_prevent:` 承载，不得无条件免伤
@@ -1689,14 +1700,24 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["tags"], ["passive:coin_prevent:darkness"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_history_condition_rejected(self):
-        """「was damaged … during your opponent's last turn」需回合级历史"""
+    def test_history_condition_now_modeled(self):
+        """「was damaged … last turn」→ 第一百零一批起 `dmg_plus_prev_taken`
+
+        决策反转留痕：旧口径要求「回合级受击历史」，引擎没有 → 如实拒绝。
+        现在 `FieldPokemon.dmg_taken_prev` 在**回合开始**把上回合累计量滚过来
+        （Mega Heracross ex「Juggernaut Horn」）。
+
+        ⚠ 关键仍是「**不按固定值**映射」：卡面是 "that much"，落成常数就是
+          静默改数值。这里断言产的是**动态** tag，而不是 `dmg_plus:<N>`。
+        """
         r = self._tags("If this Pok\u00e9mon was damaged by an attack during "
                        "your opponent's last turn, this attack does that much "
                        "more damage.", kind="attack")
-        self.assertFalse([t for t in r["tags"] if t.startswith("dmg_plus")],
+        self.assertEqual(r["tags"], ["dmg_plus_prev_taken"])
+        self.assertFalse([t for t in r["tags"]
+                          if t.startswith("dmg_plus:")],
                          "不得按固定值映射「that much more」")
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["unsupported"], [])
 
     # ---- 特性状态词：只有「主动施加」才放通 ----
     def test_active_infliction_passes(self):
@@ -1706,10 +1727,15 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["tags"], ["burn"])
 
     def test_immunity_is_not_infliction(self):
-        """「This Pokémon can't be Asleep.」= 免疫，不是让对手睡眠"""
+        """「This Pokémon can't be Asleep.」= 免疫，不是让对手睡眠
+
+        第一百一十一批起由 `passive:status_immune:sleep` 承载（Hoothoot）。
+        断言重点仍是**方向**：绝不能产出裸 `sleep`（那是让对手睡眠）。
+        """
         r = self._tags("This Pok\u00e9mon can't be Asleep.")
         self.assertNotIn("sleep", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["passive:status_immune:sleep"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_checkup_extra_damage_is_not_infliction(self):
         """「put 3 more damage counters on your opponent's Burned Pokémon」= 追加伤害
@@ -1821,13 +1847,22 @@ class TestSearchFilters(unittest.TestCase):
                        "Then, shuffle your deck.", kind="attack")
         self.assertEqual(r["tags"], ["search_any:1:per:own_bench"])
 
-    def test_any_number_search_still_rejected(self):
-        """「any number of」是玩家自由选择 → 仍拒绝（交互层未实现）"""
+    def test_any_number_named_search_modeled(self):
+        """「any number of **具名** cards」→ 第一百批起可建模（Musharna）
+
+        为什么这类「任意张」不需要交互层（与弃牌/对攻类不同）：
+          · 备选集合被**卡名**封死（这里只有 Fennel 系列）；
+          · 这是**检索**——拿到手是纯增益，不存在「取 0 更好」的场合。
+        与 Precious Trolley 的 `search_bench:all:basic` 同一口径。
+
+        ⚠ 不带卡名的「any number of cards」仍必须拒绝（见 `_search_any_named`
+          的类别词黑名单），否则会把「Basic Energy」当成卡名。
+        """
         r = self._tags("You may search your deck for any number of Fennel "
                        "cards, reveal them, and put them into your hand. Then, "
                        "shuffle your deck.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["search_trainer:all:name_has:fennel"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestSelfStatusParsing(unittest.TestCase):
@@ -2594,8 +2629,11 @@ class TestCrossTurnLockParsing(unittest.TestCase):
                           "your first turn. This attack does 30 damage for each "
                           "of your Benched Pokémon.")
         self.assertIn("dmg_set:30:per:own_bench", tags["tags"])
-        self.assertTrue(any("首回合" in u.get("reason", "")
-                            for u in tags["unsupported"]))
+        # 首回合限制已是引擎条件层（`_attack_usable`，第一百零七批），
+        # 不再登记未建模 —— 但仍须落 `use_not:` 这条**动态**条件。
+        self.assertIn("use_not:went_second_first_turn", tags["tags"])
+        self.assertFalse(any("首回合" in u.get("reason", "")
+                             for u in tags["unsupported"]))
 
         tags = self._tags("Discard 6 Basic {G} Energy cards from your hand, and "
                           "Knock Out your opponent’s Active Pokémon. If you "

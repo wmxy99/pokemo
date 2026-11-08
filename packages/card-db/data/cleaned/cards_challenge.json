@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 10:20:58",
+  "reparsed_at": "2026-11-08 10:29:07",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1192,
+  "engine_ready": 1193,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1192,
-   "engine_approximated": 1177,
-   "engine_unmatched": 75,
+   "zh_backfill": 1193,
+   "engine_approximated": 1178,
+   "engine_unmatched": 74,
    "engine_namekey_mismatch": 9
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 149,
-   "engine_tags": 1499,
-   "unsupported": 75,
+   "engine_tags": 1500,
+   "unsupported": 74,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1177,
+  "engine_approximated": 1178,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -94850,14 +94850,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Gumshoos@MEG 110",
    "parse": {
     "items": [
      {
@@ -94867,71 +94869,57 @@
        {
         "kind": "ability",
         "name": "Evidence Gathering",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "swap_hand_top": true
           }
          }
         ],
-        "source_text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck."
+        "play_gate": "",
+        "source_text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "choose:swap_hand_top"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Evidence Gathering",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "swap_hand_top": true
         }
        }
       ],
-      "source_text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck."
+      "play_gate": "",
+      "source_text": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "choose:swap_hand_top"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1177,
+      "kept": 1178,
       "by_Energy": 19,
-      "by_Pokemon": 990,
+      "by_Pokemon": 991,
       "by_Trainer": 168,
       "skipped": {
-        "存在未建模项（整卡不收）": 73,
+        "存在未建模项（整卡不收）": 72,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -32262,6 +32262,56 @@
       "source_card_id": 704,
       "name_key": "yungoos",
       "uid": "Yungoos@MEG 109"
+    },
+    {
+      "name": "Gumshoos",
+      "name_zh": "猫鼬探长",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Yungoos",
+      "attacks": [
+        {
+          "name": "Bite",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "咬住",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Evidence Gathering",
+          "name_zh": "收集证据",
+          "tag": "choose:swap_hand_top",
+          "location": "field",
+          "desc": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck.",
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。将你手牌中的 1 张卡与牌库顶部的卡交换。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "110"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 705,
+      "name_key": "gumshoos",
+      "uid": "Gumshoos@MEG 110"
     },
     {
       "name": "Tangela",

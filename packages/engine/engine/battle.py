@@ -502,6 +502,11 @@ class Battle:
                 # 静态封印（「场上的宝可梦没有特性」等，效果族提供）
                 if families.ability_blocked(self, fp, ab):
                     continue
+                # 决策分解型特性的**动作前置条件**（S1c）：手牌/牌库为空时无法交换，
+                # 必须**不进**合法动作表 —— 否则 AI 会反复尝试必然抛错的动作。
+                if ab.tag.startswith("choose:swap_hand_top") \
+                        and (not p.hand or not p.deck):
+                    continue
                 # 发动代价付不出 → 不可发动（2026-11-04 第四十九批）。放在这里而不是
                 # 等 `_do_ability` 抛错：否则 AI 会把「打不出的动作」当成合法动作。
                 if getattr(ab, "cost", "") and not _ability_cost_ok(p, fp, ab.cost):
@@ -1617,6 +1622,19 @@ class Battle:
                                       "from": fp.name, "detail": "|".join(subs)})
                 self._apply_attack_effects(fp, subs, action)
                 return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("choose:swap_hand_top"):
+                # 「Switch a card from your hand with the top card of your deck.」
+                # （Gumshoos「Evidence Gathering」）—— 选哪张手牌由牌手决定，
+                # 引擎不自选（选错＝换错牌，属于实质改结果）。
+                _opts = [{"ref": c, "display": _card_label(c)}
+                         for c in p.hand]
+                if not _opts:
+                    raise ValueError("手牌为空，无法交换")
+                if not p.deck:
+                    raise ValueError("牌库为空，无法交换")
+                self._open_choice("swap_hand_top", _opts, min_pick=1,
+                                  max_pick=1, tag=tag)
+                return {"ok": True, "event": self.events[-1]}
             if tag.startswith("recon:"):
                 _rspec = _parse_recon_tag(tag)
                 if not _rspec["legacy"]:
@@ -2145,6 +2163,19 @@ class Battle:
                 if idx is None:
                     raise ValueError("选择的手牌已不在手中（内部状态异常）")
                 self._to_discard(p, p.hand.pop(idx))
+        elif ch.kind == "swap_hand_top":
+            opt = ch.chosen()[0]
+            ref = opt.get("ref")
+            idx = next((i for i, c in enumerate(p.hand) if c is ref), None)
+            if idx is None or not p.deck:
+                raise ValueError("交换目标已失效（内部状态异常）")
+            card = p.hand.pop(idx)
+            top = p.deck.pop()            # deck[-1] = 牌库顶
+            p.hand.append(top)
+            p.deck.append(card)           # 原手牌放到牌库顶
+            self._log("swap_hand_top", {"player": ch.owner,
+                                        "put": _card_label(card),
+                                        "got": _card_label(top)})
         elif ch.kind == "confirm":
             opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
             if not opt.get("yes"):

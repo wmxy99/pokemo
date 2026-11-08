@@ -1189,9 +1189,9 @@
       "phase": "P5",
       "theme": "牌库底 / 顶检视",
       "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 2,
-      "note": "**部分完成（1 张进池 / 2 张拒收）**：Dusk Ball 落成 `recon_bottom:7`（看**牌库底** 7 张取 1 张宝可梦，其余洗回；与 `recon:` 的牌库顶方向相反，前缀不互相覆盖）。Misty's Psyduck（弃牌库底 + 自身放回牌库顶）与 Gumshoos（手牌与牌库顶互换）仍需「牌库底」写入动作 + 选择层。",
+      "actual_pool": 2,
+      "actual_refused": 1,
+      "note": "**部分完成（1 张进池 / 2 张拒收）**：Dusk Ball 落成 `recon_bottom:7`（看**牌库底** 7 张取 1 张宝可梦，其余洗回；与 `recon:` 的牌库顶方向相反，前缀不互相覆盖）。Misty's Psyduck（弃牌库底 + 自身放回牌库顶）与 Gumshoos（手牌与牌库顶互换）仍需「牌库底」写入动作 + 选择层。 **S1c 补记**：Gumshoos「Evidence Gathering」已由决策分解表达（`choose:swap_hand_top`，选哪张手牌由牌手定）。",
       "cards": [
         {
           "name": "Misty's Psyduck",

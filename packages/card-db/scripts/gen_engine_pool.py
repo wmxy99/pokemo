@@ -351,6 +351,8 @@ ABILITY_TAG_PREFIXES = (
     # （Pecharunt ex「Subjugating Chains」）。引擎侧 `_ability_legals` 会按
     # 后备位置逐条列动作，不写前缀 → 整卡在池外**静默消失**。
     "switch_choose:",
+    # 第一百三十五批（S1c）：决策分解 —— 手牌与牌库顶互换（Gumshoos）。
+    "choose:",
 )
 
 # 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）

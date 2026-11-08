@@ -3300,6 +3300,12 @@ _CTR_ANY_RE = re.compile(
     r"you like\.$", re.I)
 
 
+# 「Switch a card from your hand with the top card of your deck.」（Gumshoos）
+_SWAP_HAND_TOP_RE = re.compile(
+    r"^once during your turn, you may use this ability\. switch a card from "
+    r"your hand with the top card of your deck\.$", re.I)
+
+
 def _detect_b135(text: str, kind: str) -> list:
     """第一百三十五批：带「任意数量」选择的卡（整句精确匹配）
 
@@ -3324,6 +3330,10 @@ def _detect_b135(text: str, kind: str) -> list:
                                               m.group(3).lower())
                 return [act("rule", None, "any", {"optional_energy_cost": (
                     int(m.group(1)), _ty, _st)})]
+        return []
+    if kind == "ability":
+        if _SWAP_HAND_TOP_RE.match(t):
+            return [act("rule", None, "self", {"swap_hand_top": True})]
         return []
     if kind != "supporter":
         return []
@@ -10042,6 +10052,9 @@ def to_engine_tags(specs: list) -> dict:
                 if extra.get("win_if_prizes") is not None:
                     tags.append(f"win_if:own_prizes_eq:"
                                 f"{int(extra['win_if_prizes'])}")
+                    continue
+                if extra.get("swap_hand_top"):
+                    tags.append("choose:swap_hand_top")
                     continue
                 if extra.get("counters_any_opp") is not None:
                     tags.append(f"choose:counters_any:"

@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1214/1267 = 95.8%**，池 **1199**，
-> 未 ready **53**（批内如实拒收 47 + 结构性 4 + 待新能力 2），测试 **2609**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 / S2a–S2e 已落地**（S2 全部完成，见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1218/1267 = 96.1%**，池 **1203**，
+> 未 ready **49**（批内如实拒收 45 + 结构性 4），测试 **2620**，CI 8/8。
+> 进度：**S1 全 / S2 全 / S3 / S4 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -637,6 +637,41 @@ S2c 3 张 / S2d 4 张 / S2e 3 张，含连带卡）。下一步按计划进入 *
 
 **数字**：`engine_ready` **1214 / 1267 = 95.8%** · 池 **1199** · 未 ready **53** ·
 测试 **2609**（engine 1426）· 对账 **48 类** · CI 8/8。
+
+---
+
+### S4 · 效果免疫单点（2026-11-08 完成，进池 4 张）
+
+| 项 | 落点 |
+|---|---|
+| 统一守卫 | `Battle._effect_blocked(target, source, actor, kinds)`：① 同侧操作直接放行（自己对自己不算「对手的效果」）；② `families.effect_immune`（含团队范围）；③ 特殊能量侧。⚠ `source="trainer"` 时**必须**给卡类别，否则抛错 —— 忘了传就静默不免疫（= 静默加强） |
+| 团队范围 | `fx:effect_immune:attack:team:basic_teamrocket`：持有者在场，则**我方全部基础火箭队宝可梦**免疫对手招式效果（伤害照常） |
+| 训练家来源 | `fx:effect_immune:trainer:item+supporter:self` / `…:supporter:self`：对手**从手牌打出**的 Item/Supporter 效果不作用于自身。子类别必须精确（只写 Supporter 的印刷不挡 Item） |
+| 生效点 | `_trainer_poke_blocked` 挂在：拉人（`_trainer_boss` + 拉人附混乱）、状态（`_trainer_status_multi`）、弃特殊能量（两处内联分支）、弃道具/能量（`_trainer_discard_tool_senergy` / `_trainer_discard_tool_or_senergy`）、以及共享 helper `_apply_discard_tool` / `_apply_bounce` / `_apply_energy_move`（新增 `source` 参数：attack / ability / trainer） |
+| 进池 | **4 张**：Team Rocket's Articuno（Repelling Veil）· Cetitan ex（Snow Camouflage）· Fraxure（Unnerve）· Antique Sail Fossil（Protective Sail，化石特性） |
+| 对账 | 新增第 49 类（团队范围 / 训练家来源），并**改判**两条旧负向用例（此前因引擎无法表达而拒收） |
+
+**踩到的坑**
+
+1. **★ 族内 `audit_item` 是死代码**：`families.audit_item()` 在整仓**没有任何调用点**
+   （只有协议注释）。我最初把 S4 对账写在族里，注入错误后**对账照样全绿** ——
+   典型的「假守卫」。改为在 `audit_pool_alignment.py` 里写显式规则（S2/S3/S2d/S2e
+   同款），并删掉族内那份以免留下误导。
+2. **冠词写死 `an `**：两版卡面分别是 "**an** Item or Supporter card" 与
+   "**a** Supporter card"，只写 `an ` 会让后者落到「静态/未建模」兜底
+   （整卡被拒收，且看不出原因）。
+3. **「被免疫」不是错误**：`discard_senergy` 在两处内联分支里原本以「没有特殊能量」
+   抛错退出；被免疫时也会走到这里 → 卡打得出但 step 报错 = 池内死卡。
+   改为区分「真的没有目标」（抛错）与「有目标但全被免疫」（记日志、不结算）。
+4. **测试用 `TestCase` 继承会重复执行父类用例**：动态用例数与 `def test_*` 静态
+   计数不一致 → `check_doc_counts` 会红。改用模块级 helper 函数。
+
+**仍未做**：`Prevent all **damage** from and effects of attacks` 仍未建模（连伤害
+一起挡，需要伤害免疫层，不能只挂效果免疫）；`from your opponent's Tera Pokémon`
+的来源子集缺 Tera 元数据。这两类继续如实拒收。
+
+**数字**：`engine_ready` **1218 / 1267 = 96.1%** · 池 **1203** · 未 ready **49** ·
+测试 **2620**（engine 1436）· 对账 **49 类** · CI 8/8。
 
 ---
 

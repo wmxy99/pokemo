@@ -2131,7 +2131,10 @@ class Battle:
                                       "from": fp.name, "detail": f"opp shuffle {detail}"})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("energy_move:"):
-                detail = self._apply_energy_move(tag, fp, action)
+                # source="ability"：目标若免疫**特性**效果（`fx:effect_immune:ability`）
+                # 则整条不执行 —— 与招式侧同一守卫，只是来源不同。
+                detail = self._apply_energy_move(tag, fp, action,
+                                                 source="ability")
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
@@ -2145,12 +2148,12 @@ class Battle:
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("bounce:"):
                 # S6 回手族（如 Alomomola「弃牌堆基础宝可梦铺后备」/ Duskull）
-                detail = self._apply_bounce(tag, fp, action)
+                detail = self._apply_bounce(tag, fp, action, source="ability")
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("discard_tool:"):
-                self._apply_discard_tool(tag)
+                self._apply_discard_tool(tag, "ability")
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": "discard tool"})
                 return {"ok": True, "event": self.events[-1]}
@@ -2742,6 +2745,51 @@ class Battle:
             return
         raise ValueError(f"未实现的延迟 tag：{tag}")
 
+    def _effect_blocked(self, target, source: str, actor: int,
+                        kinds: str = "") -> bool:
+        """统一守卫（S4）：``actor`` 施加给 ``target`` 的 ``source`` 类效果是否被免疫
+
+        三条判定，缺一不可：
+          ① **自己对自己做的事不算**「对手的效果」——否则「自己用招式弃自己
+             能量」会被自己的免疫挡住（`actor == target 的拥有者` 直接放行）；
+          ② 特性侧 `fx:effect_immune:*`（含团队范围）；
+          ③ 特殊能量侧（Mist / Rock Fighting 只挡招式效果）。
+
+        `source` ∈ attack / ability / trainer；`kinds` 只在 trainer 用
+        （`item` / `supporter`），对应卡面「plays an Item or Supporter card」。
+        """
+        if target is None:
+            return False
+        # ⚠ 训练家来源**必须**给出卡类别：忘传会让免疫静默失效（对手的卡照常
+        #   生效 = 静默加强），因此这里直接抛错而不是猜一个默认值。
+        if source == "trainer" and not kinds:
+            raise ValueError("trainer 免疫判定必须给出卡类别（item / supporter）")
+        if int(actor) == self._owner_of(target):
+            return False
+        if families.effect_immune(self, target, source, kinds):
+            return True
+        return special_energy.effect_immune(target, source)
+
+    def _trainer_poke_blocked(self, fp, kind: str) -> bool:
+        """训练家卡（Item / Supporter）对 ``fp`` 的效果是否被免疫（S4）
+
+        只认「从手牌打出的 Item / Supporter」——场地/特性触发的效果不走这里
+        （卡面写死 `plays an Item or Supporter card from their hand`）。
+        """
+        if not fp:
+            return False
+        if not kind:
+            # `kind` 为空 = **不是**「对手从手牌打出的 Item/Supporter」：
+            # 特性触发的同类效果（如特性版拉人）与内部直调都属于这一类，
+            # 免疫不适用。正式派发（`_dispatch_trainer_tag`）一定带真实卡类别。
+            return False
+        if self._effect_blocked(fp, "trainer", self.current, kind):
+            self._log("blocked", {"target": getattr(fp, "name", None),
+                                  "by": "effect_immune", "effect": "trainer",
+                                  "kind": kind})
+            return True
+        return False
+
     def _run_watch_body(self, owner: int, fp, name: str, body: str,
                         kind: str, ctx: dict, fixed: Optional[dict] = None) -> None:
         """执行一条 `on_event:<kind>:<body>` 订阅
@@ -3160,9 +3208,10 @@ class Battle:
         elif tag == "ultra_ball":
             placed = self._trainer_ultra_ball(p, hi)
         elif tag == "hammer":
-            placed = self._trainer_hammer(opp)
+            placed = self._trainer_hammer(opp, kind)
         elif tag == "boss":
-            placed = self._trainer_boss(opp, int(action.get("target", 0)))
+            placed = self._trainer_boss(opp, int(action.get("target", 0)),
+                                        kind)
         elif tag.startswith("research:"):
             # 弃全部手牌（不含自身）→ 抽 n
             n = int(tag.split(":")[1])
@@ -3226,7 +3275,7 @@ class Battle:
             #  opponent's Pokémon.」（Ruffian）
             # ⚠ 两个条件必须**落在同一只**身上（卡面「from 1 of …」）；拆成两次
             #   递归挑选会变成「可以分跨两只」—— 静默加强。
-            placed = self._trainer_discard_tool_senergy(opp)
+            placed = self._trainer_discard_tool_senergy(opp, kind)
         elif tag.startswith("recon:"):
             # 检视牌库顶（2026-10-30 第二十批）：Pokégear 3.0 / Bug Catching Set /
             # Drayton / Hassel / Grimsley's Move / Waitress
@@ -3304,12 +3353,17 @@ class Battle:
         elif tag == "gust_confuse":
             # 拉对手后备 + 新战斗位混乱（第五十一批，Lisia's Appeal）。
             # 必须排在 `startswith("gust")` 之前 —— 否则会被它吞掉，混乱静默丢失。
-            placed = self._trainer_boss(opp, int(action.get("target", 0)))
-            if opp.active is not None:
+            placed = self._trainer_boss(opp, int(action.get("target", 0)),
+                                        kind)
+            # S4：被拉上来的那只若免疫「支援者卡效果」，混乱也不施加
+            # （整张卡的效果都不作用于它）。`_trainer_boss` 被挡时不会换位，
+            # 因此这里判的还是**原来那只**——它没被换下，也不该被混乱。
+            if opp.active is not None \
+                    and not self._trainer_poke_blocked(opp.active, kind):
                 opp.active.status.add("confuse")
-            placed += " + confuse"
+                placed += " + confuse"
         elif tag.startswith("status_multi:"):
-            placed = self._trainer_status_multi(opp, tag)
+            placed = self._trainer_status_multi(opp, tag, kind)
         elif tag.startswith("switch_draw_to:"):
             placed = self._trainer_switch(p, int(action.get("target", 0)))
             _n = int(tag.split(":")[1])
@@ -3319,7 +3373,8 @@ class Battle:
                     if _need else 0)
             placed += f" + draw {_got}"
         elif tag.startswith("gust"):
-            placed = self._trainer_boss(opp, int(action.get("target", 0)))
+            placed = self._trainer_boss(opp, int(action.get("target", 0)),
+                                        kind)
         elif tag.startswith("attach_spread:"):
             # 多张自由分配附着（2026-10-30 第三十三批）：排在 `attach` 之前
             placed = self._do_attach_spread(p, tag, action)
@@ -3382,9 +3437,11 @@ class Battle:
             _praw = _pd[1] if len(_pd) > 1 else "all"
             placed = f"pokemon to deck {_pokemon_to_deck(self, p, _praw)}"
         elif tag.startswith("energy_move:"):
-            placed = self._apply_energy_move(tag, None, action)
+            placed = self._apply_energy_move(tag, None, action,
+                                             source="trainer", kinds=kind)
         elif tag.startswith("bounce:"):
-            placed = self._apply_bounce(tag, None, action)
+            placed = self._apply_bounce(tag, None, action,
+                                        source="trainer", kinds=kind)
         elif tag.startswith("discard_senergy:"):
             # 「Discard a Special Energy from 1 of your opponent's Pokémon.」
             # （第九十八批，Enhanced Hammer）—— `senergy` 是**卡**列表，
@@ -3396,18 +3453,35 @@ class Battle:
             _cands = ([_opp.active] if _opp.active is not None else []) \
                 + list(_opp.bench)
             _done = 0
+            _immune_all = True
+            _has_target = False
             for _fp in _cands:
                 if _fp is None or _fp.is_ko:
                     continue
+                # 只有**身上有特殊能量**的才算候选 —— 否则「对手场上根本没有
+                # 特殊能量」会被误判成「全被免疫」，把该报的错吞掉。
+                if not _fp.senergy:
+                    continue
+                _has_target = True
+                # S4：免疫「道具/支援者卡效果」的宝可梦不受影响
+                if self._trainer_poke_blocked(_fp, kind):
+                    continue
+                _immune_all = False
                 _done = _discard_special_energy(self, _opp, _fp, _n)
                 if _done:
                     self._log("discard_energy", {"player": self.current,
                                                 "target": _fp.name,
                                                 "kind": "special"})
                     break
-            if not _done:
+            if not _done and _has_target and _immune_all:
+                # 全部候选都免疫 → 卡**打得出**、效果不结算（不是错误）
+                self._log("blocked", {"by": "effect_immune", "effect": "discard",
+                                      "scope": "all"})
+                placed = "blocked: effect_immune"
+            elif not _done:
                 raise ValueError("对手场上没有特殊能量可弃")
-            placed = f"discard special {_done}"
+            else:
+                placed = f"discard special {_done}"
         elif tag.startswith("discard_energy:") and ":special" in tag:
             # 「Discard a Special Energy from 1 of your opponent's Pokémon.」
             # （第九十八批，Enhanced Hammer）——训练家侧此前没有 `discard_energy:`
@@ -3420,25 +3494,40 @@ class Battle:
             _cands2 = ([_opp2.active] if _opp2.active is not None else []) \
                 + list(_opp2.bench)
             _done2 = 0
+            _immune_all2 = True
+            _has_target2 = False
             for _fp2 in _cands2:
                 if _fp2 is None or _fp2.is_ko:
                     continue
+                if not _fp2.senergy:
+                    continue
+                _has_target2 = True
+                if self._trainer_poke_blocked(_fp2, kind):
+                    continue
+                _immune_all2 = False
                 _done2 = _discard_special_energy(self, _opp2, _fp2, _n2)
                 if _done2:
                     self._log("discard_energy", {"player": self.current,
                                                 "target": _fp2.name,
                                                 "kind": "special"})
                     break
-            if not _done2:
+            if not _done2 and _has_target2 and _immune_all2:
+                self._log("blocked", {"by": "effect_immune", "effect": "discard",
+                                      "scope": "all"})
+                placed = "blocked: effect_immune"
+            elif not _done2:
                 raise ValueError("对手场上没有特殊能量可弃")
-            placed = f"discard special {_done2}"
+            else:
+                placed = f"discard special {_done2}"
         elif tag.startswith("discard_tool_or_senergy:"):
             # 「弃对手道具/特殊能量 或 弃竞技场」二选一（2026-11-02 第三十八批）：
             # 必须排在 `discard_tool:` 之前 —— 前缀相近，将来若有一方放宽成
             # `startswith("discard_tool")` 就会互相吞掉（同类事故已发生过一次）。
-            placed = self._trainer_discard_tool_or_senergy(p, tag, action)
+            placed = self._trainer_discard_tool_or_senergy(p, tag, action,
+                                                          kind)
         elif tag.startswith("discard_tool:"):
-            placed = f"discard tool {self._apply_discard_tool(tag)}"
+            placed = (f"discard tool "
+                      f"{self._apply_discard_tool(tag, 'trainer', kind)}")
         elif tag == "discard_stadium":
             placed = f"discard stadium {self._apply_discard_stadium()}"
         elif tag.startswith("discard_search_multi:"):
@@ -3934,7 +4023,8 @@ class Battle:
             return
         raise ValueError(f"未知伤害前效果：pre:{spec}")
 
-    def _apply_discard_tool(self, tag: str) -> int:
+    def _apply_discard_tool(self, tag: str, source: str = "attack",
+                            kinds: str = "") -> int:
         """弃道具（``discard_tool:N[:<scope>]``）→ 实际弃置数（S6 弃道具族）
 
         scope：``opp_active``（对手战斗位，Arven's Skwovet / Larvesta / Spearow /
@@ -3962,6 +4052,13 @@ class Battle:
             if done >= n:
                 break
             if not fp.tool:
+                continue
+            # S4：**对手的**道具也受「道具/支援者卡效果免疫」保护（自己拆自己的不算）
+            if owner is opp and self._effect_blocked(fp, source, self.current,
+                                                    kinds):
+                self._log("blocked", {"target": fp.name, "by": "effect_immune",
+                                      "effect": "discard_tool",
+                                      "source": source})
                 continue
             name = fp.tool_name or fp.tool
             ref = fp.tool_ref
@@ -4028,7 +4125,8 @@ class Battle:
         return PokeRef(fp.pdef), extras
 
     def _apply_bounce(self, tag: str, fp: Optional[FieldPokemon] = None,
-                      action: Optional[dict] = None) -> str:
+                      action: Optional[dict] = None,
+                      source: str = "attack", kinds: str = "") -> str:
         """回手 / 洗回牌库 / 弃牌堆铺后备（S6 回手族）
 
         tag：
@@ -4044,7 +4142,7 @@ class Battle:
         if mode == "energy":
             # 能量收回手牌（2026-10-29 第二十三批）：
             # `bounce:energy:<self|opp_active>:<n|all>[:type:<c>]`
-            return self._bounce_energy(tag, fp)
+            return self._bounce_energy(tag, fp, source, kinds)
         if mode == "discard_to_bench":
             return self._bounce_from_discard(tag)
         scope = parts[2] if len(parts) > 2 else ""
@@ -4115,7 +4213,8 @@ class Battle:
             moved += 1
         return f"put {moved} onto bench"
 
-    def _bounce_energy(self, tag: str, fp: Optional[FieldPokemon] = None) -> str:
+    def _bounce_energy(self, tag: str, fp: Optional[FieldPokemon] = None,
+                       source: str = "attack", kinds: str = "") -> str:
         """能量收回**持有者手牌**（``bounce:energy:<self|opp_active>:<n|all>[:type:<c>]``）
 
         卡面原型（2026-10-29 第二十三批）：「Put an Energy attached to this Pokémon
@@ -4168,7 +4267,8 @@ class Battle:
         return f"energy {got} -> hand"
 
     def _apply_energy_move(self, tag: str, fp: Optional[FieldPokemon] = None,
-                           action: Optional[dict] = None) -> str:
+                           action: Optional[dict] = None,
+                           source: str = "attack", kinds: str = "") -> str:
         """能量移动（S6 能量移动族 · 2026-10-28）
 
         tag：``energy_move:N[:type:<c>]:from:<src>:to:<dst>``
@@ -4220,6 +4320,13 @@ class Battle:
         if src is None:
             self._log("no_effect", {"tag": tag, "reason": "无能量源"})
             return "no target"
+        # S4：从**对手**身上搬能量时，目标免疫「道具/支援者卡效果」则整条不执行
+        if src_kind.startswith("opp") and self._effect_blocked(src, source,
+                                                               self.current,
+                                                               kinds):
+            self._log("blocked", {"target": src.name, "by": "effect_immune",
+                                  "effect": "energy_move", "source": source})
+            return "blocked: effect_immune"
         # ---- 目标（缺省 target 时取第一个合法位置，保证「无选择动作」也能执行）----
         if dst_kind == "bench":
             if not p.bench:
@@ -4560,7 +4667,8 @@ class Battle:
             ctx={"revealed": revealed})
         return f"choice:flute{len(basics)}/{k}"
 
-    def _trainer_discard_tool_senergy(self, opp: PlayerState) -> str:
+    def _trainer_discard_tool_senergy(self, opp: PlayerState,
+                                      kind: str = "") -> str:
         """弃对手**同一只**身上的 1 张道具 + 1 张特殊能量（Ruffian）
 
         没有任一只同时满足「有道具 且 有特殊能量」时**什么都不做**（卡面要求
@@ -4568,6 +4676,8 @@ class Battle:
         """
         for fp in opp.all_field():
             if not fp.tool or not fp.senergy:
+                continue
+            if self._trainer_poke_blocked(fp, kind):
                 continue
             name = fp.tool_name or fp.tool
             ref = fp.tool_ref
@@ -5231,7 +5341,7 @@ class Battle:
         return f"shield {fp.name}"
 
     def _trainer_discard_tool_or_senergy(self, p: PlayerState, tag: str,
-                                         action: dict) -> str:
+                                         action: dict, kind: str = "") -> str:
         """「弃对手 1 只宝可梦身上的道具**或**特殊能量，**或**弃场上竞技场」
 
         卡面（Blowtorch PFL 86）是**二选一**。引擎没有交互选择层 → 缺省取
@@ -5255,6 +5365,8 @@ class Battle:
             for fp in field:
                 if len(done) >= n:
                     break
+                if self._trainer_poke_blocked(fp, kind):
+                    continue
                 if fp.tool:
                     name = fp.tool_name or fp.tool
                     ref = fp.tool_ref
@@ -5560,16 +5672,19 @@ class Battle:
         p.hand.append(found)
         return f"search {found.pdef.name} to hand"
 
-    def _trainer_hammer(self, opp: PlayerState) -> str:
-        """抛币正面 → 弃对手 active 1 能量"""
+    def _trainer_hammer(self, opp: PlayerState, kind: str = "") -> str:
+        """抛币正面 → 弃对手 active 1 能量（S4：效果免疫者不结算）"""
         if opp.active is None or opp.active.total_energy() <= 0:
             raise ValueError("对手 active 无能量")
+        if self._trainer_poke_blocked(opp.active, kind):
+            return "blocked: effect_immune"
         if self.rng.random() < 0.5:
             opp.active.remove_any(1)
             return "heads: discard 1 energy"
         return "tails: no effect"
 
-    def _trainer_status_multi(self, opp: PlayerState, tag: str) -> str:
+    def _trainer_status_multi(self, opp: PlayerState, tag: str,
+                              kind: str = "") -> str:
         """训练家多状态（``status_multi:<a>+<b>``，第五十一批 · Dangerous Laser）
 
         卡面「Your opponent's Active Pokémon is now Burned **and** Confused.」——
@@ -5583,6 +5698,9 @@ class Battle:
         # 逐状态判定（第一百一十一批）：被动免疫可能**只针对某一个状态**
         # （Hoothoot 只免疫睡眠）。整条拦下会把「灼伤 + 睡眠」一起丢掉，
         # 反过来整条放行又会把睡眠静默施加到免疫者身上 —— 两种都不行。
+        # S4：道具/支援者卡的**整个效果**被免疫时不施加任何状态
+        if self._trainer_poke_blocked(opp.active, kind):
+            return "no effect"
         _blocked = {st for st in parts if self._status_blocked(opp.active, st)}
         if _blocked and len(_blocked) == len(parts):
             self._log("blocked", {"target": opp.active.name,
@@ -5602,10 +5720,16 @@ class Battle:
                              "status": "+".join(applied)})
         return f"status {'+'.join(applied)}"
 
-    def _trainer_boss(self, opp: PlayerState, bi: int) -> str:
-        """将对手 1 只后备拉为 active（换位）"""
+    def _trainer_boss(self, opp: PlayerState, bi: int, kind: str = "") -> str:
+        """将对手 1 只后备拉为 active（换位）
+
+        S4：被拉的那只若免疫「道具/支援者卡效果」（Unnerve / Protective Sail），
+        这次换位不成立 —— 卡面说的是「**that card** 的所有效果」，拉人也是效果。
+        """
         if not opp.bench or bi >= len(opp.bench):
             raise ValueError("对手无可拉后备")
+        if self._trainer_poke_blocked(opp.bench[bi], kind):
+            return "blocked: effect_immune"
         new_active = opp.bench.pop(bi)
         if opp.active is not None:
             opp.active.clear_active_locks()

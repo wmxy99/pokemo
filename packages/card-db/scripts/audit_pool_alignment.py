@@ -3923,6 +3923,45 @@ def audit_s2e_events(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---------------- S4（2026-11-08）：效果免疫的团队范围 / 训练家来源 ----------------
+_S4_TEAM_TR = re.compile(
+    r"prevent all effects of attacks used by your opponent[’']?s pok[eé]mon "
+    r"done to your basic team rocket[’']?s pok[eé]mon", re.I)
+_S4_TRAINER = re.compile(
+    r"whenever your opponent plays an? (item or supporter|supporter) card from "
+    r"their hand,? prevent all effects of that card done to this pok[eé]mon",
+    re.I)
+
+
+def audit_s4_immune(card_name: str, item_name: str, desc: str,
+                    effects: list) -> list:
+    """S4 对账：效果免疫的范围与来源
+
+    三处最容易「认了半句」的错法：
+      · 团队范围落成 `:self` → 只有持有者自己免疫（少保护整队）；
+      · 训练家子类别写宽（只写 Supporter 的卡落成 `item+supporter`）→
+        对手的 Item 也被挡（静默加强）；
+      · 训练家来源落成 `attack` → 完全不生效（免疫形同不存在）。
+    """
+    errs: list = []
+    d = _norm(desc or "").replace("é", "e")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+    if _S4_TEAM_TR.search(d):
+        want = "fx:effect_immune:attack:team:basic_teamrocket"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「我方基础火箭队宝可梦」"
+                        f"应产 `{want}`，实际 {tags}")
+    m = _S4_TRAINER.search(d)
+    if m:
+        kinds = "item+supporter" if m.group(1).startswith("item") else "supporter"
+        want = f"fx:effect_immune:trainer:{kinds}:self"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手打出的 "
+                        f"{m.group(1)}」应产 `{want}`，实际 {tags}")
+    return errs
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -4066,6 +4105,7 @@ def main() -> int:
                 errs += audit_s2_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2d_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2e_events(c["name"], it.get("name"), desc, eff)
+                errs += audit_s4_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4121,6 +4161,7 @@ def main() -> int:
             errs += audit_static_damage(c["name"], it.get("name"), desc, eff)
             errs += audit_static_immune(c["name"], it.get("name"), desc, eff)
             errs += audit_extra_damage(c["name"], it.get("name"), desc, eff)
+            errs += audit_s4_immune(c["name"], it.get("name"), desc, eff)
         tag = str(c.get("tag") or "")
         if tag.startswith("fossil:"):
             n_items += 1
@@ -4157,8 +4198,9 @@ def main() -> int:
           "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 · "
           "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 · "
           "限时订阅/撤退费+战斗位搬能量/具名能量附着 · "
-          "可选触发/原地替换/只能由效果上场 "
-          "四十八类对账全部一致")
+          "可选触发/原地替换/只能由效果上场 · "
+          "效果免疫（团队范围/训练家来源） "
+          "四十九类对账全部一致")
     return 0
 
 

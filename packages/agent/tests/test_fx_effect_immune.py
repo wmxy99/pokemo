@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """fx 族：效果免疫解析 —— 正例 + 负向守卫
 
-正例必须**整段**可表达；近邻写法（连伤害一起免疫 / 全队子集 / 训练家卡 /
-非特性侧）一律拒绝，不能产出半套免疫。
+正例必须**整段**可表达；近邻写法（连伤害一起免疫 / 非特性侧）一律拒绝，
+不能产出半套免疫。
+
+⚠ S4（2026-11-08）**改判了两条旧负向用例**：`全队子集` 与 `训练家卡效果`
+过去因为引擎无法表达而整卡拒收，现在两组 tag（`…:team:basic_teamrocket` /
+`…:trainer:item+supporter:self`）已进引擎，因此改为**正向**用例；
+但判据更严了 —— 必须产出**精确**形态（落成 `:self` 或 `attack` 都会红）。
 
 ⚠ 2026-10-28 起：Tera 来源的「伤害+效果」免疫由**静态免伤族**
 （`passive:dmg_immune:…:effects`）建模，本文件改为正向守卫 —— 它绝不能落到
@@ -49,19 +54,33 @@ class TestEffectImmuneDetect(unittest.TestCase):
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 
-    def test_team_scope_rejected(self):
+    def test_team_scope_now_modeled(self):
+        """**改判**（S4）：全队范围已可表达，但必须是 `team:basic_teamrocket`
+
+        落成 `:self` 就只能保护持有者自己（少保护整队），是静默削弱。
+        """
         r = _tags("Prevent all effects of attacks used by your opponent’s "
                   "Pokémon done to your Basic Team Rocket’s Pokémon. "
                   "(Existing effects are not removed. Damage is not an effect.)")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["fx:effect_immune:attack:team:basic_teamrocket"])
+        self.assertEqual(r["unsupported"], [])
 
-    def test_trainer_card_effect_rejected(self):
+    def test_trainer_card_effect_now_modeled(self):
+        """**改判**（S4）：训练家卡来源已可表达，子类别必须精确"""
         r = _tags("Whenever your opponent plays an Item or Supporter card "
                   "from their hand, prevent all effects of that card done to "
                   "this Pokémon.")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"],
+                         ["fx:effect_immune:trainer:item+supporter:self"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_trainer_supporter_only_keeps_narrow_kind(self):
+        """只写 Supporter 的印刷不得落成 `item+supporter`（那会顺带挡住 Item）"""
+        r = _tags("Whenever your opponent plays a Supporter card from their "
+                  "hand, prevent all effects of that card done to this Pokémon.")
+        self.assertEqual(r["tags"],
+                         ["fx:effect_immune:trainer:supporter:self"])
 
     def test_tera_source_now_modeled_as_dmg_immune(self):
         """2026-10-28 第八批：Tera 来源的「伤害+效果」免疫已由静态免伤族建模

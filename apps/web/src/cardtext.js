@@ -348,6 +348,25 @@ export function abilityDesc(tag) {
       }
       return { zh: `被动：对手的宝可梦在其回合换下战斗位时，结算后续效果（${extra || '换下目标'}）。`, en: `Passive: when your opponent's Active Pokémon moves to the Bench during their turn, resolve the subscribed effect.` }
     }
+    case 'fx': {
+      // S4（2026-11-08）：`fx:effect_immune:*` 的四种形态要说清范围与来源 ——
+      // 一律套「未建模」文案就是把已实现的能力说成不存在（C1 自述不实）。
+      const fp = String(tag || '').split(':')
+      if (fp[1] === 'effect_immune') {
+        const src = fp[2]
+        if (src === 'trainer') {
+          const kinds = fp[3] === 'supporter' ? '支援者卡' : '道具卡或支援者卡'
+          return { zh: `对手从手牌打出${kinds}时，防止该卡对此宝可梦造成的所有效果。`, en: `Whenever your opponent plays ${fp[3] === 'supporter' ? 'a Supporter' : 'an Item or Supporter'} card from their hand, prevent all effects of that card done to this Pokémon.` }
+        }
+        const team = fp[3] === 'team'
+        const srcZh = src === 'ability' ? '特性' : '招式'
+        if (team) {
+          return { zh: `对手宝可梦的${srcZh}效果不作用于你的基础火箭队宝可梦（伤害不受影响）。`, en: `Prevent all effects of your opponent's Pokémon's ${src === 'ability' ? 'Abilities' : 'attacks'} done to your Basic Team Rocket's Pokémon (damage is not an effect).` }
+        }
+        return { zh: `对手宝可梦的${srcZh}效果不作用于此宝可梦（伤害不受影响）。`, en: `Prevent all effects of your opponent's Pokémon's ${src === 'ability' ? 'Abilities' : 'attacks'} done to this Pokémon.` }
+      }
+      return { zh: `静态效果：${String(tag).split(':').slice(1).join(':') || '按卡面结算'}。`, en: `Static effect: ${String(tag).split(':').slice(1).join(':') || 'see card text'}.` }
+    }
     case 'passive':
       // S2e：`passive:no_evolve_into`（Palafin ex「Hero's Spirit」）
       if (String(tag).includes('no_evolve_into')) {
@@ -400,6 +419,7 @@ export const EFFECT_TAG_LABEL = {
   pick_energy: { zh: '搬能量', en: 'Move energy' },
   replace_self: { zh: '原地替换', en: 'Replace self' },
   passive: { zh: '被动', en: 'Passive' },
+  fx: { zh: '静态效果', en: 'Static' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

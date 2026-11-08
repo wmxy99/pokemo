@@ -194,15 +194,23 @@ def ability_blocked(battle, fp, ab) -> bool:
     return False
 
 
-def effect_immune(battle, fp, source: str) -> bool:
-    """``fp`` 是否免疫来自 ``source``（attack / ability）的效果
+def effect_immune(battle, fp, source: str, kinds: str = "") -> bool:
+    """``fp`` 是否免疫来自 ``source`` 的效果（S4：可限定训练家子类别）
 
-    解析侧只产出可完整表达的自身形态；各族自己校验 tag，未知形态抛错。
+    解析侧只产出可完整表达的形态；各族自己校验 tag，未知形态抛错。
+    `kinds` 只有 `trainer` 来源用（`item` / `supporter`），其它来源忽略。
     """
     for m in modules():
         fn = getattr(m, "effect_immune", None)
-        if fn is not None and fn(battle, fp, source):
-            return True
+        if fn is None:
+            continue
+        try:
+            if fn(battle, fp, source, kinds):
+                return True
+        except TypeError:
+            # 旧族只接受三个参数（没有来源子类别的概念）
+            if fn(battle, fp, source):
+                return True
     return False
 
 

@@ -4437,19 +4437,21 @@ class Battle:
             # 形态：`mill:<n>:both`（n 在前、scope 在后，与普通 `mill:N:opp`
             # 同序）。第一版把 `parts[1]` 当成 scope 判，`mill:1:both` 直接
             # 走进「未知形态」——卡在对局里打不出，而且是**运行时**才炸。
-            if len(parts) < 3 or parts[2] != "both" \
+            # 形态：`mill:<n>:both` / `mill:<n>:self`（n 在前、scope 在后）
+            if len(parts) < 3 or parts[2] not in ("both", "self") \
                     or not (parts[1] == "all" or parts[1].isdigit()):
                 raise ValueError(f"未知伤害前效果：pre:{spec}")
             n = 999 if parts[1] == "all" else int(parts[1])
             moved = 0
-            for pi in (0, 1):
+            _sides = (0, 1) if parts[2] == "both" else (self.current,)
+            for pi in _sides:
                 vp = self.players[pi]
                 for _ in range(n):
                     if not vp.deck:
                         break
                     self._to_discard(vp, vp.deck.pop())
                     moved += 1
-            self._log("mill", {"player": "both", "n": moved, "by": "pre"})
+            self._log("mill", {"player": parts[2], "n": moved, "by": "pre"})
             return
         if head == "attach_all_basic":
             # 「Before doing damage, you may attach **any number** of Basic {W}
@@ -4931,6 +4933,76 @@ class Battle:
             self._open_choice("alloc", opts, min_pick=0, max_pick=-1,
                               tag=tag, ctx={"mode": mode})
             return
+        if mode == "attach_discard":
+            # 「Attach an amount of **Basic Energy** up to … from your discard pile
+            #  to your Benched Pokémon **in any way you like**」
+            #  （Smeargle「Energizing Sketch」/ Dedenne「Tail Generator」）
+            # 上限由卡面另行给出（抛币正面数 / 计数源），**在结算时**算出来。
+            etype = None
+            targets = "field"
+            cap = -1
+            i = 1
+            while i < len(parts):
+                if parts[i] == "type" and i + 1 < len(parts):
+                    # `type:any` = 不限属性。**必须**显式当 None：否则下面的
+                    # `if etype and et != etype` 会拿 "any" 去比真实属性名，
+                    # 结果一个选项都不生成（表现成「弃牌堆里没能量」）。
+                    etype = None if parts[i + 1] == "any" else parts[i + 1]
+                    i += 2
+                    continue
+                if parts[i] == "targets" and i + 1 < len(parts):
+                    if parts[i + 1] == "type" and i + 2 < len(parts):
+                        targets = "type:" + parts[i + 2]
+                        i += 3
+                        continue
+                    targets = parts[i + 1]
+                    i += 2
+                    continue
+                if parts[i] == "max" and i + 1 < len(parts):
+                    k = parts[i + 1]
+                    if k == "flip" and i + 2 < len(parts):
+                        cnt = int(parts[i + 2])
+                        heads = sum(1 for _ in range(cnt)
+                                    if self.rng.random() < 0.5)
+                        self._log("coin_each", {
+                            "player": self.current, "n": cnt, "heads": heads,
+                            "tag": "alloc:attach_discard"})
+                        cap = heads
+                        i += 3
+                        continue
+                    if k == "per" and i + 2 < len(parts):
+                        cap = max(0, int(_eval_counter(self, parts[i + 2])))
+                        i += 3
+                        continue
+                    i += 2
+                    continue
+                i += 1
+            if targets == "bench":
+                dsts = [(k, fp) for k, fp in enumerate(p.bench, start=1)]
+            elif targets.startswith("type:"):
+                col = targets.split(":", 1)[1]
+                dsts = [(k, fp) for k, fp in enumerate(p.all_field())
+                        if str(fp.pdef.ptype) == col]
+            else:
+                dsts = list(enumerate(p.all_field()))
+            for ref in list(p.discard_refs):
+                edef = getattr(ref, "edef", None)
+                if edef is None or getattr(edef, "is_special", False):
+                    continue
+                et = str(getattr(edef, "type", "") or "")
+                if etype and et != etype:
+                    continue
+                for di, dst in dsts:
+                    opts.append({"display": f"把弃牌堆的 1 张 {et} 能量贴到 {dst.name}",
+                                 "dref": ref, "dst": di, "etype": et})
+            if not opts:
+                self._log("no_effect", {"tag": tag,
+                                        "reason": "弃牌堆没有可贴的基本能量"})
+                return
+            self._open_choice("alloc", opts, min_pick=0,
+                              max_pick=(cap if cap >= 0 else -1),
+                              tag=tag, ctx={"mode": mode, "etype": etype})
+            return
         if mode == "shuffle_opp_bench":
             n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
             keep = "keep" in parts
@@ -5006,6 +5078,28 @@ class Battle:
                 moved += 1
             self._log("attach_energy", {"player": ch.owner, "n": moved,
                                         "from": "hand", "by": "alloc"})
+            return
+        if mode == "attach_discard":
+            moved = 0
+            for opt in ch.chosen():
+                ref = opt.get("dref")
+                idx = next((i for i, c in enumerate(p.discard_refs) if c is ref),
+                           None)
+                dst = _field_at(p, int(opt.get("dst", 0)))
+                if idx is None or dst is None:
+                    continue
+                p.discard_refs.pop(idx)
+                # 文本层同步移除一条同名标签（否则「弃牌堆里有 2 张」会一直显示
+                # 原来的张数，玩家看不出已经贴出去了）
+                lab = _card_label(ref)
+                try:
+                    p.discard.remove(lab)
+                except ValueError:
+                    pass
+                dst.add_energy(str(opt.get("etype") or ""), 1)
+                moved += 1
+            self._log("attach_energy", {"player": ch.owner, "n": moved,
+                                        "from": "discard", "by": "alloc"})
             return
         if mode == "shuffle_opp_bench":
             keep = bool(ch.ctx.get("keep"))
@@ -6891,6 +6985,9 @@ class Battle:
         # B4：`discarded_energy_this_attack` 的基准 —— 用**差分**得到「本招式
         # 弃掉了几张能量」，而不是本回合累计。
         self._atk_energy_disc0 = p.discarded_energy_this_turn
+        # 同上口径：本次攻击弃掉的**卡对象**切片起点（`discarded_this_attack_*`
+        # 计数源用）。用长度快照而不是在每个弃置点埋钩子 —— 弃置路径有十几处。
+        self._atk_disc0 = len(p.discard_refs)
         _b4 = _b4_spec(atk.effects)
         for _tag in atk.effects or ():
             if str(_tag).startswith("pre:") and not str(_tag).startswith(B4_PREFIX):
@@ -13362,6 +13459,14 @@ _COUNTERS = {
         lambda b, p, o: max(0, p.discarded_energy_this_turn
                             - int(getattr(b, "_atk_energy_disc0", 0))),
 }
+
+# 「for each <具名阵营> Pokémon / Basic {X} Energy card **you discarded in this
+# way**」（Misty's Gyarados / Mega Abomasnow ex）——本次攻击弃掉的卡里符合条件
+# 的张数。**必须按子集数**：卡面只数「Misty's Pokémon」「Basic {W} Energy」，
+# 用 `own_discarded_this_turn`（全部）会系统性多算。
+_DISC_SLICE_RE = re.compile(
+    r"^(?:discarded_this_attack_named|discarded_this_attack_basic_energy):"
+    r"([a-z0-9]+)$")
 # 能量计数源：``<zone>_energy[_<color>]`` —— 支持「附在此宝可梦上的水能量」这类
 # **带颜色筛选**的精确计数（笼统按总能量数会系统性多算伤害）
 _ENERGY_ZONES = {
@@ -13564,6 +13669,12 @@ _DYNAMIC_COUNTER_RE = re.compile(
     # B4（2026-11-08）：「Reveal any number of Honedge, Doublade, and Aegislash
     # from your hand …」（Doublade）——**手牌**里这些名字的卡数。
     r"|own_hand_named_any:[a-z0-9]+(?:\+[a-z0-9]+)*"
+    # B4（2026-11-08）：「… you discarded **in this way**」的**子集**计数
+    # （Misty's Gyarados 按阵营数 / Mega Abomasnow ex 按基本能量属性数）。
+    # 必须加进 `is_known_counter` 的同一份词表 —— 解析侧产出与守卫校验都读它，
+    # 两处各写一份必然漂移（新计数源会被判「引擎无此 per」而整卡拒收）。
+    r"|discarded_this_attack_named:[a-z0-9]+"
+    r"|discarded_this_attack_basic_energy:[a-z]+"
     r"|opp_hand_kind:(?:pokemon|trainer|energy)"
     r"|opp_prizes_taken_last_turn"
     # 第二十六批（2026-10-29）：按**属性/具名**限定的后备指示物数，以及
@@ -13635,6 +13746,22 @@ def _eval_counter(battle, counter: str) -> int:
     # 为什么不需要交互层：reveal **不弃牌、不改变任何状态**，所以「全部亮出」
     # 是支配解（多亮一张只会更多伤害）。这与「discard any number」不同 ——
     # 后者有代价，必须让玩家选。
+    m = _DISC_SLICE_RE.match(counter)
+    if m:
+        kind, arg = counter.split(":", 1)
+        start = int(getattr(battle, "_atk_disc0", 0))
+        sl = list(p.discard_refs)[start:]
+        if kind == "discarded_this_attack_named":
+            # 卡名**子串**（与 `own_discard_named` 同口径）：`mistys` 命中
+            # 「Misty's Gyarados」「Misty's Magikarp」。
+            return sum(1 for c in sl if arg in _name_key(_card_label(c)))
+        # `Basic {X} Energy`：基本能量卡，且属性匹配
+        if arg not in TYPES:
+            raise ValueError(f"未知宝可梦属性 {arg}（{counter}）")
+        return sum(1 for c in sl
+                   if isinstance(c, EnergyRef)
+                   and not getattr(c.edef, "is_special", False)
+                   and str(c.edef.type) == arg)
     m = re.match(r"^own_hand_named_any:([a-z0-9]+(?:\+[a-z0-9]+)*)$", counter)
     if m:
         keys = m.group(1).split("+")

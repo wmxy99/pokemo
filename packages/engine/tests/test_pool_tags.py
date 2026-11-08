@@ -309,7 +309,10 @@ class TestPoolTagVocabulary(unittest.TestCase):
                 # B4（2026-11-08）：「Discard the top card of **each player's**
                 # deck.」（Magcargo ex「Ground Burn」）必须在**伤害之前**磨
                 # ——伤害按「这次磨掉几张能量」缩放。
-                if len(parts) != 4 or parts[3] != "both" \
+                # B4（2026-11-08）：`both`（双方各磨）/ `self`（只磨自己）
+                # 两种作用域都要接受 —— Misty's Gyarados / Mega Abomasnow ex
+                # 是「磨自己的牌、按磨出的子集算伤害」。
+                if len(parts) != 4 or parts[3] not in ("both", "self") \
                         or not (parts[2] == "all" or parts[2].isdigit()):
                     bad.append(f"{name} · {item}: {tag}（伤害前磨牌形态非法）")
             elif head == "attach_all_basic":

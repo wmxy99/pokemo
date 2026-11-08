@@ -37,7 +37,7 @@
 | 伤害顺序：基础 → ×弱点 → −抗性 → 减伤 → 护盾 → 免疫 | `packages/engine/engine/battle.py::_damage_pipeline` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | — | — | ✅ |
 | 弱点 ×2 / 抗性 −30 | `packages/engine/engine/rules.py::compute_damage` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_resistance_applies_after_weakness` | — | — | ✅ |
 | 静态减伤（「受到的招式伤害 −N」，在弱抗之后） | `packages/engine/engine/battle.py::_static_mods` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `passive:dmg_reduce:` | 4 | ✅ |
-| 限时护盾（`shield:*`：本回合/下回合内减伤或免疫） | `packages/engine/engine/rules.py::apply_shield` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `shield:` | 23 | ✅ |
+| 限时护盾（`shield:*`：本回合/下回合内减伤或免疫） | `packages/engine/engine/rules.py::apply_shield` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `shield:` | 24 | ✅ |
 | 特殊状态构成：中毒/灼伤可共存；睡眠/混乱/麻痹三选一 | `packages/engine/engine/rules.py::apply_status_set` | `packages/engine/tests/test_s6c_rules.py::TestStatusComposition.test_orient_replaces_orient` | — | — | ✅ |
 | 一次效果施加多个状态（卡面「now A and B」） | `packages/engine/engine/battle.py::_set_status` | `packages/engine/tests/test_s6c_rules.py::TestStatusComposition.test_multi_status_via_card_both_apply` | `status_multi:` | 7 | ✅ |
 | 宝可梦检查期：中毒 → 灼伤（先 20 伤害再抛币治愈）→ 睡眠 → 麻痹 | `packages/engine/engine/rules.py::status_checkup` | `packages/engine/tests/test_s6c_rules.py::TestBurnCheckup.test_heads_damages_then_cures` | — | — | ✅ |
@@ -57,7 +57,7 @@
 | 打出前置条件（含**多个**具名卡同时在场） | `packages/engine/engine/battle.py::_play_gate_ok`、`packages/engine/engine/battle.py::_gate_name_norm` | `packages/engine/tests/test_s6d_gate.py::TestAllInPlayGate.test_gate_blocks_when_one_missing` | — | — | ✅ |
 | 静态被动族：队伍 +HP / 双属性 / 能力封锁（Rule Box · 自身击倒代价）/ 工具上限 | `packages/engine/engine/battle.py::_global_ability_blocked`、`packages/engine/engine/battle.py::_refresh_stadium_hp`、`packages/engine/engine/rules.py::attacker_types` | `packages/engine/tests/test_d4_static_passives.py::TestTeamHpPlus.test_team_hp_applies_to_all_and_does_not_stack` | — | — | ✅ |
 | 「任意数量」伤害前决策：数量由玩家定、**定完才**算伤害（挂起 → 续跑） | `packages/engine/engine/battle.py::_b4_open`、`packages/engine/engine/battle.py::_attack_resume`、`packages/engine/engine/battle.py::_b4_spec` | `packages/engine/tests/test_b4_interaction.py::TestSelfCounters.test_choice_count_drives_damage` | `pre:b4:` | 5 | ✅ |
-| 「任意数量」分配 / 多目标：目标不唯一时由玩家指（搬指示物 / 搬能量 / 贴能量 / 选 N 只洗回） | `packages/engine/engine/battle.py::_alloc_open`、`packages/engine/engine/battle.py::_alloc_apply` | `packages/engine/tests/test_b4_interaction.py::TestAlloc.test_shuffle_opp_bench_kept` | `choose:alloc:` | 5 | ✅ |
+| 「任意数量」分配 / 多目标：目标不唯一时由玩家指（搬指示物 / 搬能量 / 贴能量 / 选 N 只洗回） | `packages/engine/engine/battle.py::_alloc_open`、`packages/engine/engine/battle.py::_alloc_apply` | `packages/engine/tests/test_b4_interaction.py::TestAlloc.test_shuffle_opp_bench_kept` | `choose:alloc:` | 7 | ✅ |
 | 池内每张卡的每个训练家 tag 都必须有可执行落点（池内死卡守卫） | `packages/engine/tests/test_legals_coverage.py::_tag_prefixes` | `packages/engine/tests/test_legals_coverage.py::TestPoolTrainersArePlayable` | — | — | ✅ |
 
 ## 已知差异（`⚠️` 行的展开）

@@ -355,6 +355,122 @@ class TestAlloc(unittest.TestCase):
                       "留下的是被选中的那些")
 
 
+class TestAttachDiscard(unittest.TestCase):
+    """Smeargle / Dedenne：从**弃牌堆**贴基本能量，上限由抛币或计数源给出"""
+
+    def test_flip_cap_limits_picks(self):
+        """`max:flip:N` = 抛 N 枚、上限为正面数（不是 N，也不是不限）"""
+        b = _battle()
+        atk = _atk("Energizing Sketch", damage=0,
+                   effects=("choose:alloc:attach_discard:type:any"
+                            ":targets:bench:max:flip:3",))
+        me, opp = _prep(b, atk)
+        me.bench = [make_pokemon(PokemonDef("Buddy", hp=100,
+                                            ptype="grass"))]
+        for _ in range(5):
+            me.discard_refs.append(EnergyRef(EnergyDef("grass")))
+            me.discard.append("grass energy")
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.phase, "choice", "上限来自抛币 → 必须问玩家")
+        coins = _logs(b, "coin_each")
+        self.assertTrue(coins, "抛币事件必须记（上限依据）")
+        cap = coins[-1]["heads"]
+        # 逐张选（选项是「某一**张**弃牌 + 某一目标」，**不能**重复选同一项 ——
+        # 每个选项绑定的是一张具体卡，重复选它等于把同一张贴两次）。
+        self.assertTrue([o for o in _choose_opts(b)
+                         if "grass" in str(o["option"].get("display"))])
+        for _ in range(cap):
+            opts = [o for o in _choose_opts(b)
+                    if "grass" in str(o["option"].get("display"))]
+            self.assertTrue(opts, f"上限 {cap} 张，但第 {_ + 1} 张已无选项")
+            b.step({"verb": "choose", "pick": opts[0]["pick"]})
+        self.assertEqual(me.bench[0].total_energy(), cap,
+                         "贴的张数必须等于抛币正面数")
+        self.assertEqual(len([c for c in me.discard_refs
+                              if getattr(c, "edef", None) is not None]), 5 - cap)
+        # 达上限后必须自动收口（不再提供 choose）
+        self.assertEqual([o for o in _choose_opts(b)
+                          if "grass" in str(o["option"].get("display"))], [])
+
+    def test_per_cap_from_counter(self):
+        """`max:per:opp_all_energy` = 上限为对手全场能量数（Dedenne）"""
+        b = _battle()
+        atk = _atk("Tail Generator", damage=0,
+                   effects=("choose:alloc:attach_discard:type:lightning"
+                            ":targets:type:lightning"
+                            ":max:per:opp_all_energy",))
+        me, opp = _prep(b, atk)
+        me.active.pdef = PokemonDef("Me", hp=300, ptype="lightning",
+                                    attacks=(atk,))
+        opp.active.add_energy("water", 2)
+        # 放 3 张（上限 2 < 3）→ 选 1 张后仍应剩下可选项，才能验「还能继续」
+        for _ in range(3):
+            me.discard_refs.append(EnergyRef(EnergyDef("lightning")))
+            me.discard.append("lightning energy")
+        b.step({"verb": "attack", "attack": 0})
+        picks = [o for o in _choose_opts(b)
+                 if str(o["option"].get("etype")) == "lightning"]
+        self.assertTrue(picks, "弃牌堆有闪电能量 → 应有选项")
+        # 上限 2（对手 2 点能量）：选 1 张后仍可选（还可再选 1 张），
+        # 必须仍提供「结束选择」（min=0 → 随时可收工）
+        b.step({"verb": "choose", "pick": picks[0]["pick"]})
+        verbs = [o.get("verb") for o in b.legal_actions()
+                 if o.get("verb") in ("choose", "stop")]
+        self.assertIn("stop", verbs, "min=0 → 必须能随时结束")
+        self.assertIn("choose", verbs)
+        b.step({"verb": "stop"})
+        self.assertEqual(me.active.total_energy(), 1)
+
+
+class TestSubsetDiscardCount(unittest.TestCase):
+    """Misty's Gyarados / Mega Abomasnow ex：按**子集**数本次磨掉的牌"""
+
+    ATK = _atk("Splashing Panic", damage=0,
+               effects=("pre:mill:7:self",
+                        "dmg_set:70:per:discarded_this_attack_named:mistys"))
+
+    def test_counts_only_named_subset(self):
+        b = _battle()
+        me, opp = _prep(b, self.ATK)
+        # ⚠ **列表末尾才是牌库顶**：想磨到 3 张 Misty's，就得把它们放在最后。
+        # （第一版按自然顺序写，磨到的全是垫底的水能量 → 断言 0，看起来像计数源坏了。）
+        me.deck = ([EnergyRef(EnergyDef("water")) for _ in range(10)]
+                   + [PokeRef(PokemonDef("Other", hp=30, ptype="water"))] * 4
+                   + [PokeRef(PokemonDef("Misty's Magikarp", hp=30,
+                                         ptype="water"))] * 3)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(opp.active.damage, 210, "3 张 Misty's × 70")
+
+    def test_basic_energy_subset(self):
+        b = _battle()
+        atk = _atk("Hammer-lanche", damage=0,
+                   effects=("pre:mill:6:self",
+                            "dmg_set:100:per:"
+                            "discarded_this_attack_basic_energy:water"))
+        me, opp = _prep(b, atk)
+        # 末尾 = 牌库顶：磨 6 张 → 2 水 + 2 火 + 2 非能量
+        me.deck = ([EnergyRef(EnergyDef("water")) for _ in range(10)]
+                   + [PokeRef(PokemonDef("Other", hp=30, ptype="water"))] * 2
+                   + [EnergyRef(EnergyDef("fire"))] * 2
+                   + [EnergyRef(EnergyDef("water"))] * 2)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(opp.active.damage, 200, "只有 2 张**水**基本能量 × 100")
+
+    def test_turn_total_not_used(self):
+        """本回合早些时候磨掉的牌不得被算进伤害"""
+        b = _battle()
+        me, opp = _prep(b, self.ATK)
+        me.deck = ([EnergyRef(EnergyDef("water")) for _ in range(10)]
+                   + [PokeRef(PokemonDef("Misty's Magikarp", hp=30,
+                                         ptype="water"))] * 2)
+        # 先弃掉 3 张同名卡（模拟「本回合早先的效果」）
+        for _ in range(3):
+            b._to_discard(me, PokeRef(PokemonDef("Misty's Magikarp", hp=30,
+                                                 ptype="water")))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(opp.active.damage, 140, "只算本次磨出的 2 张 × 70")
+
+
 class TestPokemonWideFirstTurn(unittest.TestCase):
     """Meloetta ex「Debut Performance」：许可在**特性**上 → 全部招式可用"""
 

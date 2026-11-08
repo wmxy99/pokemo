@@ -712,7 +712,12 @@ def audit_mill(card_name: str, item_name: str, desc: str,
         n = int(m.group(1)) if m.group(1) else 1
         side = "opp" if "opponent" in _norm(m.group(2)) else "own"
         want = f"mill:{n}" + (":opp" if side == "opp" else "")
-        if want not in effects:
+        # B4（2026-11-08）：磨牌若发生在**伤害之前**（「Discard the top N cards of
+        # your deck, **and this attack does** … for each … discarded in this way」），
+        # 正确落点是 `pre:mill:<n>:self` —— 伤害缩放读的是这次磨出来的牌，
+        # 放到伤害之后（普通 `mill:`）会让缩放恒读 0。
+        alt = f"pre:mill:{n}:self" if side == "own" else f"pre:mill:{n}:both"
+        if want not in effects and alt not in effects:
             errs.append(f"{card_name} · {item_name}：`{m.group(0)[:60]}` "
                         f"缺 `{want}` tag")
     return errs
@@ -1088,6 +1093,19 @@ def audit_attach_variants(card_name: str, item_name: str, desc: str,
     # ---------------- ① 抛币计数 ----------------
     m_f = re.search(r"\bflip (\d+) coins?\b", d, re.I)
     wants_flip = bool(m_f) and bool(re.search(r"in any way you like", d, re.I))
+    # B4-c（2026-11-08）：从**弃牌堆**贴能量的抛币形态（Smeargle）落成
+    # `choose:alloc:attach_discard:…:max:flip:<N>` —— 它自己带着抛币枚数，
+    # 与本函数 ① 的「search your deck for up to K」是两个不同句式，不能混判。
+    _disc_flip = [t for t in tags
+                  if t.startswith("choose:alloc:attach_discard:")
+                  and ":max:flip:" in t]
+    if _disc_flip:
+        got = int(_disc_flip[0].split(":max:flip:", 1)[1].split(":")[0])
+        want_n = int(m_f.group(1)) if m_f else -1
+        if got != want_n:
+            errs.append(f"{card_name} · {item_name}：抛币枚数应为 {want_n}，"
+                        f"实际 {got}（{_disc_flip[0]}）")
+        return errs
     if wants_flip:
         m_k = re.search(r"for each heads,?\s*search your deck for up to (\d+)",
                         d, re.I)

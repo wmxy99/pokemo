@@ -9,12 +9,12 @@
 | 项 | 实测 | 说明 |
 |---|---|---|
 | 卡库总量 | **1267 张** | `cards_challenge.json`（清洗后全量） |
-| 引擎可对战（严格口径） | **1245 张 · 98.3%** | `engine_ready=true`，与 `GET /cards/stats` 同源 |
-| 引擎卡池条目 | **1230 条** | `packages/engine/engine/data/cards_pool_ext.json` |
-| 未进池 | **22 张** | = 18 张「如实拒收」+ 4 张「结构性」（D2/D3/D4/B4 累计让 23 张进池） |
+| 引擎可对战（严格口径） | **1249 张 · 98.6%** | `engine_ready=true`，与 `GET /cards/stats` 同源 |
+| 引擎卡池条目 | **1234 条** | `packages/engine/engine/data/cards_pool_ext.json` |
+| 未进池 | **18 张** | = 14 张「如实拒收」+ 4 张「结构性」（D2/D3/D4/B4 累计让 27 张进池） |
 | 解析对账 | **51 类全绿** | `scripts/audit_pool_alignment.py` |
 | 规则一致性矩阵 | **39 行（38 ✅ / 1 ⚠️）** | `docs/RULE_CONFORMANCE.md`（CI 机械核对） |
-| 测试 | **2795**（engine 1564 / agent 1077 / api 142 / gym 12） | |
+| 测试 | **2804**（engine 1569 / agent 1081 / api 142 / gym 12） | |
 
 复现：
 
@@ -35,7 +35,7 @@ python -c "import json;d=json.load(open('packages/card-db/data/cleaned/cards_cha
 **为什么必须三个都披露**：只报最大那个（1207 或 1267）会让人以为「都能打」；
 只报最小那个（1074）会让人以为「解析坏了」。三个数一起给，读者才能判断差在哪。
 
-## 三、22 张未进池卡：按缺失能力分族
+## 三、18 张未进池卡：按缺失能力分族
 
 | 族 | 缺什么能力 | 卡数 | 工作量 | 本批处置 |
 |---|---|---:|---|---|
@@ -126,7 +126,7 @@ Rotom ex（名字含 Rotom 的可附 2 张工具）· Team Rocket's Moltres ex�
 Gengar（按对手后备数加伤 + 被击倒时的连击效果）· Lillie's Ribombee（进化时把对手
 手牌里的基础宝可梦铺到自己后备）· Dialga（顶 2 张任意顺序）
 
-## 四、22 张逐卡附录
+## 四、18 张逐卡附录
 
 | 卡 | 卡面关键句（首句） | 族 |
 |---|---|---|

@@ -3847,6 +3847,15 @@ _B4_SELF_COUNTERS_RE = re.compile(
 #   缩放；放到 `_apply_attack_effects`（伤害之后）就白磨了（静默少做）。
 _B4_PRE_MILL_BOTH_RE = re.compile(
     r"discard the top (\d+ )?cards? of each player['\u2019]s deck", re.I)
+# 「Discard the top **7** cards of your deck, and this attack does 70 damage for
+#  each Misty's Pokémon that you discarded in this way.」（Misty's Gyarados）——
+# 磨牌这半句必须在**伤害之前**（缩放读的是这次磨出来的牌）。
+# ⚠ span 只覆盖**磨牌那半句**（到逗号为止），用 lookahead 确认后面接
+# 「and this attack does」—— 把后半句也吃进 span 会把**伤害缩放**一起抹掉，
+# 结果是「磨了牌但伤害不缩放」（比不建模更糟：看起来正常、数值恒低）。
+_B4_PRE_MILL_SELF_RE = re.compile(
+    r"discard the top (\d+) cards? of your deck(?=\s*,?\s*and this attack does)",
+    re.I)
 
 # 「Discard any amount of {R} Energy from among your Pokémon, and this attack
 #  does 90 damage for each card you discarded in this way.」（Mega Charizard X ex）
@@ -3915,6 +3924,22 @@ _B4B_SELF_LOCK_RE = re.compile(
     r"if (?:1|one) of your pok[eé]mon used ([a-z][a-z' ]{2,24}?) during your "
     r"last turn, this attack can['\u2019]t be used", re.I)
 
+# ---- B4-c：从**弃牌堆**贴能量（Smeargle / Dedenne） ----
+# 「Flip 3 coins. Attach an amount of Basic Energy up to the number of heads from
+#  your discard pile to your **Benched** Pokémon in any way you like.」
+_B4C_ATTACH_DISCARD_FLIP_RE = re.compile(
+    r"flip (\d+) coins\. attach an amount of basic energy up to the number of "
+    r"heads from your discard pile to your benched pok[eé]mon in any way you like",
+    re.I)
+# 「Choose Basic {L} Energy cards from your discard pile up to the amount of
+#  Energy attached to all of your opponent's Pokémon and attach them to your
+#  {L} Pokémon in any way you like.」（Dedenne「Tail Generator」）
+_B4C_ATTACH_DISCARD_PER_RE = re.compile(
+    r"choose basic \{(?P<t>[a-z])\} energy cards? from your discard pile up to "
+    r"the amount of energy attached to all of your opponent['\u2019]s "
+    r"pok[eé]mon and attach them to your \{(?P<t2>[a-z])\} pok[eé]mon in any "
+    r"way you like", re.I)
+
 # 「If you go first, this Pokémon can use attacks during your first turn.」
 # （Meloetta ex「Debut Performance」）——**宝可梦级**授权：改的是这只宝可梦的
 # 全部招式，不是某一招。与招式级的「you can use this attack」是两句话。
@@ -3955,6 +3980,12 @@ def _detect_b4(text: str, kind: str):
     m = _B4_SELF_COUNTERS_RE.search(t)
     if m:
         acts.append(act("rule", None, "self", {"b4": f"self_counters:{int(m.group(1))}"}))
+        spans.append(m.span())
+
+    m = _B4_PRE_MILL_SELF_RE.search(t)
+    if m and m.group(1).strip().lower() != "each":
+        n = int(m.group(1).strip())
+        acts.append(act("rule", None, "any", {"pre_direct": f"mill:{n}:self"}))
         spans.append(m.span())
 
     m = _B4_PRE_MILL_BOTH_RE.search(t)
@@ -4005,6 +4036,24 @@ def _detect_b4(text: str, kind: str):
             spans.append(m.span())
 
     # ---- B4-b：分配 / 多目标 ----
+    m = _B4C_ATTACH_DISCARD_FLIP_RE.search(t)
+    if m:
+        # 上限 = 抛币正面数（结算时才知道）→ 由引擎现抛，不在这里折算常数
+        acts.append(act("rule", None, "any",
+                        {"alloc": f"attach_discard:type:any:"
+                                  f"targets:bench:max:flip:{int(m.group(1))}"}))
+        spans.append(m.span())
+    m = _B4C_ATTACH_DISCARD_PER_RE.search(t)
+    if m:
+        col = _EN_ENERGY_LETTER.get(m.group("t").upper(), "")
+        col2 = _EN_ENERGY_LETTER.get(m.group("t2").upper(), "")
+        if col and col == col2:
+            acts.append(act("rule", None, "any",
+                            {"alloc": f"attach_discard:type:{col}:"
+                                      f"targets:type:{col2}:"
+                                      f"max:per:opp_all_energy"}))
+            spans.append(m.span())
+
     m = _B4B_MOVE_COUNTERS_RE.search(t)
     if m:
         acts.append(act("rule", None, "any", {"alloc": "move_counters"}))
@@ -6618,6 +6667,26 @@ def _counter_from_phrase(phrase: str) -> Optional[str]:
     #     只在「本回合先弃过能量」时显现（Magcargo ex / Wugtrio ex）。
     if re.search(r"energy cards? (?:you )?discarded in this way", low):
         return "discarded_energy_this_attack"
+    # 「for each **Basic {W} Energy card** that you discarded in this way」
+    # （Mega Abomasnow ex）——只数基本能量卡，且限定属性。子集，不能用总数。
+    m = re.search(r"basic \{([a-z])\} energy card that you discarded in this way",
+                  low)
+    if m:
+        col = _EN_ENERGY_LETTER.get(m.group(1).upper(), "")
+        if col:
+            return f"discarded_this_attack_basic_energy:{col}"
+    # 「for each **Misty's Pokémon** that you discarded in this way」
+    # （Misty's Gyarados）——按**卡名前缀**（阵营）数，不是数全部宝可梦。
+    # ⚠ 传进来的是**短语本身**（「Misty's Pokémon that you discarded in this
+    # way」），不含前面的「for each」——第一版按「for each …」写，永远匹配不到，
+    # 于是仍落到「计数源未识别」。
+    m = re.search(r"^([a-z][a-z' ]{2,20}?) pok[eé]mon that you discarded "
+                  r"in this way", low.strip())
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", m.group(1))
+        key = re.sub(r"s$", "s", key)      # `mistys` → 去掉属格后仍是 mistys
+        if key:
+            return f"discarded_this_attack_named:{key}"
     #   ⚠ **只认无限定词的光杆形态**：「card you discarded in this way」是本次
     #     效果的总数；而「Pokémon card you discarded in this way」「Energy card
     #     you discarded in this way」是**子集**（只数其中一类），映射到总数会系统性

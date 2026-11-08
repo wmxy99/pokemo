@@ -207,6 +207,48 @@ class TestPokemonWideFirstTurn(unittest.TestCase):
         self.assertIn("use_any:first_turn", r["tags"])
 
 
+class TestSubsetDiscard(unittest.TestCase):
+    """Misty's Gyarados / Mega Abomasnow ex：**子集**弃牌计数（B4-c）"""
+
+    def test_named_faction(self):
+        r = _tags("Discard the top 7 cards of your deck, and this attack does 70 "
+                  "damage for each Misty\u2019s Pokémon that you discarded in this "
+                  "way.", name="Splashing Panic")
+        self.assertIn("pre:mill:7:self", r["tags"])
+        self.assertIn("dmg_set:70:per:discarded_this_attack_named:mistys",
+                      r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_basic_energy(self):
+        r = _tags("Discard the top 6 cards of your deck, and this attack does 100 "
+                  "damage for each Basic {W} Energy card that you discarded in this "
+                  "way.", name="Hammer-lanche")
+        self.assertIn("pre:mill:6:self", r["tags"])
+        self.assertIn("dmg_set:100:per:"
+                      "discarded_this_attack_basic_energy:water", r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+
+class TestAttachFromDiscard(unittest.TestCase):
+    """Smeargle / Dedenne：从**弃牌堆**贴基本能量（B4-c）"""
+
+    def test_flip_cap(self):
+        r = _tags("Flip 3 coins. Attach an amount of Basic Energy up to the number "
+                  "of heads from your discard pile to your Benched Pokémon in any "
+                  "way you like.", name="Energizing Sketch")
+        self.assertIn("choose:alloc:attach_discard:type:any:targets:bench"
+                      ":max:flip:3", r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_counter_cap_and_type_target(self):
+        r = _tags("Choose Basic {L} Energy cards from your discard pile up to the "
+                  "amount of Energy attached to all of your opponent\u2019s "
+                  "Pokémon and attach them to your {L} Pokémon in any way you "
+                  "like.", name="Tail Generator")
+        self.assertIn("choose:alloc:attach_discard:type:lightning"
+                      ":targets:type:lightning:max:per:opp_all_energy", r["tags"])
+
+
 class TestCounterScope(unittest.TestCase):
     """`chosen_this_attack` 的口径边界"""
 

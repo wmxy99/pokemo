@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1230,
+      "kept": 1234,
       "by_Energy": 20,
-      "by_Pokemon": 1030,
+      "by_Pokemon": 1034,
       "by_Trainer": 180,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 22
+        "存在未建模项（整卡不收）": 18
       }
     }
   },
@@ -16892,6 +16892,61 @@
       "source_card_id": 362,
       "name_key": "mistysmagikarp",
       "uid": "Misty's Magikarp@DRI 48"
+    },
+    {
+      "name": "Misty's Gyarados",
+      "name_zh": "小霞的暴鲤龙",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 180,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Misty)",
+      "evolves_from": "Misty's Magikarp",
+      "attacks": [
+        {
+          "name": "Splashing Panic",
+          "cost": {
+            "water": 1
+          },
+          "damage": 70,
+          "effects": [
+            "pre:mill:7:self",
+            "dmg_set:70:per:discarded_this_attack_named:mistys"
+          ],
+          "desc": "Discard the top 7 cards of your deck, and this attack does 70 damage for each Misty’s Pokémon that you discarded in this way.",
+          "name_zh": "水花惊慌",
+          "desc_zh": "弃置你的牌库上方的 7 张卡，以此方式弃置的小霞的宝可梦每有 1 只，此招式造成 70 点伤害。"
+        },
+        {
+          "name": "Waterfall",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 120,
+          "effects": [],
+          "desc": "",
+          "name_zh": "瀑布",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "49"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 363,
+      "name_key": "mistysgyarados",
+      "uid": "Misty's Gyarados@DRI 49"
     },
     {
       "name": "Misty's Lapras",
@@ -34486,6 +34541,62 @@
       "uid": "Snover@MEG 35"
     },
     {
+      "name": "Mega Abomasnow ex",
+      "name_zh": "超级暴雪王 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 350,
+      "types": [
+        "water"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Snover",
+      "attacks": [
+        {
+          "name": "Hammer-lanche",
+          "cost": {
+            "water": 2
+          },
+          "damage": 100,
+          "effects": [
+            "pre:mill:6:self",
+            "dmg_set:100:per:discarded_this_attack_basic_energy:water"
+          ],
+          "desc": "Discard the top 6 cards of your deck, and this attack does 100 damage for each Basic {W} Energy card that you discarded in this way.",
+          "name_zh": "巨锤雪崩",
+          "desc_zh": "弃置你牌库顶部的 6 张卡。以此方式弃置的基本 {W} 能量卡每有 1 张，此招式造成 100 点伤害。"
+        },
+        {
+          "name": "Frost Barrier",
+          "cost": {
+            "water": 3
+          },
+          "damage": 200,
+          "effects": [
+            "shield:reduce:30"
+          ],
+          "desc": "During your opponent’s next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).",
+          "name_zh": "寒霜屏障",
+          "desc_zh": "在对手的下个回合中，此宝可梦受到的招式伤害 -30（计算弱点和抗性之后）。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "36"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 723,
+      "name_key": "megaabomasnowex",
+      "uid": "Mega Abomasnow ex@MEG 36"
+    },
+    {
       "name": "Clauncher",
       "name_zh": "铁臂枪虾",
       "supertype": "Pokemon",
@@ -40338,6 +40449,59 @@
       "source_card_id": 844,
       "name_key": "ambipom",
       "uid": "Ambipom@PFL 79"
+    },
+    {
+      "name": "Smeargle",
+      "name_zh": "图图犬",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 80,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Energizing Sketch",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 0,
+          "effects": [
+            "choose:alloc:attach_discard:type:any:targets:bench:max:flip:3"
+          ],
+          "desc": "Flip 3 coins. Attach an amount of Basic Energy up to the number of heads from your discard pile to your Benched Pokémon in any way you like.",
+          "name_zh": "能量素描",
+          "desc_zh": "抛 3 次硬币。从你的弃牌堆中把最多等于正面次数的基本能量，以任意方式附着于你的后备宝可梦。"
+        },
+        {
+          "name": "Hook",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 40,
+          "effects": [],
+          "desc": "",
+          "name_zh": "钩爪",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "80"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 845,
+      "name_key": "smeargle",
+      "uid": "Smeargle@PFL 80"
     },
     {
       "name": "Zigzagoon",
@@ -49769,6 +49933,62 @@
       "source_card_id": 1037,
       "name_key": "luxray",
       "uid": "Luxray@POR 28"
+    },
+    {
+      "name": "Dedenne",
+      "name_zh": "咚咚鼠",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Tail Generator",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 0,
+          "effects": [
+            "choose:alloc:attach_discard:type:lightning:targets:type:lightning:max:per:opp_all_energy"
+          ],
+          "desc": "Choose Basic {L} Energy cards from your discard pile up to the amount of Energy attached to all of your opponent’s Pokémon and attach them to your {L} Pokémon in any way you like.",
+          "name_zh": "尾巴发电",
+          "desc_zh": "从你的弃牌堆中选择基本 {L} 能量卡，数量最多与对手所有宝可梦身上附着的能量数量相同，并以任意方式附着于你的 {L} 宝可梦身上。"
+        },
+        {
+          "name": "Thunder Shock",
+          "cost": {
+            "lightning": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [
+            "coin:heads:paralyze"
+          ],
+          "desc": "Flip a coin. If heads, your opponent’s Active Pokémon is now Paralyzed.",
+          "name_zh": "电击",
+          "desc_zh": "抛硬币。若为正面，对手的战斗宝可梦陷入麻痹。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "29"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1038,
+      "name_key": "dedenne",
+      "uid": "Dedenne@POR 29"
     },
     {
       "name": "Clefairy",

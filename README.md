@@ -4,22 +4,22 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1564** 项）· 全仓 **2795** 项测试全绿
-（engine 1564 · agent 1077 · api 142 · gym 12）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1569** 项）· 全仓 **2804** 项测试全绿
+（engine 1569 · agent 1081 · api 142 · gym 12）
 <!-- 上面这行由 scripts/check_doc_counts.py 在 CI 中核对（计数类文档必须实证） -->
 
 | | |
 |---|---|
 | 许可 | 核心代码 **Apache-2.0**；`packages/content-pokemon` **PolyForm Noncommercial 1.0.0** |
 | 仓库 | `packages/`（engine · card-db · agent · gym）+ `apps/`（api · web · cli） |
-| 卡池 | 收录 **1267** 张，其中引擎可对战 **1245** 张（98.3%，**差异逐一披露**，见下「已知边界」） |
+| 卡池 | 收录 **1267** 张，其中引擎可对战 **1249** 张（98.6%，**差异逐一披露**，见下「已知边界」） |
 | K2（卡牌效果解析） | 本地 4B **40%**（不可用）→ 云端 **100%**（50 条工程基准集，**含过拟合提醒**，见下） |
 
 ## 快速开始
 
 ```bash
 # ① 引擎：无需三方依赖，装好 Python 3.12 即可
-cd packages/engine && python -m unittest discover -s tests      # 1564 项
+cd packages/engine && python -m unittest discover -s tests      # 1569 项
 
 # ② 平台（后端 = FastAPI，同时托管前端构建产物到 /app）
 pip install -r apps/api/requirements.txt
@@ -48,7 +48,7 @@ python scripts/ci_local.py engine api   # 只跑指定 job（--list 可看全部
 
 | 路径 | 内容 | 状态 | 许可 |
 |------|------|:---:|:---:|
-| `packages/engine` | 自研对战规则引擎（回合状态机 / 裁判 / 结算闭环 / 事件日志 / 真实卡池 / **规则一致性矩阵**） | v1.4 · 1564 测 | Apache-2.0 |
+| `packages/engine` | 自研对战规则引擎（回合状态机 / 裁判 / 结算闭环 / 事件日志 / 真实卡池 / **规则一致性矩阵**） | v1.4 · 1569 测 | Apache-2.0 |
 | `packages/card-db` | 卡牌数据管道 + 规则知识库（代码与 schema 可发布；**数据运行时本地导入**） | 1267 卡入库 | Apache-2.0 |
 | `packages/agent` | 决策链路（状态编码 → 策略网 → MCTS → LangGraph）+ RL 训练（BC→PPO）+ K2 提示词库 | 928 测 | Apache-2.0 |
 | `packages/gym` | 单智能体博弈环境（gymnasium 风格 `reset/step`，零运行时依赖，含对手 benchmark）+ 可选张量适配层（`pokegym.torch_obs`） | 12 测 | Apache-2.0 |
@@ -84,7 +84,7 @@ python scripts/ci_local.py engine api   # 只跑指定 job（--list 可看全部
 
 | 边界 | 数值 | 披露位置 |
 |---|---|---|
-| 卡池引擎覆盖率 | 1245 / 1267 = **98.3%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
+| 卡池引擎覆盖率 | 1249 / 1267 = **98.6%** | `packages/card-db/data/cleaned/unmodeled_registry.md`（永久登记 · C5） |
 | 未建模动作条目 | **154** 条（**全部纳入实现范围**，见 `docs/RULES_COMPLETION_PLAN.md`） | 同上（含批次图例与处置） |
 | 规则完整度 | 规则层已按官方对齐（S6a–S6c：先手首回合禁攻/禁支援者 + 例外许可、无手牌上限、setup 不能进化、伤害顺序、特殊状态构成与检查期、逐张取奖赏）。**逐条规则 → 实现点 → 守卫测试 → 覆盖卡数**见矩阵，由 CI 机械核对（写错即红）；**已知差异 1 条**（mulligan 补偿自动抽，官方为可选） | `docs/RULE_CONFORMANCE.md` |
 | 引擎未实现卡 | 对战时以基础能量**占位**并在 UI 显式告知 | 卡组页 / 预设清单三态标注 |

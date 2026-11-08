@@ -1364,16 +1364,23 @@ class TestMillMapping(unittest.TestCase):
             "Discard the top card of your deck.")["tags"])
 
     def test_mill_plus_scaling_mill_still_mapped(self):
-        """「磨 6 张 + 每张<子集>加伤」：磨牌必须映射
+        """「磨 6 张 + 每张<子集>加伤」：磨牌与缩放都要在
 
-        缩放侧带**子集限定**（只数 Basic {W} Energy）而引擎只有「本回合弃的能量总数」
-        → 缩放如实留未建模（宁缺勿错），但**磨牌本身不能因此丢掉**。
+        ⚠ B4（2026-11-08）改判：以前这里断言「缩放如实未建模」（当时引擎只有
+        「本回合弃的能量总数」，按子集数会把别处的能量算进来）。
+        现在有了 `discarded_this_attack_basic_energy:<type>`（本次攻击弃掉的
+        基本能量切片 + 属性过滤），子集能精确表达 → 两个 tag 都应产出。
+
+        本条继续钉住的核心错法没变：**磨牌不能丢**（并且必须在伤害之前完成，
+        所以落 `pre:mill:6:self` 而不是事后 `mill:6`）。
         """
         r = self._tags("Discard the top 6 cards of your deck, and this attack "
                        "does 100 damage for each Basic {W} Energy card that "
                        "you discarded in this way.")
-        self.assertIn("mill:6", r["tags"])
-        self.assertTrue(r["unsupported"], "子集限定的缩放应如实登记未建模")
+        self.assertIn("pre:mill:6:self", r["tags"])
+        self.assertIn("dmg_set:100:per:discarded_this_attack_basic_energy:water",
+                      r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestParameterizedEnergyCondition(unittest.TestCase):

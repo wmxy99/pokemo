@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 22:04:37",
+  "reparsed_at": "2026-11-08 22:19:48",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1245,
+  "engine_ready": 1249,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1245,
-   "engine_approximated": 1230,
-   "engine_unmatched": 22,
-   "engine_namekey_mismatch": 3
+   "zh_backfill": 1249,
+   "engine_approximated": 1234,
+   "engine_unmatched": 18,
+   "engine_namekey_mismatch": 2
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 118,
-   "engine_tags": 1559,
-   "unsupported": 22,
+   "engine_tags": 1563,
+   "unsupported": 18,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1230,
+  "engine_approximated": 1234,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -51185,14 +51185,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Misty's Gyarados@DRI 49",
    "parse": {
     "items": [
      {
@@ -51206,15 +51208,6 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": 7,
-          "target": "deck",
-          "extra": {
-           "from_deck": true,
-           "side": "own"
-          }
-         },
-         {
           "type": "damage",
           "amount": 70,
           "target": "active_opponent"
@@ -51222,9 +51215,19 @@
          {
           "type": "rule",
           "amount": null,
+          "target": "any",
+          "extra": {
+           "pre_direct": "mill:7:self"
+          }
+         },
+         {
+          "type": "damage_mod",
+          "amount": 70,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（Misty's Pokémon that you disca）"
+           "mode": "set_per",
+           "per": "discarded_this_attack_named:mistys",
+           "phrase": "Misty's Pokémon that you discarded in th"
           }
          }
         ],
@@ -51233,14 +51236,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "mill:7"
+       "pre:mill:7:self",
+       "dmg_set:70:per:discarded_this_attack_named:mistys"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（Misty's Pokémon that you disca）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -51251,15 +51250,6 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": 7,
-        "target": "deck",
-        "extra": {
-         "from_deck": true,
-         "side": "own"
-        }
-       },
-       {
         "type": "damage",
         "amount": 70,
         "target": "active_opponent"
@@ -51267,9 +51257,19 @@
        {
         "type": "rule",
         "amount": null,
+        "target": "any",
+        "extra": {
+         "pre_direct": "mill:7:self"
+        }
+       },
+       {
+        "type": "damage_mod",
+        "amount": 70,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（Misty's Pokémon that you disca）"
+         "mode": "set_per",
+         "per": "discarded_this_attack_named:mistys",
+         "phrase": "Misty's Pokémon that you discarded in th"
         }
        }
       ],
@@ -51278,14 +51278,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "mill:7"
+     "pre:mill:7:self",
+     "dmg_set:70:per:discarded_this_attack_named:mistys"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（Misty's Pokémon that you disca）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -96890,14 +96886,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Abomasnow ex@MEG 36",
    "parse": {
     "items": [
      {
@@ -96911,15 +96909,6 @@
         "conditions": [],
         "actions": [
          {
-          "type": "discard",
-          "amount": 6,
-          "target": "deck",
-          "extra": {
-           "from_deck": true,
-           "side": "own"
-          }
-         },
-         {
           "type": "damage",
           "amount": 100,
           "target": "active_opponent"
@@ -96927,9 +96916,19 @@
          {
           "type": "rule",
           "amount": null,
+          "target": "any",
+          "extra": {
+           "pre_direct": "mill:6:self"
+          }
+         },
+         {
+          "type": "damage_mod",
+          "amount": 100,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（Basic {W} Energy card that you）"
+           "mode": "set_per",
+           "per": "discarded_this_attack_basic_energy:water",
+           "phrase": "Basic {W} Energy card that you discarded"
           }
          }
         ],
@@ -96938,14 +96937,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "mill:6"
+       "pre:mill:6:self",
+       "dmg_set:100:per:discarded_this_attack_basic_energy:water"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（Basic {W} Energy card that you）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -96984,15 +96979,6 @@
       "conditions": [],
       "actions": [
        {
-        "type": "discard",
-        "amount": 6,
-        "target": "deck",
-        "extra": {
-         "from_deck": true,
-         "side": "own"
-        }
-       },
-       {
         "type": "damage",
         "amount": 100,
         "target": "active_opponent"
@@ -97000,9 +96986,19 @@
        {
         "type": "rule",
         "amount": null,
+        "target": "any",
+        "extra": {
+         "pre_direct": "mill:6:self"
+        }
+       },
+       {
+        "type": "damage_mod",
+        "amount": 100,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（Basic {W} Energy card that you）"
+         "mode": "set_per",
+         "per": "discarded_this_attack_basic_energy:water",
+         "phrase": "Basic {W} Energy card that you discarded"
         }
        }
       ],
@@ -97028,15 +97024,11 @@
     ],
     "errors": [],
     "engine_tags": [
-     "mill:6",
+     "pre:mill:6:self",
+     "dmg_set:100:per:discarded_this_attack_basic_energy:water",
      "shield:reduce:30"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（Basic {W} Energy card that you）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -112055,14 +112047,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Smeargle@PFL 80",
    "parse": {
     "items": [
      {
@@ -112080,7 +112074,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "alloc": "attach_discard:type:any:targets:bench:max:flip:3"
           }
          }
         ],
@@ -112088,13 +112082,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:attach_discard:type:any:targets:bench:max:flip:3"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -112109,7 +112100,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "alloc": "attach_discard:type:any:targets:bench:max:flip:3"
         }
        }
       ],
@@ -112117,13 +112108,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "choose:alloc:attach_discard:type:any:targets:bench:max:flip:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -136789,14 +136777,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dedenne@POR 29",
    "parse": {
     "items": [
      {
@@ -136814,7 +136804,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "alloc": "attach_discard:type:lightning:targets:type:lightning:max:per:opp_all_energy"
           }
          }
         ],
@@ -136822,13 +136812,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:attach_discard:type:lightning:targets:type:lightning:max:per:opp_all_energy"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -136873,7 +136860,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "alloc": "attach_discard:type:lightning:targets:type:lightning:max:per:opp_all_energy"
         }
        }
       ],
@@ -136901,14 +136888,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "choose:alloc:attach_discard:type:lightning:targets:type:lightning:max:per:opp_all_energy",
      "coin:heads:paralyze"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

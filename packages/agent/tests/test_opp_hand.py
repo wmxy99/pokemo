@@ -115,11 +115,20 @@ class TestNegativeGuards(unittest.TestCase):
         r = _tags(text, "attack")
         self.assertEqual([t for t in r["tags"] if t.startswith("opp_hand:")], [])
 
-    def test_ability_forms_rejected(self):
+    def test_ability_forms_use_bench_op(self):
+        """特性侧的两张（Mandibuzz / Ribombee）**已建模**（F8，2026-11-08）
+
+        本用例原来断言「特性形态一律不认领」（那时引擎没有 `opp_hand:bench`，
+        认领了也只能落成弃牌 —— 语义完全错）。现在有了铺场语义，正确口径是：
+        认领，且 **op 必须是 `bench`**，绝不能落成 `discard`/`bottom`。
+        """
         for text in (MANDIBUZZ, RIBOMBEE):
             r = _tags(text, "ability")
-            self.assertEqual([t for t in r["tags"] if t.startswith("opp_hand:")],
-                             [], text[:40])
+            got = [t for t in r["tags"] if "opp_hand:" in t]
+            self.assertTrue(got, f"未认领：{text[:40]}")
+            for t in got:
+                self.assertIn(":bench:", t,
+                              f"落成了非铺场形态（会把这套牌送去弃牌/牌库底）：{t}")
 
     def test_numeric_discard_without_verb_is_not_confused(self):
         """「discard 2 cards you find there」不是本族句式（缺 you/choose 语序），

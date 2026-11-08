@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 23:18:27",
+  "reparsed_at": "2026-11-08 23:28:17",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1257,
+  "engine_ready": 1260,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,22 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1257,
-   "engine_approximated": 1242,
-   "engine_unmatched": 10,
-   "engine_namekey_mismatch": 1
+   "zh_backfill": 1260,
+   "engine_approximated": 1245,
+   "engine_unmatched": 7
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 120,
-   "engine_tags": 1571,
-   "unsupported": 10,
+   "errors": 122,
+   "engine_tags": 1574,
+   "unsupported": 7,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1242,
+  "engine_approximated": 1245,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -16017,14 +16016,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Okidogi@TWM 111",
    "parse": {
     "items": [
      {
@@ -16040,24 +16041,22 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "energy_static:100:100:darkness"
           }
          }
         ],
-        "source_text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+        "source_text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:energy_static:100:100:darkness"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -16070,23 +16069,21 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "energy_static:100:100:darkness"
         }
        }
       ],
-      "source_text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance)."
+      "source_text": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:energy_static:100:100:darkness"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -40416,14 +40413,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lillie’s Ribombee@JTG 67",
    "parse": {
     "items": [
      {
@@ -40439,24 +40438,27 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "opp",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "opp_hand_bench": {
+            "sel": "basic_pokemon",
+            "n": "all"
+           }
           }
          }
         ],
-        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench."
+        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：opp"
+      ],
+      "engine_tags": [
+       "evolve_act:opp_hand:bench:basic_pokemon:all"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -40469,23 +40471,26 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "opp",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "opp_hand_bench": {
+          "sel": "basic_pokemon",
+          "n": "all"
+         }
         }
        }
       ],
-      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench."
+      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
+    "errors": [
+     "[0] action.target 非法：opp"
     ],
+    "engine_tags": [
+     "evolve_act:opp_hand:bench:basic_pokemon:all"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -74608,14 +74613,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Mandibuzz@WHT 64",
    "parse": {
     "items": [
      {
@@ -74625,71 +74632,65 @@
        {
         "kind": "ability",
         "name": "Look for Prey",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "opp",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "opp_hand_bench": {
+            "sel": "basic_pokemon@hp70",
+            "n": 1
+           }
           }
          }
         ],
-        "source_text": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent’s Bench."
+        "source_text": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent’s Bench.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：opp"
+      ],
+      "engine_tags": [
+       "opp_hand:bench:basic_pokemon@hp70:1"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Look for Prey",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "opp",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "opp_hand_bench": {
+          "sel": "basic_pokemon@hp70",
+          "n": 1
+         }
         }
        }
       ],
-      "source_text": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent’s Bench."
+      "source_text": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent’s Bench.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "errors": [
+     "[0] action.target 非法：opp"
     ],
+    "engine_tags": [
+     "opp_hand:bench:basic_pokemon@hp70:1"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

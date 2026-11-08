@@ -927,6 +927,12 @@ def audit_opp_hand(card_name: str, item_name: str, desc: str,
     for t in tags:
         parts = t.split(":")
         got_op = parts[1] if len(parts) > 1 else ""
+        # F8（2026-11-08）：`bench` 是**铺场**语义（Mandibuzz / Ribombee），
+        # 张数/筛选/去向的判据完全不同（`@hp<N>` 限定、后备空间），由
+        # `audit_f8_rules` 单独核对。这里只保证它**没有**被误判成本族的
+        # discard/bottom 形态。
+        if got_op == "bench":
+            continue
         got_sel = parts[2] if len(parts) > 2 else ""
         got_n = parts[3] if len(parts) > 3 else "1"
         if got_op != want_op:
@@ -4234,6 +4240,13 @@ def audit_f7_tools(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# 能量符号 → 引擎属性名（`{D}` → darkness）。与 `effects._EN_SYMBOL_COLOR` 同表；
+# 这里单独写一份是因为本脚本不 import 解析链（对账必须在解析链坏掉时仍能跑）。
+_SYMBOL_TO_TYPE = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
+                   "P": "psychic", "F": "fighting", "D": "darkness",
+                   "M": "metal", "C": "colorless", "N": "dragon"}
+
+
 def audit_f8_rules(card_name: str, item_name: str, desc: str,
                    effects: list) -> list:
     """F8 对账：**规则改写 / 去向改写**（2026-11-08）
@@ -4301,7 +4314,39 @@ def audit_f8_rules(card_name: str, item_name: str, desc: str,
                 not in low:
             errs.append(f"{card_name} · {item_name}：去向改写只对「被招式伤害"
                         f"击倒」成立，卡面没写就不能按无条件处理")
-    # ⑤ 手牌上场（Klinklang）
+    # ⑤ 对手手牌 → 对手后备（Mandibuzz / Lillie's Ribombee）
+    if re.search(r"you put (?:a|any number of) basic pok[eé]mon", low) \
+            and "bench" in low:
+        oh = next((x for x in segs if x.startswith("opp_hand:")), "")
+        if not oh:
+            errs.append(f"{card_name} · {item_name}：卡面「把对手手牌里的基础"
+                        f"宝可梦铺到对手后备」缺 `opp_hand:`（实际 {effects}）")
+        else:
+            if ":bench:" not in oh:
+                errs.append(f"{card_name} · {item_name}：`opp_hand:` 的 op 应是 "
+                            f"`bench`（铺场），实际 {oh}")
+            m_hp = re.search(r"basic pok[eé]mon with (\d+) hp or less", low)
+            if m_hp and f"@hp{int(m_hp.group(1))}" not in oh:
+                errs.append(f"{card_name} · {item_name}：卡面限定 "
+                            f"{m_hp.group(1)} HP 以下，tag 缺 `@hp`（{oh}）")
+            if "any number of basic" in low and not oh.endswith(":all"):
+                errs.append(f"{card_name} · {item_name}：卡面「any number」= 全部，"
+                            f"tag 应以 `:all` 结尾（{oh}）")
+    # ⑥ 双段条件静态（Okidogi）
+    m_es = re.search(r"if this pok[eé]mon has any \{([a-z])\} energy attached,? "
+                     r"it gets \+(\d+) hp,? and the attacks it uses do (\d+) more "
+                     r"damage", low)
+    if m_es:
+        want = f"passive:energy_static:{int(m_es.group(2))}:{int(m_es.group(3))}:"
+        hit = [x for x in segs if x.startswith(want)]
+        if not hit:
+            errs.append(f"{card_name} · {item_name}：卡面「有条件 +HP **且** +伤害」"
+                        f"应落 `{want}<属性>`（实际 {effects}）")
+        elif _SYMBOL_TO_TYPE.get(m_es.group(1).upper()) \
+                and not hit[0].endswith(":" + _SYMBOL_TO_TYPE[m_es.group(1).upper()]):
+            errs.append(f"{card_name} · {item_name}：条件属性 "
+                        f"{{{m_es.group(1).upper()}}} 没写进 tag（{hit[0]}）")
+    # ⑦ 手牌上场（Klinklang）
     if re.search(r"in your hand and your opponent has any stage 2", low):
         hb = next((s for s in segs if s.startswith("hand_bench:")), "")
         if not hb:
@@ -4656,8 +4701,8 @@ def main() -> int:
           "退化 devolve（方向/阶数/属性/战斗位） · "
           "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） · "
           "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） · "
-          "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场） "
-          "五十五类对账全部一致")
+          "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场/"
+          "对手手牌铺场/双段条件静态） 五十五类对账全部一致")
     return 0
 
 

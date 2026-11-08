@@ -680,6 +680,15 @@ class Battle:
                 if ab.tag.startswith("discard_opp_to:"):
                     if len(opp.hand) <= int(ab.tag.split(":")[1]):
                         continue
+                if ab.tag.startswith("opp_hand:"):
+                    # F8：**特性侧**的对手手牌操作（Mandibuzz / Ribombee）。
+                    # `opp_hand:` 此前只出现在训练家卡上，能力侧没有这一支 ——
+                    # 有 tag 但不判可发性 = 「合法但必然空转」的假动作。
+                    _ohop, _ohsel, _ = _parse_opp_hand_tag(ab.tag)
+                    if _ohop == "bench" and len(opp.bench) >= self.cfg.max_bench:
+                        continue
+                    if not any(_opp_hand_matches(c, _ohsel) for c in opp.hand):
+                        continue
                 if ab.tag.startswith("energy_move:"):
                     # 特性侧能量移动：持有者自身有能量且己方有后备（当前池内
                     # 只有「自身 → 后备」形态；Dewgong 的「任意次」仍拒绝）
@@ -1001,8 +1010,12 @@ class Battle:
                 # 对手手牌操作（2026-10-30 第三十二批）：对手手里**没有**符合
                 # 筛选条件的牌时，这张卡打出去只会「什么都不发生」——必须从
                 # 合法动作表里摘掉，否则 AI 会反复尝试一张空转的卡。
-                if any(_opp_hand_matches(c, _parse_opp_hand_tag(tag)[1])
-                       for c in opp.hand):
+                _ohop, _ohsel, _ohn = _parse_opp_hand_tag(tag)
+                if _ohop == "bench" and len(opp.bench) >= self.cfg.max_bench:
+                    # F8：铺后备的形态还要求**对手后备有空位**（Mandibuzz /
+                    # Ribombee）。不判这一条就是「合法但必然空转」的假动作。
+                    continue
+                if any(_opp_hand_matches(c, _ohsel) for c in opp.hand):
                     out.append(dict(base))
             elif tag.startswith("recon:"):
                 # 检视牌库顶（2026-10-30 第二十批）：牌库非空且**前置条件满足**才可打出。
@@ -2454,6 +2467,13 @@ class Battle:
                 detail = families.apply_action(
                     self, tag, {"kind": "ability", "holder": fp,
                                 "action": action, "player": self.current})
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("opp_hand:"):
+                # F8（Mandibuzz / Ribombee）：看对手手牌、把基础宝可梦铺到
+                # **对手**后备。走与训练家侧同一个 helper（口径唯一）。
+                detail = self._do_opp_hand(p, tag, action)
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
@@ -5711,6 +5731,15 @@ class Battle:
             c = o.hand.pop(i)
             if op == "discard":
                 self._to_discard(o, c)
+            elif op == "bench":
+                # F8：铺到**对手**的后备。空间不足时**停止**（卡面是「put onto
+                # their Bench」，没有「弃掉多余」的语义）—— 剩余的手牌留在手里。
+                if len(o.bench) >= self.cfg.max_bench:
+                    o.hand.insert(i, c)      # 放回原位，不算 moved
+                    continue
+                mon = make_pokemon(c.pdef)
+                mon.just_played = True
+                o.bench.append(mon)
             else:                        # bottom：牌库顶是列表末尾，故插入前端
                 o.deck.insert(0, c)
             moved += 1
@@ -8616,6 +8645,17 @@ class Battle:
         # 与 `passive:hp_plus:N:if:` 同一套判据（`cards._hp_cond_ok`）。
         for ab in attacker.pdef.abilities:
             tag = str(getattr(ab, "tag", "") or "")
+            if tag.startswith("passive:energy_static:"):
+                # F8（Okidogi）：与 +HP 同一条件、同一 tag（见 cards.cond_hp_bonus）
+                _es = tag.split(":")
+                dmg_n = int(_es[3]) if len(_es) > 3 and _es[3].isdigit() else 0
+                etype = _es[4] if len(_es) > 4 else ""
+                if dmg_n and etype and _hp_cond_ok_pub(attacker,
+                                                       f"energy:{etype}"):
+                    out["plus"] += dmg_n
+                    self._log("passive_dmg_plus", {"target": attacker.name,
+                                                   "n": dmg_n})
+                continue
             if not tag.startswith("passive:dmg_plus:"):
                 continue
             seg = tag.split(":")
@@ -12638,7 +12678,9 @@ def _parse_opp_hand_tag(tag: str) -> tuple:
     if len(parts) < 3:
         raise ValueError(f"opp_hand tag 字段不足：{tag}")
     op, sel = parts[1], parts[2]
-    if op not in ("discard", "bottom"):
+    # F8（2026-11-08）：`bench` = 把对手手牌里的宝可梦**铺到对手后备**
+    # （Mandibuzz「Look for Prey」/ Lillie's Ribombee「Inviting Wink」）
+    if op not in ("discard", "bottom", "bench"):
         raise ValueError(f"未知 opp_hand 操作：{op}")
     if not sel:
         raise ValueError(f"opp_hand 缺少筛选项：{tag}")
@@ -12682,7 +12724,24 @@ def _opp_hand_one(ref, alt: str) -> bool:
 
 def _opp_hand_matches(ref, sel: str) -> bool:
     base = str(sel or "any").split("@")[0]
-    return any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt)
+    if not any(_opp_hand_one(ref, alt) for alt in base.split("+") if alt):
+        return False
+    return _opp_hand_hp_ok(ref, sel)
+
+
+def _opp_hand_hp_max(sel: str) -> int:
+    """``sel`` 里的 ``@hp<N>`` 限定（0 = 无限定）—— Mandibuzz「70 HP or less」"""
+    m = re.search(r"@hp(\d+)", str(sel or ""))
+    return int(m.group(1)) if m else 0
+
+
+def _opp_hand_hp_ok(ref, sel: str) -> bool:
+    """HP 上限限定（只对宝可梦有意义；非宝可梦在带 hp 限定时**不匹配**）"""
+    from .cards import PokeRef
+    cap = _opp_hand_hp_max(sel)
+    if not cap:
+        return True
+    return isinstance(ref, PokeRef) and int(ref.pdef.hp) <= cap
 
 
 def _parse_ability_cost(pc: str):

@@ -655,10 +655,25 @@ def _hp_cond_ok(fp: "FieldPokemon", cond: str) -> bool:
 
 
 def cond_hp_bonus(fp: "FieldPokemon") -> int:
-    """``passive:hp_plus:<n>:if:<cond>`` 的现值（无条件形态不在此处，见 bonus_hp）"""
+    """``passive:hp_plus:<n>:if:<cond>`` 的现值（无条件形态不在此处，见 bonus_hp）
+
+    另含 F8 的**双段条件静态** ``passive:energy_static:<hp>:<dmg>:<type>``
+    （Okidogi「Adrena-Power」：有 {D} 能量则 +100 HP **且** +100 伤害）。
+    为什么合并成一条 tag 而不是 `hp_plus|dmg_plus` 复合：`AbilityDef.tag` 是单值，
+    而被动读取点（`_static_mods` / `cond_hp_bonus` / `_attack_mods`）都按前缀各自
+    解析 —— 复合会让其中一处静默漏读。两段共享同一条件，合并后再在各自的读取点
+    解析那一段，才不会出现「加了血却没加伤」。
+    """
     total = 0
     for ab in fp.pdef.abilities:
         tag = str(getattr(ab, "tag", "") or "")
+        if tag.startswith("passive:energy_static:"):
+            _es = tag.split(":")
+            hp_n = int(_es[2]) if len(_es) > 2 and _es[2].isdigit() else 0
+            etype = _es[4] if len(_es) > 4 else ""
+            if hp_n and etype and _hp_cond_ok(fp, f"energy:{etype}"):
+                total += hp_n
+            continue
         if not tag.startswith("passive:hp_plus:"):
             continue
         raw = tag.split(":")

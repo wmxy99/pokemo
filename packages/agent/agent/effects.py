@@ -3474,6 +3474,35 @@ def _detect_f8(text: str, kind: str) -> list:
         # Klinklang「Emergency Rotation」：在**手牌**里、对手有 2 阶 → 直接铺后备
         if _F8_HAND_TO_BENCH_RE.match(low):
             return [act("rule", None, "self", {"hand_to_bench": "opp_stage2"})]
+        # Okidogi「Adrena-Power」：有 {D} 能量则 +100 HP **且** +100 伤害。
+        # 两段共享同一条件 → 合成一条 `passive:energy_static:<hp>:<dmg>:<type>`
+        # （`AbilityDef.tag` 单值；拆成两条会有一处读取点静默漏读）。
+        _m = _F8_ENERGY_STATIC_RE.match(low)
+        if _m:
+            _et = _EN_SYMBOL_COLOR.get(str(_m.group("type")).upper())
+            _hp = _m.group("hp")
+            _dmg = _m.group("dmg")
+            if _et and _hp and _dmg:
+                return [act("rule", None, "self",
+                            {"static_passive": f"energy_static:{int(_hp)}:"
+                                               f"{int(_dmg)}:{_et}"})]
+            return []
+        # Mandibuzz「Look for Prey」：看对手手牌，把 1 只 ≤70HP 的基础宝可梦
+        # 铺到**对手**后备（不是弃、不是拿到手）。
+        if _F8_OPP_HAND_BENCH_RE.match(low):
+            _m = _F8_OPP_HAND_BENCH_RE.match(low)
+            _hp = f"@hp{int(_m.group('hp'))}" if _m.group("hp") else ""
+            return [act("rule", None, "opp",
+                        {"opp_hand_bench": {"sel": "basic_pokemon" + _hp,
+                                            "n": 1}})]
+        # Lillie's Ribombee「Inviting Wink」：进化时看对手手牌，把**任意只**
+        # 基础宝可梦铺到对手后备。
+        if _F8_EVOLVE_OPP_HAND_BENCH_RE.match(low):
+            # 触发时机是「从手牌进化时」→ `__trigger__` 交给 `to_engine_tags`
+            # 包 `evolve_act:`（写成 on_use 会变成每回合一次的场上特性）
+            return [act("rule", None, "opp",
+                        {"opp_hand_bench": {"sel": "basic_pokemon", "n": "all"},
+                         "__trigger__": "on_evolve"})]
         return []
     return []
 
@@ -3491,6 +3520,20 @@ _F8_KO_TO_HAND_RE = re.compile(
     r"^if this pok[eé]mon is knocked out by damage from an attack from your "
     r"opponent'?s pok[eé]mon,? put it into your hand instead of the discard "
     r"pile\.?\s*(?:\(discard all attached cards\.?\))?$", re.I)
+_F8_ENERGY_STATIC_RE = re.compile(
+    r"^if this pok[eé]mon has any \{(?P<type>[a-z])\} energy attached,? it gets "
+    r"\+(?P<hp>\d+) hp,? and the attacks it uses do (?P<dmg>\d+) more damage to "
+    r"your opponent'?s active pok[eé]mon\s*"
+    r"(?:\(before applying weakness and resistance\))?\.$", re.I)
+_F8_OPP_HAND_BENCH_RE = re.compile(
+    r"^once during your turn,? you may use this ability\.? your opponent reveals "
+    r"their hand,? and you put a basic pok[eé]mon(?: with (?P<hp>\d+) hp or "
+    r"less)? that you find there onto your opponent'?s bench\.?$", re.I)
+_F8_EVOLVE_OPP_HAND_BENCH_RE = re.compile(
+    r"^when you play this pok[eé]mon from your hand to evolve 1 of your "
+    r"pok[eé]mon during your turn,? you may have your opponent reveal their "
+    r"hand and you put any number of basic pok[eé]mon you find there onto "
+    r"their bench\.?$", re.I)
 _F8_HAND_TO_BENCH_RE = re.compile(
     r"^once during your turn,? if this pok[eé]mon is in your hand and your "
     r"opponent has any stage 2 pok[eé]mon in play,? you may put this pok[eé]mon "
@@ -4465,7 +4508,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
     # 「discard this Pokémon」被通用分支命中后，语义会完全反过来。
     _f8 = _detect_f8(t_raw, kind)
     if _f8:
-        return {"kind": kind, "name": name, "trigger": "on_use",
+        _f8_trig = "on_use"
+        for _a in _f8:
+            _ex = _a.get("extra") or {}
+            if "__trigger__" in _ex:
+                _f8_trig = str(_ex.pop("__trigger__"))
+        return {"kind": kind, "name": name, "trigger": _f8_trig,
                 "conditions": conditions, "actions": _f8,
                 "source_text": str(text or ""), "citations": []}
     _s2 = _detect_s2(t_raw, kind)
@@ -11416,6 +11464,12 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("discard_self"):
                     # F8（Revavroom ex）：弃自身与全部附加卡（**不是**击倒）
                     tags.append("discard_self:all")
+                elif extra.get("opp_hand_bench"):
+                    # F8：把**对手**手牌里的宝可梦铺到**对手**后备
+                    # （Mandibuzz / Lillie's Ribombee）
+                    _ohb = extra["opp_hand_bench"]
+                    tags.append(f"opp_hand:bench:{_ohb.get('sel') or 'basic_pokemon'}"
+                                f":{_ohb.get('n', 1)}")
                 elif extra.get("hand_to_bench"):
                     # F8（Klinklang）：在手牌里、对手有 2 阶 → 直接铺后备
                     tags.append(f"hand_bench:{extra['hand_to_bench']}")

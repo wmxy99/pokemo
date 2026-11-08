@@ -96,5 +96,47 @@ class TestHandToBench(unittest.TestCase):
                          r["tags"])
 
 
+class TestOppHandBench(unittest.TestCase):
+    """Mandibuzz / Lillie's Ribombee：把**对手手牌**里的基础宝可梦铺到**对手后备**"""
+
+    def test_mandibuzz_with_hp_cap(self):
+        r = _tags("Once during your turn, you may use this Ability. Your opponent "
+                  "reveals their hand, and you put a Basic Pokémon with 70 HP or "
+                  "less that you find there onto your opponent's Bench.",
+                  "ability", "Look for Prey")
+        self.assertEqual(r["tags"], ["opp_hand:bench:basic_pokemon@hp70:1"])
+
+    def test_ribombee_any_number_wrapped_in_evolve_act(self):
+        r = _tags("When you play this Pokémon from your hand to evolve 1 of your "
+                  "Pokémon during your turn, you may have your opponent reveal "
+                  "their hand and you put any number of Basic Pokémon you find "
+                  "there onto their Bench.", "ability", "Inviting Wink")
+        # 进化触发必须包 `evolve_act:`，否则会变成「每回合一次」的场上特性
+        self.assertEqual(r["tags"],
+                         ["evolve_act:opp_hand:bench:basic_pokemon:all"])
+
+    def test_discard_form_not_confused(self):
+        """反向：弃牌形态（Eri 等）不能落成铺场"""
+        r = _tags("Your opponent reveals their hand, and you discard a card you "
+                  "find there.", "item", "Eri")
+        self.assertFalse(any(t.startswith("opp_hand:bench:") for t in r["tags"]),
+                         r["tags"])
+
+
+class TestEnergyStatic(unittest.TestCase):
+    def test_okidogi(self):
+        r = _tags("If this Pokémon has any {D} Energy attached, it gets +100 HP, "
+                  "and the attacks it uses do 100 more damage to your opponent's "
+                  "Active Pokémon (before applying Weakness and Resistance).",
+                  "ability", "Adrena-Power")
+        self.assertEqual(r["tags"], ["passive:energy_static:100:100:darkness"])
+
+    def test_requires_both_clauses(self):
+        """反向：只有 +HP、没有「and the attacks … more damage」不能按双段处理"""
+        r = _tags("If this Pokémon has any {D} Energy attached, it gets +100 HP.",
+                  "ability", "X")
+        self.assertNotIn("passive:energy_static:100:100:darkness", r["tags"])
+
+
 if __name__ == "__main__":
     unittest.main()

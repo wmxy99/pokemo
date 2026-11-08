@@ -347,6 +347,10 @@ ABILITY_TAG_PREFIXES = (
     # F8（2026-11-08）：在手牌里发动、直接铺后备（Klinklang「Emergency
     # Rotation」）。⚠ 不是 `cursed:`（那个会**弃自身**）—— 卡是上场而不是被弃。
     "hand_bench:",
+    # F8：**特性侧**的对手手牌操作（Mandibuzz「Look for Prey」/ Ribombee
+    # 「Inviting Wink」）。此前 `opp_hand:` 只在训练家白名单里 → 这两张的
+    # tag 会被静默滤空、整卡拒收。
+    "opp_hand:",
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
     # 第四十九批（2026-11-04）：**补白** —— 特性侧「draw cards until you have N」
     # （Quaquaval「Up-Tempo」/ Iono's Kilowattrel「Flashing Draw」）。引擎早在

@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1242,
+      "kept": 1245,
       "by_Energy": 20,
-      "by_Pokemon": 1039,
+      "by_Pokemon": 1042,
       "by_Trainer": 183,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 10
+        "存在未建模项（整卡不收）": 7
       }
     }
   },
@@ -4999,6 +4999,56 @@
       "source_card_id": 115,
       "name_key": "conkeldurr",
       "uid": "Conkeldurr@TWM 105"
+    },
+    {
+      "name": "Okidogi",
+      "name_zh": "够赞狗",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "psychic",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Good Punch",
+          "cost": {
+            "fighting": 2
+          },
+          "damage": 70,
+          "effects": [],
+          "desc": "",
+          "name_zh": "好拳",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Adrena-Power",
+          "name_zh": "肾上腺素力量",
+          "tag": "passive:energy_static:100:100:darkness",
+          "location": "field",
+          "desc": "If this Pokémon has any {D} Energy attached, it gets +100 HP, and the attacks it uses do 100 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+          "desc_zh": "若此宝可梦附着了 {D} 能量，则其 HP +100，且其使用的招式对对手的战斗宝可梦造成 +100 伤害（在应用弱点和抗性之前）。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "111"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 116,
+      "name_key": "okidogi",
+      "uid": "Okidogi@TWM 111"
     },
     {
       "name": "Cornerstone Mask Ogerpon ex",
@@ -12996,6 +13046,56 @@
       "source_card_id": 278,
       "name_key": "lilliescutiefly",
       "uid": "Lillie’s Cutiefly@JTG 66"
+    },
+    {
+      "name": "Lillie’s Ribombee",
+      "name_zh": "莉莉艾的蝶结萌虻",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 70,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Lillie)",
+      "evolves_from": "Lillie’s Cutiefly",
+      "attacks": [
+        {
+          "name": "Magical Shot",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "魔法射击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Inviting Wink",
+          "name_zh": "邀约眨眼",
+          "tag": "evolve_act:opp_hand:bench:basic_pokemon:all",
+          "location": "field",
+          "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may have your opponent reveal their hand and you put any number of Basic Pokémon you find there onto their Bench.",
+          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以让对手展示其手牌，并由你将其中任意数量的基础宝可梦放到对手的后备。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "67"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 279,
+      "name_key": "lilliesribombee",
+      "uid": "Lillie’s Ribombee@JTG 67"
     },
     {
       "name": "Lillie’s Comfey",
@@ -25965,6 +26065,56 @@
       "source_card_id": 541,
       "name_key": "vullaby",
       "uid": "Vullaby@WHT 63"
+    },
+    {
+      "name": "Mandibuzz",
+      "name_zh": "秃鹰娜",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 110,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Vullaby",
+      "attacks": [
+        {
+          "name": "Cutting Wind",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 90,
+          "effects": [],
+          "desc": "",
+          "name_zh": "斩风",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Look for Prey",
+          "name_zh": "寻觅猎物",
+          "tag": "opp_hand:bench:basic_pokemon@hp70:1",
+          "location": "field",
+          "desc": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent’s Bench.",
+          "desc_zh": "在你的回合中，你可以使用 1 次此特性。对手展示其手牌，你把其中找到的 1 只 HP 为 70 以下的基础宝可梦放置到对手的后备。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "WHT",
+        "number": "64"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 542,
+      "name_key": "mandibuzz",
+      "uid": "Mandibuzz@WHT 64"
     },
     {
       "name": "Escavalier",

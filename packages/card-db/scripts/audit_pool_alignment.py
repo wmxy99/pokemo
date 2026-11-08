@@ -4364,6 +4364,25 @@ def audit_f8_rules(card_name: str, item_name: str, desc: str,
                 not in low:
             errs.append(f"{card_name} · {item_name}：去向改写只对「被招式伤害"
                         f"击倒」成立，卡面没写就不能按无条件处理")
+    # ④b 进化链改写（Eevee ex「Rainbow DNA」）
+    if re.search(r"can evolve into any pok[eé]mon \{ex\} that evolves from", low):
+        ea = next((x for x in segs if x.startswith("passive:evolve_as:")), "")
+        if not ea:
+            errs.append(f"{card_name} · {item_name}：卡面「可进化成任意 "
+                        f"{{ex}}」缺 `passive:evolve_as:`（实际 {effects}）")
+        else:
+            m_fr = re.search(r"that evolves from (?P<from>[a-z' ]{2,20}) if you "
+                             r"play", low)
+            want = "".join(ch for ch in (m_fr.group("from") if m_fr else "").lower()
+                           if ch.isalnum())
+            key = ea.split(":")[2] if len(ea.split(":")) > 2 else ""
+            if want and key != want:
+                errs.append(f"{card_name} · {item_name}：改写名应为 {want!r}，"
+                            f"实际 {key!r}（{ea}）")
+            # `:ex` 是卡面「any Pokémon {ex}」的限定，丢了会让非 ex 进化型也能上来
+            if not ea.endswith(":ex"):
+                errs.append(f"{card_name} · {item_name}：卡面限定 {{ex}}，"
+                            f"tag 缺 `:ex`（{ea}）")
     # ⑤ 对手手牌 → 对手后备（Mandibuzz / Lillie's Ribombee）
     if re.search(r"you put (?:a|any number of) basic pok[eé]mon", low) \
             and "bench" in low:
@@ -4809,7 +4828,8 @@ def main() -> int:
           "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场/"
           "对手手牌铺场/双段条件静态） · "
           "静态属性改写（改弱点方向/能量增值属性） · "
-          "二选一模式/具名能量代价（模式不拆散/键与后续） 五十六类对账全部一致")
+          "二选一模式/具名能量代价（模式不拆散/键与后续） · "
+          "进化链改写（改写名/{{ex}}限定） 五十六类对账全部一致")
     return 0
 
 

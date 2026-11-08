@@ -3550,6 +3550,17 @@ def _detect_f8(text: str, kind: str) -> list:
         if _F8_KO_TO_HAND_RE.match(low):
             return [act("rule", None, "self",
                         {"static_passive": "ko_to_hand"})]
+        # Eevee ex「Rainbow DNA」：可进化成**任意** `evolves_from: Eevee` 的 {ex}。
+        # 引擎侧是 `passive:evolve_as:<key>[:ex]`（见 `_evolve_name_ok`）——
+        # `:ex` 是卡面「any Pokémon **{ex}**」的限定，丢了会让非 ex 的 Eevee
+        # 进化型（Leafeon / Glaceon …）也能上来。
+        _m = _F8_EVOLVE_AS_RE.match(low)
+        if _m:
+            _key = _k(_m.group("from"))
+            if _key:
+                return [act("rule", None, "self",
+                            {"static_passive": f"evolve_as:{_key}:ex"})]
+            return []
         # Klinklang「Emergency Rotation」：在**手牌**里、对手有 2 阶 → 直接铺后备
         if _F8_HAND_TO_BENCH_RE.match(low):
             return [act("rule", None, "self", {"hand_to_bench": "opp_stage2"})]
@@ -3622,6 +3633,11 @@ _F8_EVOLVE_OPP_HAND_BENCH_RE = re.compile(
     r"pok[eé]mon during your turn,? you may have your opponent reveal their "
     r"hand and you put any number of basic pok[eé]mon you find there onto "
     r"their bench\.?$", re.I)
+_F8_EVOLVE_AS_RE = re.compile(
+    r"^this pok[eé]mon can evolve into any pok[eé]mon \{ex\} that evolves from "
+    r"(?P<from>[a-z][a-z' ]{2,20}?) if you play it from your hand onto this "
+    r"pok[eé]mon\.?\s*(?:\(this pok[eé]mon can'?t evolve during your first turn "
+    r"or the turn you play it\.\))?$", re.I)
 _F8_HAND_TO_BENCH_RE = re.compile(
     r"^once during your turn,? if this pok[eé]mon is in your hand and your "
     r"opponent has any stage 2 pok[eé]mon in play,? you may put this pok[eé]mon "

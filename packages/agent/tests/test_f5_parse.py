@@ -65,5 +65,26 @@ class TestEnergyDouble(unittest.TestCase):
         self.assertNotIn("passive:energy_double:grass", r["tags"])
 
 
+class TestEvolveAs(unittest.TestCase):
+    """Eevee ex「Rainbow DNA」：绕过进化链，但仍限 {ex}"""
+
+    TXT = ("This Pokémon can evolve into any Pokémon {ex} that evolves from "
+           "Eevee if you play it from your hand onto this Pokémon. (This Pokémon "
+           "can't evolve during your first turn or the turn you play it.)")
+
+    def test_tag(self):
+        r = _tags(self.TXT, name="Rainbow DNA")
+        self.assertEqual(r["tags"], ["passive:evolve_as:eevee:ex"])
+        self.assertEqual(r["unsupported"], [],
+                         "括号里的「can't evolve during your first turn」被当成"
+                         "未建模 → 整卡会被拒收")
+
+    def test_key_follows_card_text(self):
+        """改写的名字来自卡面，不能写死 eevee"""
+        r = _tags("This Pokémon can evolve into any Pokémon {ex} that evolves "
+                  "from Pikachu if you play it from your hand onto this Pokémon.")
+        self.assertEqual(r["tags"], ["passive:evolve_as:pikachu:ex"])
+
+
 if __name__ == "__main__":
     unittest.main()

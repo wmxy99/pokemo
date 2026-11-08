@@ -159,5 +159,53 @@ class TestEnergyDouble(unittest.TestCase):
         self.assertTrue(acts, "1 张草能量（增值后 2 点）应够付 2 点撤退费")
 
 
+class TestEvolveAs(unittest.TestCase):
+    """Eevee ex「Rainbow DNA」：可进化成**任意** `evolves_from: Eevee` 的 {ex}"""
+
+    TAG = "passive:evolve_as:eevee:ex"
+
+    def _setup(self, *, with_passive=True, target_ex=True, from_eevee=True):
+        b = _battle()
+        me = b.players[b.current]
+        opp = b.players[1 - b.current]
+        me.active = make_pokemon(PokemonDef(
+            "Eevee ex", hp=200, ptype="colorless", is_ex=True,
+            abilities=((AbilityDef("Rainbow DNA", tag=self.TAG,
+                                   location="field"),) if with_passive else ())))
+        me.active.just_played = False
+        me.bench, me.deck = [], _deck()
+        from_name = "Eevee" if from_eevee else "Pikachu"
+        target = PokemonDef("Espeon ex" if target_ex else "Espeon", hp=270,
+                            ptype="psychic", stage=1, evolves_from=from_name,
+                            is_ex=target_ex)
+        me.hand = [PokeRef(target)]
+        opp.active = make_pokemon(PokemonDef("Foe", hp=200, ptype="colorless"))
+        opp.deck = _deck("B")
+        return b, me, opp
+
+    def _acts(self, b):
+        return [a for a in b.legal_actions() if a.get("verb") == "evolve"]
+
+    def test_can_evolve_into_other_eevee_ex(self):
+        b, me, opp = self._setup()
+        self.assertTrue(self._acts(b), "Rainbow DNA 生效时却没列出进化动作")
+        r = b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(me.active.name, "Espeon ex")
+
+    def test_without_passive_not_listed(self):
+        b, me, opp = self._setup(with_passive=False)
+        self.assertFalse(self._acts(b), "没有 Rainbow DNA 也能跨名进化")
+
+    def test_non_ex_target_rejected(self):
+        """卡面限定「any Pokémon **{ex}**」：非 ex 的 Eevee 进化型不能上来"""
+        b, me, opp = self._setup(target_ex=False)
+        self.assertFalse(self._acts(b), "非 {ex} 目标也被允许（限定丢了）")
+
+    def test_other_chain_rejected(self):
+        b, me, opp = self._setup(from_eevee=False)
+        self.assertFalse(self._acts(b), "改写名只对卡面点名的进化来源有效")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -542,7 +542,7 @@ class Battle:
                     if tgt is not None \
                             and (not tgt.just_played
                                  or self._same_turn_evolve_ok(tgt, c, pi)) \
-                            and tgt.pdef.name == c.pdef.evolves_from \
+                            and _evolve_name_ok(tgt, c) \
                             and tgt.stage + 1 == c.pdef.stage:
                         acts.append({"verb": "evolve", "hand": hi,
                                      "target": tpos,
@@ -1904,8 +1904,13 @@ class Battle:
         # 「本回合刚上场/进化」，退化不是其中任何一种（混用会让日志说错原因）。
         if getattr(tgt, "devolved_turn", 0) == self.turn_number:
             raise ValueError("本回合已退化，不可进化")
-        if tgt.pdef.name != c.pdef.evolves_from \
-                or tgt.stage + 1 != c.pdef.stage:
+        # F8（2026-11-08）：Eevee ex「Rainbow DNA」——
+        # 「This Pokémon can evolve into any Pokémon {ex} that evolves from
+        #  **Eevee** if you play it from your hand onto this Pokémon.」
+        # 它自己是「Eevee ex」，按卡名字面匹配永远进不了「evolves_from: Eevee」
+        # 的卡（Espeon ex / Sylveon ex …）。因此这里允许**被动改写的名字**：
+        # `passive:evolve_as:<key>[:ex]` —— `:ex` 表示只允许 {ex} 目标。
+        if not _evolve_name_ok(tgt, c):
             raise ValueError("进化链不匹配")
         # S2e（2026-11-08）：「Put this Pokémon into play only with the effect of
         # Palafin's Zero to Hero Ability.」（Palafin ex「Hero's Spirit」）——
@@ -15248,6 +15253,43 @@ def _pos_of_fp(p: PlayerState, fp) -> int:
         if cur is fp:
             return tpos
     return -1
+
+
+def _evolve_name_ok(tgt, card) -> bool:
+    """进化链的名字判据（含**被动改写的名字**，F8）
+
+    常规：`场上这只的卡名 == 手牌这张的 evolves_from`。
+    例外（Eevee ex「Rainbow DNA」）：场上那只带
+    ``passive:evolve_as:<key>[:ex]`` 时，允许 ``evolves_from`` 归一化后等于
+    ``<key>`` 的卡进化它；带 ``:ex`` 表示**只允许 {ex} 目标**（卡面写
+    「any Pokémon **{ex}** that evolves from Eevee」）。
+
+    ⚠ 放宽必须**只走这条显式被动**：直接按「名字前缀」放宽，会让所有同名系列
+    （N's Zoroark / N's Zorua 之类）互相进化 —— 静默改变整个卡池的进化规则。
+    """
+    if tgt is None or card is None:
+        return False
+    from_name = str(getattr(card.pdef, "evolves_from", "") or "").strip()
+    if not from_name:
+        return False
+    if tgt.pdef.name == from_name:
+        return True
+    want_ex = False
+    wanted: list = []
+    for ab in getattr(tgt.pdef, "abilities", ()) or ():
+        tag = str(getattr(ab, "tag", "") or "")
+        if not tag.startswith("passive:evolve_as:"):
+            continue
+        parts = tag.split(":")
+        if len(parts) > 2 and parts[2]:
+            wanted.append(parts[2])
+        if "ex" in parts[3:]:
+            want_ex = True
+    if not wanted:
+        return False
+    if want_ex and not bool(getattr(card.pdef, "is_ex", False)):
+        return False
+    return _name_key(from_name) in wanted
 
 
 def _has_ability_tag(fp, tag: str) -> bool:

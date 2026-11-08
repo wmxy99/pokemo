@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1249,
+      "kept": 1250,
       "by_Energy": 20,
-      "by_Pokemon": 1045,
+      "by_Pokemon": 1046,
       "by_Trainer": 184,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 3
+        "存在未建模项（整卡不收）": 2
       }
     }
   },
@@ -11716,6 +11716,58 @@
       "source_card_id": 248,
       "name_key": "umbreonex",
       "uid": "Umbreon ex@PRE 60"
+    },
+    {
+      "name": "Eevee ex",
+      "name_zh": "伊布 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 200,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Coruscating Quartz",
+          "cost": {
+            "fire": 1,
+            "water": 1,
+            "lightning": 1
+          },
+          "damage": 200,
+          "effects": [],
+          "desc": "",
+          "name_zh": "闪烁石英",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Rainbow DNA",
+          "name_zh": "彩虹 DNA",
+          "tag": "passive:evolve_as:eevee:ex",
+          "location": "field",
+          "desc": "This Pokémon can evolve into any Pokémon {ex} that evolves from Eevee if you play it from your hand onto this Pokémon. (This Pokémon can’t evolve during your first turn or the turn you play it.)",
+          "desc_zh": "若你从手牌中打出此卡到这只宝可梦身上，此宝可梦可以进化为任何由伊布进化而来的宝可梦 {ex}。（此宝可梦在你的第一个回合或你打出它的回合无法进化。）",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "PRE",
+        "number": "75"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 249,
+      "name_key": "eeveeex",
+      "uid": "Eevee ex@PRE 75"
     },
     {
       "name": "Hoothoot",

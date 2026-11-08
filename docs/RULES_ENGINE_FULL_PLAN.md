@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1207/1267 = 95.3%**，池 **1192**，
-> 未 ready **60**（批内如实拒收 54 + 结构性 4 + 待新能力 2），测试 **2583**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 / S2a / S2b / S2c 已落地**（见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1211/1267 = 95.6%**，池 **1196**，
+> 未 ready **56**（批内如实拒收 50 + 结构性 4 + 待新能力 2），测试 **2597**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 / S2a / S2b / S2c / S2d 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -568,6 +568,40 @@ Palafin（检索换位且保留附着卡）· Lycanroc（指定特殊能量的�
 
 **数字**：`engine_ready` **1207 / 1267 = 95.3%** · 池 **1192** · 未 ready **60** ·
 测试 **2583**（engine 1400）· 对账 46 类 · CI 8/8。
+
+---
+
+### S2d · 限时订阅 / 撤退费条件 / 具名能量 / Boomerang（2026-11-08 完成，进池 4 张）
+
+| 项 | 落点 |
+|---|---|
+| `attach_energy` 事件 | `_do_attach` 末尾发（**只认手牌附着**；从牌库/弃牌堆的效果附着走别处，不属此事件点） |
+| `attack_done` 事件 | `_do_attack` 里「击倒结算之后、结束回合之前」发；`discarded` 用**弃牌堆水位差分**得出（弃置路径十几处，逐处埋钩必漏） |
+| **限时订阅** | `events.add_temp_watch(owner, kind, body, until_count, ctx)`：载体不是场上的卡，而是「一次出招留下的记忆」（Pachirisu）。窗口到该玩家回合末关闭（`resolve_turn_end` 剪枝）+ 开局兜底（`reset_turn_counters`），剪枝写日志 |
+| 订阅 body 扩展 | 主体 `on:target`（快照目标）· `match:event_target`（事件必须发生在快照那只身上）· `require:was_active` / `require:retreat:<N>`（撤退费**恰好** N）· `move_energy_to_bench:<N>`（弃置前抢救能量，轮转分配） |
+| `attach_named` | `attach_named:<n>:<卡名>:discard:self`：按**卡名**从弃牌堆取能量（Lycanroc 的 Spiky Energy；按属性取会拿错卡） |
+| Boomerang | `special_energy.on_attack_done`：三个条件 —— 卡对象身份 + 本招弃置 + 持有者仍在场上。前置修复 `_discard_energy_from`：弃能量时特殊能量**卡**真的进 `discard_refs`（原 `remove_any` pop 掉就结束，卡凭空消失） |
+| 进池 | **4 张**：Pachirisu（`arm:attach_energy:counters:8:on:target:scope:own_turn:match:event_target:until:opp_next_turn`）· Heavy Baton（`on_event:ko:move_energy_to_bench:3:…:require:was_active:require:retreat:4`）· Lycanroc（`evolve_act:attach_named:2:Spiky Energy:discard:self`）· Boomerang Energy（`senergy:boomerang`） |
+| 对账 | 新增第 47 类（限时订阅必须带窗口与目标匹配 / 撤退费+战斗位 / 具名能量），并把「`that Pokémon` 不可精确表达」放宽到限时订阅（那里它是快照目标，精确） |
+
+**踩到的坑**
+
+1. **`that Pokémon` 在限时订阅里被既有规则判成「不可精确表达」** —— 直接整卡拒收。
+   补的不是「放行整类」，而是**要求 tag 同时含 `on:target` 与 `match:event_target`**
+   才放行（限定词丢了照样红）。
+2. **卡名正则吃掉 `Energy`**：`([a-z][a-z'\-]*) energy` 把 "Spiky" 当名字 →
+   `attach_named:2:Spiky:…` 在弃牌堆里一张也匹配不上（**效果静默为空**）。
+   改成 `((?:[a-z][a-z'\-]* )+?)energy` 再补回 "Energy"。
+3. **`remove_any` 让特殊能量卡凭空消失**：弃置类效果只 pop `senergy` 不入弃牌堆。
+   这既是 Boomerang 的阻塞点，也是所有「从弃牌堆回收能量」效果的静默漏掉。
+   修法独立成 `_discard_energy_from`（基本能量沿用旧顺序，特殊能量走 `_to_discard`）。
+
+**仍未做（S2e 候选，剩 2 张 + 1 张连带）**：Latios（「`you may use` 的可选触发 +
+多源能量移动 bench→active」两项新机制）· Palafin（Zero to Hero：检索换位且保留附着卡、
+伤害指示物、状态与回合数；连带 Palafin ex 的 `Hero's Spirit` 上场门禁 —— 两张卡一起才成立）。
+
+**数字**：`engine_ready` **1211 / 1267 = 95.6%** · 池 **1196** · 未 ready **56** ·
+测试 **2597**（engine 1414）· 对账 **47 类** · CI 8/8。
 
 ---
 

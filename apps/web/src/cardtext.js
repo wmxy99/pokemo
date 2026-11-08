@@ -198,13 +198,24 @@ export const TRAINER_TAG_DESC = {
   },
   // S2c（2026-11-08）：**订阅式道具**（Amulet of Hope / Powerglass）——
   // 卡面只写触发条件与效果，这里按事件点给出可读说明（C1/C5 自述转写）。
-  on_event: (a, b) => {
+  on_event: (a, b, parts) => {
     const when = { ko: '所附宝可梦被招式击倒时', turn_end: '你的回合末（在战斗位时）',
                    switch_out: '对手换下战斗位时', switch_in: '对手换上新战斗位时',
                    evolve: '对手进化时' }[a] || a || '触发时'
+    // S2d：`move_energy_to_bench` 的张数在 parts[3]（`……:move_energy_to_bench:3:…`）
+    const cnt = (parts || [])[3]
     const what = { search_any: `从牌库检索 ${b || 'N'} 张卡加入手牌`, attach_basic: '可从弃牌堆附着 1 个基本能量',
-                   counters: `放置 ${b || 'N'} 个伤害指示物`, status: '施加特殊状态' }[b] || (b || '按卡面结算')
-    return { zh: `${when}：${what}。`, en: `When ${a}: ${b}.` }
+                   counters: `放置 ${b || 'N'} 个伤害指示物`, status: '施加特殊状态',
+                   move_energy_to_bench: `把最多 ${cnt || 'N'} 张基本能量从那只搬到你的后备（自由分配）` }[b] || (b || '按卡面结算')
+    // `require:` 限定词也要显示 —— 少写就等于把条件藏起来（C5 差异透明不允许）
+    const reqs = []
+    const rp = parts || []
+    for (let i = 0; i < rp.length; i += 1) {
+      if (rp[i] === 'require' && rp[i + 1] === 'retreat') reqs.push(`撤退费恰好 ${rp[i + 2]}`)
+      if (rp[i] === 'require' && rp[i + 1] === 'was_active') reqs.push('须在战斗位')
+    }
+    const tail = reqs.length ? `（条件：${reqs.join('、')}）` : ''
+    return { zh: `${when}${tail}：${what}。`, en: `When ${a}: ${b}.` }
   },
   flute: (a) => ({ zh: `亮出对手牌库顶 ${argOf(a)} 张，可将其中任意数量的基础宝可梦放到对手的后备；其余洗回对手牌库。`, en: `Reveal the top ${argOf(a)} cards of your opponent’s deck; put any number of Basic Pokémon found there onto their Bench, then shuffle the rest back.` }),
   // S2（2026-11-08）：**延迟生效**（Amarys「At the end of this turn, …」）
@@ -354,6 +365,10 @@ export const EFFECT_TAG_LABEL = {
   attach_basic: { zh: '附基本能量', en: 'Attach Basic' },
   search_any: { zh: '检索任意卡', en: 'Search any' },
   discard_defender: { zh: '弃置战斗位', en: 'Discard Defender' },
+  // S2d（2026-11-08）：限时订阅 / 撤退费条件 / 具名能量
+  arm: { zh: '限时登记', en: 'Arm' },
+  move_energy_to_bench: { zh: '能量搬到后备', en: 'Move energy' },
+  attach_named: { zh: '附具名能量', en: 'Attach named' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

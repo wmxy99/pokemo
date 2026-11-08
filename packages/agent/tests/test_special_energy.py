@@ -91,12 +91,21 @@ class TestSpecialEnergyDetect(unittest.TestCase):
                 self.assertEqual(r["tags"], [f"senergy:{kind}"])
                 self.assertEqual(r["unsupported"], [])
 
-    def test_boomerang_unmodeled(self):
+    def test_boomerang_now_modeled(self):
+        """Boomerang Energy —— **改判**（S2d，2026-11-08）
+
+        原判据：引擎的能量是计数、弃掉不回弃牌堆 → 「被弃置后回附」无法精确
+        表达，整卡拒收。S2d 补上两件东西后可以认领：
+          · `_discard_energy_from`：弃能量时**特殊能量卡**真的进 `discard_refs`；
+          · `attack_done` 的差分快照：知道「这张卡是不是被**本招式**弃掉的」。
+        仍然钉死「不得只认第一段（提供 {C}）」—— 那是把整条规则静默丢掉。
+        """
         r = E.to_engine_tags([E.parse_rule(BOOMERANG, kind="energy",
                                            name="Boomerang Energy")])
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
-        self.assertEqual(D.unmodeled_kind(BOOMERANG), "boomerang")
+        self.assertEqual(r["tags"], ["senergy:boomerang"])
+        self.assertEqual(r["unsupported"], [])
+        # 已知但未建模表里不该再有它
+        self.assertEqual(D.unmodeled_kind(BOOMERANG), "")
 
     # ---- 负向守卫 ----
     def test_truncated_text_rejected(self):

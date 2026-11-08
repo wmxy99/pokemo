@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-08 14:21:20
+- 生成时间：2026-11-08 14:34:59
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **61** 条 · 已映射 tag 1512 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1207 张**
-- 解析层面「无未建模动作」卡：1059 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **57** 条 · 已映射 tag 1516 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1211 张**
+- 解析层面「无未建模动作」卡：1063 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -27,9 +27,8 @@
 | B4 | type:cost | `cost` | 1 | 1 | 能量代价子句未被映射（可选/任意数量代价，B4） |
 | B5 | S6 | `rule` | 20 | 20 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 4 | 4 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
-| B5 | S2 | `rule` | 3 | 3 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 2 | 2 | 静态/未建模（英文） |
-| B5 | S4 | `rule` | 1 | 1 | 静态/未建模（英文） |
+| B5 | S2 | `rule` | 2 | 2 | 静态/未建模（英文） |
 | B5 | S1 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 1 | 1 | 静态/未建模（英文） |
@@ -72,20 +71,15 @@
 - `Team Rocket's Honchkrow`（火箭队的乌鸦头头）：You may discard any number of Supporter cards that have “Team Rocket” in their name from your hand, and this attack does 60 damage for each card you discarded i
 - `Doublade`（双剑鞘）：Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.
 
-**B5 · S2**（3 条）
-
-- `Rotom ex`（洛托姆 ex）：Each of your Pokémon that has "Rotom" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Poké
-- `Heavy Baton`（沉重接力棒）：If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's
-- `Core Memory`（核心记忆）：The Mega Zygarde {ex} this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.)
-
 **B5 · S5**（2 条）
 
 - `Mandibuzz`（秃鹰娜）：Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your 
 - `Carbink`（小碎钻）：As long as this Pokémon is in play, it is {F} and {P} type.
 
-**B5 · S4**（1 条）
+**B5 · S2**（2 条）
 
-- `Boomerang Energy`（回旋镖能量）：As long as this card is attached to a Pokémon, it provides {C} Energy.  If this card is discarded by an effect of an attack used by the Pokémon this card is att
+- `Rotom ex`（洛托姆 ex）：Each of your Pokémon that has "Rotom" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Poké
+- `Core Memory`（核心记忆）：The Mega Zygarde {ex} this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.)
 
 **B5 · S1**（1 条）
 

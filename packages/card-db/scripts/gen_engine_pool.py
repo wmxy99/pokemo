@@ -216,6 +216,10 @@ ATTACK_TAG_PREFIXES = (
     # S2c（2026-11-08）：招式侧**延迟效果**（TR Grimer「At the end of your
     # opponent's next turn, discard the Defending Pokémon …」）
     "queue:",
+    # S2d（2026-11-08）：**限时订阅**（Pachirisu「During your opponent's next
+    # turn, whenever they attach …」）。不是延迟效果而是「窗口内的事件钩子」，
+    # 载体不是场上的卡，故独立前缀。
+    "arm:",
     # 第一百三十五批（S1a/S1b）：决策分解 —— 招式侧「可选能量代价」
     # （Mega Eelektross ex）。训练家侧同名前缀另见 TRAINER_TAGS。
     "choose:",

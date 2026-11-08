@@ -47,6 +47,7 @@ def arena(seed: int = 3) -> Battle:
     b._defer_end_turn = False
     b._queue = events.EffectQueue()
     b._watch_fired = {}
+    b._temp_watch = []          # S2d：限时订阅列表
     b._switch_snap = None
     b.finished = False
     b.winner = None
@@ -568,3 +569,240 @@ class TestQueuedDiscardDefender(unittest.TestCase):
         self.assertEqual(b.players[0].prizes_left, prizes_before,
                          "**弃置不是击倒**，不得取奖赏")
         self.assertEqual(len(b._queue), 0)
+
+
+# ---------------- S2d：限时订阅 / 撤退费条件 / 具名能量 / Boomerang ----------------
+
+ARM = ("arm:attach_energy:counters:8:on:target:scope:own_turn"
+       ":match:event_target:until:opp_next_turn")
+
+
+def _pachirisu_arena():
+    b = arena()
+    atk = AttackDef("Electrified Incisors", cost=1, damage=10, effects=(ARM,))
+    b.players[0].active = make_pokemon(
+        PokemonDef("Pachirisu", hp=70, ptype="lightning", attacks=(atk,)))
+    b.players[0].active.add_energy("lightning")
+    b.players[0].deck = [EnergyRef(EnergyDef("fire")) for _ in range(FILLER)]
+    b.players[1].active = make_pokemon(_pdef("Defender", hp=400))
+    b.players[1].bench = [make_pokemon(_pdef("Backup", hp=100))]
+    b.players[1].hand = [EnergyRef(EnergyDef("water")),
+                         EnergyRef(EnergyDef("water"))]
+    return b
+
+
+class TestTimedWatch(unittest.TestCase):
+    """Pachirisu「Electrified Incisors」：**限时**订阅（窗口 = 对手下个回合）"""
+
+    def test_armed_by_attack(self):
+        b = _pachirisu_arena()
+        self.assertTrue(b.step({"verb": "attack", "attack": 0})["ok"])
+        self.assertEqual(len(b._temp_watch), 1, "出招应留下一条限时订阅")
+        self.assertEqual(b._temp_watch[0]["kind"], "attach_energy")
+        self.assertEqual(b.current, 1, "攻击结束 → 换到对手回合")
+
+    def test_counters_when_they_attach_to_the_defender(self):
+        b = _pachirisu_arena()
+        b.step({"verb": "attack", "attack": 0})
+        defender = b.players[1].active
+        before = defender.damage
+        self.assertTrue(b.step({"verb": "attach", "energy": 0,
+                                "target": 0})["ok"])
+        self.assertEqual(defender.damage - before, 80, "8 个指示物 = 80 点")
+
+    def test_no_counters_when_attached_elsewhere(self):
+        """卡面写死 `to the Defending Pokémon` —— 附给后备不该触发"""
+        b = _pachirisu_arena()
+        b.step({"verb": "attack", "attack": 0})
+        defender, backup = b.players[1].active, b.players[1].bench[0]
+        d0, b0 = defender.damage, backup.damage
+        b.step({"verb": "attach", "energy": 0, "target": 1})
+        self.assertEqual(defender.damage, d0)
+        self.assertEqual(backup.damage, b0)
+
+    def test_expires_after_their_turn(self):
+        b = _pachirisu_arena()
+        b.step({"verb": "attack", "attack": 0})
+        b.step({"verb": "pass"})           # 对手回合结束 → 窗口关闭
+        self.assertEqual(len(b._temp_watch), 0, "回合末必须剪掉（否则=永久）")
+        b.step({"verb": "pass"})           # 回到对手的**下下个**回合
+        b.players[1].hand = [EnergyRef(EnergyDef("water"))]
+        defender = b.players[1].active
+        d0 = defender.damage
+        b.step({"verb": "attach", "energy": 0, "target": 0})
+        self.assertEqual(defender.damage, d0, "过期后不得再触发")
+
+    def test_own_attach_does_not_trigger(self):
+        """`scope:own_turn`：出招方自己回合内的附着不该被自己的订阅打"""
+        b = _pachirisu_arena()
+        b.players[0].hand = [EnergyRef(EnergyDef("fire"))]
+        b.current = 1
+        b.step({"verb": "pass"})           # 回到 P0
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b.current, 1)
+        self.assertEqual(len(b._temp_watch), 1)
+        # 此时是 P1 的回合；直接喂一条「P0 在自己回合附着」的事件验证 scope：
+        # ⚠ `emit` 的返回值只表示「订阅被**调用**了」，被判 scope 挡下的也会
+        #   出现在里面 —— 所以断言要看**效果**（伤害）与 `event_scope_skip` 日志。
+        defender = b.players[1].active
+        d0 = defender.damage
+        events.emit(b, "attach_energy",
+                    {"player": 0, "target": defender, "turn_owner": 0})
+        self.assertEqual(defender.damage, d0, "P0 的附着不在窗口的回合里")
+        self.assertTrue([e for e in b.events
+                         if e["type"] == "event_scope_skip"])
+
+
+BATON = ("on_event:ko:move_energy_to_bench:3:on:leaving:scope:own_by_attack"
+         ":require:was_active:require:retreat:4")
+
+
+def _baton_arena(retreat: int = 4, on_active: bool = True):
+    b = arena()
+    atk = AttackDef("Big", cost=1, damage=200)
+    b.players[0].active = make_pokemon(
+        PokemonDef("Attacker", hp=300, ptype="colorless", attacks=(atk,)))
+    b.players[0].active.add_energy("colorless")
+    victim = make_pokemon(PokemonDef("Victim", hp=100, ptype="colorless",
+                                     retreat=retreat))
+    for _ in range(3):
+        victim.add_energy("fire")
+    for _ in range(2):
+        victim.add_energy("water")
+    victim.tool = BATON
+    victim.tool_name = "Heavy Baton"
+    victim.tool_ref = TrainerRef(TrainerDef(tag=BATON, kind="tool",
+                                            name="Heavy Baton", name_zh=""))
+    b1 = make_pokemon(_pdef("B1"))
+    b2 = make_pokemon(_pdef("B2"))
+    b.players[1].bench = [b1, b2]
+    if on_active:
+        b.players[1].active = victim
+    else:
+        b.players[1].active = make_pokemon(_pdef("Front", hp=100))
+        b.players[1].bench.insert(0, victim)
+    return b, victim, b1, b2
+
+
+class TestHeavyBaton(unittest.TestCase):
+    """Heavy Baton：撤退费**恰好** 4 + 在战斗位 + 被招式击倒 → 搬最多 3 张"""
+
+    def test_moves_three_round_robin(self):
+        b, victim, b1, b2 = _baton_arena()
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b1.total_energy() + b2.total_energy(), 3)
+        self.assertEqual((b1.total_energy(), b2.total_energy()), (2, 1),
+                         "轮转分配（不会把 3 张全堆在一只身上）")
+        self.assertNotIn(victim, b.players[1].all_field())
+
+    def test_wrong_retreat_cost_does_nothing(self):
+        b, victim, b1, b2 = _baton_arena(retreat=3)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b1.total_energy() + b2.total_energy(), 0,
+                         "撤退费不恰好是 4 → 不触发")
+
+    def test_bench_victim_does_nothing(self):
+        b, victim, b1, b2 = _baton_arena(on_active=False)
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(b1.total_energy() + b2.total_energy(), 0,
+                         "卡面限定 Active Spot → 后备被击倒不搬")
+
+    def test_non_attack_ko_does_nothing(self):
+        from engine import events
+        b, victim, b1, b2 = _baton_arena()
+        b._ko_from_attack = False
+        b._resolve_ko(1, victim)
+        self.assertEqual(b1.total_energy() + b2.total_energy(), 0,
+                         "非招式击倒不触发（scope:own_by_attack）")
+
+
+class TestAttachNamed(unittest.TestCase):
+    """Lycanroc「Spike-Clad」：从弃牌堆附着 **2 张 Spiky Energy**"""
+
+    TAG = "evolve_act:attach_named:2:Spiky Energy:discard:self"
+
+    def _arena(self, n_spiky=3):
+        b = arena()
+        b.players[0].active = make_pokemon(
+            PokemonDef("Rockruff", hp=70, ptype="fighting"))
+        b.players[0].hand = [PokeRef(PokemonDef(
+            "Lycanroc", hp=120, ptype="fighting", stage=1,
+            evolves_from="Rockruff",
+            abilities=(AbilityDef("Spike-Clad", tag=self.TAG,
+                                  location="field"),)))]
+        p = b.players[0]
+        p.discard_refs = [EnergyRef(EnergyDef("colorless",
+                                              name="Basic Colorless Energy"))]
+        p.discard = ["Basic Colorless Energy"]
+        for _ in range(n_spiky):
+            p.discard_refs.append(EnergyRef(EnergyDef(
+                "colorless", name="Spiky Energy", tag="senergy:spiky")))
+            p.discard.append("Spiky Energy")
+        b.current = 0
+        b.turn_counts = [1, 1]
+        return b, p
+
+    def test_attaches_by_name_not_type(self):
+        b, p = self._arena()
+        self.assertTrue(b.step({"verb": "evolve", "hand": 0,
+                                "target": 0})["ok"])
+        names = [r.edef.name for r in p.active.senergy]
+        self.assertEqual(names, ["Spiky Energy", "Spiky Energy"])
+        self.assertIn("Basic Colorless Energy",
+                      [r.edef.name for r in p.discard_refs],
+                      "基本无色能量（同属性）不得被拿去顶替")
+
+    def test_only_available_cards(self):
+        b, p = self._arena(n_spiky=1)
+        b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertEqual(len(p.active.senergy), 1, "只有 1 张就只附 1 张")
+
+
+class TestBoomerangEnergy(unittest.TestCase):
+    """Boomerang Energy：被**自身招式效果**弃置 → 攻击结束后回附"""
+
+    def _arena(self, effects):
+        b = arena()
+        atk = AttackDef("Toss", cost=1, damage=0, effects=effects)
+        p = b.players[0]
+        p.active = make_pokemon(
+            PokemonDef("Attacker", hp=300, ptype="colorless", attacks=(atk,)))
+        p.active.add_energy("colorless")
+        ref = EnergyRef(EnergyDef("colorless", name="Boomerang Energy",
+                                  tag="senergy:boomerang"))
+        p.active.senergy.append(ref)
+        b.players[1].active = make_pokemon(_pdef("Victim", hp=400))
+        p.prizes_left = 12
+        b.players[1].prizes_left = 12
+        return b, p, ref
+
+    def test_returns_after_own_attack_discards_it(self):
+        b, p, ref = self._arena(("discard_energy:all",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(any(x is ref for x in p.active.senergy),
+                        "被本招效果弃置 → 攻击结束后回附")
+        self.assertNotIn(ref, p.discard_refs)
+
+    def test_no_return_when_not_discarded(self):
+        b, p, ref = self._arena(("discard_energy:1",))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(any(x is ref for x in p.active.senergy),
+                        "没被弃置就一直在身上；`discard_energy:1` 弃的是基本能量")
+        self.assertFalse([e for e in b.events if e["type"] == "senergy_return"])
+
+    def test_no_return_when_discarded_by_opponent(self):
+        """「attack used by the Pokémon this card is **attached to**」——
+        对手的招式效果弃掉它，不回附（回附的是**自己**的招式）"""
+        b = arena()
+        atk = AttackDef("Strip", cost=1, damage=0,
+                        effects=("discard_energy:1:opp",))
+        b.players[0].active = make_pokemon(
+            PokemonDef("Opp", hp=300, ptype="colorless", attacks=(atk,)))
+        b.players[0].active.add_energy("colorless")
+        victim = b.players[1].active
+        victim.senergy.append(EnergyRef(EnergyDef(
+            "colorless", name="Boomerang Energy", tag="senergy:boomerang")))
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(len(victim.senergy), 0)
+        self.assertIn("Boomerang Energy", b.players[1].discard,
+                      "卡进弃牌堆，但不该回附到对手身上")

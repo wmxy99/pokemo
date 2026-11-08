@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1192,
-      "by_Energy": 19,
-      "by_Pokemon": 999,
-      "by_Trainer": 174,
+      "kept": 1196,
+      "by_Energy": 20,
+      "by_Pokemon": 1001,
+      "by_Trainer": 175,
       "skipped": {
-        "存在未建模项（整卡不收）": 60,
+        "存在未建模项（整卡不收）": 56,
         "人工卡池已有同一印刷（人工优先）": 15
       }
     }
@@ -141,6 +141,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 8,
       "uid": "Basic {M} Energy@SVE 8"
+    },
+    {
+      "name": "Boomerang Energy",
+      "name_zh": "回旋镖能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:boomerang",
+      "type": "colorless",
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡因附着此卡的宝可梦所使用招式的效果而被弃置，则在攻击后从弃牌堆将此卡附着于该宝可梦。",
+      "real": {
+        "set": "TWM",
+        "number": "166"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 9,
+      "uid": "Boomerang Energy@TWM 166"
     },
     {
       "name": "Neo Upper Energy",
@@ -12564,6 +12582,58 @@
       "source_card_id": 286,
       "name_key": "rockruff",
       "uid": "Rockruff@JTG 84"
+    },
+    {
+      "name": "Lycanroc",
+      "name_zh": "鬃岩狼人",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Rockruff",
+      "attacks": [
+        {
+          "name": "Clamping Fangs",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 40,
+          "effects": [
+            "dmg_plus:40:per:opp_active_counters"
+          ],
+          "desc": "This attack does 40 more damage for each damage counter on your opponent’s Active Pokémon.",
+          "name_zh": "咬紧獠牙",
+          "desc_zh": "对手的战斗宝可梦上的伤害指示物每有 1 个，此招式的伤害 +40。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Spike-Clad",
+          "name_zh": "尖刺护身",
+          "tag": "evolve_act:attach_named:2:Spiky Energy:discard:self",
+          "location": "field",
+          "desc": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Spiky Energy cards from your discard pile to this Pokémon.",
+          "desc_zh": "在你的回合中，当你从手牌中打出此宝可梦来进化你的 1 只宝可梦时，你可以从你的弃牌堆中将最多 2 张尖刺能量卡附着于此宝可梦。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "85"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 287,
+      "name_key": "lycanroc",
+      "uid": "Lycanroc@JTG 85"
     },
     {
       "name": "Hop’s Silicobra",
@@ -33983,6 +34053,48 @@
       "uid": "Mega Manectric ex@MEG 50"
     },
     {
+      "name": "Pachirisu",
+      "name_zh": "帕奇利兹",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Electrified Incisors",
+          "cost": {
+            "lightning": 1
+          },
+          "damage": 10,
+          "effects": [
+            "arm:attach_energy:counters:8:on:target:scope:own_turn:match:event_target:until:opp_next_turn"
+          ],
+          "desc": "During your opponent’s next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon.",
+          "name_zh": "带电门牙",
+          "desc_zh": "在对手的下个回合中，每当对手从手牌将能量卡附着于防御宝可梦时，在该宝可梦身上放置 8 个伤害指示物。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "51"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 738,
+      "name_key": "pachirisu",
+      "uid": "Pachirisu@MEG 51"
+    },
+    {
       "name": "Helioptile",
       "name_zh": "伞电蜥",
       "supertype": "Pokemon",
@@ -51272,6 +51384,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1159,
       "uid": "Hero’s Cape@TEF 152"
+    },
+    {
+      "name": "Heavy Baton",
+      "name_zh": "沉重接力棒",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "on_event:ko:move_energy_to_bench:3:on:leaving:scope:own_by_attack:require:was_active:require:retreat:4",
+      "desc": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent’s Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like.",
+      "desc_zh": "若此卡所附着的宝可梦的撤退费用正好为 4、位于战斗区，且被对手宝可梦的招式伤害击倒，则以任意方式从该宝可梦上将最多 3 张基本能量卡移动到你的后备宝可梦上。",
+      "real": {
+        "set": "TEF",
+        "number": "151"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1160,
+      "uid": "Heavy Baton@TEF 151"
     },
     {
       "name": "Handheld Fan",

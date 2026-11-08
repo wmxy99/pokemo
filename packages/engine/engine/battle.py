@@ -1505,6 +1505,13 @@ class Battle:
                              "etype": (ref.edef.tag or ref.edef.type),
                              "energy_now": target.total_energy(),
                              **({"detail": detail} if detail else {})})
+        # S2d（2026-11-08）：**附能事件**。只从**手牌**附着才发（卡面
+        # 「attach an Energy card from their hand」）—— 从牌库/弃牌堆的效果附着
+        # 走 `_attach_energy_from_zones`，不属于这个事件点（漏判 = 静默多触发）。
+        events.emit(self, "attach_energy",
+                    {"player": self.current, "target": target,
+                     "etype": (ref.edef.tag or ref.edef.type),
+                     "from_hand": True, "turn_owner": self.current})
         return {"ok": True, "event": self.events[-1]}
 
     # ---------- 借用招式（2026-10-28） ----------
@@ -2608,18 +2615,32 @@ class Battle:
         raise ValueError(f"未实现的延迟 tag：{tag}")
 
     def _run_watch_body(self, owner: int, fp, name: str, body: str,
-                        kind: str, ctx: dict) -> None:
+                        kind: str, ctx: dict, fixed: Optional[dict] = None) -> None:
         """执行一条 `on_event:<kind>:<body>` 订阅
 
-        body 文法（S2a 只开放两种，未知即抛错）::
+        body 文法（未知形态一律抛错，绝不静默跳过）::
 
-            counters:<N>:on:<leaving|entering>[:scope:<...>]
-            status:<st>:on:<leaving|entering>[:scope:<...>]
+            counters:<N>:on:<leaving|entering|holder|target>[:scope:<...>]
+            status:<st>:on:<...>[:scope:<...>]
+            search_any:<N>:on:<...>
+            attach_basic:on:<...>
+            move_energy_to_bench:<N>:on:<leaving>[:require:<cond>]
 
         `scope`：
           · `opp_their_turn`（默认）—— 换位方必须是**订阅者的对手**，且这次换位
             发生在**换位方自己的回合**（卡面「during their turn」）；
+          · `own_by_attack` —— 己方被**招式伤害**击倒（S2c）；
+          · `own_turn` —— 事件发生在订阅者自己的回合（S2c/S2d）；
           · `any` —— 不限定（卡面没写「during their turn」时用）。
+
+        `fixed`（S2d）：**限时订阅**在建立时存的快照。此时 `fp` 为 None
+        （订阅没有载体卡），目标要取自 `fixed["target"]` —— 到触发时那只可能
+        早已进化/换下，绝不能重新猜。`match:event_target` 进一步要求「这次事件
+        就发生在快照的那只身上」（Pachirisu：附着目标必须是当时的防御宝可梦）。
+
+        `require:`（S2d）：附加前置条件，目前两种 ——
+          · `require:was_active`        事件对象当时在战斗位
+          · `require:retreat:<N>`       事件对象的撤退费**恰好** N
         """
         parts = [x for x in str(body).split(":") if x]
         if "on" not in parts:
@@ -2672,16 +2693,89 @@ class Battle:
             return
         if subj == "holder":
             tgt = fp                       # 载体自己（Powerglass 的持有者）
+        elif subj == "target":
+            # S2d：限时订阅的**快照目标**（Pachirisu 的「当时的防御宝可梦」）
+            tgt = (fixed or {}).get("target")
         elif subj == "leaving":
             tgt = ctx.get("leaving")
         else:
             tgt = ctx.get("entering")
         if tgt is None:
             return
+        # `match:event_target`（S2d）——「这次事件就发生在快照的那只身上」。
+        # Pachirisu 写的是「attach … **to the Defending Pokémon**」：对手附给
+        # 别的宝可梦不该触发（漏判 = 无条件每附一张就打 80）。
+        if "match" in parts and parts[parts.index("match") + 1] == "event_target":
+            if (fixed or {}).get("target") is not ctx.get("target"):
+                self._log("event_scope_skip", {"kind": kind, "by": name,
+                                               "owner": owner,
+                                               "reason": "非快照目标"})
+                return
+        # `require:` 前置条件（S2d）：写清每种判定，未知条件直接抛错
+        _req = {}
+        _i = 0
+        while _i < len(parts):
+            if parts[_i] == "require" and _i + 1 < len(parts):
+                _k = parts[_i + 1]
+                if _k == "retreat":
+                    if _i + 2 >= len(parts) or not parts[_i + 2].isdigit():
+                        raise ValueError(f"require:retreat 缺数值：{body}")
+                    _req["retreat"] = int(parts[_i + 2])
+                    _i += 3
+                    continue
+                _req[_k] = True
+                _i += 2
+                continue
+            _i += 1
+        if _req.get("was_active") and not ctx.get("was_active"):
+            self._log("event_scope_skip", {"kind": kind, "by": name,
+                                           "owner": owner,
+                                           "reason": "不在战斗位"})
+            return
+        if "retreat" in _req and _retreat_cost(tgt, self) != _req["retreat"]:
+            self._log("event_scope_skip", {"kind": kind, "by": name,
+                                           "owner": owner,
+                                           "reason": "撤退费不符",
+                                           "retreat": _retreat_cost(tgt, self),
+                                           "want": _req["retreat"]})
+            return
         if tgt not in self.players[who].all_field():
             # 已经离场（回手 / 洗回牌库）→ 放置类效果无对象，记日志而不是假装做了
             self._log("no_effect", {"kind": kind, "by": name, "owner": owner,
                                     "reason": "目标已离场", "target": tgt.name})
+            return
+        if head == "move_energy_to_bench":
+            # S2d：Heavy Baton「move up to N Basic Energy cards from that Pokémon
+            # to your Benched Pokémon in any way you like」。
+            # 「in any way you like」沿用 `attach_spread` 的既有口径：**轮转**
+            # 分配（可复现，且不会把 N 张全堆在一只身上）。
+            # ⚠ 这是**弃置前**的抢救：`_resolve_ko` 里附着能量不进 `discard_refs`，
+            #   错过这一瞬间就永久丢了（S3 已登记的边界）。
+            _n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+            _side = who
+            _q = self.players[_side]
+            _pool = [x for x in _q.bench if x is not tgt]
+            if not _pool or not tgt.energy:
+                self._log("no_effect", {"kind": kind, "by": name,
+                                        "owner": owner,
+                                        "reason": "无可搬移目标或能量",
+                                        "bench": len(_pool)})
+                return
+            _moved = 0
+            for _k in range(max(0, _n)):
+                _et = next((t for t, c in tgt.energy.items() if c > 0), None)
+                if _et is None:
+                    break
+                tgt.energy[_et] -= 1
+                if tgt.energy[_et] <= 0:
+                    del tgt.energy[_et]
+                _dst = _pool[_moved % len(_pool)]
+                _dst.add_energy(_et, 1)
+                _moved += 1
+            self._log("energy_move", {"player": _side, "n": _moved,
+                                      "from": tgt.name,
+                                      "to": "bench", "by": name,
+                                      "event": kind})
             return
         if head == "attach_basic":
             # S2c：Powerglass「you may attach a Basic Energy card from your
@@ -4381,6 +4475,54 @@ class Battle:
                                "sel": sel, "n": moved})
         return f"opp {op} {moved}"
 
+    def _do_attach_named(self, p: PlayerState, holder, tag: str) -> str:
+        """从**弃牌堆**取 N 张**具名**能量附着到 holder（S2d）
+
+        tag：``attach_named:<n>:<英文卡名>:<zone>:<dst>``
+        （zone 目前只支持 `discard`，dst 只支持 `self`；其它形态抛错）
+
+        ⚠ 必须按**卡名**匹配，不能退化成按属性：Spiky Energy 提供 `{C}`，
+          按属性取会捞到一张基本无色能量 —— 效果"看似做了"，实际拿错卡。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 3:
+            raise ValueError(f"attach_named tag 非法：{tag}")
+        n = int(parts[1]) if parts[1].isdigit() else 1
+        want = parts[2]
+        zone = parts[3] if len(parts) > 3 and parts[3] else "discard"
+        dst = parts[4] if len(parts) > 4 and parts[4] else "self"
+        if zone != "discard":
+            raise ValueError(f"attach_named 只支持 discard：{tag}")
+        if dst != "self":
+            raise ValueError(f"attach_named 只支持 self：{tag}")
+        if holder is None:
+            raise ValueError(f"attach_named 缺少持有者：{tag}")
+        key = _name_key(want)
+        moved = 0
+        label = ""
+        for ref in list(p.discard_refs):
+            if moved >= n:
+                break
+            if not isinstance(ref, EnergyRef):
+                continue
+            if _name_key(ref.edef.name) != key:
+                continue
+            p.discard_refs.remove(ref)
+            label = _card_label(ref)
+            if label in p.discard:
+                p.discard.remove(label)
+            if ref.edef.is_special:
+                holder.senergy.append(ref)
+            else:
+                holder.add_energy(ref.edef.type)
+            moved += 1
+        if moved:
+            self._log("attach", {"player": self.current,
+                                 "target": holder.name, "etype": want,
+                                 "energy_now": holder.total_energy(),
+                                 "by": "attach_named", "n": moved})
+        return f"attach {moved} {want} from discard"
+
     def _do_attach_spread(self, p: PlayerState, tag: str,
                           action: dict,
                           holder: Optional[FieldPokemon] = None) -> str:
@@ -5780,6 +5922,10 @@ class Battle:
             # （第一百二十批，Virizion「Giga Drain」）—— 效果在伤害之后执行，
             # 因此把本次实际伤害记在这里供 `heal:equal` 取用。
             self._last_damage_dealt = damage_dealt
+            # S2d：记下「本招结算前两方弃牌堆的水位」，招式效果跑完后取切片 ——
+            # 「被本招式效果弃置的卡」由此得到（Boomerang Energy 的回收条件）。
+            # 用差分而不是在每个弃置点埋钩子：弃置路径有十几处，埋钩必漏。
+            _disc_before = [(len(self.players[k].discard_refs)) for k in (0, 1)]
             if not mods.get("nullify_all"):
                 self._apply_attack_effects(attacker, atk.effects,
                                            plan=action.get("targets"),
@@ -5804,6 +5950,21 @@ class Battle:
                 self._resolve_ko(1 - self.current, defender)
         finally:
             self._ko_from_attack = prev_ko_flag
+        if self.finished:
+            return {"ok": True, "event": None}
+        # S2d（2026-11-08）：**攻击结束事件**（「after attacking」）。
+        # 放在击倒/免击倒结算之后、结束回合之前；`discarded` = 本招效果弃置的卡
+        # 对象（差分得到），Boomerang Energy 靠它判断「是不是被自己的招式弃掉的」。
+        _discarded = []
+        for _k in (0, 1):
+            _pl = self.players[_k]
+            if len(_pl.discard_refs) > _disc_before[_k]:
+                _discarded += list(_pl.discard_refs[_disc_before[_k]:])
+        events.emit(self, "attack_done",
+                    {"player": self.current, "attacker": attacker,
+                     "defender": defender, "discarded": _discarded,
+                     "turn_owner": self.current})
+        special_energy.on_attack_done(self, attacker, _discarded)
         if self.finished:
             return {"ok": True, "event": None}
         # 「If Festival Grounds is in play, this Pokémon may use an attack it has
@@ -7934,6 +8095,44 @@ class Battle:
                 self._log("self_to_deck_top", {"player": self.current,
                                                "card": attacker.name,
                                                "dropped": _dropped})
+            elif tag.startswith("arm:"):
+                # S2d：**限时订阅**（Pachirisu「Electrified Incisors」：「During
+                # your opponent's next turn, whenever they attach an Energy card
+                # from their hand to the Defending Pokémon, place 8 damage
+                # counters on that Pokémon.」）
+                # 形态：`arm:<事件kind>:<body>:until:<窗口>`，窗口目前只有
+                # `opp_next_turn`（对手的下个回合）。
+                # ⚠ 目标**此刻**快照：到对手回合时防御宝可梦可能已进化/换下，
+                #   重新猜目标就是错打（`match:event_target` 再钉一层）。
+                _arm = str(tag).split(":until:")
+                if len(_arm) != 2:
+                    raise ValueError(f"arm tag 缺 until: 段：{tag}")
+                _body_parts = [x for x in _arm[0].split(":") if x]
+                if len(_body_parts) < 3:
+                    raise ValueError(f"arm tag 缺事件体：{tag}")
+                _ev_kind = _body_parts[1]
+                _ev_body = ":".join(_body_parts[2:])
+                _win = _arm[1]
+                if _win == "opp_next_turn":
+                    _wo = 1 - self.current
+                    _until = int(self.turn_counts[_wo]) + 1
+                elif _win == "own_next_turn":
+                    _wo = self.current
+                    _until = int(self.turn_counts[_wo]) + 1
+                else:
+                    raise ValueError(f"未知 arm 窗口：{_win}")
+                events.add_temp_watch(
+                    self, _wo, _ev_kind, _ev_body, until_count=_until,
+                    ctx={"target": opp.active}, name="temp_watch",
+                    source=str(tag))
+            elif tag.startswith("attach_named:"):
+                # S2d：从弃牌堆附着**具名能量**（Lycanroc「Spike-Clad」：
+                # 「attach up to 2 **Spiky Energy** cards from your discard pile
+                # to this Pokémon」）。按**卡名**取，不是按属性 —— Spiky Energy
+                # 提供的是无色，按属性取会拿错卡（静默错映射）。
+                self._log("attach_named", {
+                    "player": self.current,
+                    "detail": self._do_attach_named(p, attacker, str(tag))})
             elif tag.startswith("queue:"):
                 # S2c：招式侧的**延迟效果**（Team Rocket's Grimer「Corrosive
                 # Sludge」：「At the end of your opponent's next turn, discard the
@@ -8298,8 +8497,8 @@ class Battle:
                         if _fp.stage <= 0:
                             continue
                         avail = _fp.total_energy()
-                        if avail and _fp.remove_any(avail):
-                            done += avail
+                        if avail:
+                            done += _discard_energy_from(self, p, _fp, avail)
                     self._log("discard_energy",
                               {"player": self.current, "target": attacker.name,
                                "n": done, "side": "own", "scope": "evolved"})
@@ -8333,8 +8532,9 @@ class Battle:
                             done = _discard_special_energy(self, opp, opp.active, n)
                         else:
                             avail = min(n, opp.active.total_energy())
-                            if avail and opp.active.remove_any(avail):
-                                done = avail
+                            if avail:
+                                done = _discard_energy_from(self, opp, opp.active,
+                                                            avail)
                     self._log("discard_energy",
                               {"player": self.current,
                                "target": (opp.active.name if opp.active else None),
@@ -8345,8 +8545,8 @@ class Battle:
                     done = 0
                     if p.active is not None:
                         avail = min(n, p.active.total_energy())
-                        if avail and p.active.remove_any(avail):
-                            done = avail
+                        if avail:
+                            done = _discard_energy_from(self, p, p.active, avail)
                     if done < n:
                         done += _discard_hand_energy(self, p, n - done)
                     self._log("discard_energy", {"player": self.current,
@@ -11263,6 +11463,40 @@ def _move_one_energy(src: FieldPokemon, dst: FieldPokemon,
         dst.senergy.append(src.senergy.pop())
         return True
     return False
+
+
+def _discard_energy_from(battle, owner_pl, fp: FieldPokemon, n: int) -> int:
+    """从 ``fp`` 弃置 n 点能量 → 实际弃置数（**特殊能量卡进弃牌堆**）
+
+    与 `FieldPokemon.remove_any` 的差别只在最后一步：`remove_any` 把特殊能量
+    从 `senergy` 里 pop 掉就结束，**卡不进弃牌堆**。对「弃置」类效果这是错的 ——
+    特殊能量是**有身份的卡**：
+      · Boomerang Energy 的整条规则就是「被弃置后从弃牌堆回附」，卡不进弃牌堆
+        就永远回不来（实测：`discard_energy:all` 打完，`discard_refs` 里一张没有）；
+      · 任何「从弃牌堆回收能量」的效果都会看不到它。
+    因此这里基本能量沿用 `remove_any` 的顺序（无色优先 → 其它基本色），
+    特殊能量改走 `_discard_special_energy`（`_to_discard`，文本层与类型化层同步）。
+    """
+    if fp.total_energy() < n:
+        return 0
+    done = 0
+    # ① 基本能量：无色优先，其次按属性名（与 `remove_any` 同口径）
+    order = [COLORLESS] + [t for t in sorted(fp.energy) if t != COLORLESS]
+    for t in order:
+        if done >= n:
+            break
+        have = fp.energy.get(t, 0)
+        if have <= 0:
+            continue
+        k = min(have, n - done)
+        fp.energy[t] = have - k
+        if fp.energy[t] <= 0:
+            del fp.energy[t]
+        done += k
+    # ② 还不够 → 弃特殊能量**卡**
+    if done < n:
+        done += _discard_special_energy(battle, owner_pl, fp, n - done)
+    return done
 
 
 def _discard_special_energy(battle, owner_pl, fp: FieldPokemon, n: int) -> int:

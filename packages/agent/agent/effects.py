@@ -3316,17 +3316,62 @@ _S2_DELAY_DISCARD_DEFENDER_RE = re.compile(
     r"pok[eé]mon and all attached cards\.?$", re.I)
 
 
+# --- S2d（2026-11-08）：限时订阅 / 战斗位+撤退费条件 / 具名能量附着 ---
+# Pachirisu「Electrified Incisors」：「During your opponent's next turn, whenever
+#  they attach an Energy card from their hand to the Defending Pokémon, place 8
+#  damage counters on that Pokémon.」
+#  ⚠ 这是「出招留下的一次记忆」，载体不是场上的卡 → `arm:`（限时订阅）。
+_S2D_ARM_ATTACH_RE = re.compile(
+    r"^during your opponent'?s next turn,? whenever they attach an energy card "
+    r"from their hand to the defending pok[eé]mon,? (?:place|put) (\d+) damage "
+    r"counters? on that pok[eé]mon\.?$", re.I)
+
+# Heavy Baton（道具）：「If the Pokémon this card is attached to has a Retreat
+#  Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an
+#  attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that
+#  Pokémon to your Benched Pokémon in any way you like.」
+_S2D_HEAVY_BATON_RE = re.compile(
+    r"^if the pok[eé]mon this card is attached to has a retreat cost of exactly "
+    r"(\d+),? is in the active spot,? and is knocked out by damage from an "
+    r"attack from your opponent'?s pok[eé]mon,? move up to (\d+) basic energy "
+    r"cards? from that pok[eé]mon to your benched pok[eé]mon in any way you "
+    r"like\.?$", re.I)
+
+# Lycanroc「Spike-Clad」：「When you play this Pokémon from your hand to evolve 1
+#  of your Pokémon during your turn, you may attach up to 2 **Spiky Energy** cards
+#  from your discard pile to this Pokémon.」
+#  ⚠ 必须捕获**能量卡名**：按属性取会拿错卡（Spiky Energy 提供的是无色）。
+_S2D_EVOLVE_ATTACH_NAMED_RE = re.compile(
+    r"^when you play this pok[eé]mon from your hand to evolve 1 of your "
+    r"pok[eé]mon during your turn,? you may attach up to (\d+) "
+    # ⚠ 卡名要**连 Energy 一起**捕获：`([a-z][a-z' \-]*) energy` 会把
+    #   "Spiky" 当名字、把 "Energy" 当固定词尾，得到的卡名就少了 "Energy"
+    #   （实测：`attach_named:2:Spiky:…` → 弃牌堆里一张也匹配不上）。
+    r"((?:[a-z][a-z'\-]* )+?)energy cards? from your discard pile to this "
+    r"pok[eé]mon\.?$", re.I)
+
+
 def _detect_s2(text: str, kind: str) -> list:
     """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
     if kind == "attack":
         if _S2_SHIELD_NO_WEAKNESS_RE.match(t):
             return [act("shield", None, "self", {"no_weakness": True})]
+        m = _S2D_ARM_ATTACH_RE.match(t)
+        if m:
+            # 限时订阅：窗口 = 对手的下个回合；目标 = 出招时的防御宝可梦
+            return [act("rule", None, "opp", {"arm_attach_counters": int(m.group(1))})]
         if _S2_DELAY_DISCARD_DEFENDER_RE.match(t):
             # 延迟弃置：目标 = 出招时的 Defending Pokémon（入队时快照）
             return [act("rule", None, "opp", {"queue_discard_defender": True})]
         return []
     if kind in ("item", "tool"):
+        m = _S2D_HEAVY_BATON_RE.match(t)
+        if m:
+            # 三个前置条件都要写进 tag：撤退费**恰好** N、当时在战斗位、被**招式**击倒
+            return [act("rule", None, "self",
+                        {"ko_move_energy_bench": (int(m.group(2)),
+                                                 int(m.group(1)))})]
         m = _S2_KO_SEARCH_RE.match(t)
         if m:
             return [act("rule", None, "self", {"ko_search_any": int(m.group(1))})]
@@ -3355,6 +3400,15 @@ def _detect_s2(text: str, kind: str) -> list:
                 return [act("rule", None, "self", {"evolve_attach_spread": (
                     _n, _ety, _sty)})]
             return []
+        m = _S2D_EVOLVE_ATTACH_NAMED_RE.match(t)
+        if m:
+            _n = int(m.group(1))
+            # 卡名首字母大写还原（归一化文本是小写）+ 补回被正则吃掉的 "Energy"
+            _ename = " ".join(w.capitalize()
+                              for w in re.sub(r"\s+", " ", m.group(2)).split())
+            _ename = f"{_ename} Energy"
+            return [act("rule", None, "self",
+                        {"evolve_attach_named": (_n, _ename)})]
         m = _S2_EVOLVE_RECON_ATTACH_RE.match(t)
         if m:
             # 进化触发：看顶 N 张，把所有基本能量自由分配附着，余牌洗回
@@ -10273,6 +10327,23 @@ def to_engine_tags(specs: list) -> dict:
                     _dn, _lim = extra["draw_then_queue_discard"]
                     tags.append(f"draw:{int(_dn)}|queue:turn_end:discard_hand:all"
                                 f":if:own_hand_at_least:{int(_lim)}")
+                    continue
+                if extra.get("arm_attach_counters") is not None:
+                    tags.append("arm:attach_energy:counters:"
+                                f"{int(extra['arm_attach_counters'])}"
+                                ":on:target:scope:own_turn:match:event_target"
+                                ":until:opp_next_turn")
+                    continue
+                if extra.get("ko_move_energy_bench") is not None:
+                    _mn, _rc = extra["ko_move_energy_bench"]
+                    tags.append("on_event:ko:move_energy_to_bench:"
+                                f"{int(_mn)}:on:leaving:scope:own_by_attack"
+                                f":require:was_active:require:retreat:{int(_rc)}")
+                    continue
+                if extra.get("evolve_attach_named") is not None:
+                    _an, _ename = extra["evolve_attach_named"]
+                    tags.append(f"evolve_act:attach_named:{int(_an)}:{_ename}"
+                                ":discard:self")
                     continue
                 if extra.get("queue_discard_defender"):
                     tags.append("queue:opp_next_turn_end:discard_defender:all")

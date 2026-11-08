@@ -29,9 +29,10 @@
   2. **一处结算**：延迟效果只在 `Battle._end_turn` 的固定点结算（不散落在各 helper 里）。
   3. **同一 seed 同序列**：订阅顺序按（玩家序 → 场上位置 → 插入序）固定，可复现。
 
-事件点（`EMIT_POINTS`）目前只接线了两类：`switch_out` / `switch_in`（换位）。
-其余（进化/附能/伤害/击倒）留 S2b —— **没接线的点不会静默生效**，因为订阅只能
-通过 `emit()` 触发，未接线的 kind 永远不会被 emit（`test_emit_points_wired`）。
+已接线的事件点：`switch_out` / `switch_in`（S2a）· `evolve`（S2b）·
+`ko` / `turn_end`（S2c）· `attach_energy` / `attack_done`（S2d）。
+其余（`turn_begin` / `checkup` / `play_trainer` / `damage`）**没接线也不会静默生效** ——
+订阅只能通过 `emit()` 触发，未接线的 kind 永远不会被 emit（`test_emit_points_wired`）。
 """
 from __future__ import annotations
 
@@ -153,16 +154,63 @@ def resolve_turn_end(battle, owner: int) -> list:
         battle._log("queue_resolve", {
             "owner": owner, "n": len(done),
             "tags": [it.tag for it in done], "pending": len(q)})
+    # 限时订阅的窗口到这一刻就关了（「during your opponent's next turn」）：
+    # 在该玩家**自己的**回合结束时剪掉，而不是等下一次开局 —— 晚剪一回合虽然
+    # 被 `scope:own_turn` 挡住不会误触发，但「窗口」就成了谎报。
+    tws = list(getattr(battle, "_temp_watch", []) or [])
+    if tws:
+        keep = []
+        for tw in tws:
+            if tw["owner"] == owner and count >= tw["until_count"]:
+                battle._log("temp_watch_expired", {"owner": tw["owner"],
+                                                   "kind": tw["kind"],
+                                                   "until": tw["until_count"],
+                                                   "name": tw["name"],
+                                                   "at": "turn_end"})
+                continue
+            keep.append(tw)
+        battle._temp_watch = keep
     return done
 
 
 # ---------------- 订阅 ----------------
 
-def _watchers(battle, kind: str) -> list:
-    """扫描**双方**场上（特性 + 道具）的 `on_event:<kind>:<body>` 订阅
+def add_temp_watch(battle, owner: int, kind: str, body: str, *,
+                   until_count: int, ctx=None, name: str = "",
+                   source: str = "") -> dict:
+    """挂一条**限时订阅**（S2d）
 
-    顺序固定：玩家 0 → 玩家 1，各自「战斗位 → 后备」。同一张卡多条订阅按
-    卡面上的顺序（`pdef.abilities` 的顺序）—— 可复现是硬要求。
+    与卡片自带的 `on_event:` 订阅不同，这类订阅由**一次效果**临时建立：
+    「During your opponent's next turn, whenever they attach an Energy card from
+    their hand to the Defending Pokémon, place 8 damage counters on that
+    Pokémon.」（Pachirisu「Electrified Incisors」）—— 它的载体不是场上的卡，
+    而是**一次出招留下的记忆**。
+
+    `until_count`：`turn_counts[owner] > until_count` 时失效。
+    「对手的下个回合」= 当前对手回合序 + 1：在对手**再下一个**回合开始时被剪掉
+    （`reset_turn_counters` 里剪枝，写日志）。
+
+    `ctx`：订阅时的**快照**（Pachirisu 存「当时的防御宝可梦」）——
+    到对手回合时那只可能已经进化/换下，绝不能重新猜目标。
+    """
+    tw = {"owner": int(owner), "kind": str(kind), "body": str(body),
+          "until_count": int(until_count), "ctx": dict(ctx or {}),
+          "name": str(name), "source": str(source)}
+    battle._temp_watch = list(getattr(battle, "_temp_watch", []) or []) + [tw]
+    battle._log("temp_watch", {"owner": int(owner), "kind": str(kind),
+                               "body": str(body), "until": int(until_count),
+                               "name": str(name), "source": str(source)})
+    return tw
+
+
+def _watchers(battle, kind: str) -> list:
+    """扫描**双方**的 `on_event:<kind>:<body>` 订阅（卡片自带 + 限时）
+
+    顺序固定：玩家 0 → 玩家 1，各自「战斗位 → 后备」，然后按插入序追加限时订阅
+    —— 可复现是硬要求（同一 seed 必须同序列）。
+
+    返回 dict（S2d 起）：`owner / pos / fp / name / body / fixed`。
+    `fixed` 非 None 表示这是限时订阅，携带订阅时的快照 ctx。
     """
     from .battle import _field_iter     # 延迟 import：battle 在加载期就 import 了本模块
     out = []
@@ -181,7 +229,8 @@ def _watchers(battle, kind: str) -> list:
                 # 时**不订阅**。不在扫描处判断就变成「放后备也生效」= 静默加强。
                 if ":while:active" in body and tpos != 0:
                     continue
-                out.append((pi, tpos, fp, ab.name, body))
+                out.append({"owner": pi, "pos": tpos, "fp": fp, "name": ab.name,
+                            "body": body, "fixed": None})
             tool = str(getattr(fp, "tool", "") or "")
             if tool.startswith(want):
                 body = tool[len(want):]
@@ -190,8 +239,18 @@ def _watchers(battle, kind: str) -> list:
                 # 仍会在回合末挂起附着选择）。这条测试抓到的就是它。
                 if ":while:active" in body and tpos != 0:
                     continue
-                out.append((pi, tpos, fp,
-                            getattr(fp, "tool_name", "") or "tool", body))
+                out.append({"owner": pi, "pos": tpos, "fp": fp,
+                            "name": getattr(fp, "tool_name", "") or "tool",
+                            "body": body, "fixed": None})
+    # 限时订阅：过期的**不静默跳过**（剪枝在 `reset_turn_counters`，这里只兜底）
+    for tw in list(getattr(battle, "_temp_watch", []) or []):
+        if tw["kind"] != kind:
+            continue
+        if int(battle.turn_counts[tw["owner"]]) > tw["until_count"]:
+            continue
+        out.append({"owner": tw["owner"], "pos": -1, "fp": None,
+                    "name": tw["name"] or "temp_watch", "body": tw["body"],
+                    "fixed": tw["ctx"], "tw": tw})
     return out
 
 
@@ -210,8 +269,12 @@ def emit(battle, kind: str, ctx=None) -> list:
     if counts is None:
         counts = {}
         battle._watch_fired = counts
-    for pi, tpos, fp, name, body in _watchers(battle, kind):
-        key = (id(fp), kind, body)
+    for w in _watchers(battle, kind):
+        pi, fp = w["owner"], w["fp"]
+        name, body, fixed = w["name"], w["body"], w["fixed"]
+        # 限时订阅用它自己的 dict 身份做 key（没有 fp 可指）
+        key = (("tw", id(w["tw"])) if fixed is not None
+               else (id(fp), kind, body))
         turn, n = counts.get(key, (battle.turn_number, 0))
         if turn != battle.turn_number:
             turn, n = battle.turn_number, 0
@@ -220,7 +283,7 @@ def emit(battle, kind: str, ctx=None) -> list:
                                              "owner": pi, "body": body})
             continue
         counts[key] = (turn, n + 1)
-        battle._run_watch_body(pi, fp, name, body, kind, ctx)
+        battle._run_watch_body(pi, fp, name, body, kind, ctx, fixed=fixed)
         fired.append({"owner": pi, "by": name, "body": body})
     if fired:
         battle._log("event", {"kind": kind, "n": len(fired),
@@ -229,8 +292,26 @@ def emit(battle, kind: str, ctx=None) -> list:
 
 
 def reset_turn_counters(battle) -> None:
-    """新回合开始：清空「每回合触发次数」记账（在 `_begin_turn` 调用）"""
+    """新回合开始：清空「每回合触发次数」记账 + 剪掉过期的限时订阅
+
+    `_begin_turn` 里 `turn_counts[current] += 1` **之后**调用，因此
+    `turn_counts[owner] > until_count` 就是「这个订阅的窗口已经过去了」。
+    剪枝写日志 —— 过期却没剪会让订阅在下一次同 kind 事件时被误触发。
+    """
     battle._watch_fired = {}
+    tws = list(getattr(battle, "_temp_watch", []) or [])
+    if not tws:
+        return
+    keep = []
+    for tw in tws:
+        if int(battle.turn_counts[tw["owner"]]) > tw["until_count"]:
+            battle._log("temp_watch_expired", {"owner": tw["owner"],
+                                               "kind": tw["kind"],
+                                               "until": tw["until_count"],
+                                               "name": tw["name"]})
+            continue
+        keep.append(tw)
+    battle._temp_watch = keep
 
 
 # ---------------- 换位事件（diff 检测：唯一落点，不散落在各 helper） ----------------

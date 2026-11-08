@@ -1515,15 +1515,23 @@ class TestCardLibrary(unittest.TestCase):
         self.assertIn("不可对战", s["note"])
 
     def test_deck_import_matches_library_only_card(self):
-        """仅卡库收录（引擎未建模）的卡应被**识别**并如实标注为灰名单"""
+        """仅卡库收录（引擎未建模）的卡应被**识别**并如实标注为灰名单
+
+        ⚠ **样本卡不再写死**（2026-11-08 S2d）。原来的写法挑了「长期未建模」的
+        一张真实卡，结果随建模推进被迫换了三次（Brilliant Blender → Dusk Ball →
+        Heavy Baton），而 S2d 又把 Heavy Baton 建了 —— 这类断言一旦依赖具体卡名，
+        每次进池都要改测试，改的还只是「样本」，真正的语义（**灰名单要如实标注**）
+        反而被噪声掩盖。
+        现在改为**从卡库动态取一张未建模卡**：语义不变、不会再随建模漂移。
+        """
         h = user_headers()
+        un = client.get("/cards", params={"engine_ready": False,
+                                         "page_size": 1}, headers=h).json()
+        self.assertEqual(un["total"] > 0, True, "卡库应存在未建模卡（引擎未 100%）")
+        sample = un["items"][0]["name"]
         text = "\n".join([
             "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",
-            # 样本卡随建模推进更换（历史上换过两次：Brilliant Blender 第八十三批
-            # 落地 → Dusk Ball → **Heavy Baton**，第一百三十四批把 Dusk Ball 的
-            # `recon_bottom:` 也建了）。选「长期未建模」的卡才能守住本用例的语义：
-            # Heavy Baton 需要道具 `on_ko` 钩子，属结构性缺口。
-            "4 Heavy Baton", "4 Hyper Aroma", "8 Basic {P} Energy",
+            f"4 {sample}", "4 Hyper Aroma", "8 Basic {P} Energy",
             "8 Basic {R} Energy", "4 好朋友宝芬", "4 高级球", "4 破坏之锤",
             "2 老大的指令", "3 博士的研究", "4 奇树", "2 神奇糖果",
             "4 Night Stretcher", "4 Counter Catcher",
@@ -1532,9 +1540,9 @@ class TestCardLibrary(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         j = r.json()
         by = {e["name"]: e for e in j["parsed"]}
-        self.assertTrue(by["Heavy Baton"]["matched"], "卡库独有卡应被识别")
-        self.assertFalse(by["Heavy Baton"]["meta"]["engine_ready"])
-        self.assertEqual(by["Heavy Baton"]["meta"]["source"], "card-db")
+        self.assertTrue(by[sample]["matched"], f"卡库独有卡应被识别：{sample}")
+        self.assertFalse(by[sample]["meta"]["engine_ready"], sample)
+        self.assertEqual(by[sample]["meta"]["source"], "card-db")
         self.assertTrue(any("引擎未实现卡" in w for w in j["warnings"]), j["warnings"])
         # engine_ready 统计不再恒等于总数（此前的漏算已修）
         self.assertGreater(j["summary"]["not_implemented"], 0)

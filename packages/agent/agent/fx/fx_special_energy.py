@@ -10,8 +10,10 @@
 **静默丢掉**，卡进池后就是一个"普通能量"——比未建模危险得多。
 因此这里对每张卡写**完整**的归一化文本匹配：多一句、少一句都不认。
 
-**故意不认**：`Boomerang Energy` —— 它的第二段要求"能量卡身份 + 攻击后从弃牌堆
-回附"，而引擎的能量 presently 是计数（弃掉不回弃牌堆），无法精确表达。
+**S2d 补记**：`Boomerang Energy` 原本故意不认（"能量卡身份 + 攻击后从弃牌堆回附"
+当时无法表达）。S2d 之后有了两件东西 —— `_discard_energy_from`（弃能量时特殊能量
+**卡**进 `discard_refs`）与 `attack_done` 的差分快照（`discarded`）—— 于是整段
+可以精确表达，改为认领。
 
 tag 由 `engine/special_energy.py` 逐字解析；未知 kind 会抛错。
 """
@@ -75,15 +77,18 @@ _PATTERNS = {
     "prevent all effects of attacks used by your opponent's pokemon done to "
     "the {f} pokemon this card is attached to. (existing effects are not "
     "removed. damage is not an effect.)": "rock_fighting",
-}
 
-# 已知但**未建模**的特殊能量文本 → 明确拒绝（写出来是为了让"不建模"可被检索）
-_UNMODELED = {
+    # S2d：被**持有者自己的招式效果**弃置时，攻击结束后从弃牌堆回附
     "as long as this card is attached to a pokemon, it provides {c} energy. "
     "if this card is discarded by an effect of an attack used by the pokemon "
     "this card is attached to, attach this card from your discard pile to that "
     "pokemon after attacking.": "boomerang",
 }
+
+# 已知但**未建模**的特殊能量文本 → 明确拒绝（写出来是为了让"不建模"可被检索）
+# S2d（2026-11-08）：`boomerang` 已建模（攻击结束差分 + 卡对象身份），移入
+# `_PATTERNS`。表保留为空 —— 以后再出现"认得但做不到"的特殊能量放这里。
+_UNMODELED: dict = {}
 
 
 def detect(text: str, kind: str = "attack", name: str = "") -> dict | None:

@@ -28,7 +28,8 @@
 ----
 · 未知 `senergy:<kind>` **抛 ValueError**（绝不当成无色能量静默放过）；
 · `provides` 一律按**持有者当前物种**实时计算（进化后自动重算，不会残留旧值）；
-· 未建模的形态（Boomerang：需要"能量卡身份 + 弃牌堆回收"）解析侧不产 tag。
+· 已建模的形态：S2d 补上 Boomerang —— 用「卡对象身份 + 攻击结束差分快照」判定
+  「是不是被**持有者自己的招式效果**弃掉的」，再从未被捞走的弃牌堆里回附。
 """
 from __future__ import annotations
 
@@ -51,6 +52,8 @@ _SPECS = {
     "enriching": {"provides": {"colorless": 1}, "on_attach_draw": 4},
     # 提供 {C}；持有者在战斗位被招式伤害时，攻击方受 20 点伤害（即使被击倒）
     "spiky": {"provides": {"colorless": 1}, "on_damaged_counter": 20},
+    # 提供 {C}；被**持有者自己的招式效果**弃置时，攻击结束后从弃牌堆回附（S2d）
+    "boomerang": {"provides": {"colorless": 1}, "return_after_attack": True},
     # 提供任意 1；被对手招式伤害击倒时对方少拿 1 张奖赏卡（每局一次）
     "legacy": {"provides": {ANY: 1}, "prize": -1},
     # 提供 {C}；附着于 Stage 2 → 任意属性 2
@@ -206,6 +209,55 @@ def discard_at_end_of_turn(battle, p) -> list:
                                            "side": "own", "from": "end_turn",
                                            "etype": kind})
     return dropped
+
+
+def on_attack_done(battle, attacker, discarded) -> list:
+    """攻击结束后的特殊能量回收（S2d，Boomerang Energy）
+
+    卡面：「If this card is discarded by an effect of an attack used by the
+    Pokémon this card is attached to, attach this card from your discard pile to
+    that Pokémon **after attacking**.」
+
+    三个条件缺一不可：
+      ① 被弃置的是 **Boomerang 本体**（不是别的能量）—— 按卡对象身份判定；
+      ② 是**本招式效果**弃置的（`discarded` 由 `_do_attack` 用差分给出）；
+      ③ 持有者仍在场上（被自伤/反伤击倒的话，卡已随它进弃牌堆，不该复活）。
+
+    返回回附的记录（供日志/测试核对）。
+    """
+    if attacker is None or not discarded:
+        return []
+    out = []
+    for ref in list(discarded):
+        kind = kind_of(getattr(ref, "edef", None))
+        if kind is None or not spec(kind).get("return_after_attack"):
+            continue
+        # ① 必须是「这张卡」本身在弃牌堆里（身份比对，不按名字猜）
+        owner_side = None
+        for pi in (0, 1):
+            pl = battle.players[pi]
+            if any(r is ref for r in pl.discard_refs):
+                owner_side = pi
+                break
+        if owner_side is None:
+            continue                     # 已被别的效果捞走 → 没有可回收的对象
+        # ③ 持有者还在场上（同一方）
+        if attacker not in battle.players[owner_side].all_field():
+            battle._log("no_effect", {"reason": "持有者已离场",
+                                     "etype": kind, "side": owner_side})
+            continue
+        from .battle import _card_label     # 延迟 import（battle→本模块→battle）
+        pl = battle.players[owner_side]
+        pl.discard_refs = [r for r in pl.discard_refs if r is not ref]
+        label = _card_label(ref)
+        if label in pl.discard:
+            pl.discard.remove(label)
+        attacker.senergy.append(ref)
+        battle._log("senergy_return", {"player": owner_side,
+                                       "target": attacker.name,
+                                       "etype": kind, "from": "discard"})
+        out.append(ref)
+    return out
 
 
 def on_attach(battle, p, fp, edef) -> str:

@@ -427,6 +427,12 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         if any(str(e).startswith("on_event:evolve:counters:")
                and ":on:entering" in str(e) for e in effects):
             return []
+        # S2d：限时订阅里的「that Pokémon」= **出招时的防御宝可梦**（建档时快照），
+        # `on:target` + `match:event_target` 把它钉死成精确目标
+        # （Pachirisu「place 8 damage counters on that Pokémon」）。
+        if any(str(e).startswith("arm:") and ":on:target" in str(e)
+               and ":match:event_target" in str(e) for e in effects):
+            return []
         return [f"{card_name} · {item_name}：不可精确表达的目标 "
                 f"`{raw[:60]}` **却在池内**（应整卡不收）"]
     if want == "self":
@@ -2071,6 +2077,10 @@ _SENERGY_REQUIRED = {
                     "provides 2 in any combination of {p} energy and {d} energy"),
     "telepath": ("provides {p} energy",
                  "search your deck for up to 2 basic {p} pokemon"),
+    # S2d：两句都不能少 —— 少了第二句就是「普通无色能量」，
+    # 少了「after attacking」则变成「攻击中途就回附」（能重复支付）。
+    "boomerang": ("provides {c} energy", "discarded by an effect of an attack",
+                  "after attacking"),
 }
 
 
@@ -3784,6 +3794,72 @@ _S2C_DELAY_DISCARD = re.compile(
     r"pok[eé]mon and all attached cards", re.I)
 
 
+# ---------------- S2d（2026-11-08）：限时订阅 / 撤退费条件 / 具名能量 ---
+# 独立实现（不 import 解析包）。
+_S2D_ARM = re.compile(
+    r"whenever they attach an energy card from their hand to the defending "
+    r"pok[eé]mon,? (?:place|put) (\d+) damage counters? on that pok[eé]mon", re.I)
+_S2D_BATON = re.compile(
+    r"has a retreat cost of exactly (\d+),? is in the active spot,? and is "
+    r"knocked out by damage from an attack .{0,40}?move up to (\d+) basic energy",
+    re.I)
+_S2D_NAMED = re.compile(
+    r"you may attach up to (\d+) ((?:[a-z][a-z'\-]* )+?)energy cards? from your "
+    r"discard pile to this pok[eé]mon", re.I)
+
+
+def audit_s2d_events(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """S2d 对账：限时订阅 / 撤退费+战斗位 / 具名能量附着
+
+    这三族的错法都是「**丢了限定词**」：
+      · 限时订阅丢了窗口 → 变成**永久**订阅（每附一张能量就打 80，整局）；
+      · 丢了 `match:event_target` → 对手附给**任何**宝可梦都打 80；
+      · Heavy Baton 丢了 `require:retreat:N` → 任何宝可梦被击倒都搬能量；
+      · `attach_named` 丢了卡名（退化成按属性）→ 拿错卡。
+    所以这里逐条要求限定词在场，而不是只看族前缀。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+    m = _S2D_ARM.search(d)
+    if m:
+        want = f"arm:attach_energy:counters:{int(m.group(1))}"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手下回合附能到防御"
+                        f"宝可梦时放 {m.group(1)} 个指示物」应产 `{want}…`，"
+                        f"实际 {tags}")
+        elif ":until:" not in joined:
+            errs.append(f"{card_name} · {item_name}：限时订阅缺 `:until:` —— "
+                        f"会变成**永久**订阅（静默加强）")
+        elif ":match:event_target" not in joined:
+            errs.append(f"{card_name} · {item_name}：限时订阅缺 "
+                        f"`match:event_target` —— 对手附给别的宝可梦也会触发")
+    m = _S2D_BATON.search(d)
+    if m:
+        want = f"on_event:ko:move_energy_to_bench:{int(m.group(2))}"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「撤退费恰好 "
+                        f"{m.group(1)} 且被击倒时搬 {m.group(2)} 张基本能量」应产 "
+                        f"`{want}…`，实际 {tags}")
+        elif f"require:retreat:{int(m.group(1))}" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `require:retreat:"
+                        f"{int(m.group(1))}` —— 任何宝可梦被击倒都会搬能量")
+        elif "require:was_active" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `require:was_active` —— "
+                        f"卡面限定「在战斗位」，后备被击倒不该触发")
+    m = _S2D_NAMED.search(d)
+    if m:
+        _en = " ".join(w.capitalize() for w in m.group(2).split())
+        want = f"attach_named:{int(m.group(1))}:{_en} Energy"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「从弃牌堆附着 "
+                        f"{m.group(1)} 张 {_en} Energy」应产 `{want}…`，"
+                        f"实际 {tags}")
+    return errs
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -3925,6 +4001,7 @@ def main() -> int:
                 errs += audit_batch93_94(c["name"], it.get("name"), desc, eff)
                 errs += audit_s3_zones(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2_events(c["name"], it.get("name"), desc, eff)
+                errs += audit_s2d_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3959,6 +4036,8 @@ def main() -> int:
                                    [_ctag] if _ctag else [])
             errs += audit_s2_events(c["name"], c["name"], _cdesc,
                                     [_ctag] if _ctag else [])
+            errs += audit_s2d_events(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4010,8 +4089,9 @@ def main() -> int:
           "搜索族（牌库顶筛支援者/四类别各取1/任意数量铺后备/检索放回牌库顶） · "
           "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 · "
           "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 · "
-          "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 "
-          "四十六类对账全部一致")
+          "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 · "
+          "限时订阅/撤退费+战斗位搬能量/具名能量附着 "
+          "四十七类对账全部一致")
     return 0
 
 

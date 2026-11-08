@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 14:19:29",
+  "reparsed_at": "2026-11-08 14:34:55",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1207,
+  "engine_ready": 1211,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1207,
-   "engine_approximated": 1192,
-   "engine_unmatched": 60,
+   "zh_backfill": 1211,
+   "engine_approximated": 1196,
+   "engine_unmatched": 56,
    "engine_namekey_mismatch": 9
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 155,
-   "engine_tags": 1512,
-   "unsupported": 61,
+   "errors": 156,
+   "engine_tags": 1516,
+   "unsupported": 57,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1192,
+  "engine_approximated": 1196,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -497,14 +497,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡因附着此卡的宝可梦所使用招式的效果而被弃置，则在攻击后从弃牌堆将此卡附着于该宝可梦。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Boomerang Energy@TWM 166",
    "parse": {
     "items": [
      {
@@ -514,60 +516,58 @@
        {
         "kind": "energy",
         "name": "Boomerang Energy",
-        "trigger": "on_use",
+        "trigger": "static",
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "fx",
+          "target": null,
           "amount": null,
-          "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "tag": "senergy:boomerang",
+           "family": "special_energy"
           }
          }
         ],
-        "source_text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking."
+        "source_text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
+        "fx_family": "special_energy"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "senergy:boomerang"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "energy",
       "name": "Boomerang Energy",
-      "trigger": "on_use",
+      "trigger": "static",
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "fx",
+        "target": null,
         "amount": null,
-        "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "tag": "senergy:boomerang",
+         "family": "special_energy"
         }
        }
       ],
-      "source_text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking."
+      "source_text": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
+      "fx_family": "special_energy"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "senergy:boomerang"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -41464,14 +41464,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lycanroc@JTG 85",
    "parse": {
     "items": [
      {
@@ -41511,30 +41513,31 @@
        {
         "kind": "ability",
         "name": "Spike-Clad",
-        "trigger": "on_evolve",
+        "trigger": "on_use",
         "conditions": [],
         "actions": [
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "evolve_attach_named": [
+            2,
+            "Spiky Energy"
+           ]
           }
          }
         ],
-        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Spiky Energy cards from your discard pile to this Pokémon."
+        "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Spiky Energy cards from your discard pile to this Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "evolve_act:attach_named:2:Spiky Energy:discard:self"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -41560,31 +41563,31 @@
      {
       "kind": "ability",
       "name": "Spike-Clad",
-      "trigger": "on_evolve",
+      "trigger": "on_use",
       "conditions": [],
       "actions": [
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "evolve_attach_named": [
+          2,
+          "Spiky Energy"
+         ]
         }
        }
       ],
-      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Spiky Energy cards from your discard pile to this Pokémon."
+      "source_text": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may attach up to 2 Spiky Energy cards from your discard pile to this Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:40:per:opp_active_counters"
+     "dmg_plus:40:per:opp_active_counters",
+     "evolve_act:attach_named:2:Spiky Energy:discard:self"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -98902,14 +98905,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Pachirisu@MEG 51",
    "parse": {
     "items": [
      {
@@ -98925,23 +98930,23 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "opp",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（that Pokémon）"
+           "arm_attach_counters": 8
           }
          }
         ],
-        "source_text": "During your opponent’s next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon."
+        "source_text": "During your opponent’s next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）"
-       }
-      ]
+      "errors": [
+       "[0] action.target 非法：opp"
+      ],
+      "engine_tags": [
+       "arm:attach_energy:counters:8:on:target:scope:own_turn:match:event_target:until:opp_next_turn"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -98954,23 +98959,23 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "opp",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（that Pokémon）"
+         "arm_attach_counters": 8
         }
        }
       ],
-      "source_text": "During your opponent’s next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon."
+      "source_text": "During your opponent’s next turn, whenever they attach an Energy card from their hand to the Defending Pokémon, place 8 damage counters on that Pokémon.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）"
-     }
+    "errors": [
+     "[0] action.target 非法：opp"
     ],
+    "engine_tags": [
+     "arm:attach_energy:counters:8:on:target:scope:own_turn:match:event_target:until:opp_next_turn"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -150510,14 +150515,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent’s Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "若此卡所附着的宝可梦的撤退费用正好为 4、位于战斗区，且被对手宝可梦的招式伤害击倒，则以任意方式从该宝可梦上将最多 3 张基本能量卡移动到你的后备宝可梦上。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Heavy Baton@TEF 151",
    "parse": {
     "items": [
      {
@@ -150533,25 +150540,26 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "ko_move_energy_bench": [
+            3,
+            4
+           ]
           }
          }
         ],
-        "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
+        "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "on_event:ko:move_energy_to_bench:3:on:leaving:scope:own_by_attack:require:was_active:require:retreat:4"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -150564,23 +150572,24 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "ko_move_energy_bench": [
+          3,
+          4
+         ]
         }
        }
       ],
-      "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like."
+      "source_text": "If the Pokémon this card is attached to has a Retreat Cost of exactly 4, is in the Active Spot, and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 3 Basic Energy cards from that Pokémon to your Benched Pokémon in any way you like.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "on_event:ko:move_energy_to_bench:3:on:leaving:scope:own_by_attack:require:was_active:require:retreat:4"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

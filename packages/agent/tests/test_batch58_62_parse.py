@@ -95,11 +95,25 @@ class TestPlayGate(unittest.TestCase):
                   "Prize cards remaining. Draw 1 card.")
         self.assertEqual(r["play_gate"], "opp_prizes_exactly:2")
 
-    def test_unknown_gate_stays_unmodeled(self):
-        """引擎没有的组合条件（六张具名卡全在场）⇒ 如实未建模"""
+    def test_multi_name_gate_is_modeled(self):
+        """**多张具名卡同时在场**（D2，2026-11-08）→ 合取 gate `all_in_play:`
+
+        本用例以前断言「如实未建模」（当时 gate 只能表达单条件）。D2 之后
+        引擎能求值 `all_in_play:`，于是正确的行为是**认领**并落成合取条件 ——
+        继续拒收等于让这张卡永远进不了池。
+        """
         r = _tags("You can use this card only if you have N’s Darmanitan, N’s "
                   "Zoroark {ex} and N’s Zekrom in play. Draw 1 card.")
-        self.assertTrue(any("打出前置条件" in u for u in r["unsupported"]))
+        self.assertEqual(r["play_gate"],
+                         "all_in_play:N's Darmanitan|N's Zoroark {ex}|N's Zekrom")
+        self.assertFalse([u for u in r["unsupported"] if "打出前置条件" in u])
+
+    def test_descriptive_phrase_is_not_a_name_list(self):
+        """描述性短语（「any Tera Pokémon」）不得当成具名卡列表 —— 否则门槛
+        永远判不满足，卡等于被锁死"""
+        r = _tags("You can use this card only if you have any Tera Pokémon in "
+                  "play. Draw 1 card.")
+        self.assertEqual(r["play_gate"], "tera_in_play")
 
     def test_cost_word_not_taken_as_gate(self):
         """`only if you **discard**` 是**代价**，不是 gate（本批最易混）"""

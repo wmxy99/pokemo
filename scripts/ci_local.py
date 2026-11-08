@@ -133,6 +133,19 @@ def build_jobs() -> list:
             # （只读 JSON + 源码，不需要 torch/三方依赖，放在 decl-check 里最省）
             Step("规则一致性矩阵（docs/RULE_CONFORMANCE.md）",
                  [PY, "scripts/check_conformance.py"], REPO),
+            # PR 模板守卫：模板本身必须存在且仍包含「必勾项」的关键条目。
+            # 模板被删/被精简到只剩标题时，PR 就没有任何强制力了 ——
+            # 而这件事**不会有人报错**，只会慢慢失效。
+            Step("PR 模板必勾项齐全", [PY, "-c",
+                 "import pathlib,sys\n"
+                 "p=pathlib.Path('.github/pull_request_template.md')\n"
+                 "if not p.is_file(): sys.exit('缺少 PR 模板')\n"
+                 "t=p.read_text(encoding='utf-8')\n"
+                 "need=['矩阵已同步','五处同查','两处同挡','注入式负向自测',\n"
+                 "      '计数守卫','CI 8/8','如实披露','规则一致性矩阵']\n"
+                 "miss=[k for k in need if k not in t]\n"
+                 "if miss: sys.exit('PR 模板缺必勾项: %s' % miss)\n"
+                 "print('OK: PR 模板 %d 个必勾项齐全' % len(need))"], REPO),
         ]),
         Job("web-build", [
             Step("Build (vite)", [npm, "run", "build"], _p("apps", "web"),

@@ -254,7 +254,10 @@ footer.site{border-top:1px solid var(--line-2);margin-top:32px;padding:26px 24px
 .seg button:hover{color:var(--brand-deep)}
 
 @keyframes card-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.card{animation:card-in .22s ease both}
+/* ⚠ `backwards` 而不是 `both`：`both` 会把动画末帧的 `transform:none` **永久**压
+   在元素上，于是 `.card:hover{transform:…}` 永远不生效（动画优先级高于普通声明）。
+   这类「hover 没反应」在截图里看不出来，只能靠手感发现。 */
+.card{animation:card-in .22s var(--ease-out) backwards}
 
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important;animation:none !important}
@@ -384,3 +387,93 @@ footer.site a{color:var(--brand);text-decoration:underline}
 /* 统一「首屏提示条」：页面顶部的一句话引导 */
 .lead{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line-2);border-left:3px solid var(--brand);
   border-radius:0 10px 10px 0;background:#FCFCFD;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+
+/* ==================================================================
+   视觉与交互打磨（2026-11-08）
+   参考宝可梦官方站点的「实体卡牌感」：卡片有重量、动效带回弹、页面分层入场。
+   三条纪律：
+     · 只动 transform / opacity / box-shadow（不触发布局重排，滚动不卡）；
+     · 所有动效都走统一的时长/缓动 token，改一处即全站一致；
+     · `prefers-reduced-motion` 已在下方统一降级（既有规则，优先级最高）。
+   ================================================================== */
+:root{
+  --ease-out:cubic-bezier(.22,.85,.3,1);
+  --ease-back:cubic-bezier(.34,1.56,.64,1);
+  --dur-1:140ms; --dur-2:240ms; --dur-3:420ms;
+  --shadow-lift:0 14px 34px rgba(15,23,42,.13);
+}
+
+/* --- 页面入场：标题先到、面板依次跟上（分层节奏，避免整页一起闪出来） --- */
+@keyframes page-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.page-head{animation:page-rise var(--dur-3) var(--ease-out) backwards}
+main .card:nth-of-type(2){animation-delay:45ms}
+main .card:nth-of-type(3){animation-delay:90ms}
+main .card:nth-of-type(4){animation-delay:135ms}
+
+/* --- 面板：悬浮微抬升 + 更实的投影（卡牌「拿起来」的手感） --- */
+.card{transition:box-shadow var(--dur-2) var(--ease-out),
+                 transform var(--dur-2) var(--ease-out),
+                 border-color var(--dur-2) var(--ease-out)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift);border-color:#CBD5E1}
+
+/* --- 按钮：按下回弹（只有 transform，不影响布局） --- */
+button{transition:transform var(--dur-1) var(--ease-out),
+                 background var(--dur-1) ease, color var(--dur-1) ease,
+                 border-color var(--dur-1) ease, box-shadow var(--dur-1) ease}
+button:not(:disabled):active{transform:translateY(1px) scale(.99)}
+.chip-btn:hover:not(:disabled),.seg button:hover:not(:disabled){transform:translateY(-1px)}
+.chip-btn:active:not(:disabled),.seg button:active:not(:disabled){transform:translateY(1px)}
+
+/* --- 顶部：品牌三色细线（红/黄/蓝，官方站点的识别色） --- */
+header.site{position:sticky}
+header.site::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,var(--brand) 0%,#F59E0B 38%,#2563EB 72%,
+             rgba(37,99,235,0) 100%);opacity:.5;pointer-events:none}
+
+/* --- 表格：行悬浮高亮（图书馆/批次表逐行扫读时不容易串行） --- */
+table tbody tr{transition:background var(--dur-1) ease}
+table tbody tr:hover{background:rgba(220,38,38,.035)}
+
+/* --- 卡图：轻微的「镀膜」高光扫过（hover 时一次性，不做常驻动画） --- */
+.lib-hero{position:relative;overflow:hidden;
+  transition:transform var(--dur-2) var(--ease-back),box-shadow var(--dur-2)}
+.lib-hero:hover{transform:translateY(-3px) scale(1.02);box-shadow:var(--shadow-lift)}
+.lib-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);
+  transform:translateX(-120%);transition:transform var(--dur-3) var(--ease-out)}
+.lib-hero:hover::after{transform:translateX(120%)}
+.lib-thumb{transition:transform var(--dur-1) var(--ease-out)}
+.lib-thumb:hover{transform:scale(1.06)}
+
+/* --- 骨架屏（加载态占位，避免「白屏 → 突然一大块内容」） --- */
+@keyframes sk-sweep{to{transform:translateX(100%)}}
+.sk{position:relative;overflow:hidden;background:#EEF1F5;border-radius:8px}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.78),transparent);
+  animation:sk-sweep 1.25s infinite}
+.sk-line{height:12px;margin:8px 0}
+.sk-line.w60{width:60%} .sk-line.w40{width:40%}
+
+/* --- 提示条：滑入带回弹 --- */
+@keyframes toast-in{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+.toast{animation:toast-in var(--dur-2) var(--ease-back) backwards}
+
+/* --- 滚动条 / 选中色 / 平滑滚动（长页面切换时不再「跳一下」） --- */
+html{scroll-behavior:smooth}
+*{scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px;
+  border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:#94A3B8;background-clip:content-box}
+::selection{background:rgba(220,38,38,.16)}
+
+/* --- 页脚「官方参考」链接组（外链，标注为非官方项目的外部参考） --- */
+.official-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.official-links a{display:inline-flex;align-items:center;gap:6px;font-size:12px;
+  color:var(--ink-2);text-decoration:none;border:1px solid var(--line-2);
+  border-radius:999px;padding:5px 12px;min-height:30px;background:#fff;
+  transition:border-color var(--dur-1),color var(--dur-1),transform var(--dur-1)}
+.official-links a:hover{border-color:var(--brand-line);color:var(--brand-deep);
+  transform:translateY(-1px)}
+.official-links a::after{content:"↗";font-size:11px;opacity:.6}
+

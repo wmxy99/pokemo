@@ -336,6 +336,14 @@ class FieldPokemon:
     moved_active_turn: int = 0
     evolved_turn: int = 0
     evolved_from_name: str = ""
+    # ---- 进化堆叠（D3 devolve，2026-11-08）----
+    # 退化必须知道「这只下面压着哪些卡」，而 `evolve_to` 只换 `pdef`、把旧定义丢掉，
+    # 于是「把最高阶进化卡放回手牌」无从下手（只能按名字猜，会猜错同名不同印刷）。
+    # 存 `PokemonDef` 引用（注册表里的对象，无额外拷贝开销）：底层在前、顶层在后。
+    # 不变量：`under` 长度 = 当前 stage - 基础 stage（基础宝可梦恒为空）。
+    under: list = field(default_factory=list)
+    # 退化发生的回合（`turn_number`）—— 官方：退化过的宝可梦**当回合不能再进化**。
+    devolved_turn: int = 0
     healed_turn: int = 0
     # ---- Pokémon Checkup 伤害改写（2026-10-28 第十三批）----
     # 「During Pokémon Checkup, put N damage counters on that Pokémon instead of
@@ -544,7 +552,14 @@ class FieldPokemon:
         self.retaliate_owner = -1
 
     def evolve_to(self, ndef: PokemonDef) -> None:
-        """E2 进化：替换物种；保留能量与伤害，清除状态"""
+        """E2 进化：替换物种；保留能量与伤害，清除状态
+
+        D3：把**原来的定义**压进 `under` 堆叠，供退化还原（同名不同印刷也能还原到
+        正确的那一张，不需要按名字反查）。
+        """
+        self.under = list(self.under) + [self.pdef]
+        # 退化当回合的限制只作用于「这次退化后」—— 一进化就失效
+        self.devolved_turn = 0
         self.pdef = ndef
         self.status.clear()
         self.clear_turn_locks()
@@ -555,6 +570,30 @@ class FieldPokemon:
         # 可随时弃置」这三条化石特权（继续留着会变成**静默加强**）。
         self.fossil = False
         self.fossil_ref = None
+
+    def devolve(self, count: int = 1) -> list:
+        """退化 count 阶（D3）：把压在上面 count 张进化卡退回，返回这些定义
+
+        - 只退**实际存在**的层数（`count` 超过堆叠深度时退到基础形态为止）；
+        - **保留**伤害指示物与附着卡（能量/道具）—— 官方退化不回血；
+        - 退化后如果伤害 ≥ 新形态的 HP 上限 → 由调用方判击倒；
+        - **不清除特殊状态**：清除状态是「进化」的明文规则（Evolving removes
+          Special Conditions），退化没有对应条文，照抄会变成静默改变对局。
+        - 记 `devolved_turn`，`Battle._do_evolve` 据此挡掉当回合再进化。
+        """
+        n = max(0, min(int(count), len(self.under)))
+        if n <= 0:
+            return []
+        # ⚠ 退 1 阶 = **当前这张**（最上面那张）回手牌、本体降为 `under[-1]`。
+        # 第一版把 `under[-n:]` 当返回值（把下面的卡当成了要退回的卡），
+        # 于是「Big → Mid」会退成「Mid → Tiny」并把 Tiny 留下、Big 凭空消失 ——
+        # 数值上只是「少退一阶」，日志照样写着 devolve，完全看不出来。
+        returned = [self.pdef] + self.under[len(self.under) - n + 1:]
+        self.pdef = self.under[len(self.under) - n]
+        self.under = self.under[:len(self.under) - n]
+        self.evolved_from_name = ""
+        self.evolved_turn = 0
+        return returned
 
     def summary(self) -> dict:
         return {

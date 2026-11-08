@@ -147,16 +147,27 @@ class TestBatch89PrizeBonus(unittest.TestCase):
                "more Prize cards.", kind="supporter")
         self.assertEqual(o["tags"], ["prize_bonus:3:nteam"])
 
-    def test_anthea_unmodeled_gate_rejected(self):
-        """Anthea 真实卡面含**未建模**的「6 张具名宝可梦在场」gate → 整卡拒收
-        （否则 gate 被静默丢弃 = 无条件 +3 奖赏的静默 buff）"""
-        o = _m("You can use this card only if you have N's Darmanitan, N's "
+    def test_anthea_multi_name_gate(self):
+        """Anthea 真实卡面（D2 起）：6 张具名卡 → 合取 gate + `prize_bonus` 都要在
+
+        以前这里是「整卡拒收」（gate 只能表达单条件）。D2 之后拒收才是错：
+        gate 已能求值，继续丢弃它等于让这张卡永远进不了池；
+        但**也不能只留 tag 丢掉 gate**（那就是无条件 +3 奖赏的静默 buff）——
+        所以本用例同时断言两件事。
+        """
+        txt = ("You can use this card only if you have N's Darmanitan, N's "
                "Zoroark {ex}, N's Vanilluxe, N's Klinklang, N's Reshiram, and "
                "N's Zekrom in play.\n\nDuring this turn, if your opponent's "
                "Active Pokémon is Knocked Out by damage from an attack used by "
-               "your N's Pokémon, take 3 more Prize cards.", kind="supporter")
-        self.assertEqual(o["tags"], [])
-        self.assertTrue(o["unsupported"], "未建模 gate 应使整卡如实未建模")
+               "your N's Pokémon, take 3 more Prize cards.")
+        o = _m(txt, kind="supporter")
+        self.assertEqual(o["tags"], ["prize_bonus:3:nteam"])
+        self.assertEqual(o["unsupported"], [])
+        # gate 是**字段**（不是 tag），`_m` 不带它 → 直接问 parse_rule
+        sp = E.parse_rule(txt, kind="supporter", name="Anthea & Concordia")
+        gate = (sp.get("play_gate") or "")
+        self.assertTrue(gate.startswith("all_in_play:"), gate)
+        self.assertEqual(len(gate.split("|")), 6, "6 张具名卡一个都不能少")
 
     def test_attack_side_not_claimed(self):
         """该句式只在训练家卡级认领，招式/特性侧不得冒充（否则整卡错位）"""

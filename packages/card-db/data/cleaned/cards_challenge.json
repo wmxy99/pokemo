@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 17:03:01",
+  "reparsed_at": "2026-11-08 19:26:09",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1222,
+  "engine_ready": 1225,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1222,
-   "engine_approximated": 1207,
-   "engine_unmatched": 45,
+   "zh_backfill": 1225,
+   "engine_approximated": 1210,
+   "engine_unmatched": 42,
    "engine_namekey_mismatch": 7
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 125,
-   "engine_tags": 1532,
-   "unsupported": 46,
+   "engine_tags": 1534,
+   "unsupported": 43,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1207,
+  "engine_approximated": 1210,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -82450,14 +82450,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Archeops@WHT 51",
    "parse": {
     "items": [
      {
@@ -82467,65 +82469,55 @@
        {
         "kind": "ability",
         "name": "Ancient Wing",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "evolve",
+          "type": "rule",
           "amount": null,
-          "target": "self"
+          "target": "any",
+          "extra": {
+           "devolve": "opp:1",
+           "active_only": true
+          }
          }
         ],
         "source_text": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent’s evolved Pokémon by putting the highest Stage Evolution card on it into your opponent’s hand."
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "devolve:opp:1:active_only"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "evolve",
-        "reason": "招式/特性驱动的进化需卡级 tag"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Ancient Wing",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "evolve",
+        "type": "rule",
         "amount": null,
-        "target": "self"
+        "target": "any",
+        "extra": {
+         "devolve": "opp:1",
+         "active_only": true
+        }
        }
       ],
       "source_text": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent’s evolved Pokémon by putting the highest Stage Evolution card on it into your opponent’s hand."
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "evolve",
-      "reason": "招式/特性驱动的进化需卡级 tag"
-     }
+    "engine_tags": [
+     "devolve:opp:1:active_only"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -148748,14 +148740,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can’t evolve this turn.)",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "将你的 1 只已进化的 {P} 宝可梦退化，将其身上任意数量的进化卡加入手牌。（该宝可梦在本回合无法进化。）",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Strange Timepiece@MEG 128",
    "parse": {
     "items": [
      {
@@ -148769,16 +148763,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "evolve",
-          "amount": null,
-          "target": "self"
-         },
-         {
           "type": "rule",
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "devolve": "self:any",
+           "type": "psychic",
+           "who": "devolve"
           }
          }
         ],
@@ -148787,16 +148778,11 @@
       ],
       "errors": [],
       "engine_tags": [
-       "candy"
+       "devolve:self:any:type:psychic"
       ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -148807,16 +148793,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "evolve",
-        "amount": null,
-        "target": "self"
-       },
-       {
         "type": "rule",
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "devolve": "self:any",
+         "type": "psychic",
+         "who": "devolve"
         }
        }
       ],
@@ -148825,14 +148808,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "candy"
+     "devolve:self:any:type:psychic"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -157791,14 +157769,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "You can use this card only if you have N’s Darmanitan, N’s Zoroark {ex}, N’s Vanilluxe, N’s Klinklang, N’s Reshiram, and N’s Zekrom in play.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your N’s Pokémon, take 3 more Prize cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "仅当你场上有 N 的达摩狒狒、N 的索罗亚克{ex}、N 的双倍多多冰、N 的齿轮怪、N 的莱希拉姆和 N 的捷克罗姆时，才能使用此卡。\n\n本回合中，若对手的战斗宝可梦被你的 N 的宝可梦使用的招式伤害击倒，则多拿取 3 张奖赏卡。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Anthea & Concordia@ASC 182",
    "parse": {
     "items": [
      {
@@ -157816,23 +157796,23 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+           "prize_bonus": 3,
+           "scope": "nteam"
           }
          }
         ],
-        "source_text": "You can use this card only if you have N's Darmanitan, N's Zoroark {ex}, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play.\n\nDuring this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards."
+        "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards.",
+        "citations": [],
+        "play_gate": "all_in_play:N's Darmanitan|N's Zoroark {ex}|N's Vanilluxe|N's Klinklang|N's Reshiram|N's Zekrom"
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "prize_bonus:3:nteam"
+      ],
       "play_cost": "",
-      "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-       }
-      ]
+      "play_gate": "all_in_play:N's Darmanitan|N's Zoroark {ex}|N's Vanilluxe|N's Klinklang|N's Reshiram|N's Zekrom",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -157847,21 +157827,21 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "打出前置条件（You can use this card only if …）未建模（B5）"
+         "prize_bonus": 3,
+         "scope": "nteam"
         }
        }
       ],
-      "source_text": "You can use this card only if you have N's Darmanitan, N's Zoroark {ex}, N's Vanilluxe, N's Klinklang, N's Reshiram, and N's Zekrom in play.\n\nDuring this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards."
+      "source_text": "During this turn, if your opponent's Active Pokémon is Knocked Out by damage from an attack used by your N's Pokémon, take 3 more Prize cards.",
+      "citations": [],
+      "play_gate": "all_in_play:N's Darmanitan|N's Zoroark {ex}|N's Vanilluxe|N's Klinklang|N's Reshiram|N's Zekrom"
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "打出前置条件（You can use this card only if …）未建模（B5）"
-     }
+    "engine_tags": [
+     "prize_bonus:3:nteam"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

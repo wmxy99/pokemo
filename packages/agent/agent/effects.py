@@ -1234,6 +1234,10 @@ _ABILITY_COST_SHAPE = re.compile(
 # `battle._eval_condition` **确有其键**的条件 —— 引擎里没有的（例如
 # 「你场上有 N's Darmanitan、N's Zoroark {ex}… 这六张全部在场」）一律不认领，
 # 让整卡如实未建模，而不是拿一个近似条件顶上（那会把门槛换成另一个意思）。
+# 「you can use this card only if you have <具名卡>, <具名卡>, and <具名卡> in play」
+_MULTI_NAME_GATE_RE = re.compile(
+    r"^you can use this card only if you have (?P<names>.+?) in play[.]\s*", re.I)
+
 _PLAY_GATE_PATTERNS = (    # 「any of your Pokémon were Knocked Out during your opponent's last turn」
     (re.compile(r"^you can use this card only if any of your pok[eé]mon were "
                 r"knocked out during your opponent'?s last turn[.]\s*", re.I),
@@ -1293,6 +1297,18 @@ def _split_play_gate(text: str, kind: str) -> tuple:
             continue
         g = key.format(n=int(m.group("n"))) if "{n}" in key else key
         return t[m.end():].strip(), g
+    # D2（2026-11-08）：**多个具名卡同时在场** —— 「only if you have A, B, and C
+    # in play」（Anthea & Concordia 要 6 张）。上面那张表只表达单条件，这条以前
+    # 落到「认不出 → 整卡拒收」。
+    m = _MULTI_NAME_GATE_RE.match(t)
+    if m:
+        names = [x.strip() for x in re.split(r",\s*(?:and\s+)?|\s+and\s+",
+                                             m.group("names")) if x.strip()]
+        # 每条都必须是**具名卡**（含 's 属格 或 {ex} 后缀）；否则宁可不认领 ——
+        # 把「any Tera Pokémon」这类描述性短语当成卡名会让门槛永远判不满足。
+        if len(names) >= 2 and all(
+                ("'s" in _norm_apostrophe(n)) or "{ex}" in n for n in names):
+            return t[m.end():].strip(), "all_in_play:" + "|".join(names)
     return t, None
 
 
@@ -3691,6 +3707,54 @@ def _detect_s3(text: str, kind: str) -> list:
     return []
 
 
+# D3（2026-11-08）退化 devolve —— 卡面两种写法（对手/自己）
+#
+# 「devolve 1 of your opponent's evolved Pokémon by putting the **highest** Stage
+#  Evolution card on it into **their** hand」（Archeops，特性）
+# 「Devolve 1 of your evolved {P} Pokémon by putting **any number** of Evolution
+#  cards on it into your hand」（Strange Timepiece，道具）
+# ⚠ 两条正则都写成「空白宽松 + 撇号兼容」：卡面里可能是 `’`（不是 `'`）、
+# 也可能有换行/双空格。第一版按字面单空格写，`_detect_devolve` 因为先做了
+# 归一才匹配上，而**抹句用的同一组正则**在原始文本上搜不到 → 抹不掉 →
+# 同一句被别的检测器再认领一次（实测：`candy` 假 tag + 进化未建模）。
+_DEVOLVE_OPP_RE = re.compile(
+    r"devolve\s+1\s+of\s+your\s+opponent['’]s\s+evolved\s+pok[eé]mon"
+    r"\s+by\s+putting\s+the\s+highest\s+stage\s+evolution\s+card\s+on\s+it"
+    # 卡面既可能写 "into **their** hand"，也可能写 "into **your opponent's** hand"
+    # （Archeops 实体卡是后者）—— 两种都要认，否则整卡拒收且看不出为什么。
+    r"\s+into\s+(?:their|your\s+opponent['’]s)\s+hand", re.I)
+_DEVOLVE_SELF_RE = re.compile(
+    r"devolve\s+1\s+of\s+your\s+evolved\s+\{([a-z])\}\s+pok[eé]mon"
+    r"\s+by\s+putting\s+any\s+number\s+of\s+evolution\s+cards\s+on\s+it"
+    r"\s+into\s+your\s+hand", re.I)
+
+
+def _detect_devolve(text: str, kind: str) -> list:
+    """退化（D3）→ ``rule`` 动作（tag 在 `to_engine_tags` 里拼成 `devolve:…`）
+
+    ⚠ 数量语义不能糊：「退回**最高阶** 1 张」（对手）与「退回**任意张**」（自己）
+    是两条不同的规则 —— 前者是固定阶数 1，后者是**玩家选数量**（引擎挂起选择）。
+    把后者写成 1 会让 Strange Timepiece 打出「只退一阶」的静默削弱。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    m = _DEVOLVE_OPP_RE.search(t)
+    if m:
+        # 特性侧还有「if this Pokémon is in the Active Spot」前置条件
+        return [act("rule", None, "any",
+                    {"devolve": "opp:1",
+                     "active_only": "in the active spot" in t.lower()})]
+    m = _DEVOLVE_SELF_RE.search(t)
+    if m:
+        letter = m.group(1).lower()
+        extra = {"devolve": "self:any"}
+        tname = _ENERGY_TYPE_ALIASES.get(letter)
+        if tname:
+            extra["type"] = tname
+            extra["who"] = "devolve"
+        return [act("rule", None, "any", extra)]
+    return []
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -3899,6 +3963,36 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     _re_spans = _reactive_damage_spans(t_raw)
     t = _mask_spans(t_raw, _re_spans)
     actions: list = []
+    # D3 退化：整句认领（放在最前 —— 后面「Once during your turn, if …」这类
+    # 从句会被别的检测器分段吃掉，退化句一旦被拆散就再也拼不回来）
+    _dv = _detect_devolve(t, kind)
+    if _dv:
+        actions.extend(_dv)
+        # 认领之后必须把**这一句**从后续扫描里抹掉（等长空格，位置守恒）：
+        # 句中的 "Evolution card" 会被「招式/特性驱动的进化」检测器再认领一次，
+        # 尾注 "(That Pokémon can't evolve this turn.)" 会被当成 `candy` ——
+        # 结果就是「一张卡两个 tag」→ 训练家整卡拒收（实测两处都踩到）。
+        _dv_spans = []
+        for _rx in (_DEVOLVE_OPP_RE, _DEVOLVE_SELF_RE):
+            m = _rx.search(t)
+            if not m:
+                continue
+            _a, _b = m.span()
+            # 前缀若只是「发动时机 + 前置条件」的套话，一并吃掉
+            _prefix = t[:_a]
+            if re.fullmatch(r"(?:once during your turn,?\s*)?(?:if this pok[eé]mon"
+                            r" is in the active spot,?\s*)?(?:you may\s*)?",
+                            _prefix, re.I):
+                _a = 0
+            # 尾注「(That Pokémon can't evolve this turn.)」是引擎规则的重述
+            # 尾注前面常带一个句号（`hand. (That Pokémon …)`）→ 允许前导标点，
+            # 否则匹配不上、尾注留着被进化检测器读成一次进化（实测 `candy` 假 tag）
+            _tail = t[_b:].strip()
+            if re.fullmatch(r"[\s.]*\(?that pok[eé]mon can.t evolve this turn"
+                            r"\.?\)?", _tail, re.I):
+                _b = len(t)
+            _dv_spans.append((_a, _b))
+        t = _mask_spans(t, _dv_spans)
     conditions: list = []
     lower = t.lower()
     # 「自伤指示物 + 本回合自身加伤」复合特性（第九十五批，Feraligatr）：
@@ -10754,6 +10848,14 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("nullify_if"):
                     # 招式失败门：条件成立则整招不结算
                     tags.append(f"nullify_if:{extra['nullify_if']}")
+                elif extra.get("devolve"):
+                    # D3：`devolve:<scope>:<n|any>[:type:<t>][:active_only]`
+                    _dv = str(extra["devolve"])
+                    if extra.get("type"):
+                        _dv += f":type:{extra['type']}"
+                    if extra.get("active_only"):
+                        _dv += ":active_only"
+                    tags.append(f"devolve:{_dv}")
                 elif extra.get("use_any"):
                     # S6a：先手禁攻的例外（「If you go first, you can use this
                     # attack during your first turn.」）

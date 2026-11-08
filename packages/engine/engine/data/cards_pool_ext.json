@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1207,
+      "kept": 1210,
       "by_Energy": 20,
-      "by_Pokemon": 1009,
-      "by_Trainer": 178,
+      "by_Pokemon": 1010,
+      "by_Trainer": 180,
       "skipped": {
-        "存在未建模项（整卡不收）": 45,
+        "存在未建模项（整卡不收）": 42,
         "人工卡池已有同一印刷（人工优先）": 15
       }
     }
@@ -28080,6 +28080,57 @@
       "uid": "Archen@WHT 50"
     },
     {
+      "name": "Archeops",
+      "name_zh": "始祖大鸟",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 140,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Archen",
+      "attacks": [
+        {
+          "name": "Rock Throw",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "落石",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Ancient Wing",
+          "name_zh": "远古之翼",
+          "tag": "devolve:opp:1:active_only",
+          "location": "field",
+          "desc": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent’s evolved Pokémon by putting the highest Stage Evolution card on it into your opponent’s hand.",
+          "desc_zh": "在你的回合中，若此宝可梦位于战斗区，你可以使用 1 次，令对手的 1 只已进化宝可梦退化，将其身上最高阶段的进化卡放入对手手牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "WHT",
+        "number": "51"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 604,
+      "name_key": "archeops",
+      "uid": "Archeops@WHT 51"
+    },
+    {
       "name": "Mienfoo",
       "name_zh": "功夫鼬",
       "supertype": "Pokemon",
@@ -51577,6 +51628,23 @@
       "uid": "Repel@MEG 126"
     },
     {
+      "name": "Strange Timepiece",
+      "name_zh": "奇异怀表",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "devolve:self:any:type:psychic",
+      "desc": "Devolve 1 of your evolved {P} Pokémon by putting any number of Evolution cards on it into your hand. (That Pokémon can’t evolve this turn.)",
+      "desc_zh": "将你的 1 只已进化的 {P} 宝可梦退化，将其身上任意数量的进化卡加入手牌。（该宝可梦在本回合无法进化。）",
+      "real": {
+        "set": "MEG",
+        "number": "128"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1144,
+      "uid": "Strange Timepiece@MEG 128"
+    },
+    {
       "name": "Mega Signal",
       "name_zh": "超级信号",
       "supertype": "Trainer",
@@ -53059,6 +53127,24 @@
       "source_card_id": 1233,
       "play_cost": "discard:1",
       "uid": "Canari@ASC 185"
+    },
+    {
+      "name": "Anthea & Concordia",
+      "name_zh": "安西娅与康可迪亚",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "prize_bonus:3:nteam",
+      "desc": "You can use this card only if you have N’s Darmanitan, N’s Zoroark {ex}, N’s Vanilluxe, N’s Klinklang, N’s Reshiram, and N’s Zekrom in play.\n\nDuring this turn, if your opponent’s Active Pokémon is Knocked Out by damage from an attack used by your N’s Pokémon, take 3 more Prize cards.",
+      "desc_zh": "仅当你场上有 N 的达摩狒狒、N 的索罗亚克{ex}、N 的双倍多多冰、N 的齿轮怪、N 的莱希拉姆和 N 的捷克罗姆时，才能使用此卡。\n\n本回合中，若对手的战斗宝可梦被你的 N 的宝可梦使用的招式伤害击倒，则多拿取 3 张奖赏卡。",
+      "real": {
+        "set": "ASC",
+        "number": "182"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1234,
+      "play_gate": "all_in_play:N's Darmanitan|N's Zoroark {ex}|N's Vanilluxe|N's Klinklang|N's Reshiram|N's Zekrom",
+      "uid": "Anthea & Concordia@ASC 182"
     },
     {
       "name": "Waitress",

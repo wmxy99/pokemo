@@ -3127,7 +3127,18 @@ def audit_batch58_62(card_name: str, item_name: str, desc: str,
 
     # ⑤ play_gate 形状校验（card-level 字段）
     if play_gate:
-        if play_gate not in _PLAY_GATE_OK and \
+        # D2（2026-11-08）：**多具名卡合取** `all_in_play:A|B|…`。
+        # 这里不只放行前缀、还要校验**形状**（≥2 张、每张是具名卡）：
+        # 否则「把描述性短语当卡名」会被静默放过，而它的后果是门槛**永远判不
+        # 满足**（卡被锁死，对局里只说「条件不满足」，查不出是解析写错）。
+        _m_all = re.fullmatch(r"all_in_play:(.+)", play_gate)
+        if _m_all:
+            _names = [x.strip() for x in _m_all.group(1).split("|") if x.strip()]
+            if len(_names) < 2 or not all(
+                    ("'s" in n or "\u2019s" in n or "{ex}" in n) for n in _names):
+                errs.append(f"{card_name} · {item_name}：play_gate=`{play_gate}` "
+                            "的具名卡列表形状不对（需 ≥2 张且每张带 's 或 {ex}）")
+        elif play_gate not in _PLAY_GATE_OK and \
                 not re.match(r"opp_prizes_exactly:\d+", play_gate) and \
                 not re.match(r"own_hand_at_most:\d+", play_gate):
             errs.append(f"{card_name} · {item_name}：play_gate=`{play_gate}` "
@@ -4031,6 +4042,56 @@ def _S5_CAT_KEY(raw: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+def audit_devolve(card_name: str, item_name: str, desc: str,
+                  effects: list) -> list:
+    """D3 对账：退化 devolve
+
+    两个族的共同错法都是**丢了限定词**，而且都不会报错：
+
+      · 对手/自己搞反（`opp` ↔ `self`）—— 变成「退自己的」或「退对手的」；
+      · 「any number」（自己侧）写成 `1` —— 静默削弱（只能退一阶）；
+      · 丢 `{P}` 类型限定 —— 任何属性都能退（卡面只允许超能）；
+      · 丢 `active_only` —— 备战位的 Archeops 也能发动。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    d = d.replace("’", "'")
+    joined = "|".join(str(e) for e in _expand_compound(effects))
+    if "devolve" not in d:
+        return errs
+    if "devolve:" not in joined:
+        errs.append(f"{card_name} · {item_name}：卡面有「devolve」却没产 "
+                    f"`devolve:` tag，实际 {effects}")
+        return errs
+    tag = next((e for e in _expand_compound(effects)
+                if str(e).startswith("devolve:")), "")
+    parts = str(tag).split(":")
+    scope = parts[1] if len(parts) > 1 else ""
+    amt = parts[2] if len(parts) > 2 else ""
+    opp = "your opponent's evolved" in d
+    mine = "your evolved" in d
+    if opp and scope != "opp":
+        errs.append(f"{card_name} · {item_name}：卡面退化**对手**的宝可梦，"
+                    f"tag 写成 scope={scope!r}（{tag}）")
+    if mine and scope != "self":
+        errs.append(f"{card_name} · {item_name}：卡面退化**自己**的宝可梦，"
+                    f"tag 写成 scope={scope!r}（{tag}）")
+    if "any number of evolution cards" in d and amt != "any":
+        errs.append(f"{card_name} · {item_name}：卡面「any number of Evolution "
+                    f"cards」应产 `:any`（数量由玩家选），实际 {tag}")
+    if "highest stage evolution card" in d and amt != "1":
+        errs.append(f"{card_name} · {item_name}：卡面「the highest Stage Evolution "
+                    f"card」= 固定 1 阶，实际 {tag}")
+    m_type = re.search(r"your evolved \{([a-z])\}", d)
+    if m_type and ":type:" not in tag:
+        errs.append(f"{card_name} · {item_name}：卡面限定 {{{m_type.group(1).upper()}}} "
+                    f"属性，tag 丢 `:type:`（{tag}）")
+    if "in the active spot" in d and "active_only" not in tag:
+        errs.append(f"{card_name} · {item_name}：卡面限定「in the Active Spot」，"
+                    f"tag 丢 `:active_only`（{tag}）")
+    return errs
+
+
 def audit_s6_first_turn(card_name: str, item_name: str, desc: str,
                         effects: list) -> list:
     """S6 对账：先手第一回合的**例外许可**
@@ -4212,6 +4273,7 @@ def main() -> int:
                 errs += audit_s4_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_s5_borrow(c["name"], it.get("name"), desc, eff)
                 errs += audit_s6_first_turn(c["name"], it.get("name"), desc, eff)
+                errs += audit_devolve(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4254,6 +4316,8 @@ def main() -> int:
                                     [_ctag] if _ctag else [])
             errs += audit_s6_first_turn(c["name"], c["name"], _cdesc,
                                         [_ctag] if _ctag else [])
+            errs += audit_devolve(c["name"], c["name"], _cdesc,
+                                  [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4311,8 +4375,9 @@ def main() -> int:
           "可选触发/原地替换/只能由效果上场 · "
           "效果免疫（团队范围/训练家来源） · "
           "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 · "
-          "先手首回合例外许可（招式/训练家） "
-          "五十一类对账全部一致")
+          "先手首回合例外许可（招式/训练家） · "
+          "退化 devolve（方向/阶数/属性/战斗位） "
+          "五十二类对账全部一致")
     return 0
 
 

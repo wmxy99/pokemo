@@ -225,6 +225,26 @@ function App() {
             </p>
           </section>
           <section>
+            <h4>官方参考</h4>
+            <p>
+              卡牌文本、规则与卡图的权利信息请以官方渠道为准。下面的外链仅供核对，
+              本项目不抓取、不镜像官方内容。
+            </p>
+            <div className="official-links">
+              <a href="https://www.pokemon.cn/" target="_blank" rel="noreferrer noopener">
+                宝可梦官方网站
+              </a>
+              <a href="https://www.pokemon.cn/tcg-about" target="_blank"
+                 rel="noreferrer noopener">
+                卡牌玩法指引
+              </a>
+              <a href="https://www.pokemon.com/us/pokemon-tcg/" target="_blank"
+                 rel="noreferrer noopener">
+                Pokémon TCG（英文）
+              </a>
+            </div>
+          </section>
+          <section>
             <h4>AI 与隐私</h4>
             <p>
               AI 生成的效果解析与对战解说均以「AI 生成」徽标显著标识。数据传输支持 HTTPS，

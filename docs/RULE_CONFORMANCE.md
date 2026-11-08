@@ -53,6 +53,8 @@
 | 决策分解：引擎**从不**替玩家选择（挂起即冻结 / `then` 必须执行） | `packages/engine/engine/choice.py::PendingChoice` | `packages/engine/tests/test_choice_protocol.py::TestChoiceOpens.test_play_opens_choice_and_freezes_state` | — | — | ✅ |
 | 复制对手招式（含抛币门 / 牌库顶来源；深度恒 1） | `packages/engine/engine/battle.py::_borrow_options` | `packages/engine/tests/test_borrow_s5.py::TestBorrowCoinGate.test_copied_attack_does_not_borrow_again` | `borrow_attack:` | 5 | ✅ |
 | 训练家卡类别门禁（item / supporter / stadium / tool 的出场条件） | `packages/engine/engine/battle.py::_trainer_legals` | `packages/engine/tests/test_batch58_59_trainer_gate.py::TestPlayGate` | — | — | ✅ |
+| 退化 devolve：把最高阶进化卡退回手牌、本体降级、当回合不能再进化 | `packages/engine/engine/cards.py::devolve`、`packages/engine/engine/battle.py::_apply_devolve` | `packages/engine/tests/test_s6d_devolve.py::TestDevolveBasics.test_one_step_returns_highest_card_to_hand` | `devolve:` | 2 | ✅ |
+| 打出前置条件（含**多个**具名卡同时在场） | `packages/engine/engine/battle.py::_play_gate_ok`、`packages/engine/engine/battle.py::_gate_name_norm` | `packages/engine/tests/test_s6d_gate.py::TestAllInPlayGate.test_gate_blocks_when_one_missing` | — | — | ✅ |
 | 池内每张卡的每个训练家 tag 都必须有可执行落点（池内死卡守卫） | `packages/engine/tests/test_legals_coverage.py::_tag_prefixes` | `packages/engine/tests/test_legals_coverage.py::TestPoolTrainersArePlayable` | — | — | ✅ |
 
 ## 已知差异（`⚠️` 行的展开）
@@ -67,13 +69,10 @@ card** for each mulligan。引擎直接按次数抽满。
 改成「挂起 `mulligan_draw` 选择 + 置 `_setup_pending_begin`，由 `_close_choice`
 补做 `_begin_turn`」，并补 3 条真实对局用例（双方都 mulligan / 只有一方 / 开关关闭）。
 
-**D2 · 多条件组合门槛（gate）**
-卡面「if … and if …」（两个以上条件同时成立才生效）目前按**单条件**解析，
-解析层对这类句式**整卡拒收**（不是猜一个条件照做）。拒收=不进池，
-所以在池内的卡上不会算错；池外 41 张里有这类。
-
-**D3 · 退化 devolve**
-没有退化机制 → 相关卡未进池（结构性 4 张之一）。
+> D2（多条件门槛）与 D3（退化 devolve）已在 **2026-11-08** 落地：前者支持
+> `all_in_play:<名1>|<名2>|…` 的合取（Anthea & Concordia 进池），后者有完整
+> 退化链（Archeops / Strange Timepiece 进池）。二者的守卫是上表对应行 +
+> `tests/test_s6d_devolve.py` / `tests/test_s6d_gate.py`。
 
 ## 维护方式
 

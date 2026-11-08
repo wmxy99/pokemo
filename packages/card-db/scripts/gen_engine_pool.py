@@ -65,6 +65,9 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 白名单是过滤，漏写即静默丢弃、卡照样能打。
                 "team_boost:",
                 "discard_search_energy", "search_energy", "candy",
+                # D3（2026-11-08）：退化（Strange Timepiece）—— 把进化卡退回手牌。
+                # 漏写这条的后果是「卡照收但 tag 被过滤」→ 打出即「未知训练家 tag」。
+                "devolve:",
                 # 第九十二批（2026-11-05）：从牌库检索并当场进化（Salvatore）。
                 # 该前缀此前只在 ATTACK_TAG_PREFIXES，训练家侧与 `_do_trainer`
                 # 都缺 → 卡三处全缺、必然在池外。`:no_ability` 变体由
@@ -324,6 +327,8 @@ ATTACK_TAG_PREFIXES = (
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
 ABILITY_TAG_PREFIXES = (
+    # D3（2026-11-08）：退化特性（Archeops「devolve:opp:1:active_only」）
+    "devolve:",
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
     # 第四十九批（2026-11-04）：**补白** —— 特性侧「draw cards until you have N」
     # （Quaquaval「Up-Tempo」/ Iono's Kilowattrel「Flashing Draw」）。引擎早在

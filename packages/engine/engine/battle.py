@@ -778,6 +778,33 @@ class Battle:
                 # 主动施加状态（`burn`/`poison`/…）：对手无战斗位则不可发动
                 if ab.tag in STATUSES and (opp.active is None or opp.active.is_ko):
                     continue
+                # D3：退化型特性的**可发性** —— 「if this Pokémon is in the Active
+                # Spot」是发动条件（`active_only`），且对手必须真有可退化的宝可梦；
+                # 目标逐只列（与 `heal:` 同口径：不可达的目标不列动作，免得 AI
+                # 反复尝试必然抛错的假动作）。
+                if ab.tag.startswith("devolve:"):
+                    _dv = str(ab.tag).split(":")
+                    if "active_only" in _dv and p.active is not fp:
+                        continue
+                    _dscope = _dv[1] if len(_dv) > 1 else "self"
+                    _dtype = ""
+                    for _i in range(3, len(_dv) - 1):
+                        if _dv[_i] == "type":
+                            _dtype = _dv[_i + 1].lower()
+                    _side_i = (self.current if _dscope == "self"
+                               else 1 - self.current)
+                    _tg = self.players[_side_i]
+                    _valid = [i for i in range(len(_tg.all_field()))
+                              if self._devolve_target(_side_i, i, _dtype)]
+                    if not _valid:
+                        continue
+                    for _ti in _valid:
+                        out.append({"verb": "ability", "name": ab.name,
+                                    "name_zh": ab.name_zh,
+                                    "display": ab.name_zh or ab.name,
+                                    "pos": tpos, "tag": ab.tag,
+                                    "target": int(_ti)})
+                    continue
                 out.append({"verb": "ability", "name": ab.name,
                             "name_zh": ab.name_zh,
                             "display": ab.name_zh or ab.name,
@@ -1019,6 +1046,23 @@ class Battle:
                 # 条件式抽牌即使条件不满足也可打出（抽 0 张），但牌库为空时无意义
                 if p.deck:
                     out.append(dict(base))
+            elif tag.startswith("devolve:"):
+                # D3：逐目标判定（与 `_devolve_target` 同判据）；没有合法目标不列动作
+                _dv = str(tag).split(":")
+                _dscope = _dv[1] if len(_dv) > 1 else "self"
+                _dtype = ""
+                for _i in range(3, len(_dv) - 1):
+                    if _dv[_i] == "type":
+                        _dtype = _dv[_i + 1].lower()
+                _dside = 0 if _dscope == "self" else 1      # self = 打出方
+                _dtg = self.players[self.current if _dside == 0
+                                    else 1 - self.current]
+                _found = [i for i in range(len(_dtg.all_field()))
+                          if self._devolve_target(
+                              self.current if _dside == 0 else 1 - self.current,
+                              i, _dtype)]
+                for _ti in _found:
+                    out.append({**base, "target": int(_ti)})
             elif tag.startswith("heal:"):
                 # 与 `_apply_heal` 的 scope 语义**逐项对齐**：不可达的目标不列动作，
                 # 否则「合法但必然抛错」的假动作会进入 AI 候选集
@@ -1767,6 +1811,11 @@ class Battle:
             raise ValueError("进化目标为空")
         if tgt.just_played and not self._same_turn_evolve_ok(tgt, c):
             raise ValueError("本回合刚放置/进化，不可再进化")
+        # D3（官方）：**退化过的宝可梦当回合不能再进化**（卡面「That Pokémon can't
+        # evolve this turn.」）。用独立字段判，不复用 `just_played` —— 后者语义是
+        # 「本回合刚上场/进化」，退化不是其中任何一种（混用会让日志说错原因）。
+        if getattr(tgt, "devolved_turn", 0) == self.turn_number:
+            raise ValueError("本回合已退化，不可进化")
         if tgt.pdef.name != c.pdef.evolves_from \
                 or tgt.stage + 1 != c.pdef.stage:
             raise ValueError("进化链不匹配")
@@ -2091,6 +2140,12 @@ class Battle:
                 self._log("ability", {"player": self.current, "name": name,
                                       "from": fp.name, "detail": f"draw {n}",
                                       "drew": got})
+                return {"ok": True, "event": self.events[-1]}
+            if tag.startswith("devolve:"):
+                # D3 退化（Archeops）：目标由 action 指定（对手战斗位/后备）
+                detail = self._apply_devolve(tag, action, holder=fp)
+                self._log("ability", {"player": self.current, "name": name,
+                                      "from": fp.name, "detail": detail})
                 return {"ok": True, "event": self.events[-1]}
             if tag.startswith("heal:"):
                 # 特性回复：范围语义与招式/训练家共用 `_apply_heal`；
@@ -2457,6 +2512,16 @@ class Battle:
     def _apply_choice_result(self, ch) -> None:
         """把选择结果落到状态上（每种 kind 一个分支，未知即抛错）"""
         p = self.players[ch.owner]
+        if ch.kind == "pick_devolve_count":
+            # D3：「any number of Evolution cards」—— 数量由玩家选，引擎不代选
+            opt = ch.chosen()[0]
+            side = int(ch.ctx.get("side", self.current))
+            ti = int(ch.ctx.get("target", 0))
+            detail = self._do_devolve_now(side, ti, int(opt.get("count", 1)))
+            self._log("devolve_choice", {"player": side, "target": ti,
+                                         "count": int(opt.get("count", 1)),
+                                         "detail": detail})
+            return
         if ch.kind == "pick_prize":
             # S6b/S6d：「取哪张奖赏卡」。选面朝上的那张 → 指定槽位；选背面 → 随机。
             # 一次只取 1 张；还有剩余就再挂一次（官方是逐张取的）。
@@ -3464,6 +3529,9 @@ class Battle:
             placed = self._trainer_draw(p, tag)
         elif tag.startswith("heal:"):
             placed = self._trainer_heal(p, tag, action)
+        elif tag.startswith("devolve:"):
+            # D3 退化（Strange Timepiece）：目标由 action 指定
+            placed = self._apply_devolve(tag, action)
         elif tag == "gust_confuse":
             # 拉对手后备 + 新战斗位混乱（第五十一批，Lisia's Appeal）。
             # 必须排在 `startswith("gust")` 之前 —— 否则会被它吞掉，混乱静默丢失。
@@ -3735,6 +3803,10 @@ class Battle:
         # 静态禁令（「你的对手不能从手牌打出物品卡」等，效果族提供）
         if families.blocked_play(self, p, c):
             raise ValueError("场上效果禁止打出该卡")
+        # 打出**前置条件**（D2）：合法动作表已挡一次，派发侧必须同判 ——
+        # 只挡 legals 时，AI/脚本直接给动作仍会打出，门槛等于消失。
+        if not self._play_gate_ok(p, getattr(c.tdef, "play_gate", "")):
+            raise ValueError("本卡打出前置条件不满足")
         if kind == "supporter":
             if p.supporter_used:
                 raise ValueError("本回合已使用支援者")
@@ -4034,6 +4106,87 @@ class Battle:
         self._log("draw_cond", {"tag": tag, "cond": cond, "hit": hit,
                                 "want": want, "drew": got})
         return f"draw_cond {want} (cond={'Y' if hit else 'N'})"
+
+    def _apply_devolve(self, tag: str, action: dict, holder=None) -> str:
+        """退化（D3）：``devolve:<scope>:<n|any>[:type:<t>]``
+
+        卡面两种：
+          · 对手 —— 「devolve 1 of your opponent's evolved Pokémon by putting the
+            **highest** Stage Evolution card on it into **their** hand」（Archeops）
+          · 自己 —— 「Devolve 1 of your evolved {P} Pokémon by putting **any
+            number** of Evolution cards on it into your hand」（Strange Timepiece）
+
+        ``scope``：``opp`` / ``self``（self = 卡牌使用者一方）
+        ``n``：数字 = 固定阶数；``any`` = **数量由玩家选**（挂起选择，不替玩家定）
+        ``type``：目标宝可梦属性限定（``{P}`` 之类）
+
+        目标由 action 的 ``target``（0=战斗位，n=后备n）给出 —— 与 `heal:` /
+        `counters:` 同一口径：**合法动作表必须与这里的目标语义逐项对齐**，
+        否则会出现「合法但必然抛错」的假动作。
+        """
+        parts = str(tag).split(":")
+        scope = parts[1] if len(parts) > 1 else "self"
+        amt = parts[2] if len(parts) > 2 else "1"
+        want_type = ""
+        for i in range(3, len(parts) - 1):
+            if parts[i] == "type":
+                want_type = parts[i + 1].lower()
+        # 特性侧「if this Pokémon is in the Active Spot」是**发动条件**：
+        # 派发侧也要挡（合法动作表已挡一次，但 AI 可能直接给动作 → 双重门禁）
+        if holder is not None and "active_only" in parts \
+                and self.players[self.current].active is not holder:
+            raise ValueError("该特性需在战斗位才能发动")
+        side = self.current if scope == "self" else 1 - self.current
+        ti = int(action.get("target", 0) or 0)
+        fp = self._devolve_target(side, ti, want_type)
+        if fp is None:
+            raise ValueError("退化目标不存在或不合法")
+        if amt == "any":
+            # 「any number」= 真决策：把可退的层数逐个列成选项（阶数 ≤2，选项很少）
+            depth = len(fp.under)
+            opts = [{"count": k,
+                     "display": f"退回 {k} 张进化卡（→ "
+                                f"{fp.under[depth - k].display}）"}
+                    for k in range(1, depth + 1)]
+            self._open_choice("pick_devolve_count", opts, min_pick=1, max_pick=1,
+                              tag="devolve_any",
+                              ctx={"side": int(side), "target": int(ti),
+                                   "type": want_type})
+            return "devolve pending"
+        return self._do_devolve_now(side, ti, int(amt))
+
+    def _devolve_target(self, side: int, ti: int, want_type: str = ""):
+        """退化目标（None = 不存在/不合法）—— 派发与合法动作表**共用**这一个判据"""
+        owner = self.players[side]
+        fp = owner.active if ti == 0 else (
+            owner.bench[ti - 1] if 0 < ti <= len(owner.bench) else None)
+        if fp is None or getattr(fp, "is_ko", False) or not fp.under:
+            return None
+        if want_type and str(fp.pdef.ptype).lower() != want_type:
+            return None
+        return fp
+
+    def _do_devolve_now(self, side: int, ti: int, n: int) -> str:
+        """真正执行退化 + 判击倒（选择闭合后也走这里）"""
+        owner = self.players[side]
+        fp = owner.active if ti == 0 else (
+            owner.bench[ti - 1] if 0 < ti <= len(owner.bench) else None)
+        if fp is None:
+            raise ValueError("退化目标不存在")
+        old = fp.name
+        popped = fp.devolve(n)
+        if not popped:
+            raise ValueError(f"{fp.name} 无法退化")
+        fp.devolved_turn = self.turn_number
+        for d in popped:
+            owner.hand.append(PokeRef(d))
+        self._log("devolve", {"player": side, "target": old, "to": fp.name,
+                              "cards": len(popped),
+                              "hand": [d.name for d in popped]})
+        # 退化后血量上限可能变低 → 可能直接击倒（官方：剩 HP ≤0 即被击倒）
+        if fp.is_ko:
+            self._resolve_ko(side, fp)
+        return f"devolve {old} -> {fp.name} ({len(popped)})"
 
     def _trainer_heal(self, p: PlayerState, tag: str, action: dict) -> str:
         """回复（``heal:N[:<scope>][:type:<c>]``），范围语义见 `_apply_heal`"""
@@ -12936,6 +13089,16 @@ def _eval_counter(battle, counter: str) -> int:
         f"<zone>_energy[_<color>]，zone ∈ {'/'.join(_ENERGY_ZONES)}）")
 
 
+def _gate_name_norm(s: str) -> str:
+    """卡名归一（gate 用）：`N’s Zoroark {ex}` 与 `N's Zoroark ex` 视为同一张
+
+    卡面文本用弯撇号、`{ex}` 花括号写法，引擎定义用直撇号 + ` ex` 后缀；
+    不归一会让「明明在场却判不满足」（静默把卡锁死，且报错信息看不出来）。
+    """
+    t = str(s or "").replace("\u2019", "'").replace("{ex}", " ex")
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
 def _eval_condition(battle, cond: str) -> bool:
     """条件求值（未知 → 抛错，禁止静默 False）
 
@@ -12947,6 +13110,17 @@ def _eval_condition(battle, cond: str) -> bool:
     """
     p = battle.players[battle.current]
     o = battle.players[1 - battle.current]
+    # D2（2026-11-08）：**多条件合取** —— 「you have A, B, and C in play」
+    # （Anthea & Concordia 要求 6 张具名宝可梦同时在场）。此前 gate 只能表达
+    # 单条件，于是「多个条件同时成立」整卡拒收 —— 拒收本身是对的（不猜），
+    # 但这张卡因此永远进不了池。
+    if cond.startswith("all_in_play:"):
+        want = [_gate_name_norm(x) for x in cond.split(":", 1)[1].split("|")
+                if x.strip()]
+        if not want:
+            raise ValueError("all_in_play 条件缺少卡名")
+        have = {_gate_name_norm(fp.pdef.name) for fp in p.all_field()}
+        return all(w in have for w in want)
     # ⑦ 取反（2026-10-28）：「If you **don't** have … this attack does nothing」
     if cond.startswith("not:"):
         return not _eval_condition(battle, cond[4:])

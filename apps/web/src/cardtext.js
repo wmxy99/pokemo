@@ -161,6 +161,18 @@ export const TRAINER_TAG_DESC = {
   },
   shuffle_draw_split: (a) => ({ zh: `双方各自将手牌洗回牌库，然后各抽 ${argOf(a)} 张牌。`, en: `Each player shuffles their hand into their deck and draws ${argOf(a)} card(s).` }),
   shuffle_both_coin_draw: (a) => ({ zh: `双方将手牌洗回牌库，然后抛硬币决定各自抽牌数（你抽 ${argOf(a)} 张）。`, en: `Both players shuffle their hands into their decks, then flip a coin to set the draws (you draw ${argOf(a)}).` }),
+  // D3（2026-11-08）：退化 devolve —— 把最高阶进化卡退回手牌，宝可梦本体降一级。
+  // 卡面两种写法（对手最高阶 1 张 / 自己任意张）在文案里都要能读出来，
+  // 否则 UI 只说「退化」，玩家不知道该退几张、退给谁。
+  devolve: (a) => {
+    const [scope, amt] = String(argOf(a) || 'self:1').split(':')
+    const who = scope === 'opp' ? '对手的' : '自己的'
+    const n = amt === 'any' ? '任意数量（由你选择）' : '最高阶 1 张'
+    return {
+      zh: `让${who} 1 只进化宝可梦退化：${n}进化卡放回手牌。`,
+      en: `Devolve 1 of ${scope === 'opp' ? "your opponent's" : 'your'} evolved Pokémon: return ${amt === 'any' ? 'any number of' : 'the highest'} Evolution card(s) to its owner's hand.`,
+    }
+  },
   // S6a（2026-11-08）：**先手首回合的例外许可**（不是效果，是合法性标记）。
   // 卡面：「If you go first, you may use this card / can use this attack during
   // your first turn.」—— 复合 tag 的第二段会走到这里，必须有人话说明，

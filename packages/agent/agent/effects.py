@@ -3487,6 +3487,32 @@ def _detect_f5(text: str, kind: str) -> list:
     return []
 
 
+def _detect_mode_choice(text: str, kind: str):
+    """**二选一模式**（Kieran「Choose 1: • … • …」）→ ``mode_pick:a|b``
+
+    为什么在 `parse_rule` 顶层认领而不是检测器链里：检测器链拿到的是**逐句
+    切开**的文本，两个 bullet 会各自落成散动作（实测：`switch_self` + 「静态
+    伤害增减」未建模）—— 玩家没有「选模式」的机会，两个效果还会**同时**生效。
+
+    目前认这一种形态：`switch_self` + `team_boost:<n>:cat:ex,v`。
+    其它二选一写法一律不认（整卡如实登记），绝不只取第一个模式。
+    """
+    if kind not in ("supporter", "item"):
+        return None
+    low = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip().lower()
+    if not low.startswith("choose 1"):
+        return None
+    m = _F8_MODE_BOOST_RE.search(low)
+    if not m:
+        return None
+    # ⚠ 用正则而不是子串：文本里是 `pokémon`（é），子串 `pok[eé]mon` 永远不匹配
+    #   （写成 `in` 判断时那一对方括号是**字面字符**，不是字符类）。
+    if not re.search(r"switch your active pok[eé]mon with 1 of your benched", low):
+        return None
+    modes = ["switch_self", f"team_boost:{int(m.group(1))}:cat:ex+v"]
+    return [act("rule", None, "self", {"choose_mode": "|".join(modes)})]
+
+
 def _detect_f8(text: str, kind: str) -> list:
     """F8（2026-11-08）：**规则改写 / 自身离场 / 反转退化** 五张整句
 
@@ -3500,6 +3526,16 @@ def _detect_f8(text: str, kind: str) -> list:
         # Revavroom ex「Shattering Speed」：弃自身与全部附加卡（**不是**击倒）
         if _F8_DISCARD_SELF_RE.match(low):
             return [act("rule", None, "self", {"discard_self": True})]
+        # Team Rocket's Moltres ex「Evil Incineration」：弃**具名能量**作为代价，
+        # 「If you do」才弃对手战斗位（**弃置不是击倒**，不取奖赏）。
+        _m = _F8_NAMED_ENERGY_THEN_RE.match(low)
+        if _m:
+            _key = _k(_m.group("name"))
+            if _key:
+                return [act("rule", None, "opp",
+                            {"discard_named_energy": {
+                                "key": _key, "then": "discard_defender"}})]
+            return []
         # Espeon ex「Amazez」：**全体**退化，退下来的进化卡洗回**牌库**
         if _F8_DEVOLVE_EACH_RE.match(low):
             return [act("rule", None, "opp",
@@ -3563,6 +3599,15 @@ _F8_KO_TO_HAND_RE = re.compile(
     r"^if this pok[eé]mon is knocked out by damage from an attack from your "
     r"opponent'?s pok[eé]mon,? put it into your hand instead of the discard "
     r"pile\.?\s*(?:\(discard all attached cards\.?\))?$", re.I)
+# Kieran：「During this turn, attacks used by your Pokémon do N more damage to
+# your opponent's Active Pokémon {ex} and Active Pokémon {V}」
+_F8_NAMED_ENERGY_THEN_RE = re.compile(
+    r"^discard a (?P<name>[a-z' ]{2,28}?) energy from this pok[eé]mon\.? "
+    r"if you do,? discard your opponent'?s active pok[eé]mon and all attached "
+    r"cards\.?$", re.I)
+_F8_MODE_BOOST_RE = re.compile(
+    r"during this turn,? attacks used by your pok[eé]mon do (\d+) more damage "
+    r"to your opponent'?s active pok[eé]mon", re.I)
 _F8_ENERGY_STATIC_RE = re.compile(
     r"^if this pok[eé]mon has any \{(?P<type>[a-z])\} energy attached,? it gets "
     r"\+(?P<hp>\d+) hp,? and the attacks it uses do (?P<dmg>\d+) more damage to "
@@ -6083,9 +6128,19 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     # 传给 `_parse_rule_en` 抹掉（避免 counters/heal-范围/any-number 兜底
     # 二次认领），并把动作排在修正器之前。
     _b4_acts, _b4_spans = _detect_b4(text, kind)
-    spec = (_parse_rule_en(text, kind=kind, name=name, b4_spans=_b4_spans)
-            if text and not _CJK_RE.search(str(text))
-            else _parse_rule_zh(text, kind=kind, name=name))
+    # F8（2026-11-08）：**整卡级模式选择**（Kieran「Choose 1: • … • …」）。
+    # ⚠ 必须在这里认领，**不能**只在 `_parse_rule_en` 的检测器链里做：那一层
+    # 拿到的已经是**逐句切开**的文本，两个 bullet 会各自落成散动作
+    # （实测：`switch_self` + 「静态伤害增减」未建模），玩家没有「选模式」的机会。
+    _mode_acts = _detect_mode_choice(text, kind) if text else None
+    if _mode_acts:
+        spec = {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": [], "actions": _mode_acts,
+                "source_text": str(text or ""), "citations": []}
+    else:
+        spec = (_parse_rule_en(text, kind=kind, name=name, b4_spans=_b4_spans)
+                if text and not _CJK_RE.search(str(text))
+                else _parse_rule_zh(text, kind=kind, name=name))
     if _perm_kind:
         # 例外许可：招式侧 → 招式级 tag；训练家侧 → 卡级 tag（只用于**合法性**，
         # `_do_trainer` 对它是 no-op，见引擎侧注释）。
@@ -11519,6 +11574,14 @@ def to_engine_tags(specs: list) -> dict:
                     _ohb = extra["opp_hand_bench"]
                     tags.append(f"opp_hand:bench:{_ohb.get('sel') or 'basic_pokemon'}"
                                 f":{_ohb.get('n', 1)}")
+                elif extra.get("discard_named_energy"):
+                    # F8（TR Moltres ex）：弃具名能量 → 成功才弃对手战斗位
+                    _dne = extra["discard_named_energy"]
+                    tags.append(f"discard_named_energy:{_dne.get('key')}"
+                                f":then:{_dne.get('then')}")
+                elif extra.get("choose_mode"):
+                    # F8（Kieran）：二选一模式 —— `|` 是**模式**分隔符
+                    tags.append("mode_pick:" + str(extra["choose_mode"]))
                 elif extra.get("hand_to_bench"):
                     # F8（Klinklang）：在手牌里、对手有 2 阶 → 直接铺后备
                     tags.append(f"hand_bench:{extra['hand_to_bench']}")

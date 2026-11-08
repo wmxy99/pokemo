@@ -225,6 +225,21 @@ export const TRAINER_TAG_DESC = {
   recon: (a) => ({ zh: `查看牌库顶 ${argOf(a)} 张，取符合条件的牌加入手牌。`, en: `Look at the top ${argOf(a)} cards and take the matching ones into your hand.` }),
   choose: () => ({ zh: '打出后由你选择要弃掉哪些手牌（可随时结束选择），然后抽牌到指定张数。', en: 'Choose any number of cards to discard from your hand (you may stop at any time), then draw up to the stated number.' }),
   recon_bottom: (a) => ({ zh: `查看牌库底 ${argOf(a)} 张，可取其中 1 张宝可梦加入手牌，其余洗回牌库。`, en: `Look at the bottom ${argOf(a)} cards, take a Pokémon into your hand, then shuffle the rest back.` }),
+  // F8（2026-11-08）：支援者**二选一模式**（Kieran「Choose 1」）。
+  // 两个模式互斥 —— 文案必须说明「选 1 种」，不能写成两个都发生。
+  mode_pick: (_a, _b, parts) => {
+    const body = (parts || []).join(':')
+    const boost = /team_boost:?(\d+)?/.exec(body)
+    const n = boost && boost[1] ? boost[1] : ''
+    const hasSwitch = body.includes('switch_self')
+    const bits = []
+    if (hasSwitch) bits.push('把你的战斗宝可梦与 1 只后备宝可梦互换')
+    if (boost) bits.push(`本回合你的宝可梦对对手 {ex}/{V} 战斗宝可梦的伤害 +${n || 'N'}`)
+    return {
+      zh: `选择 1 种：${bits.join(' 或 ') || '按卡面二选一'}。`,
+      en: `Choose 1: ${bits.length ? bits.map((x, i) => (i === 0 ? 'switch your Active Pokémon with 1 of your Benched Pokémon' : 'attacks do more damage to your opponent\u2019s Active {ex}/{V} this turn'))[0] : 'per card text'} (modes are mutually exclusive).`,
+    }
+  },
   discard_tool_senergy: () => ({ zh: '弃掉对手 1 只宝可梦身上的 1 张道具与 1 张特殊能量。', en: 'Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.' }),
   // F7（2026-11-08）：Megaton Blower —— 全场道具 + 全部特殊能量（可选带弃场地）。
   // 与上面的 `discard_tool_senergy`（同一只身上各 1 张）**不是**一回事，

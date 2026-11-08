@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1262（99.6%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **5** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 5） |
-| 引擎池 | **1247** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1264（99.8%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **3** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 3） |
+| 引擎池 | **1249** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **56 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.770**（200 局双盲 = 100 先手 + 100 后手，`artifacts/k1_rich.pt`；单侧对照 0.815、先手基线 0.640）· ⚠ S6a 打开官方先手规则后由 0.795 → 0.770（差值 0.025 < CI ±0.058，仍 ≥0.70 判据；权重是在旧规则下训练的，重训可回收） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **5** = 批内如实拒收 **5** + 结构性边界 **0** + 待新能力 **0** = **5** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **3** = 批内如实拒收 **3** + 结构性边界 **0** + 待新能力 **0** = **3** ✅。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 39 · 整批受阻 5），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1262 / 1267 = 99.6%**（44 批全部处理完毕）。剩余 5 张已逐批**如实拒收**（原因见各批说明），另 0 张结构性边界与 0 张待新能力卡需引擎重构（静态规则改写 · 道具与招式形态 · 逐卡机制）才可能归零。
+**终局**：`engine_ready` **1264 / 1267 = 99.8%**（44 批全部处理完毕）。剩余 3 张已逐批**如实拒收**（原因见各批说明），另 0 张结构性边界与 0 张待新能力卡需引擎重构（静态规则改写 · 道具与招式形态 · 逐卡机制）才可能归零。
 
 ---
 
@@ -144,7 +144,7 @@
 | Iron Crown ex | TEF | 81 | done（已完成） |  |
 | Lillie’s Clefairy ex | JTG | 56 | done（已完成） |  |
 | Hop’s Choice Band | JTG | 148 | done（已完成） |  |
-| Kieran | TWM | 154 | B（有具体缺口·可归族） |  |
+| Kieran | TWM | 154 | done（已完成） |  |
 | Archaludon ex | SSP | 130 | done（已完成） |  |
 | Feraligatr | TEF | 41 | done（已完成） | 跨批 → 97 |
 
@@ -422,7 +422,7 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Sylveon ex | SSP | 86 | done（已完成） |  |
-| Team Rocket's Moltres ex | DRI | 31 | D（兜底·复合句） |  |
+| Team Rocket's Moltres ex | DRI | 31 | done（已完成） |  |
 | Ethan's Sudowoodo | DRI | 93 | done（已完成） |  |
 | Walrein | SSP | 45 | done（已完成） |  |
 | Palafin ex | TWM | 61 | done（已完成） |  |
@@ -737,11 +737,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 131 张 |
-| 批次内待做 | 5 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 133 张 |
+| 批次内待做 | 3 | 全部未 ready |
 | 结构性边界 | 0 | 不承载 tag，仅建档 |
 | 待新能力 | 0 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **5** | 应等于基线 5 |
+| **合计（= 未 ready 卡数）** | **3** | 应等于基线 3 |
 
 ---
 

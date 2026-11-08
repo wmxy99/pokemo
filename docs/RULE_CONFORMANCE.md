@@ -37,7 +37,7 @@
 | 伤害顺序：基础 → ×弱点 → −抗性 → 减伤 → 护盾 → 免疫 | `packages/engine/engine/battle.py::_damage_pipeline` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | — | — | ✅ |
 | 弱点 ×2 / 抗性 −30 | `packages/engine/engine/rules.py::compute_damage` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_resistance_applies_after_weakness` | — | — | ✅ |
 | 静态减伤（「受到的招式伤害 −N」，在弱抗之后） | `packages/engine/engine/battle.py::_static_mods` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `passive:dmg_reduce:` | 4 | ✅ |
-| 限时护盾（`shield:*`：本回合/下回合内减伤或免疫） | `packages/engine/engine/rules.py::apply_shield` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `shield:` | 24 | ✅ |
+| 限时护盾（`shield:*`：本回合/下回合内减伤或免疫） | `packages/engine/engine/rules.py::apply_shield` | `packages/engine/tests/test_s6c_rules.py::TestDamagePipelineOrder.test_full_order_matches_official_sequence` | `shield:` | 25 | ✅ |
 | 特殊状态构成：中毒/灼伤可共存；睡眠/混乱/麻痹三选一 | `packages/engine/engine/rules.py::apply_status_set` | `packages/engine/tests/test_s6c_rules.py::TestStatusComposition.test_orient_replaces_orient` | — | — | ✅ |
 | 一次效果施加多个状态（卡面「now A and B」） | `packages/engine/engine/battle.py::_set_status` | `packages/engine/tests/test_s6c_rules.py::TestStatusComposition.test_multi_status_via_card_both_apply` | `status_multi:` | 7 | ✅ |
 | 宝可梦检查期：中毒 → 灼伤（先 20 伤害再抛币治愈）→ 睡眠 → 麻痹 | `packages/engine/engine/rules.py::status_checkup` | `packages/engine/tests/test_s6c_rules.py::TestBurnCheckup.test_heads_damages_then_cures` | — | — | ✅ |

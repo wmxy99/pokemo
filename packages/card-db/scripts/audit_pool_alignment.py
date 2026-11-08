@@ -4396,7 +4396,56 @@ def audit_f8_rules(card_name: str, item_name: str, desc: str,
                 and not hit[0].endswith(":" + _SYMBOL_TO_TYPE[m_es.group(1).upper()]):
             errs.append(f"{card_name} · {item_name}：条件属性 "
                         f"{{{m_es.group(1).upper()}}} 没写进 tag（{hit[0]}）")
-    # ⑦ 手牌上场（Klinklang）
+    # ⑦ 二选一模式（Kieran）
+    # ⚠ 必须看**未经 `_expand_compound` 拆分**的原始 effect 条目：`mode_pick:`
+    #   内部的 `|` 是「互斥模式」分隔符，与「复合动作」的 `|` 长得一样 ——
+    #   先拆分再判断会把第二个模式当成独立 tag，得出完全相反的结论。
+    raweffs = [str(e) for e in (effects or [])]
+    if low.startswith("choose 1") and "switch your active" in low:
+        mp = next((x for x in raweffs if x.startswith("mode_pick:")), "")
+        if not mp:
+            errs.append(f"{card_name} · {item_name}：卡面是「Choose 1」二选一，"
+                        f"必须落**一条** `mode_pick:`（两个模式用 `|` 分隔），"
+                        f"实际 {effects}")
+        else:
+            modes = mp[len("mode_pick:"):].split("|")
+            if len(modes) < 2:
+                errs.append(f"{card_name} · {item_name}：`mode_pick:` 只列了 "
+                            f"{len(modes)} 个模式（卡面给了两个）")
+            if not any(m == "switch_self" for m in modes):
+                errs.append(f"{card_name} · {item_name}：卡面的「switch your "
+                            f"Active …」模式没写进 tag（{mp}）")
+            m_b = re.search(r"do (\d+) more damage", low)
+            if m_b and not any(m.startswith("team_boost:") for m in modes):
+                errs.append(f"{card_name} · {item_name}：卡面的「do "
+                            f"{m_b.group(1)} more damage」模式没写进 tag（{mp}）")
+            # 反向：两个模式不得作为**独立条目**出现（那会同时生效）
+            stray = [x for x in raweffs
+                     if x == "switch_self"
+                     or (x.startswith("team_boost:")
+                         and not x.startswith("mode_pick:"))]
+            if stray:
+                errs.append(f"{card_name} · {item_name}：二选一的两个模式被拆成了"
+                            f"**独立 tag**（会同时生效）：{stray}")
+    # ⑧ 具名能量代价 → 弃对手战斗位（TR Moltres ex）
+    m_ne = re.search(r"discard a (?P<name>[a-z' ]{2,28}?) energy from this "
+                     r"pok[eé]mon", low)
+    if m_ne and "if you do, discard your opponent" in low:
+        dne = next((x for x in segs if x.startswith("discard_named_energy:")), "")
+        if not dne:
+            errs.append(f"{card_name} · {item_name}：卡面「弃具名能量，若如此做则"
+                        f"弃对手战斗位」缺 `discard_named_energy:`（实际 {effects}）")
+        else:
+            want = "".join(ch for ch in m_ne.group("name").lower()
+                           if ch.isalnum())
+            key = dne.split(":")[1] if len(dne.split(":")) > 1 else ""
+            if want and key != want:
+                errs.append(f"{card_name} · {item_name}：具名能量键应为 "
+                            f"{want!r}，实际 {key!r}（{dne}）")
+            if "then:discard_defender" not in dne:
+                errs.append(f"{card_name} · {item_name}：卡面「If you do → 弃对手"
+                            f"战斗位」缺 `:then:discard_defender`（{dne}）")
+    # ⑨ 手牌上场（Klinklang）
     if re.search(r"in your hand and your opponent has any stage 2", low):
         hb = next((s for s in segs if s.startswith("hand_bench:")), "")
         if not hb:
@@ -4691,6 +4740,11 @@ def main() -> int:
                                          [_ctag] if _ctag else [])
             errs += audit_f7_tools(c["name"], c["name"], _cdesc,
                                    [_ctag] if _ctag else [])
+            # F5/F8 的训练家侧（Kieran 的二选一模式在**卡级** tag 上）
+            errs += audit_f5_statics(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
+            errs += audit_f8_rules(c["name"], c["name"], _cdesc,
+                                   [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4754,7 +4808,8 @@ def main() -> int:
           "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） · "
           "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场/"
           "对手手牌铺场/双段条件静态） · "
-          "静态属性改写（改弱点方向/能量增值属性） 五十六类对账全部一致")
+          "静态属性改写（改弱点方向/能量增值属性） · "
+          "二选一模式/具名能量代价（模式不拆散/键与后续） 五十六类对账全部一致")
     return 0
 
 

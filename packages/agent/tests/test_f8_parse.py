@@ -138,5 +138,53 @@ class TestEnergyStatic(unittest.TestCase):
         self.assertNotIn("passive:energy_static:100:100:darkness", r["tags"])
 
 
+KIERAN_TXT = (
+    "Choose 1:\n\n"
+    "• Switch your Active Pokémon with 1 of your Benched Pokémon.\n"
+    "• During this turn, attacks used by your Pokémon do 30 more damage to your "
+    "opponent’s Active Pokémon {ex} and Active Pokémon {V} (before applying "
+    "Weakness and Resistance).")
+
+
+class TestModePick(unittest.TestCase):
+    """Kieran：**Choose 1** 二选一模式 → 一条 `mode_pick:a|b`"""
+
+    def test_single_tag_with_two_modes(self):
+        r = _tags(KIERAN_TXT, "supporter", "Kieran")
+        self.assertEqual(len(r["tags"]), 1,
+                         f"两个模式必须以**一条** tag 承载，实际 {r['tags']}")
+        t = r["tags"][0]
+        self.assertTrue(t.startswith("mode_pick:"), t)
+        modes = t[len("mode_pick:"):].split("|")
+        self.assertIn("switch_self", modes)
+        self.assertTrue(any(m.startswith("team_boost:30:cat:ex") for m in modes),
+                        f"增伤模式没写进 tag：{modes}")
+        self.assertEqual(r["unsupported"], [])
+
+    def test_not_split_into_two_tags(self):
+        """反向：拆成两条独立 tag 会**同时生效**（白送一个效果）"""
+        r = _tags(KIERAN_TXT, "supporter")
+        self.assertNotIn("switch_self", r["tags"])
+        self.assertFalse(any(t.startswith("team_boost:") for t in r["tags"]))
+
+
+class TestNamedEnergyThen(unittest.TestCase):
+    """TR Moltres ex：弃具名能量 → 「If you do」才弃对手战斗位"""
+
+    TXT = ("Discard a Team Rocket’s Energy from this Pokémon. If you do, discard "
+           "your opponent’s Active Pokémon and all attached cards.")
+
+    def test_tag(self):
+        r = _tags(self.TXT, "attack", "Evil Incineration")
+        self.assertEqual(r["tags"],
+                         ["discard_named_energy:teamrockets:then:discard_defender"])
+
+    def test_requires_if_you_do(self):
+        """反向：没有「If you do」的条件后续不能落 `then:`（会无条件弃对手）"""
+        r = _tags("Discard a Team Rocket’s Energy from this Pokémon.", "attack")
+        self.assertFalse(any("then:discard_defender" in t for t in r["tags"]),
+                         r["tags"])
+
+
 if __name__ == "__main__":
     unittest.main()

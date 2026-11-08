@@ -64,6 +64,10 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # Black Belt's Training）。与 `dmg_plus:`（这一招自己）不同量纲 ——
                 # 白名单是过滤，漏写即静默丢弃、卡照样能打。
                 "team_boost:",
+                # F8（2026-11-08）：支援者**二选一模式**（Kieran「Choose 1」）。
+                # `|` 在这里是**互斥模式**分隔符（不是复合动作），引擎在 legals
+                # 里各列一条、派发时按 `mode` 递归。漏写 → 卡被整卡拒收。
+                "mode_pick:",
                 "discard_search_energy", "search_energy", "candy",
                 # D3（2026-11-08）：退化（Strange Timepiece）—— 把进化卡退回手牌。
                 # 漏写这条的后果是「卡照收但 tag 被过滤」→ 打出即「未知训练家 tag」。
@@ -205,6 +209,9 @@ ATTACK_TAG_PREFIXES = (
     # F8（2026-11-08）：**弃自身与全部附加卡**（Revavroom ex「Shattering
     # Speed」）。⚠ 与 `discard_energy:` 不是一回事，也不走击倒结算（不取奖赏）。
     "discard_self:",
+    # F8：弃**具名能量**作为代价、成功才做后续（TR Moltres ex「Evil
+    # Incineration」）。与 `discard_energy:`（按属性/数量）不同源。
+    "discard_named_energy:",
     # F8：**招式侧**退化（Espeon ex「Amazez」，「devolve **each** … into their
     # deck」）。D3 只把它加进了特性白名单 → 招式侧被静默滤空、整卡拒收。
     "devolve:",

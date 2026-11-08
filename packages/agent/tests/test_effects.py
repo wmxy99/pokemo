@@ -1221,8 +1221,12 @@ class TestClauseScopedTargets(unittest.TestCase):
             "Pok\u00e9mon do 30 more damage to your opponent\u2019s Active "
             "Pok\u00e9mon {ex} and Active Pok\u00e9mon {V} (before applying "
             "Weakness and Resistance).", kind="supporter", name="Kieran")
-        self.assertIn("switch_self", r["tags"])
-        self.assertNotIn("gust", r["tags"])
+        # F8（2026-11-08）后该卡落成**一条** `mode_pick:switch_self|…`：
+        # 两个模式互斥，必须由玩家选（不再拆成两条独立 tag）。原意不变 ——
+        # 换位只能是「我方」，绝不能读成 gust（拉对手）。
+        joined = "|".join(r["tags"])
+        self.assertIn("switch_self", joined)
+        self.assertNotIn("gust", joined)
 
     def test_gust_still_detected(self):
         r = self._tags("Switch in 1 of your opponent\u2019s Benched "

@@ -900,8 +900,10 @@ class Battle:
             # S2（2026-11-08）：**复合 tag**（`a|b`）的合法性只看**第一段** ——
             # 第一段合法就能打出；后续段是同一张卡的追加效果，不该把卡变成摆设。
             # 动作里仍带**完整** tag（`base["tag"]`），由 `_do_trainer` 逐段执行。
-            # `coin:` / `coin_flip:` 的 `|` 是同一枚币的两面，不能拆。
-            if "|" in tag and not tag.startswith(("coin:", "coin_flip:")):
+            # `coin:` / `coin_flip:` 的 `|` 是同一枚币的两面；`mode_pick:` 的
+            # `|` 是**互斥模式**（二选一）——两种都不能按「复合动作」拆开。
+            if "|" in tag and not tag.startswith(("coin:", "coin_flip:",
+                                                  "mode_pick:")):
                 tag = tag.split("|")[0]
             # 跨回合手牌禁打（Budew / Frillish / Galvantula ex 的 Item 封锁）
             # 官方规则中 Pokémon Tool 属于 Item，故一并封锁。
@@ -1241,6 +1243,13 @@ class Battle:
                     continue
                 for tpos, _fp in _field_iter(p):
                     out.append({**base, "target": tpos})
+            elif tag.startswith("mode_pick:"):
+                # 每个**可执行**的模式各列一条动作（不可执行的摘掉，免得 AI
+                # 反复尝试必然失败的选择）；`mode` 带上被选中的那一段。
+                for _m in [x for x in tag[len("mode_pick:"):].split("|") if x]:
+                    if _m == "switch_self" and not p.bench:
+                        continue
+                    out.append({**base, "mode": _m})
             elif tag.startswith("team_boost:"):
                 # 全队本回合增伤（第六十批）：无目标，手上有就能打
                 out.append(dict(base))
@@ -3117,46 +3126,58 @@ class Battle:
             # S2c：「discard the Defending Pokémon and all attached cards」
             # （TR Grimer）。**这是「弃置」不是「击倒」** → 不取奖赏
             # （取奖赏会凭空给对手 1~3 张，属于实质改变胜负）。
-            side = int(it.ctx.get("side", 1))
-            tgt = it.ctx.get("target")
-            q = self.players[side]
-            if tgt is None or tgt not in q.all_field():
-                self._log("no_effect", {"tag": tag, "player": side,
-                                        "reason": "目标已不在场上"})
-                return
-            was_active = q.active is tgt
-            for _et, _cnt in list(tgt.energy.items()):
-                for _ in range(_cnt):
-                    q.discard.append(f"{_et} energy")
-            for _sref in list(tgt.senergy):
-                self._to_discard(q, _sref)
-            if tgt.tool:
-                if tgt.tool_ref is not None:
-                    self._to_discard(q, tgt.tool_ref)
-                else:
-                    q.discard.append(tgt.tool)
-            tgt.energy.clear()
-            tgt.senergy.clear()
-            _drop_tool(tgt)
-            if was_active:
-                q.active = None
-            else:
-                q.bench = [x for x in q.bench if x is not tgt]
-            self._to_discard(q, PokeRef(tgt.pdef))
-            self._log("discard_from_field", {"player": side,
-                                             "card": tgt.name,
-                                             "by": it.source,
-                                             "active": was_active})
-            if was_active:
-                if q.bench:
-                    q.active = q.bench.pop(0)
-                    q.active.moved_active_turn = self.turn_number
-                    q.active.clear_status()
-                    self._log("promote", {"player": side, "to": q.active.name})
-                else:
-                    self._finish(1 - side, "no_pokemon", {"loser": side})
+            self._discard_from_field(int(it.ctx.get("side", 1)),
+                                     it.ctx.get("target"), it.source)
             return
         raise ValueError(f"未实现的延迟 tag：{tag}")
+
+    def _discard_from_field(self, side: int, tgt, source: str = "attack") -> bool:
+        """把场上某只（**连同全部附加卡**）弃置 —— **不是击倒**
+
+        三条必须同时成立（错一条就是实质改结果）：
+          · 不取奖赏（击倒才取；弃置不取）；
+          · 不发 `ko` 事件（「被击倒时」类特性/订阅不得触发）；
+          · 战斗位空出时后备顶上（与击倒一致），无替补则该方判负。
+
+        调用方：延迟队列的 `discard_defender`（TR Grimer）与招式的
+        `discard_named_energy:…:then:discard_defender`（Team Rocket's Moltres ex）。
+        **只此一处实现** —— 复制一份就会出现「两条路径行为不一致」的静默分叉。
+        """
+        q = self.players[side]
+        if tgt is None or tgt not in q.all_field():
+            self._log("no_effect", {"tag": "discard_from_field", "player": side,
+                                    "reason": "目标已不在场上"})
+            return False
+        was_active = q.active is tgt
+        for _et, _cnt in list(tgt.energy.items()):
+            for _ in range(_cnt):
+                q.discard.append(f"{_et} energy")
+        for _sref in list(tgt.senergy):
+            self._to_discard(q, _sref)
+        if tgt.tool:
+            if tgt.tool_ref is not None:
+                self._to_discard(q, tgt.tool_ref)
+            else:
+                q.discard.append(tgt.tool)
+        tgt.energy.clear()
+        tgt.senergy.clear()
+        _drop_tool(tgt)
+        if was_active:
+            q.active = None
+        else:
+            q.bench = [x for x in q.bench if x is not tgt]
+        self._to_discard(q, PokeRef(tgt.pdef))
+        self._log("discard_from_field", {"player": side, "card": tgt.name,
+                                         "by": source, "active": was_active})
+        if was_active:
+            if q.bench:
+                q.active = q.bench.pop(0)
+                q.active.moved_active_turn = self.turn_number
+                q.active.clear_status()
+                self._log("promote", {"player": side, "to": q.active.name})
+            else:
+                self._finish(1 - side, "no_pokemon", {"loser": side})
+        return True
 
     def _effect_blocked(self, target, source: str, actor: int,
                         kinds: str = "") -> bool:
@@ -3839,6 +3860,18 @@ class Battle:
             # S5（2026-11-08）：抛币分岔检索（Team Rocket's Great Ball）——
             # 正面找进化、反面找基础，类别由 `category:` 限定。
             placed = self._trainer_coin_search(p, tag)
+        elif tag.startswith("mode_pick:"):
+            # F8（2026-11-08）：**二选一模式**支援者（Kieran「Choose 1」）。
+            # 选哪个是**玩家的决策** —— 不选就抛错，绝不替玩家默认一个
+            # （默认换位会白送一次换位、默认增伤会白送 30 伤害，都改变胜负）。
+            _modes = [m for m in tag[len("mode_pick:"):].split("|") if m]
+            _want = str(action.get("mode") or "")
+            if not _modes:
+                raise ValueError("mode_pick 没有列出任何模式")
+            if _want not in _modes:
+                raise ValueError(f"该卡必须选 1 种模式（可选：{'、'.join(_modes)}）")
+            placed = self._dispatch_trainer_tag(p, opp, c, _want, kind,
+                                                action, hi)
         elif tag.startswith("team_boost:"):
             # 全队本回合增伤（第六十批，Premium Power Pro / Black Belt's Training）
             placed = self._trainer_team_boost(p, tag)
@@ -4074,7 +4107,8 @@ class Battle:
         # 而不是让某一支把另一支吃掉。`coin:` / `coin_flip:` 里的 `|` 是**分支**
         # 分隔符（同一枚币的两面），绝不能拆。
         _subs = ([x for x in tag.split("|") if x]
-                 if "|" in tag and not tag.startswith(("coin:", "coin_flip:"))
+                 if "|" in tag and not tag.startswith(("coin:", "coin_flip:",
+                                                       "mode_pick:"))
                  else [tag])
         # 道具的 `|` 是**静态修正的复合**（`tool:cost_less:1:…|tool:dmg_plus:30`，
         # Hop's Choice Band），整条字符串要原样存进 `fp.tool` 供静态层读取。
@@ -8730,7 +8764,11 @@ class Battle:
                 _ok_cat = False
                 _cdef = str((defender.pdef.category if defender else "")
                             or "").lower()
-                for _want in (x.strip() for x in _tb.team_boost_cats.split(",")):
+                # 分隔符同时接受 `,` 与 `+`：对账口径写的是 `cat:ex+v`
+                # （与 `_recon` 的 `a+b` 并集同风格），而早期实现只按 `,` 拆 ——
+                # 那样 `ex+v` 会被当成一个未知 token，**永远不匹配**（静默失效）。
+                for _want in (x.strip()
+                              for x in re.split(r"[,+]", _tb.team_boost_cats)):
                     if not _want:
                         continue
                     if _want == "ex":
@@ -10565,6 +10603,30 @@ class Battle:
                 # `devolve:` 只在特性/训练家两侧派发，招式侧缺这一支 —— 卡能进池
                 # 但出招时报「未知招式 tag」（= 池内死卡）。
                 self._apply_devolve(tag, action)
+            elif tag.startswith("discard_named_energy:"):
+                # F8（Team Rocket's Moltres ex「Evil Incineration」）：
+                # 「Discard a **Team Rocket's Energy** from this Pokémon. **If you
+                # do**, discard your opponent's Active Pokémon and all attached
+                # cards.」两段是**条件后续**：没弃到具名能量就什么都不做
+                # （不是「改成弃别的能量」也不是「照样弃对手」）。
+                _dne = tag.split(":")
+                _key = _dne[1] if len(_dne) > 1 else ""
+                _then = _dne[3] if len(_dne) > 3 and _dne[2] == "then" else ""
+                _hit = next((r for r in list(attacker.senergy)
+                             if _key and _key in _name_key(
+                                 getattr(r.edef, "name", ""))), None)
+                if _hit is None:
+                    self._log("no_effect", {"tag": tag, "player": self.current,
+                                            "reason": f"没有具名能量 {_key}"})
+                else:
+                    attacker.senergy.remove(_hit)
+                    self._to_discard(p, _hit)
+                    self._log("discard_named_energy", {
+                        "player": self.current, "target": attacker.name,
+                        "energy": _card_label(_hit)})
+                    if _then == "discard_defender":
+                        self._discard_from_field(1 - self.current, opp.active,
+                                                 "attack")
             elif tag.startswith("discard_self:"):
                 # F8（2026-11-08）：**弃自身与全部附加卡**（Revavroom ex
                 # 「Shattering Speed」）。注意这**不是**击倒：不取奖赏、不触发

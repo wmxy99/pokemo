@@ -3293,6 +3293,13 @@ _OPT_ENERGY_RE = re.compile(
     r"your opponent'?s active pok[eé]mon (paralyzed|confused|asleep)\.$", re.I)
 
 
+# 「Put 4 damage counters on your opponent's Pokémon in any way you like.」
+# （Sinistcha「Cursed Drop」）—— 任意分配**含战斗位**，落成 `choose:counters_any:N`。
+_CTR_ANY_RE = re.compile(
+    r"^put (\d+) damage counters? on your opponent'?s pok[eé]mon in any way "
+    r"you like\.$", re.I)
+
+
 def _detect_b135(text: str, kind: str) -> list:
     """第一百三十五批：带「任意数量」选择的卡（整句精确匹配）
 
@@ -3301,6 +3308,10 @@ def _detect_b135(text: str, kind: str) -> list:
     """
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
     if kind == "attack":
+        _ca = _CTR_ANY_RE.match(t)
+        if _ca:
+            return [act("rule", None, "any",
+                        {"counters_any_opp": int(_ca.group(1))})]
         m = _OPT_ENERGY_RE.match(t)
         if m:
             _ty = _EN_SYMBOL_COLOR.get(m.group(2).upper())
@@ -10031,6 +10042,10 @@ def to_engine_tags(specs: list) -> dict:
                 if extra.get("win_if_prizes") is not None:
                     tags.append(f"win_if:own_prizes_eq:"
                                 f"{int(extra['win_if_prizes'])}")
+                    continue
+                if extra.get("counters_any_opp") is not None:
+                    tags.append(f"choose:counters_any:"
+                                f"{int(extra['counters_any_opp'])}:opp_any")
                     continue
                 if extra.get("optional_energy_cost"):
                     _n, _ty, _st = extra["optional_energy_cost"]

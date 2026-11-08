@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1191（94.0%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **76** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 76） |
-| 引擎池 | **1176** | `cards_pool_ext.json` 的 `cards` 长度 |
+| `engine_ready` | **1192（94.1%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **75** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 75） |
+| 引擎池 | **1177** | `cards_pool_ext.json` 的 `cards` 长度 |
 | 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.785**（200 局双盲，`artifacts/k1_rich.pt` = `k1_rich40k` 复测）· ⚠ 原 **0.795** 权重在一次失败的「动作编码 +2 维」迁移尝试中被覆盖（迁移已回退，代码未变）；现权重仍 ≥0.70 判据（PASS），但**不是**原基线值 | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **76** = 批内如实拒收 **70** + 结构性边界 **4** + 待新能力 **2** = **76** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **75** = 批内如实拒收 **69** + 结构性边界 **4** + 待新能力 **2** = **75** ✅。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 39 · 整批受阻 5），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1191 / 1267 = 94.0%**（44 批全部处理完毕）。剩余 70 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 2 张待新能力卡需引擎重构（交互层：任意数量/可选代价 · 延迟队列 · 奖赏卡对象与牌库底**写入** · 事件触发（换位/进化/附能时）· 效果免疫层 · 退化 devolve）才可能归零。
+**终局**：`engine_ready` **1192 / 1267 = 94.1%**（44 批全部处理完毕）。剩余 69 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 2 张待新能力卡需引擎重构（交互层：任意数量/可选代价 · 延迟队列 · 奖赏卡对象与牌库底**写入** · 事件触发（换位/进化/附能时）· 效果免疫层 · 退化 devolve）才可能归零。
 
 ---
 
@@ -175,16 +175,16 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Feraligatr | TEF | 41 | done（已完成） | 跨批 → 95 |
-| Sinistcha | TWM | 22 | B（有具体缺口·可归族） |  |
+| Sinistcha | TWM | 22 | done（已完成） |  |
 | Team Rocket's Ampharos | DRI | 74 | B（有具体缺口·可归族） |  |
 | Team Rocket's Crobat ex | DRI | 122 | done（已完成） |  |
 | Pachirisu | MEG | 51 | B（有具体缺口·可归族） |  |
 | Mismagius | ASC | 86 | done（已完成） |  |
 | Team Rocket's Dugtrio | ASC | 101 | B（有具体缺口·可归族） |  |
 
-**实际结果**：进池 **3** 张，如实拒收 **4** 张。
+**实际结果**：进池 **4** 张，如实拒收 **3** 张。
 
-> **落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增条件门 `:gate:` 与后备专用范围 `:scope:opp_bench`）、Feraligatr（复合特性 `counters:5:scope:self|self_dmg_bonus:120:self`）。**如实拒收 4 张**：Sinistcha（需**分配**语义，`counters:` 只能每目标各 N 个）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。
+> **落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:sc … **S1c 补记**：「Put N damage counters on your opponent’s Pokémon in any way you like」已由决策分解表达（`choose:counters_any:N`，目标**含战斗位**、允许重复同一只，min=max=N）。Sinistcha 因此进池。
 
 ---
 
@@ -698,7 +698,7 @@
 | 94 | P2 | 静态伤害缩放：计数源型 | 5 | 2 | 3 | ✅ 完成 |
 | 95 | P2 | 静态修正层 | 6 | 2 | 4 | ✅ 完成 |
 | 96 | P2 | `any number of` 自由数量 | 9 | 1 | 8 | ✅ 完成 |
-| 97 | P2 | 指示物目标 / 条件 | 7 | 3 | 4 | ✅ 完成 |
+| 97 | P2 | 指示物目标 / 条件 | 7 | 4 | 3 | ✅ 完成 |
 | 98 | P3 | 附加伤害目标扩展 | 3 | 2 | 1 | ✅ 完成 |
 | 99 | P3 | 检索去向 / 数量由计数定 | 6 | 4 | 2 | ✅ 完成 |
 | 100 | P3 | 抛币嵌套子效果 | 3 | 1 | 2 | ✅ 完成 |
@@ -743,11 +743,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 66 张 |
-| 批次内待做 | 70 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 67 张 |
+| 批次内待做 | 69 | 全部未 ready |
 | 结构性边界 | 4 | 不承载 tag，仅建档 |
 | 待新能力 | 2 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **76** | 应等于基线 76 |
+| **合计（= 未 ready 卡数）** | **75** | 应等于基线 75 |
 
 ---
 

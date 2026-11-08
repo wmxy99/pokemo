@@ -7231,6 +7231,26 @@ class Battle:
                 self._log("info", {"player": self.current,
                                    "target": attacker.name,
                                    "what": tag[len("info:"):]})
+            elif tag.startswith("choose:counters_any:"):
+                # 「Put N damage counters on your opponent's Pokémon in any way
+                #  you like.」（Sinistcha「Cursed Drop」）
+                # 目标**含战斗位**（既有 `spread_free:` 只覆盖后备），且允许
+                # 重复选同一只 —— 用决策分解，由牌手逐枚决定放哪。
+                _v = tag.split(":")
+                if len(_v) < 3 or not _v[2].isdigit():
+                    raise ValueError(f"choose:counters_any tag 非法：{tag}")
+                _n = int(_v[2])
+                _opts = []
+                if opp.active is not None and not opp.active.is_ko:
+                    _opts.append({"target": 0, "display": opp.active.name})
+                for _bi, _fp in enumerate(opp.bench, start=1):
+                    if not _fp.is_ko:
+                        _opts.append({"target": _bi, "display": _fp.name})
+                if not _opts:
+                    continue
+                self._open_choice("counters_any_opp", _opts,
+                                  min_pick=_n, max_pick=_n,
+                                  allow_repeat=True, tag=tag)
             elif tag.startswith("choose:optional_energy_cost:"):
                 # 「You may discard N {T} Energy from this Pokémon and <后续>」
                 # （Mega Eelektross ex「Disaster Shock」）

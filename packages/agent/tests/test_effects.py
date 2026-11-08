@@ -1102,8 +1102,13 @@ class TestExtraDamageClauseTargets(unittest.TestCase):
         self.assertIn("spread_free:60", bench["tags"])
         anyp = self._tags("Put 4 damage counters on your opponent\u2019s "
                           "Pok\u00e9mon in any way you like.")
-        self.assertEqual(anyp["tags"], [])
-        self.assertTrue(anyp["unsupported"])
+        # 第一百三十五批（S1c）改判：含战斗位的「任意分配」现在可由决策分解
+        # 精确表达（`choose:counters_any:N`），因此**不再**是「无 tag」。
+        # 守的性质不变：**不得**落成只覆盖后备的 `spread_free`（那会漏掉战斗位）。
+        self.assertEqual(anyp["tags"], ["choose:counters_any:4:opp_any"])
+        self.assertFalse(any(t.startswith("spread_free") for t in anyp["tags"]))
+        # 已可精确表达 → 不再登记 unsupported（旧断言「必须未建模」随改判失效）
+        self.assertEqual(anyp["unsupported"], [])
 
 
 class TestRulesParenIsNotAnEffect(unittest.TestCase):

@@ -275,9 +275,9 @@
       "phase": "P2",
       "theme": "指示物目标 / 条件",
       "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 4,
-      "note": "**落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:scope:opp:2`）、Mismagius（`counters:6:scope:opp_bench:1:gate:opp_active_has_status` —— 新增条件门 `:gate:` 与后备专用范围 `:scope:opp_bench`）、Feraligatr（复合特性 `counters:5:scope:self|self_dmg_bonus:120:self`）。**如实拒收 4 张**：Sinistcha（需**分配**语义，`counters:` 只能每目标各 N 个）、Team Rocket's Ampharos / Pachirisu / Team Rocket's Dugtrio（触发点是**对手**的进化 / 附能 / 撤退，引擎无对应事件钩子）。",
+      "actual_pool": 4,
+      "actual_refused": 3,
+      "note": "**落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:sc … **S1c 补记**：「Put N damage counters on your opponent’s Pokémon in any way you like」已由决策分解表达（`choose:counters_any:N`，目标**含战斗位**、允许重复同一只，min=max=N）。Sinistcha 因此进池。",
       "cards": [
         {
           "name": "Feraligatr",

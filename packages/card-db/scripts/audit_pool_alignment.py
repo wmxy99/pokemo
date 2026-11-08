@@ -410,6 +410,12 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
     if want == "none":
         return []
     if want == "unmodeled":
+        # 第一百三十五批（S1c）：决策分解把「任意分配（含**战斗位**）」变成
+        # 可精确表达 → `choose:counters_any:N`。只在**整句**「in any way you like」
+        # 且确有该 tag 时放行；带子集条件（that has / for each …）的写法仍然未建模。
+        if re.search(r"in any way you like", _norm(raw or clause or "")) and \
+                any(str(e).startswith("choose:counters_any:") for e in effects):
+            return []
         return [f"{card_name} · {item_name}：不可精确表达的目标 "
                 f"`{raw[:60]}` **却在池内**（应整卡不收）"]
     if want == "self":

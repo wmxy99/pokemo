@@ -3962,6 +3962,75 @@ def audit_s4_immune(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_s5_borrow(card_name: str, item_name: str, desc: str,
+                    effects: list) -> list:
+    """S5 对账：抛币门借用 / 牌库顶借用 / 抛币分岔检索 / 放牌库底逐人抛币
+
+    这四族的共同错法是「丢了限定词」——而且每个都**不会报错**：
+      · 抛币门丢了币 → 变成「一定借用」（静默加强）；
+      · 币写进来源里（`borrow_attack:opp_active:coin`）→ 来源永不匹配 = 死卡；
+      · 牌库顶借用丢了张数（`opp_deck_top`）→ 无法定位翻开的牌 = 死卡；
+      · 抛币分岔检索退化成 `search_pokemon:` → 少了 stage 与阵营两道限定；
+      · 放牌库底错认成洗回牌库（`shuffle_both_coin_draw`）→ 牌库顺序完全不同。
+    正则与解析包**各自独立实现**（不 import 同一个正则，否则一起错、永远全绿）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+
+    m = _S5_BORROW_COIN.search(d)
+    if m:
+        want = "coin:heads:borrow_attack:opp_active"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「抛币正面才借用对手"
+                        f"战斗位招式」应产 `{want}`，实际 {tags}")
+    m = _S5_BORROW_DECK_TOP.search(d)
+    if m:
+        want = f"borrow_attack:opp_deck_top:{int(m.group(1))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「翻对手牌库顶 "
+                        f"{int(m.group(1))} 张借招式」应产 `{want}`，实际 {tags}")
+    m = _S5_COIN_SEARCH.search(d)
+    if m:
+        _k = _S5_CAT_KEY(m.group("cat"))
+        want = f"coin_search:evolution:basic:category:{_k}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「正面找进化 / 反面找"
+                        f"基础」应产 `{want}`，实际 {tags}")
+    m = _S5_BOTTOM_COIN_DRAW.search(d)
+    if m:
+        want = f"shuffle_both_bottom_coin_draw:{int(m.group(1))}:{int(m.group(2))}"
+        if want not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「手牌放牌库底 + 每人各抛"
+                        f"一枚币」应产 `{want}`，实际 {tags}")
+    return errs
+
+
+# S5 的四条独立正则（刻意不复用解析包的实现）
+_S5_BORROW_COIN = re.compile(
+    r"flip a coin\. if heads, choose 1 of your opponent's active "
+    r"pok[eé]mon's attacks? and use it as this attack", re.I)
+_S5_BORROW_DECK_TOP = re.compile(
+    r"reveal the top (\d+) cards of your opponent's deck\. you may choose an "
+    r"attack from a pok[eé]mon you find there", re.I)
+_S5_COIN_SEARCH = re.compile(
+    r"flip a coin\. if heads, search your deck for an? evolution "
+    r"(?P<cat>[a-z'.\- ]+?) pok[eé]mon.*?if tails, search your deck for an? "
+    r"basic ", re.I | re.S)
+_S5_BOTTOM_COIN_DRAW = re.compile(
+    r"each player shuffles their hand and puts it on the bottom of their "
+    r"deck\..*?each player flips a coin\. if heads, that player draws (\d+) "
+    r"cards?\..*?if tails, they draw (\d+) cards?", re.I | re.S)
+
+
+def _S5_CAT_KEY(raw: str) -> str:
+    """阵营名归一（与引擎 `_category_key` 同口径：去所有格、只留小写字母数字）"""
+    s = str(raw or "").lower().replace("’", "'")
+    s = re.sub(r"'s\b", "", s)
+    return re.sub(r"[^a-z0-9]+", "", s)
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -4106,6 +4175,7 @@ def main() -> int:
                 errs += audit_s2d_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2e_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s4_immune(c["name"], it.get("name"), desc, eff)
+                errs += audit_s5_borrow(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4144,6 +4214,8 @@ def main() -> int:
                                      [_ctag] if _ctag else [])
             errs += audit_s2e_events(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
+            errs += audit_s5_borrow(c["name"], c["name"], _cdesc,
+                                    [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4199,8 +4271,9 @@ def main() -> int:
           "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 · "
           "限时订阅/撤退费+战斗位搬能量/具名能量附着 · "
           "可选触发/原地替换/只能由效果上场 · "
-          "效果免疫（团队范围/训练家来源） "
-          "四十九类对账全部一致")
+          "效果免疫（团队范围/训练家来源） · "
+          "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 "
+          "五十类对账全部一致")
     return 0
 
 

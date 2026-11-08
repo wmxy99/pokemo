@@ -161,6 +161,29 @@ export const TRAINER_TAG_DESC = {
   },
   shuffle_draw_split: (a) => ({ zh: `双方各自将手牌洗回牌库，然后各抽 ${argOf(a)} 张牌。`, en: `Each player shuffles their hand into their deck and draws ${argOf(a)} card(s).` }),
   shuffle_both_coin_draw: (a) => ({ zh: `双方将手牌洗回牌库，然后抛硬币决定各自抽牌数（你抽 ${argOf(a)} 张）。`, en: `Both players shuffle their hands into their decks, then flip a coin to set the draws (you draw ${argOf(a)}).` }),
+  // S5（2026-11-08）：手牌放**牌库底**（不洗牌）+ 每人**各**抛一枚币分抽。
+  // 与上一条只差「放底 vs 洗回」和「一枚 vs 每人一枚」，文案必须点明这两点 ——
+  // 写成同一条会让玩家以为双方抽牌数必然相关（实际各自独立抛币）。
+  shuffle_both_bottom_coin_draw: (a, b) => ({
+    zh: `双方将手牌放到各自牌库底（不洗牌）；只要有任一方放了牌，双方就各自抛一枚硬币：正面抽 ${argOf(a)} 张，反面抽 ${argOf(b)} 张。`,
+    en: `Each player puts their hand on the bottom of their deck (no shuffle). If either player did, each player flips a coin: heads draws ${argOf(a)}, tails draws ${argOf(b)}.`,
+  }),
+  // S5：抛币分岔检索（正面/反面找**不同进化阶段**的同一阵营宝可梦）
+  coin_search: (a, b, parts) => {
+    const stage = { evolution: ['进化形态', 'Evolution'], basic: ['基础形态', 'Basic'],
+      stage1: ['1 阶进化', 'Stage 1'], stage2: ['2 阶进化', 'Stage 2'] }
+    const h = (stage[a] || [a, a])[0]
+    const t = (stage[b] || [b, b])[0]
+    const he = (stage[a] || [a, a])[1]
+    const te = (stage[b] || [b, b])[1]
+    const ci = (parts || []).indexOf('category')
+    const cat = ci >= 0 ? String((parts || [])[ci + 1] || '') : ''
+    const catZh = cat ? `${cat} 阵营` : '指定阵营'
+    return {
+      zh: `抛一枚硬币：正面从牌库检索 1 张${catZh}的${h}宝可梦，反面检索 1 张${catZh}的${t}宝可梦，亮出后加入手牌，然后洗牌。`,
+      en: `Flip a coin: heads searches your deck for 1 ${he} ${cat || 'matching'} Pokémon, tails for 1 ${te}, reveals it, and puts it into your hand. Then shuffle your deck.`,
+    }
+  },
   opp_shuffle_draw: { zh: '对手把手牌洗回并置于其牌库底。', en: 'Your opponent shuffles their hand and puts it on the bottom of their deck.' },
   opp_hand: (act) => ({
     zh: `查看对手手牌，并从中${act === 'discard' ? '弃置' : '置于其牌库底'}符合条件的卡。`,

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 15:38:16",
+  "reparsed_at": "2026-11-08 15:58:56",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1218,
+  "engine_ready": 1222,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1218,
-   "engine_approximated": 1203,
-   "engine_unmatched": 49,
+   "zh_backfill": 1222,
+   "engine_approximated": 1207,
+   "engine_unmatched": 45,
    "engine_namekey_mismatch": 7
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 156,
-   "engine_tags": 1522,
-   "unsupported": 50,
+   "errors": 125,
+   "engine_tags": 1526,
+   "unsupported": 46,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1203,
+  "engine_approximated": 1207,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -5789,9 +5789,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -5817,9 +5815,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -6605,9 +6601,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -6710,9 +6704,7 @@
       "source_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "discard_hand_energy:3",
      "snipe:opp:60:1:per:own_discarded_energy_this_turn",
@@ -14818,9 +14810,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -14943,9 +14933,7 @@
       "source_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "passive:bench_immune_dmg"
@@ -18642,9 +18630,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -18732,9 +18718,7 @@
       "source_text": "Once during your turn, you may put 13 damage counters on 1 of your opponent’s Pokémon. If you use this Ability, this Pokémon is Knocked Out."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "counters:13:scope:opp:1:selfko"
@@ -20761,9 +20745,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -20789,9 +20771,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -25920,9 +25900,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -25996,9 +25974,7 @@
       "source_text": "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 3 damage counters on the Attacking Pokémon."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "on_damaged:counter:30"
@@ -32111,9 +32087,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -32201,9 +32175,7 @@
       "source_text": "Put damage counters on each of your opponent’s Benched Pokémon until its remaining HP is 100."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "passive:bench_immune_dmg",
      "retreat_lock:opp:turn",
@@ -33211,9 +33183,7 @@
         "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "poison",
        "retreat_lock:opp:turn"
@@ -33302,9 +33272,7 @@
       "citations": []
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "poison",
      "retreat_lock:opp:turn",
@@ -37504,9 +37472,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -37580,9 +37546,7 @@
       "citations": []
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "on_ko:counter:60"
@@ -41776,9 +41740,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -41859,9 +41821,7 @@
       "source_text": "This attack also does 20 damage to each of your Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)"
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "snipe:own_bench:20:all"
@@ -47323,9 +47283,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -47351,9 +47309,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -53143,14 +53099,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Ethan's Sudowoodo@DRI 93",
    "parse": {
     "items": [
      {
@@ -53175,9 +53133,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -53198,7 +53154,8 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "borrow": "opp_active",
+           "coin": "heads"
           }
          }
         ],
@@ -53206,13 +53163,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "coin:heads:borrow_attack:opp_active"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -53244,25 +53198,20 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "borrow": "opp_active",
+         "coin": "heads"
         }
        }
       ],
       "source_text": "Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
-     "retreat_lock:opp:turn"
+     "retreat_lock:opp:turn",
+     "coin:heads:borrow_attack:opp_active"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -63883,9 +63832,7 @@
         "source_text": "Your opponent’s Active Pokémon is now Confused. During your opponent’s next turn, that Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "confuse",
        "retreat_lock:opp:turn"
@@ -63979,9 +63926,7 @@
       "source_text": "This attack does 100 damage for each Special Condition affecting your opponent’s Active Pokémon."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "confuse",
      "retreat_lock:opp:turn",
@@ -64837,9 +64782,7 @@
         "source_text": "Heal 50 damage from this Pokémon. During your next turn, this Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "heal:50",
        "retreat_lock:self:turn"
@@ -64871,9 +64814,7 @@
       "source_text": "Heal 50 damage from this Pokémon. During your next turn, this Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "heal:50",
      "retreat_lock:self:turn"
@@ -65467,14 +65408,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Persian ex@DRI 150",
    "parse": {
     "items": [
      {
@@ -65492,7 +65435,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "borrow": "opp_deck_top:10"
           }
          }
         ],
@@ -65500,13 +65443,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "borrow_attack:opp_deck_top:10"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -65549,7 +65489,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "borrow": "opp_deck_top:10"
         }
        }
       ],
@@ -65575,14 +65515,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "borrow_attack:opp_deck_top:10",
      "confuse"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -69498,9 +69434,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -69578,9 +69512,7 @@
       "source_text": "Prevent all damage from and effects of attacks done to this Pokémon by your opponent’s Pokémon that have any Special Energy attached."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "passive:dmg_immune:self:from:special_energy:effects"
@@ -74919,9 +74851,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -74947,9 +74877,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -84121,9 +84049,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -84199,9 +84125,7 @@
       "citations": []
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "ko_prize_plus:1:opp_basic"
@@ -88171,9 +88095,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -88199,9 +88121,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -92972,9 +92892,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -93000,9 +92918,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -109204,9 +109120,7 @@
         "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "poison",
        "retreat_lock:opp:turn"
@@ -109241,9 +109155,7 @@
       "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "poison",
      "retreat_lock:opp:turn"
@@ -115372,7 +115284,6 @@
        }
       ],
       "errors": [
-       "[0] action.type 非法：retreat_lock",
        "[0] action.type 非法：dmg_taken_plus_next"
       ],
       "engine_tags": [
@@ -115407,7 +115318,6 @@
      }
     ],
     "errors": [
-     "[0] action.type 非法：retreat_lock",
      "[0] action.type 非法：dmg_taken_plus_next"
     ],
     "engine_tags": [
@@ -116798,9 +116708,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -116844,9 +116752,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "dmg_plus:100:if:opp_ko_last_turn",
      "retreat_lock:opp:turn"
@@ -128491,9 +128397,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -128566,9 +128470,7 @@
       "source_text": "If this Pokémon has any damage counters on it, this attack does 100 more damage."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "dmg_plus:100:if:own_active_has_damage"
@@ -129404,9 +129306,7 @@
         "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "poison",
        "retreat_lock:opp:turn"
@@ -129441,9 +129341,7 @@
       "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "poison",
      "retreat_lock:opp:turn"
@@ -131029,9 +130927,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -131105,9 +131001,7 @@
       "source_text": "If this Pokémon is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), place 2 damage counters on the Attacking Pokémon for each {M} Energy attached to this Pokémon."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "on_damaged:counter_per:2:metal"
@@ -131782,9 +131676,7 @@
         "source_text": "Heal 60 damage from this Pokémon. During your next turn, this Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "heal:60",
        "retreat_lock:self:turn"
@@ -131816,9 +131708,7 @@
       "source_text": "Heal 60 damage from this Pokémon. During your next turn, this Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "heal:60",
      "retreat_lock:self:turn"
@@ -133011,9 +132901,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -133086,9 +132974,7 @@
       "source_text": "This Pokémon also does 30 damage to itself."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn",
      "self:30"
@@ -133493,9 +133379,7 @@
         "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "retreat_lock:opp:turn"
       ],
@@ -133521,9 +133405,7 @@
       "source_text": "During your opponent’s next turn, the Defending Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "retreat_lock:opp:turn"
     ],
@@ -133614,9 +133496,7 @@
         "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：retreat_lock"
-      ],
+      "errors": [],
       "engine_tags": [
        "poison",
        "retreat_lock:opp:turn"
@@ -133651,9 +133531,7 @@
       "source_text": "Your opponent’s Active Pokémon is now Poisoned. During your opponent’s next turn, that Pokémon can’t retreat."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：retreat_lock"
-    ],
+    "errors": [],
     "engine_tags": [
      "poison",
      "retreat_lock:opp:turn"
@@ -147500,14 +147378,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抛硬币。若为正面，从牌库中检索 1 只进化形态的火箭队的宝可梦，展示它并加入手牌。若为反面，从牌库中检索 1 只基础火箭队的宝可梦，展示它并加入手牌。然后洗牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Great Ball@DRI 175",
    "parse": {
     "items": [
      {
@@ -147521,11 +147401,14 @@
         "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
+          "type": "coin_search",
+          "amount": null,
+          "target": "self",
           "extra": {
-           "what": "pokemon"
+           "heads_stage": "evolution",
+           "tails_stage": "basic",
+           "heads_category": "teamrocket",
+           "tails_category": "teamrocket"
           }
          }
         ],
@@ -147533,15 +147416,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "coin_search:evolution:basic:category:teamrocket"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "抛币分支内的检索（需 coin 嵌套，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -147552,11 +147432,14 @@
       "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
+        "type": "coin_search",
+        "amount": null,
+        "target": "self",
         "extra": {
-         "what": "pokemon"
+         "heads_stage": "evolution",
+         "tails_stage": "basic",
+         "heads_category": "teamrocket",
+         "tails_category": "teamrocket"
         }
        }
       ],
@@ -147564,13 +147447,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "抛币分支内的检索（需 coin 嵌套，B4）"
-     }
+    "engine_tags": [
+     "coin_search:evolution:basic:category:teamrocket"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -156760,10 +156640,7 @@
         "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：shuffle_both_coin_draw",
-       "[0] action.target 非法：both"
-      ],
+      "errors": [],
       "engine_tags": [
        "shuffle_both_coin_draw:5:3:3:5"
       ],
@@ -156794,10 +156671,7 @@
       "source_text": "Each player shuffles their hand into their deck. Then, flip a coin. If heads, you draw 5 cards, and your opponent draws 3 cards. If tails, you draw 3 cards, and your opponent draws 5 cards."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：shuffle_both_coin_draw",
-     "[0] action.target 非法：both"
-    ],
+    "errors": [],
     "engine_tags": [
      "shuffle_both_coin_draw:5:3:3:5"
     ],
@@ -158095,14 +157969,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Each player shuffles their hand and puts it on the bottom of their deck. If either player put any cards on the bottom of their deck in this way, each player flips a coin. If heads, that player draws 6 cards. If tails, they draw 3 cards.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "每位玩家将其手牌洗牌并放到其牌库底部。若任一玩家以此方式将卡放到了牌库底部，则每位玩家抛硬币。若为正面，该玩家抽 6 张牌。若为反面，其抽 3 张牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Lucian@TWM 157",
    "parse": {
     "items": [
      {
@@ -158116,11 +157992,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "shuffle_both_bottom_coin_draw",
           "amount": null,
-          "target": "deck",
+          "target": "both",
           "extra": {
-           "note": "抛币分支内的抽牌（需 coin 嵌套，B4）"
+           "heads": 6,
+           "tails": 3
           }
          }
         ],
@@ -158128,15 +158005,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "shuffle_both_bottom_coin_draw:6:3"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -158147,11 +158021,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "shuffle_both_bottom_coin_draw",
         "amount": null,
-        "target": "deck",
+        "target": "both",
         "extra": {
-         "note": "抛币分支内的抽牌（需 coin 嵌套，B4）"
+         "heads": 6,
+         "tails": 3
         }
        }
       ],
@@ -158159,13 +158034,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "抛币分支内的抽牌（需 coin 嵌套，B4）"
-     }
+    "engine_tags": [
+     "shuffle_both_bottom_coin_draw:6:3"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

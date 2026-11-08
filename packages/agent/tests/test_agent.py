@@ -347,10 +347,21 @@ class TestSystemPromptInjection(unittest.TestCase):
         与「{ex} 或 {V}」的近似无关：那两条是**新增能力**（引擎侧独立求值），
         不是把旧条件改名复用来凑数 —— 复用会让将来加 V 类卡时静默算错。
         模板正文未改 → 与历次「引擎加能力 → 提示词同步」同性质。
+
+        ── 2026-11-08 上调至 9600（**仍是引擎能力驱动，正文逐字节未改**）──
+        S5 补齐三处**早已在引擎执行、却一直没登记**的形态（与
+        counters / attach_spread / ko_prize 同类，解析数据里长期带着「非法」假错误）：
+          · `ACTION_TYPES` +4：`retreat_lock` · `coin_search` ·
+            `shuffle_both_bottom_coin_draw` · `shuffle_both_coin_draw`
+          · `TARGETS` +1：`both`（`draw_both` / `shuffle_both_*` 的双方语义）
+        实测：**9550** 字符（上一版 9421，+129 = 4 个动作类型名 + 1 个目标值）。
+        ⚠ 这**不是**「加功能顺便放宽预算」：枚举表由 `ACTION_TYPES` / `TARGETS`
+        单一来源注入，漏登记的直接后果是**模型永远学不到这几种形态**（提示词里
+        没有 → 解析退化成兜底 → 整卡拒收）。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9500,
+            len(sp), 9600,
             f"提示词已 {len(sp)} 字符，超过 9500 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 

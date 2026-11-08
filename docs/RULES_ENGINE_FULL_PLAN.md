@@ -6,8 +6,8 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1218/1267 = 96.1%**，池 **1203**，
-> 未 ready **49**（批内如实拒收 45 + 结构性 4），测试 **2620**，CI 8/8。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1222/1267 = 96.4%**，池 **1207**，
+> 未 ready **45**（批内如实拒收 41 + 结构性 4），测试 **2648**，CI 8/8。
 > 进度：**S1 全 / S2 全 / S3 / S4 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
@@ -263,14 +263,14 @@ def _apply_effect(self, kind, source, target, tag, ctx):
 | 卡 | Repelling Veil · Snow Camouflage · Unnerve · Protective Sail |
 | 风险 | 重构面最大的一段（涉及每个效果入口）→ 必须先补「入口清单」再动，改一处跑一次全量 |
 
-### S5 · 递归效果 + 复制招式（M · 解锁 3 张）
+### S5 · 递归效果 + 复制招式（M · 实际进池 4 张）
 
 | 项 | 内容 |
 |---|---|
-| 改动 | `_apply_attack_effects` 支持 `coin:heads:<任意 tag>` 递归（深度 ≤2）；`borrow_attack` 结算时复制 |
-| tag | `borrow_attack:opp_deck_top:<n>` · `borrow_attack:opp_active` + `coin:` 嵌套 |
-| 守卫 | 递归深度、复制来的招式不得再复制、循环检测 |
-| 卡 | Ethan's Sudowoodo · TR Great Ball · Lucian · TR Persian ex · Haughty Order |
+| 改动 | `borrow_attack` 结算时复制招式（付**本招式**费用）；两种新来源：**抛币门**（`coin:heads:` 包住借用）与**对手牌库顶 N 张**；训练家侧两种新形态：抛币分岔检索、手牌放牌库底后**逐人**抛币分抽 |
+| tag | `coin:heads:borrow_attack:opp_active` · `borrow_attack:opp_deck_top:<n>` · `coin_search:<heads_stage>:<tails_stage>:category:<c>` · `shuffle_both_bottom_coin_draw:<h>:<t>` |
+| 守卫 | 抛币门只抛一次；「you may」必须能放弃（否则引擎替玩家决定）；复制来的招式不得再次借用（深度恒 1）；牌库顶只扫 N 张、结算完才洗回 |
+| 卡 | Ethan's Sudowoodo（Impound + Try to Imitate）· Team Rocket's Persian ex（Haughty Order）· Team Rocket's Great Ball · Lucian |
 
 ### S6 · 官方规则对齐（L · 无新卡，但决定「完整」与否）
 
@@ -672,6 +672,45 @@ S2c 3 张 / S2d 4 张 / S2e 3 张，含连带卡）。下一步按计划进入 *
 
 **数字**：`engine_ready` **1218 / 1267 = 96.1%** · 池 **1203** · 未 ready **49** ·
 测试 **2620**（engine 1436）· 对账 **49 类** · CI 8/8。
+
+---
+
+### S5 · 递归效果 + 复制招式（2026-11-08 完成，进池 4 张）
+
+| 项 | 落点 |
+|---|---|
+| 抛币门借用 | `coin:heads:borrow_attack:<scope>`。币在 **`_do_attack` 开头**抛（早于借用来源解析）：反面 → action 里带的 `borrow` 整条作废，本招按印刷效果结算；正面 → 必须真借，没给来源直接抛错（引擎不得替玩家挑招式） |
+| 牌库顶借用 | `borrow_attack:opp_deck_top:<n>`：候选只来自对手牌库**顶 n 张**（`pos` = 检视列表下标），结算先记 `reveal`、招式跑完再洗回（`deck_shuffle`）。卡面「**You may**」→ 合法动作表**同时**列裸动作（可放弃） |
+| 抛币分岔检索 | `coin_search:<heads_stage>:<tails_stage>:category:<c>`：两侧同阵营、不同 stage；阵营比对用 `_category_key`（取括号里的阵营名归一，**不做子串**——归一后几乎每个类别都含 `n`） |
+| 放牌库底逐人抛币 | `shuffle_both_bottom_coin_draw:<h>:<t>`：放**牌库底且不洗牌**（≠ Harlequin 的洗回整副），币是**每人各一枚**（四条分支都可达），「任一方放了牌」才抛 |
+| 深度 | 借用解析只对**本次出招**的招式做一次 → 复制来的招式自身带 `borrow_attack:` 也不递归（测试守护） |
+| 进池 | **4 张**：Ethan's Sudowoodo（两招：`retreat_lock:opp:turn` + 抛币门借用）· Team Rocket's Persian ex（Haughty Order + Cruel Slash）· Team Rocket's Great Ball · Lucian |
+| 对账 | 新增第 50 类（四族共同错法都是「丢了限定词」：丢币 / 丢张数 / 退化检索 / 洗牌↔放底） |
+
+**踩到的坑**
+
+1. **★ 顺序**：牌库顶借用的「洗回」必须在**招式结算之后**。提到之前，被复制的
+   招式若翻看对手牌库就会看到另一副牌（卡面顺序是 reveal → choose → use → shuffle）。
+2. **★ `_attack_mods` 会给同一条 tag 再抛一枚币**：正面路径上 `atk` 已被换成复制来的
+   招式（tag 不在 effects 里），**只有反面路径**会重复抛 —— 只测正面等于没测。
+   必须断言「整次攻击只有一条 `coin` 事件」。
+3. **★ 「you may」= 必须能放弃**：不列裸动作时，AI 只能「一定借」（S1 不变量被绕），
+   且「牌库顶 10 张里没有宝可梦」时这一招彻底打不出（池内死卡）。
+4. **假错误的又一例**：`retreat_lock` / `shuffle_both_coin_draw` / `both` 三个
+   早已在引擎执行的形态一直没登记进 `ACTION_TYPES` / `TARGETS`，解析数据里带着
+   「非法」标记（与 counters / attach_spread / ko_prize 同类）。本批一并补上。
+5. **`_category_key` 不能用子串**：`trainerspokemon…` 里全是 `n`，任何
+   `category:n` 都会命中全部阵营（测试用 `tr` vs `nn` 双向守护）。
+6. **对账注入要落在池 JSON 上**：对账读的是**已生成的池**（不是解析包），
+   改解析再跑对账是**假注入**（池没重生成，tag 一个字都没变）——第一次这么做时
+   四条注入全部「没变红」。
+
+**仍未做**：`Lucian` 的「If either player put any cards on the bottom…」按**任一**
+判定（双方都没牌时不抛币），与卡面一致；但「谁放的」不单独记录（不影响结算）。
+
+**数字**：`engine_ready` **1222 / 1267 = 96.4%** · 池 **1207** · 未 ready **45**
+（41 如实拒收 + 4 结构性）· 测试 **2648**（engine 1452 / agent 1042 / api 142 / gym 12）·
+对账 **50 类** · CI 8/8 · K1 双盲 200 局 **0.795**（单侧对照 0.825，无回归）。
 
 ---
 

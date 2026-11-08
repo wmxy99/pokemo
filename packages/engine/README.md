@@ -44,7 +44,7 @@ python run_demo.py dump 20260908
 | 文件 | 内容 |
 |---|---|
 | `engine/data/cards_real.json` | **人工池**：40 张（卡名/HP/属性/招式/特性 + 引擎映射 tag + 出处与 fidelity 标注，逐卡人工校对）|
-| `engine/data/cards_pool_ext.json` | **扩展池**：1030 条目 / 899 唯一卡名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）；条目带 `uid`（`<卡名>@<SET> <number>`）|
+| `engine/data/cards_pool_ext.json` | **扩展池**：1207 条目 / 1044 唯一卡名，由 card-db 清洗数据集 + 解析链生成（`provenance=dataset-derived`，**非人工逐卡校对**）；条目带 `uid`（`<卡名>@<SET> <number>`）|
 | `engine/data/decklists.json` | 预设对手池 A1–A4 的 **60 卡卡表**（PRD §10，逐卡来源见 meta；**逐卡锁定 uid** 以固定人工校对印刷）|
 | `engine/reallib.py` | 加载器与组装：`catalog()` / `printings()` / `item_for()` / `build_deck(id)` / `coverage(id)` / `describe(id)` |
 
@@ -52,9 +52,9 @@ python run_demo.py dump 20260908
 
 | 项 | 数值 |
 |---|---|
-| `catalog()`（卡名 → **首选印刷**） | **923 张**（同名多印刷时取数据集最新印刷）|
-| `printings()`（uid → 全部印刷） | **1070 条**（人工 40 + 扩展 1030）|
-| 库内「引擎可对战」 | **1045 / 1267**（`mapped` 15 + `approximated` 1030，见 `GET /cards/stats`）|
+| `catalog()`（卡名 → **首选印刷**） | **1068 张**（同名多印刷时取数据集最新印刷）|
+| `printings()`（uid → 全部印刷） | **1247 条**（人工 40 + 扩展 1207）|
+| 库内「引擎可对战」 | **1222 / 1267**（`mapped` 15 + `approximated` 1207，见 `GET /cards/stats`）|
 
 > **印刷身份（2026-10-29 第二十一批）**：`uid = <卡名>@<SET> <number>`，卡名仍是
 > `PokemonDef.name`（进化链与「同名」类规则不受影响）。卡组可写 uid 精确选印刷；
@@ -121,6 +121,8 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负）；**被招式击倒**的标记按方计数，供下回合条件加伤使用。**S3（2026-11-08）：奖赏卡已对象化** —— 开局从牌库顶真取 6 张（`PlayerState.prizes` = `list[PrizeSlot]`），取奖赏时**真卡进手牌**；`zones.py` 提供 `deck_bottom_take/put`、`put_on_top`、`peek_top/bottom/prizes`。⚠ 取哪一张：面朝下时对牌手不可区分（不构成决策）→ 引擎按「先面朝下、后面朝上」固定顺序并写日志；存在面朝上奖赏卡时的**选择**留 S6 |
 | **事件/延迟(S2)** | 已接线事件点：`switch_out` / `switch_in`（S2a）· `evolve`（S2b）· `ko` / `turn_end`（S2c）· `attach_energy`（仅手牌附着）/ `attack_done`（S2d）。**`on_event:<kind>:<body>`**（订阅：特性 / 道具；`scope` = `opp_their_turn` / `own_by_attack` / `own_turn` / `any`；`require:` 条件如 `retreat:4`；`match:event_leaving` / `match:event_name:<X>` 限定事件对象；末尾 `may` = **可选触发**（挂起「使用 / 不使用」选择，引擎不自选）；每卡每事件每回合 1 次，抑制写日志）· **`arm:<kind>:<body>:until:<窗口>`**（**限时订阅**：由一次效果临时建立，如 Pachirisu；窗口关闭即剪枝、写日志）· **`queue:<when>:<tag>`**（延迟：`turn_end` / `next_turn_end` / `opp_next_turn_end`，`events.resolve_turn_end` 在 `_end_turn` 唯一结算点执行，**过期未结算抛错**）· 换位事件用「step 前快照 / step 后比对」检测，撤退·Switch·拉人·换位特性·回手全部自动覆盖 |
 | **效果免疫(S4)** | `fx:effect_immune:<来源>:<范围>`：来源 `attack` / `ability` / **`trainer`**（+卡类别 `item` / `supporter`），范围 `self` / **`team:<谓词>`**（如 `basic_teamrocket`）。统一守卫 `Battle._effect_blocked(target, source, actor, kinds)`：同侧操作放行 · 团队免疫扫队友 · 训练家来源**必须**带卡类别（忘传即抛错）。生效于拉人/状态/弃能量/弃道具/能量移动等训练家入口 |
+| **复制招式(S5)** | `borrow_attack:<scope>`：**复制对手的招式当本次攻击**（付**本招式**费用）。来源：`opp_active`（对手战斗位）· `opp_active_tera` · `bench_ally_n` · **`opp_deck_top:<n>`**（翻对手牌库顶 n 张，`you may` → 合法动作表同时列「放弃」，结算**先 reveal、用完再洗回**）。**抛币门** `coin:heads:borrow_attack:<scope>`：币在 `_do_attack` 开头抛（早于借用解析），反面整条 `borrow` 作废；同一次攻击只有**一枚**币（`_attack_mods` 明令跳过该 tag）。复制来的招式**不再借用**（解析只对本次出招做一次，深度恒 1） |
+| **抛币检索 / 逐人抛币(S5)** | `coin_search:<heads_stage>:<tails_stage>:category:<c>`（正面找进化、反面找基础，同阵营，`_category_key` 取括号阵营名精确比对）· `shuffle_both_bottom_coin_draw:<h>:<t>`（手牌放**牌库底不洗牌** + **每人各**抛一枚币分抽；「任一玩家放了牌」才抛） |
 | **原地替换(S2e)** | `replace_self:<卡名>:to_deck`：检索指定卡与载体**原地**对调，`_inherit_state` 逐字段继承全部状态（附着卡/伤害/状态/护盾/跨回合锁定…），旧卡洗回牌库。⚠ 原地 = 旧卡在备位就还是备位；`passive:no_evolve_into` 则在「合法动作 + `_do_evolve`」两处挡「只能由效果上场」的卡 |
 | **特殊能量回收(S2d)** | `senergy:boomerang`：被**持有者自己的招式效果**弃置时，攻击结束后从弃牌堆回附。判定=「弃置差分快照 + 卡对象身份」，不是按名字猜；弃能量时特殊能量**卡**会真的进 `discard_refs`（`_discard_energy_from`） |
 | 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库（官方：该抽而抽不到即判负）；超 `max_turns` 判平 |

@@ -189,7 +189,14 @@ class TestPoolTagVocabulary(unittest.TestCase):
         bad = []
         for name, item, tag in self._iter_tags():
             if tag.startswith("borrow_attack:"):
-                if tag.split(":", 1)[1] not in (
+                _scope = tag.split(":", 1)[1]
+                # S5（2026-11-08）：`opp_deck_top:<n>` —— 来源是对手牌库顶 N 张，
+                # 必须带**张数**（缺了就无法定位「翻开了哪几张」）。
+                if _scope.startswith("opp_deck_top:"):
+                    _n = _scope.split(":", 1)[1]
+                    if not _n.isdigit() or int(_n) <= 0:
+                        bad.append(f"{name} · {item}：{tag}（牌库顶张数非法）")
+                elif _scope not in (
                         "opp_active", "opp_active_tera", "bench_ally_n"):
                     bad.append(f"{name} · {item}：{tag}（借用来来源非法）")
             elif tag.startswith("attack_denial:"):

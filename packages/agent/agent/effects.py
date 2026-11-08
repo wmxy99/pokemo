@@ -71,9 +71,23 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # **非伤害**子效果（磨对手牌库 / 弃对手手牌 / 任意卡检索）
                 "until_tails",
                 # 2026-11-04 第五十批：被击倒时的奖赏卡减少（含同队与道具）
-                "ko_prize")
+                "ko_prize",
+                # 撤退封锁（S5）：引擎 `retreat_lock:<self|opp>:turn` 早已执行，
+                # 但枚举漏了它 → 解析数据里一直带着「action.type 非法」的假错误
+                # （与 counters / attach_spread 同类；本批 Ethan's Sudowoodo 撞上）。
+                "retreat_lock",
+                # S5：抛币分岔检索 / 手牌放牌库底后逐人抛币分抽
+                "coin_search", "shuffle_both_bottom_coin_draw",
+                # 第四十五批的 `shuffle_both_coin_draw` 一直漏登记 → 池内
+                # Harlequin 的解析数据带着「action.type 非法」的**假错误**
+                # （引擎照常执行，只是数据看起来像没建模）。S5 顺手补上。
+                "shuffle_both_coin_draw")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
-           "deck", "hand", "discard", "opponent_hand", "any")
+           "deck", "hand", "discard", "opponent_hand", "any",
+           # S5：**双方**（`draw_both` / `shuffle_both_*` 这类训练家效果）。
+           # 枚举一直漏了它 → 池内 Harlequin 的解析数据带着「action.target
+           # 非法：both」的**假错误**（引擎照常执行，只是数据看起来没建模）。
+           "both")
 COND_OPS = ("eq", "gt", "gte", "lt", "lte", "in", "contains")
 
 # 引擎可执行 tag 映射（与 engine/data/cards_real.json 的 meta.engine_tags 对齐）
@@ -3790,6 +3804,20 @@ _BORROW_PATTERNS = (
                 r"it as this attack\.?$", re.I), "bench_ally_n"),
 )
 
+# S5（2026-11-08）：两种**带条件/带来源**的借用招式。
+#   · Ethan's Sudowoodo「Try to Imitate」——**抛币门**：正面才借；
+#   · Team Rocket's Persian ex「Haughty Order」——来源是**对手牌库顶 N 张**，
+#     且卡面写「You **may**」（可以放弃 → 合法动作表必须同时列裸动作）。
+# ⚠ 两者都不能落进 `_BORROW_PATTERNS`：分别多了币与来源参数，照抄会把
+#   「抛币」或「牌库顶 N 张」这两条限定静默丢掉（= 静默加强）。
+_BORROW_COIN_RE = re.compile(
+    r"^flip a coin\. if heads, choose 1 of your opponent's active pok[eé]mon's "
+    r"attacks? and use it as this attack\.?$", re.I)
+_BORROW_DECK_TOP_RE = re.compile(
+    r"^reveal the top (\d+) cards of your opponent's deck\. you may choose an "
+    r"attack from a pok[eé]mon you find there and use it as this attack\. "
+    r"shuffle the revealed cards into your opponent's deck\.?$", re.I)
+
 # Relicanth「Memory Dive」：进化前形态的招式都能用（能量照付）
 _PREV_ATTACKS_RE = re.compile(
     r"^each of your evolved pok[eé]mon can use any attack from its previous "
@@ -3814,6 +3842,13 @@ def _detect_borrow(text: str, kind: str) -> list:
         return []
     if kind != "attack":
         return []
+    m_dt = _BORROW_DECK_TOP_RE.match(t)
+    if m_dt:
+        return [act("rule", None, "any",
+                    {"borrow": f"opp_deck_top:{int(m_dt.group(1))}"})]
+    if _BORROW_COIN_RE.match(t):
+        return [act("rule", None, "any",
+                    {"borrow": "opp_active", "coin": "heads"})]
     for rx, scope in _BORROW_PATTERNS:
         if rx.match(t):
             return [act("rule", None, "any", {"borrow": scope})]
@@ -5503,6 +5538,16 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
             drop.append("受击/受击历史从句")
         if any(m.get("type") == "shuffle_both_coin_draw" for m in mods):
             drop.append("抛币分支内的抽牌")
+        # S5：抛币分岔检索 / 放牌库底后逐人抛币 —— 子效果已由单条卡级 tag
+        # 精确承载，移除分词器留下的「抛币分支内不可表达」占位。
+        # ⚠ 只在 tag **真的产出**时才移除（否则整段效果会静默丢失）。
+        if any(m.get("type") == "coin_search" for m in mods):
+            drop.append("抛币分支内的检索")
+            # 分词器还会产出一条**无条件** `search`（等价于「两侧都搜」）——
+            # 留着它要么让效果变成搜两次（静默加强），要么被登记成未建模。
+            actions = [a for a in actions if a.get("type") != "search"]
+        if any(m.get("type") == "shuffle_both_bottom_coin_draw" for m in mods):
+            drop.append("抛币分支内的抽牌")
         # 第四十六批：全队限时减伤 / 单体限时护盾（含奖赏数打出前置条件）
         if any(m.get("type") == "team_shield" for m in mods):
             drop.append("静态规则修改")
@@ -5627,6 +5672,56 @@ _SHUFFLE_BOTH_COIN_DRAW_RE = re.compile(
     r"flip\s+a\s+coin\.\s*if\s+heads,\s*you\s+draw\s+(\d+)\s+cards?,\s*and\s+your\s+"
     r"opponent\s+draws\s+(\d+)\s+cards?\.\s*if\s+tails,\s*you\s+draw\s+(\d+)\s+"
     r"cards?,\s*and\s+your\s+opponent\s+draws\s+(\d+)\s+cards?", re.I)
+# S5（Lucian TWM 157）：**放牌库底**（不洗）+ 每人**各**抛一枚币分抽。
+# 「Each player shuffles their hand and puts it on the bottom of their deck. If
+#  either player put any cards on the bottom of their deck in this way, each
+#  player flips a coin. If heads, that player draws 6 cards. If tails, they
+#  draw 3 cards.」
+# ⚠ 与上一条（Harlequin）**不是同一形态**：① 放底不洗牌 → 牌库顺序不同；
+#   ② 币是每人各一枚（「each player flips … that player draws」）→ 四条
+#   分支都要可达，而单币版只有两条。照抄上一条会把概率分布改掉。
+_SHUFFLE_BOTH_BOTTOM_COIN_DRAW_RE = re.compile(
+    r"each\s+player\s+shuffles\s+their\s+hand\s+and\s+puts\s+it\s+on\s+the\s+"
+    r"bottom\s+of\s+their\s+deck\.\s*if\s+either\s+player\s+put\s+any\s+cards\s+on\s+"
+    r"the\s+bottom\s+of\s+their\s+deck\s+in\s+this\s+way,\s*each\s+player\s+flips\s+"
+    r"a\s+coin\.\s*if\s+heads,\s*that\s+player\s+draws\s+(\d+)\s+cards?\.\s*"
+    r"if\s+tails,\s*they\s+draw\s+(\d+)\s+cards?", re.I)
+# S5（Team Rocket's Great Ball DRI 175）：**抛币分岔检索**——正面找进化、
+# 反面找基础，两侧是**同一阵营**的不同 stage。
+# 「Flip a coin. If heads, search your deck for an Evolution Team Rocket's
+#  Pokémon, reveal it, and put it into your hand. If tails, search your deck for
+#  a Basic Team Rocket's Pokémon, reveal it, and put it into your hand. Then,
+#  shuffle your deck.」
+# ⚠ 冠词有 `a` / `an` 两版（「an Evolution」/「a Basic」），写死一个会让另一个
+#   落进「抛币分支内的检索」兜底（整卡拒收且看不出原因）。
+_COIN_SEARCH_SPLIT_RE = re.compile(
+    r"flip\s+a\s+coin\.\s*if\s+heads,\s*search\s+your\s+deck\s+for\s+an?\s+"
+    r"(evolution|basic|stage\s*1|stage\s*2)\s+(?P<c1>[a-z'’.\- ]+?)"
+    r"\s+pok[eé]mon,\s*reveal\s+it,\s*and\s+put\s+it\s+into\s+your\s+hand\.\s*"
+    r"if\s+tails,\s*search\s+your\s+deck\s+for\s+an?\s+"
+    r"(evolution|basic|stage\s*1|stage\s*2)\s+(?P<c2>[a-z'’.\- ]+?)"
+    r"\s+pok[eé]mon,\s*reveal\s+it,\s*and\s+put\s+it\s+into\s+your\s+hand\.\s*"
+    r"then,\s*shuffle\s+your\s+deck\.?", re.I)
+
+
+def _stage_key(raw: str) -> str:
+    """卡面 stage 词 → 引擎 `stage:` 取值（basic / stage1 / stage2 / evolution）"""
+    s = re.sub(r"\s+", "", str(raw or "").lower())
+    return {"basic": "basic", "evolution": "evolution",
+            "stage1": "stage1", "stage2": "stage2"}.get(s, "")
+
+
+def _category_text_key(raw: str) -> str:
+    """卡面阵营名 → 引擎 `category:` 键（「Team Rocket's」→ ``teamrocket``）
+
+    与引擎侧 `_category_key` 用**同一套归一**（去掉所有格 's 与全部标点，
+    只留小写字母数字）。两边漂移的后果是「检索永远找不到」——卡打得出、
+    效果静默为空，日志里什么异常都没有。
+    """
+    s = str(raw or "").lower().replace("’", "'")
+    s = re.sub(r"'s\b", "", s)
+    s = re.sub(r"[^a-z0-9]+", "", s)
+    return s
 # 「Flip a coin **for each** X」（2026-11-04 第四十八批）—— 币数**本身**由计数源
 # 决定。卡面三种写法：
 #   · 「for each Energy attached to this Pokémon」（Heliolisk / Dudunsparce ex）
@@ -8424,6 +8519,28 @@ def _detect_modifiers(text: str, kind: str, name: str) -> list:
                         "opp_tails": int(m_sb.group(4))}))
         return out
 
+    # S5（Lucian）：手牌放牌库底（不洗）+ 每人各抛一枚币分抽。整段唯一语义。
+    m_bb = _SHUFFLE_BOTH_BOTTOM_COIN_DRAW_RE.search(t)
+    if m_bb:
+        out.append(act("shuffle_both_bottom_coin_draw", None, "both",
+                       {"heads": int(m_bb.group(1)),
+                        "tails": int(m_bb.group(2))}))
+        return out
+
+    # S5（TR Great Ball）：抛币分岔检索（同阵营、不同 stage）。整段唯一语义。
+    m_cs = _COIN_SEARCH_SPLIT_RE.search(t)
+    if m_cs:
+        _st1, _st2 = _stage_key(m_cs.group(1)), _stage_key(m_cs.group(3))
+        _c1 = _category_text_key(m_cs.group("c1"))
+        _c2 = _category_text_key(m_cs.group("c2"))
+        if _st1 and _st2 and _c1 and _c1 == _c2:
+            out.append(act("coin_search", None, "self",
+                           {"heads_stage": _st1, "tails_stage": _st2,
+                            "heads_category": _c1, "tails_category": _c2}))
+            return out
+        # 结构对但两侧类别/阶段读不出来 → 不认领（回落兜底，整卡如实拒收）
+        return out
+
     # 全队限时减伤（第四十六批，Iron Defender）：整段唯一语义
     m_ts = _TEAM_SHIELD_RE.search(t)
     if m_ts:
@@ -9548,6 +9665,27 @@ def to_engine_tags(specs: list) -> dict:
                     f"{int(extra.get('opp_heads') or 0)}:"
                     f"{int(extra.get('mine_tails') or 0)}:"
                     f"{int(extra.get('opp_tails') or 0)}")
+            elif t == "shuffle_both_bottom_coin_draw":
+                # S5（Lucian）：手牌放牌库**底**（不洗）+ **每人各**抛一枚币。
+                # 与上一条差在「放底不洗」与「币是每人各一枚」—— 折成同一条
+                # tag 会让双方抽牌数完全相关（四个分支变两个）。
+                tags.append(
+                    "shuffle_both_bottom_coin_draw:"
+                    f"{int(extra.get('heads') or 0)}:"
+                    f"{int(extra.get('tails') or 0)}")
+            elif t == "coin_search":
+                # S5（TR Great Ball）：抛币分岔检索。两侧**类别相同、stage 不同**；
+                # 类别缺失或两侧不一致时如实拒收（不能退化成「任意宝可梦」）。
+                _c1 = str(extra.get("heads_category") or "")
+                _c2 = str(extra.get("tails_category") or "")
+                if not _c1 or _c1 != _c2:
+                    unsupported.append({"type": t,
+                                        "reason": "抛币两侧检索类别不一致"})
+                else:
+                    tags.append(
+                        "coin_search:"
+                        f"{extra.get('heads_stage')}:{extra.get('tails_stage')}"
+                        f":category:{_c1}")
             elif t == "dmg_recoil":
                 # 可选加伤 + 反伤（第四十七批，Gurdurr / Dondozo ex）：
                 # 加伤在 `_attack_mods` 计入、反伤在 `_apply_attack_effects`
@@ -10591,7 +10729,13 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"nullify_if:{extra['nullify_if']}")
                 elif extra.get("borrow"):
                     # 借用招式（"use it as this attack"）：来源由 scope 限定
-                    tags.append(f"borrow_attack:{extra['borrow']}")
+                    _bt = f"borrow_attack:{extra['borrow']}"
+                    if extra.get("coin"):
+                        # S5：抛币门（Ethan's Sudowoodo）—— 币必须包在**外面**，
+                        # 引擎在解析借用来源之前抛；写成 `borrow_attack:...:coin`
+                        # 会被当成来源名的一部分（永不匹配 = 死卡）。
+                        _bt = f"coin:{extra['coin']}:{_bt}"
+                    tags.append(_bt)
                 elif extra.get("attack_denial"):
                     # 「if … tries to use an attack, … coin. If tails, that attack
                     # doesn't happen」→ 下回合该宝可梦每次攻击前抛币

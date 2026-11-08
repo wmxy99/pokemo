@@ -140,12 +140,13 @@ def render(data: dict, m: dict) -> str:
       f"| `sum(1 for c in cards if c.get(\"engine_ready\"))` |")
     A(f"| 未建模卡 | **{m['unready']}** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 {m['unsupported']}） |")
     A(f"| 引擎池 | **{m['pool']}** | `cards_pool_ext.json` 的 `cards` 长度 |")
-    A("| 对账类目 | **49 类全绿** | `scripts/audit_pool_alignment.py` |")
+    A("| 对账类目 | **50 类全绿** | `scripts/audit_pool_alignment.py` |")
     A("| 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |")
     A("| CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |")
-    A("| K1 双盲 | **0.785**（200 局双盲，`artifacts/k1_rich.pt` = `k1_rich40k` 复测）· "
-      "⚠ 原 **0.795** 权重在一次失败的「动作编码 +2 维」迁移尝试中被覆盖"
-      "（迁移已回退，代码未变）；现权重仍 ≥0.70 判据（PASS），但**不是**原基线值 | "
+    # K1 是**实测值**，每次改动引擎后必须重跑；本行只记最近一次的双盲结果
+    # （单侧口径 0.825 不能用于判定 —— 引擎先手优势约 14pp 会被算进战绩）。
+    A("| K1 双盲 | **0.795**（200 局双盲 = 100 先手 + 100 后手，"
+      "`artifacts/k1_rich.pt`；单侧对照 0.825、先手基线 0.640） | "
       "`examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |")
     A("")
     # 「批内待做」与「批内已判拒收」必须分开说：全部批次处理完之后，剩下的卡
@@ -177,11 +178,11 @@ def render(data: dict, m: dict) -> str:
           f"{m['ready'] / m['total'] * 100:.1f}%**（44 批全部处理完毕）。"
           f"剩余 {len(todo)} 张已逐批**如实拒收**（原因见各批说明），"
           f"另 {len(structural)} 张结构性边界与 {len(deferred)} 张待新能力卡"
-          # 缺口清单必须与**当前**实现同步：第一百三十四批把「条件式 HP」与
-          # 「牌库底**读取**」做掉了，继续照抄旧清单会误导下一轮的开工判断。
-          f"需引擎重构（交互层：任意数量/可选代价 · 延迟队列 · 奖赏卡对象与"
-          f"牌库底**写入** · 事件触发（换位/进化/附能时）· 效果免疫层 · 退化 "
-          f"devolve）才可能归零。")
+          # 缺口清单必须与**当前**实现同步：S1–S5 已把「决策分解 / 事件+延迟队列 /
+          # 奖赏卡与牌库底 / 效果免疫 / 复制招式与递归」做掉，继续照抄旧清单会
+          # 误导下一轮的开工判断（实测：旧清单里有 4 项早已落地）。
+          f"需引擎重构（退化 devolve · 多条件组合门槛（gate）· 任意数量交互层 · "
+          f"官方规则对齐 S6）才可能归零。")
     A("")
     A("---")
     A("")
@@ -206,7 +207,7 @@ def render(data: dict, m: dict) -> str:
     A("   → gen_engine_pool.py")
     A("   → import_challenge_dataset.py --reparse-only")
     A("   → coverage_backlog.py --registry")
-    A("   → audit_pool_alignment.py        # 必须 49 类全绿")
+    A("   → audit_pool_alignment.py        # 必须 50 类全绿")
     A("   ```")
     A("")
     A("**每批 DoD（全部满足才算完成）**：")

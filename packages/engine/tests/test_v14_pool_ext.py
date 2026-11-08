@@ -22,8 +22,9 @@ from engine import decklib
 from engine import reallib
 from engine.agents import RandomAgent
 from engine.battle import Battle
-from engine.cards import (EnergyRef, PokeRef, PokemonDef, TrainerRef,
-                         make_pokemon)
+from engine.battle import _borrow_optional, _borrow_scope
+from engine.cards import (AttackDef, EnergyRef, PokeRef, PokemonDef,
+                          TrainerRef, make_pokemon)
 from engine.state import GameConfig, PlayerState
 
 
@@ -45,8 +46,11 @@ def _arena(seed: int = 1):
     b.events = []
     b.players[0].active = make_pokemon(
         PokemonDef("Probe", hp=400, ptype="colorless", attacks=()))
+    # S5：对手战斗位必须**有招式** —— `borrow_attack:` 家族的候选全来自它，
+    # 空招式会让「借用招式」类卡在穷举里必然执行不了（假失败）。
     b.players[1].active = make_pokemon(
-        PokemonDef("Dummy", hp=400, ptype="colorless", attacks=()))
+        PokemonDef("Dummy", hp=400, ptype="colorless",
+                   attacks=(AttackDef("Probe Jab", cost=0, damage=10),)))
     for p in b.players:
         p.deck = [EnergyRef() for _ in range(30)]
     return b
@@ -158,7 +162,17 @@ class TestEveryCardExecutes(unittest.TestCase):
                 fp = make_pokemon(cdef)
                 _fill_energy(fp)
                 b.players[0].active = fp
-                r = b.step({"verb": "attack", "attack": ai})
+                act = {"verb": "attack", "attack": ai}
+                _scope = _borrow_scope(cdef.attacks[ai])
+                if _scope is not None and not _borrow_optional(_scope):
+                    # S5：**必须借**的招式（含抛币门）—— 裸动作在规则上非法，
+                    # 从合法动作表取「同一招式的第一个可借选项」。
+                    _cand = [a for a in b.legal_actions()
+                             if a.get("verb") == "attack"
+                             and a.get("attack") == ai]
+                    if _cand:
+                        act = _cand[0]
+                r = b.step(act)
                 checked += 1
                 if not r.get("ok"):
                     errors += 1

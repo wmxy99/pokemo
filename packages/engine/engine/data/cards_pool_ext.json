@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1203,
+      "kept": 1207,
       "by_Energy": 20,
-      "by_Pokemon": 1007,
-      "by_Trainer": 176,
+      "by_Pokemon": 1009,
+      "by_Trainer": 178,
       "skipped": {
-        "存在未建模项（整卡不收）": 49,
+        "存在未建模项（整卡不收）": 45,
         "人工卡池已有同一印刷（人工优先）": 15
       }
     }
@@ -17105,6 +17105,61 @@
       "uid": "Zeraora@DRI 78"
     },
     {
+      "name": "Ethan's Sudowoodo",
+      "name_zh": "阿响的树才怪",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 110,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Ethan)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Impound",
+          "cost": {
+            "fighting": 1
+          },
+          "damage": 20,
+          "effects": [
+            "retreat_lock:opp:turn"
+          ],
+          "desc": "During your opponent’s next turn, the Defending Pokémon can’t retreat.",
+          "name_zh": "扣押",
+          "desc_zh": "在对手的下个回合中，战斗宝可梦无法撤退。"
+        },
+        {
+          "name": "Try to Imitate",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 0,
+          "effects": [
+            "coin:heads:borrow_attack:opp_active"
+          ],
+          "desc": "Flip a coin. If heads, choose 1 of your opponent’s Active Pokémon’s attacks and use it as this attack.",
+          "name_zh": "试着模仿",
+          "desc_zh": "抛硬币。若为正面，选择对手的战斗宝可梦的 1 个招式，并作为此招式使用。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "93"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 378,
+      "name_key": "ethanssudowoodo",
+      "uid": "Ethan's Sudowoodo@DRI 93"
+    },
+    {
       "name": "Cynthia's Gible",
       "name_zh": "竹兰的圆陆鲨",
       "supertype": "Pokemon",
@@ -21507,6 +21562,61 @@
       "source_card_id": 470,
       "name_key": "teamrocketsmeowth",
       "uid": "Team Rocket's Meowth@DRI 149"
+    },
+    {
+      "name": "Team Rocket's Persian ex",
+      "name_zh": "火箭队的猫老大 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 260,
+      "types": [
+        "colorless"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Team Rocket)",
+      "evolves_from": "Team Rocket's Meowth",
+      "attacks": [
+        {
+          "name": "Haughty Order",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 0,
+          "effects": [
+            "borrow_attack:opp_deck_top:10"
+          ],
+          "desc": "Reveal the top 10 cards of your opponent’s deck. You may choose an attack from a Pokémon you find there and use it as this attack. Shuffle the revealed cards into your opponent’s deck.",
+          "name_zh": "傲慢命令",
+          "desc_zh": "展示对手牌库上方的 10 张卡。你可以从中选择 1 只宝可梦的招式，将其作为此招式使用。把展示的卡洗回对手的牌库。"
+        },
+        {
+          "name": "Cruel Slash",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 140,
+          "effects": [
+            "confuse"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Confused.",
+          "name_zh": "残酷斩击",
+          "desc_zh": "对手的战斗宝可梦现在处于混乱状态。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "150"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 471,
+      "name_key": "teamrocketspersianex",
+      "uid": "Team Rocket's Persian ex@DRI 150"
     },
     {
       "name": "Kangaskhan",
@@ -51227,6 +51337,23 @@
       "uid": "Team Rocket's Bother-Bot@DRI 172"
     },
     {
+      "name": "Team Rocket's Great Ball",
+      "name_zh": "火箭队的高级球",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "coin_search:evolution:basic:category:teamrocket",
+      "desc": "Flip a coin. If heads, search your deck for an Evolution Team Rocket’s Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Team Rocket’s Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "desc_zh": "抛硬币。若为正面，从牌库中检索 1 只进化形态的火箭队的宝可梦，展示它并加入手牌。若为反面，从牌库中检索 1 只基础火箭队的宝可梦，展示它并加入手牌。然后洗牌。",
+      "real": {
+        "set": "DRI",
+        "number": "175"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1132,
+      "uid": "Team Rocket's Great Ball@DRI 175"
+    },
+    {
       "name": "Team Rocket's Venture Bomb",
       "name_zh": "火箭队的冒险炸弹",
       "supertype": "Trainer",
@@ -52962,6 +53089,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1236,
       "uid": "Urbain@ASC 214"
+    },
+    {
+      "name": "Lucian",
+      "name_zh": "五智",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "shuffle_both_bottom_coin_draw:6:3",
+      "desc": "Each player shuffles their hand and puts it on the bottom of their deck. If either player put any cards on the bottom of their deck in this way, each player flips a coin. If heads, that player draws 6 cards. If tails, they draw 3 cards.",
+      "desc_zh": "每位玩家将其手牌洗牌并放到其牌库底部。若任一玩家以此方式将卡放到了牌库底部，则每位玩家抛硬币。若为正面，该玩家抽 6 张牌。若为反面，其抽 3 张牌。",
+      "real": {
+        "set": "TWM",
+        "number": "157"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1237,
+      "uid": "Lucian@TWM 157"
     },
     {
       "name": "Tarragon",

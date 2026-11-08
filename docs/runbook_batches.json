@@ -1,1417 +1,1402 @@
 {
-  "meta": {
-    "batches_total": 44,
-    "phases": {
-      "P1": "90–92",
-      "P2": "93–97",
-      "P3": "98–111",
-      "P4": "112–120",
-      "P5": "121–133"
-    },
-    "parser": "packages/agent/agent/effects.py",
-    "pool_builder": "packages/card-db/scripts/gen_engine_pool.py",
-    "db": "packages/card-db/data/cleaned/cards_challenge.json"
+ "meta": {
+  "batches_total": 44,
+  "phases": {
+   "P1": "90–92",
+   "P2": "93–97",
+   "P3": "98–111",
+   "P4": "112–120",
+   "P5": "121–133"
   },
-  "batches": [
+  "parser": "packages/agent/agent/effects.py",
+  "pool_builder": "packages/card-db/scripts/gen_engine_pool.py",
+  "db": "packages/card-db/data/cleaned/cards_challenge.json"
+ },
+ "batches": [
+  {
+   "id": 90,
+   "phase": "P1",
+   "theme": "被动 tag 归属修复",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "被动 tag 归属：上游把 Tera 规则文本归进 `attacks[]`，引擎只读 `ability.tag`。修法=建池时把「attack 上全为 `passive:`」转写为卡级被动；**禁止**把 `passive:` 放进攻击白名单。",
+   "cards": [
     {
-      "id": 90,
-      "phase": "P1",
-      "theme": "被动 tag 归属修复",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "被动 tag 归属：上游把 Tera 规则文本归进 `attacks[]`，引擎只读 `ability.tag`。修法=建池时把「attack 上全为 `passive:`」转写为卡级被动；**禁止**把 `passive:` 放进攻击白名单。",
-      "cards": [
-        {
-          "name": "PalossandEX",
-          "series": "SSP",
-          "number": "91",
-          "tier": "done"
-        },
-        {
-          "name": "Miraidon ex",
-          "series": "ASC",
-          "number": "73",
-          "tier": "done"
-        },
-        {
-          "name": "Koraidon ex",
-          "series": "ASC",
-          "number": "121",
-          "tier": "done"
-        }
-      ]
+     "name": "PalossandEX",
+     "series": "SSP",
+     "number": "91",
+     "tier": "done"
     },
     {
-      "id": 91,
-      "phase": "P1",
-      "theme": "训练家白名单补",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 0,
-      "note": "补 `TRAINER_TAGS` 的 `shuffle_top:`，并确认 `_do_trainer` 有派发（此前只在 `_apply_attack_effects`）。",
-      "cards": [
-        {
-          "name": "Deduction Kit",
-          "series": "SSP",
-          "number": "171",
-          "tier": "done"
-        }
-      ]
+     "name": "Miraidon ex",
+     "series": "ASC",
+     "number": "73",
+     "tier": "done"
     },
     {
-      "id": 92,
-      "phase": "P1",
-      "theme": "训练家多动作合成复合 tag",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "解析侧合成**单条**复合 tag（训练家只认一个卡级 tag）；禁止「只落第一条」或建池放行多 tag。 **实际进池 3 张 = 本批 2 张 + `Duosion`(BLK 38) 顺带解禁**（原列批 102，现已划掉）。",
-      "cards": [
-        {
-          "name": "Salvatore",
-          "series": "TEF",
-          "number": "160",
-          "tier": "done"
-        },
-        {
-          "name": "Larry’s Skill",
-          "series": "PRE",
-          "number": "115",
-          "tier": "done"
-        }
-      ]
-    },
-    {
-      "id": 93,
-      "phase": "P2",
-      "theme": "静态伤害缩放：条件型",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 1,
-      "note": "**落地 3 张**：Galvantula ex（`opp_active_is_ex_or_v`）、Team Rocket's Kangaskhan ex（`played_supporter_named:teamrocket`，读 `PlayerState.supporter_name`）、Pangoro（`own_bench_named_has_damage:pancham`）。**如实拒收 1 张**：Walking Wake「up to 9 damage counters on this Pokémon，按放置数缩放」——「up to」是玩家选择，且指示物与 `fp.damage` 合并，无法精确表达。",
-      "cards": [
-        {
-          "name": "Team Rocket's Kangaskhan ex",
-          "series": "ASC",
-          "number": "162",
-          "tier": "B"
-        },
-        {
-          "name": "Galvantula ex",
-          "series": "SCR",
-          "number": "51",
-          "tier": "B"
-        },
-        {
-          "name": "Pangoro",
-          "series": "ASC",
-          "number": "140",
-          "tier": "B"
-        },
-        {
-          "name": "Walking Wake",
-          "series": "TWM",
-          "number": "63",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 94,
-      "phase": "P2",
-      "theme": "静态伤害缩放：计数源型",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 3,
-      "note": "**落地 2 张**：Zoroark（`dmg_set:60:per:opp_ex_or_v`）、Bronzong（`dmg_set:40:per:both_field_tools`，引擎既有计数源首次被解析产出）。**如实拒收 3 张**：Misty's Gyarados / Mega Abomasnow ex（「弃牌库顶 N 张，按其中被弃的 X 数量缩放」需磨牌结果与伤害耦合，引擎 `mill:` 不回传计数）、Doublade（`any number of` 揭示，属批 96 交互层）。",
-      "cards": [
-        {
-          "name": "Zoroark",
-          "series": "SFA",
-          "number": "32",
-          "tier": "B"
-        },
-        {
-          "name": "Misty's Gyarados",
-          "series": "DRI",
-          "number": "49",
-          "tier": "B"
-        },
-        {
-          "name": "Mega Abomasnow ex",
-          "series": "MEG",
-          "number": "36",
-          "tier": "B"
-        },
-        {
-          "name": "Bronzong",
-          "series": "PFL",
-          "number": "72",
-          "tier": "B"
-        },
-        {
-          "name": "Doublade",
-          "series": "POR",
-          "number": "57",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 95,
-      "phase": "P2",
-      "theme": "静态修正层",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 4,
-      "note": "**落地 2 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 静态修正层新增**卡牌子类**范围与 `:except:` 扩展；旧拒绝理由「数据模型无 Future」已过期）、Feraligatr（`counters:5:scope:self|self_dmg_bonus:120:self` —— 新增**回合级加伤旗标** `dmg_bonus_until`，按持有者对象同一性判定范围，换位后同伴不沾光、跨回合自动过期）。**如实拒收 4 张**：Lillie's Clefairy ex（全局弱点层）、Hop's Choice Band（道具同时改费用+加伤，`fp.tool` 是单字符串，需复合道具承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）。",
-      "cards": [
-        {
-          "name": "Iron Crown ex",
-          "series": "TEF",
-          "number": "81",
-          "tier": "B"
-        },
-        {
-          "name": "Lillie’s Clefairy ex",
-          "series": "JTG",
-          "number": "56",
-          "tier": "B"
-        },
-        {
-          "name": "Hop’s Choice Band",
-          "series": "JTG",
-          "number": "148",
-          "tier": "B"
-        },
-        {
-          "name": "Kieran",
-          "series": "TWM",
-          "number": "154",
-          "tier": "B"
-        },
-        {
-          "name": "Archaludon ex",
-          "series": "SSP",
-          "number": "130",
-          "tier": "B"
-        },
-        {
-          "name": "Feraligatr",
-          "series": "TEF",
-          "number": "41",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 96,
-      "phase": "P2",
-      "theme": "`any number of` 自由数量",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 8,
-      "note": "**部分完成（1 张进池 / 8 张如实拒收）· 第一百三十五批（S1a）**：交互层（决策分解）落地 —— 引擎新增 `phase=\"choice\"` + `PendingChoice`，「弃任意数量手牌」不再需要默认值，由牌手逐张选、随时可 `stop`。Naveen 因此进池（`choose:discard_hand:any:then:draw_to:5`）。其余 8 张仍需各自的 choice kind（可选**能量代价**、多目标伤害分配、跨区选择：Alakazam / Dialga / Mega Charizard X ex / Honchkrow / Doublade / Alolan Exeggutor ex / Strange Timepiece / Lillie's Ribombee），属 S1b 范围。",
-      "cards": [
-        {
-          "name": "Alolan Exeggutor ex",
-          "series": "SSP",
-          "number": "133",
-          "tier": "B"
-        },
-        {
-          "name": "Alakazam",
-          "series": "TWM",
-          "number": "82",
-          "tier": "B"
-        },
-        {
-          "name": "Lillie’s Ribombee",
-          "series": "JTG",
-          "number": "67",
-          "tier": "B"
-        },
-        {
-          "name": "Gorebyss",
-          "series": "DRI",
-          "number": "56",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket's Honchkrow",
-          "series": "ASC",
-          "number": "127",
-          "tier": "B"
-        },
-        {
-          "name": "Accompanying Flute",
-          "series": "TWM",
-          "number": "142",
-          "tier": "B"
-        },
-        {
-          "name": "Strange Timepiece",
-          "series": "MEG",
-          "number": "128",
-          "tier": "B"
-        },
-        {
-          "name": "Naveen",
-          "series": "POR",
-          "number": "79",
-          "tier": "B"
-        },
-        {
-          "name": "Doublade",
-          "series": "POR",
-          "number": "57",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 97,
-      "phase": "P2",
-      "theme": "指示物目标 / 条件",
-      "status": "done",
-      "actual_pool": 4,
-      "actual_refused": 3,
-      "note": "**落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:sc … **S1c 补记**：「Put N damage counters on your opponent’s Pokémon in any way you like」已由决策分解表达（`choose:counters_any:N`，目标**含战斗位**、允许重复同一只，min=max=N）。Sinistcha 因此进池。",
-      "cards": [
-        {
-          "name": "Feraligatr",
-          "series": "TEF",
-          "number": "41",
-          "tier": "B"
-        },
-        {
-          "name": "Sinistcha",
-          "series": "TWM",
-          "number": "22",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket's Ampharos",
-          "series": "DRI",
-          "number": "74",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket's Crobat ex",
-          "series": "DRI",
-          "number": "122",
-          "tier": "B"
-        },
-        {
-          "name": "Pachirisu",
-          "series": "MEG",
-          "number": "51",
-          "tier": "B"
-        },
-        {
-          "name": "Mismagius",
-          "series": "ASC",
-          "number": "86",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket's Dugtrio",
-          "series": "ASC",
-          "number": "101",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 98,
-      "phase": "P3",
-      "theme": "附加伤害目标扩展",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 1,
-      "note": "**落地 2 张**：Shaymin（`snipe:opp_bench:60:1:target:ex`）、Flygon ex（`snipe:opp:100:all:target:ex` + 无视弱抗）——引擎第四十一批就有 `:target:ex` 目标筛选，缺的是「{ex} or/and {V}」并集写法的**短语映射**。**如实拒收 1 张**：Wellspring Mask Ogerpon ex（「可以洗回 3 个能量，若如此做才对后备 +120」= 可选代价与效果耦合，需交互层）。",
-      "cards": [
-        {
-          "name": "Shaymin",
-          "series": "TEF",
-          "number": "13",
-          "tier": "B"
-        },
-        {
-          "name": "Wellspring Mask Ogerpon ex",
-          "series": "TWM",
-          "number": "64",
-          "tier": "B"
-        },
-        {
-          "name": "Flygon ex",
-          "series": "SSP",
-          "number": "106",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 99,
-      "phase": "P3",
-      "theme": "检索去向 / 数量由计数定",
-      "status": "done",
-      "actual_pool": 4,
-      "actual_refused": 2,
-      "note": "**落地 4 张**：Drilbur（`on_bench_act:search_discard:3:energy:type:fighting` —— 新增**上场触发**包装层，与 `evolve_act:` 同构；不包就是普通 field 特性，会变成「每回合白弃 3 张牌库」）、Lillie's Comfey（`search_bench:all:basic:name_has:lillies`）、Musharna（`search_trainer:all:name_has:fennel`）、Rotom（`search_bench:all:name_has:rotom`）—— 后三张补齐 `any number of` 的**具名**形态与 `:name_has:` 子串筛选。**如实拒收 2 张**：Palafin（「检索 Palafin ex 并**替换自身**，保留附着卡/伤害/状态」需场上实例替换，引擎没有该机制）、Grumpig（「检视牌库顶 4 张，把其中任意张 Basic Energy **自由分配**附着」需分配界面，`recon:` 的 `dest:attach` 只支持单目标）。",
-      "cards": [
-        {
-          "name": "Drilbur",
-          "series": "TEF",
-          "number": "85",
-          "tier": "B"
-        },
-        {
-          "name": "Palafin",
-          "series": "TWM",
-          "number": "60",
-          "tier": "B"
-        },
-        {
-          "name": "Lillie’s Comfey",
-          "series": "JTG",
-          "number": "68",
-          "tier": "B"
-        },
-        {
-          "name": "Musharna",
-          "series": "BLK",
-          "number": "36",
-          "tier": "B"
-        },
-        {
-          "name": "Rotom",
-          "series": "ASC",
-          "number": "92",
-          "tier": "B"
-        },
-        {
-          "name": "Grumpig",
-          "series": "MEG",
-          "number": "63",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 100,
-      "phase": "P3",
-      "theme": "抛币嵌套子效果",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 2,
-      "note": "**落地 1 张**：Vanilluxe（`coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze`）——引擎早已支持多币阈值，缺的是「If **either** of them is heads」这句措辞（此前只认 both/all/at least）。**如实拒收 2 张**：Team Rocket's Great Ball（抛币两侧各检索不同类别，需 coin 嵌套检索）、Lucian（双手牌洗回 + 抛币抽牌，多段复合）。",
-      "cards": [
-        {
-          "name": "Vanilluxe",
-          "series": "WHT",
-          "number": "29",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket's Great Ball",
-          "series": "DRI",
-          "number": "175",
-          "tier": "B"
-        },
-        {
-          "name": "Lucian",
-          "series": "TWM",
-          "number": "157",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 101,
-      "phase": "P3",
-      "theme": "受击历史 `on_damaged`",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "**落地 3 张**：Team Rocket's Koffing（`on_damaged:search_bench:2:name_has:koffing`）、Mega Heracross ex（`dmg_plus_prev_taken`）、Team Rocket's Hypnotizer（`tool:on_damaged:status:sleep:holder:faction:teamrocket`）。新增三件：`FieldPokemon.dmg_taken_prev/mark`（回合开始把上回合累计量滚过来，**先快照再清零**）、`on_damaged` 的 `search_bench` kind、道具受击的 `status` kind + 阵营持有者限定。",
-      "cards": [
-        {
-          "name": "Team Rocket's Koffing",
-          "series": "DRI",
-          "number": "125",
-          "tier": "B"
-        },
-        {
-          "name": "Mega Heracross ex",
-          "series": "PFL",
-          "number": "4",
-          "tier": "B"
-        },
-        {
-          "name": "Team Rocket’s Hypnotizer",
-          "series": "ASC",
-          "number": "206",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 102,
-      "phase": "P3",
-      "theme": "特殊进化驱动 / 进化触发特性",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 1,
-      "note": "**落地 1 张**：Noctowl（`evolve_act:search_trainer:2:gate:tera_in_play` —— 进化触发特性新增**前置门** `:gate:`，条件不满足整条不执行）。**如实拒收 1 张**：Archeops（「devolve 1 of your opponent's evolved Pokémon」需退化机制，引擎只有正向进化 `evolve_to`，反向要重建物种与附着关系）。",
-      "cards": [
-        {
-          "name": "Archeops",
-          "series": "WHT",
-          "number": "51",
-          "tier": "B"
-        },
-        {
-          "name": "Noctowl",
-          "series": "SCR",
-          "number": "115",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 103,
-      "phase": "P3",
-      "theme": "能量代价 / 提供规则",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 2,
-      "note": "**部分完成（1 张进池 / 2 张如实拒收）· 第一百三十五批（S1b）**：可选能量代价落成决策分解 `choose:optional_energy_cost:<n>:<type>:then:<status>` —— 挂起 confirm，付不付由牌手决定；付不出时记 `optional_unpaid` 日志且**不**施加后续效果。Mega Eelektross ex 因此进池；其余卡仍缺各自的 choice kind（多目标分配 / 跨区选择 / coin 嵌套），属 S1c/S5。",
-      "cards": [
-        {
-          "name": "Mega Charizard X ex",
-          "series": "PFL",
-          "number": "13",
-          "tier": "B"
-        },
-        {
-          "name": "Mega Eelektross ex",
-          "series": "ASC",
-          "number": "61",
-          "tier": "B"
-        },
-        {
-          "name": "Dialga",
-          "series": "MEG",
-          "number": "95",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 104,
-      "phase": "P3",
-      "theme": "回复范围 / 全量回复",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "**落地 3 张**：Hydrapple ex（`attach_energy:1:grass:hand:target:any:heal:30` —— 附能后回复**同一目标**，`:heal:` 挂在 attach tag 上保住了「that Pokémon」的指代）、Magearna（`passive:heal_on_attach:90` —— 手牌附能时的被动钩子，持有者须在战斗位）、Bianca's Devotion（`heal:all:choose:maxleft:30` —— `heal:all` 新增 `:maxleft:` 目标上限，超出时引擎回 0 而不是照常回满）。",
-      "cards": [
-        {
-          "name": "Hydrapple ex",
-          "series": "SCR",
-          "number": "14",
-          "tier": "B"
-        },
-        {
-          "name": "Magearna",
-          "series": "JTG",
-          "number": "107",
-          "tier": "B"
-        },
-        {
-          "name": "Bianca’s Devotion",
-          "series": "TEF",
-          "number": "142",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 105,
-      "phase": "P3",
-      "theme": "区分基本 / 特殊能量",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 1,
-      "note": "**落地 1 张**：Enhanced Hammer（`discard_energy:1:opp:special:any`）——`senergy` 是**卡**列表，引擎本就能区分特殊/基本；缺的是训练家侧出口：该前缀此前只在 `ATTACK_TAG_PREFIXES`，训练家白名单没有 → `build_trainer` 整卡拒收（进池后还会报「未知训练家 tag」）。**如实拒收 1 张**：Megaton Blower（同时弃**全部**道具 + **全部**特殊能量 + 一张场地，需复合训练家 tag）。",
-      "cards": [
-        {
-          "name": "Enhanced Hammer",
-          "series": "TWM",
-          "number": "148",
-          "tier": "B"
-        },
-        {
-          "name": "Megaton Blower",
-          "series": "SSP",
-          "number": "182",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 106,
-      "phase": "P3",
-      "theme": "场地形态（S3 扩展）",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 0,
-      "note": "**落地 2 张**：Nighttime Mine（`stadium:tera_cost_up:1` —— 场地抬高**双方** Tera 宝可梦招式 `{C}` 费用，接进 `families.attack_cost`）、Dizzying Valley（`stadium:keep_confuse` —— 进化时按场地**保留混乱**；`evolve_to` 会清空全部状态，故先记再补）。",
-      "cards": [
-        {
-          "name": "Dizzying Valley",
-          "series": "PFL",
-          "number": "88",
-          "tier": "B"
-        },
-        {
-          "name": "Nighttime Mine",
-          "series": "ASC",
-          "number": "197",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 107,
-      "phase": "P3",
-      "theme": "对手手牌禁打层",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "**落地 3 张**：Genesect（`fx:play_block:acespec:tool` —— 禁打层新增 ACE SPEC 类别 + 「持有者贴道具」生效时机）、Chi-Yu（`discard_stadium` + `play_lock:stadium:opp:turn:if_prev` —— 招式侧新增弃场地，且**没弃到就不封锁**）、Scream Tail ex（`play_lock:supporter:opp:turn` + `use_only:went_second_first_turn`）。新增 3 个手牌禁打字段（supporter/stadium/acespec）与招式**静态使用条件** `use_only:`/`use_not:`。⚠ ACE SPEC 当前数据集一张都没有 → 该锁定恒不生效，这是**有前提的等价**，由 `test_batch107_engine` 的数据集守卫钉住。",
-      "cards": [
-        {
-          "name": "Genesect",
-          "series": "SFA",
-          "number": "40",
-          "tier": "B"
-        },
-        {
-          "name": "Chi-Yu",
-          "series": "MEG",
-          "number": "31",
-          "tier": "B"
-        },
-        {
-          "name": "Scream Tail ex",
-          "series": "TWM",
-          "number": "94",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 108,
-      "phase": "P3",
-      "theme": "首回合 / 招式静态条件",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 0,
-      "note": "**落地 2 张**：Terapagos ex（`use_not:went_second_first_turn` + 既有 `shield:` / `passive:bench_immune_dmg`）、Scream Tail ex（同上 `use_only:`，跨批与 107 共用）。",
-      "cards": [
-        {
-          "name": "Terapagos ex",
-          "series": "SCR",
-          "number": "128",
-          "tier": "B"
-        },
-        {
-          "name": "Scream Tail ex",
-          "series": "TWM",
-          "number": "94",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 109,
-      "phase": "P3",
-      "theme": "打出前置 gate",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 0,
-      "note": "**落地 2 张**：Team Rocket's Archer（`shuffle_draw_split:5:3` + 新门槛 `own_ko_tr_last_turn` —— 只统计 **Team Rocket's** 宝可梦被击倒，不能并进 `own_ko_last_turn`，否则门槛被放宽）、Rosa's Encouragement（`attach:2:any:discard:target:stage2` + 既有 `own_behind_prizes` 门槛；训练家侧此前**没有** `attach:` 派发分支）。",
-      "cards": [
-        {
-          "name": "Team Rocket's Archer",
-          "series": "DRI",
-          "number": "170",
-          "tier": "B"
-        },
-        {
-          "name": "Rosa's Encouragement",
-          "series": "POR",
-          "number": "84",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 110,
-      "phase": "P3",
-      "theme": "抽牌分支 / 延迟队列",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 2,
-      "note": "**落地 1 张**：Team Rocket's Ariana（`draw_to_branch:5:8:if:own_all_name:teamrockets`）——新增「分支替换的抽到 N 张」：两条 `draw_to` 叠加与卡面等价（只补不弃），不需要回合状态。**如实拒收 2 张**：Amarys（回合末延迟弃手牌，需延迟队列）、Lucian（抛币嵌套抽牌）。",
-      "cards": [
-        {
-          "name": "Team Rocket's Ariana",
-          "series": "DRI",
-          "number": "171",
-          "tier": "B"
-        },
-        {
-          "name": "Amarys",
-          "series": "PRE",
-          "number": "93",
-          "tier": "B"
-        },
-        {
-          "name": "Lucian",
-          "series": "TWM",
-          "number": "157",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 111,
-      "phase": "P3",
-      "theme": "状态 / 免疫类 / 特性代价",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 1,
-      "note": "**落地 3 张**：Pecharunt ex（`switch_choose:darkness:except:pecharunt:then:poison` —— 带属性/例外筛选的换位 + 换入后状态，目标由 `action[\"bench\"]` 指定）、Hoothoot（`passive:status_immune:sleep` —— 状态免疫按**具体状态**判定，`status=None` 时只有 `all` 形态算数）、Lunatone（`draw:3:if:own_field_name:solrock` + 代价 `discard_hand_energy:1:fighting` —— 代价句从「只认 must」扩到 `may`，并新增具名在场条件）。**如实拒收 1 张**：Mismagius ex（「对手战斗位**撤退到后备**时，其新战斗位混乱」需对手撤退事件钩子）。",
-      "cards": [
-        {
-          "name": "Pecharunt ex",
-          "series": "SFA",
-          "number": "39",
-          "tier": "B"
-        },
-        {
-          "name": "Hoothoot",
-          "series": "PRE",
-          "number": "77",
-          "tier": "B"
-        },
-        {
-          "name": "Mismagius ex",
-          "series": "PFL",
-          "number": "36",
-          "tier": "B"
-        },
-        {
-          "name": "Lunatone",
-          "series": "MEG",
-          "number": "74",
-          "tier": "B"
-        }
-      ]
-    },
-    {
-      "id": 112,
-      "phase": "P4",
-      "theme": "自身弃能代价",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 3,
-      "note": "**落地 2 张**：Kyurem（`fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress` —— 费用**整体改写**，新增 `self_set` 与对手弃牌堆具名计数）、Slaking ex（`passive:attack_block_unless:opp_has_ex_or_v` —— 新增「整只不能出招」被动）。**如实拒收 3 张**：Klinklang（「在手牌时直接放到后备」需手牌→场上动作）、Rotom ex（「同名宝可梦可贴 2 个道具」需道具上限字段）、Core Memory（「道具让附着者获得招式」需道具授予招式层）。",
-      "cards": [
-        {
-          "name": "Kyurem",
-          "series": "SFA",
-          "number": "47",
-          "tier": "D"
-        },
-        {
-          "name": "Klinklang",
-          "series": "SCR",
-          "number": "101",
-          "tier": "D"
-        },
-        {
-          "name": "Rotom ex",
-          "series": "PFL",
-          "number": "29",
-          "tier": "D"
-        },
-        {
-          "name": "Slaking ex",
-          "series": "SSP",
-          "number": "147",
-          "tier": "D"
-        },
-        {
-          "name": "Core Memory",
-          "series": "POR",
-          "number": "70",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 113,
-      "phase": "P4",
-      "theme": "自伤",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 0,
-      "note": "**落地 2 张**：Azumarill（`fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play`）、Eevee（`passive:evolve_same_turn:active` —— 当回合/首回合进化，限定战斗位）。",
-      "cards": [
-        {
-          "name": "Azumarill",
-          "series": "SSP",
-          "number": "74",
-          "tier": "D"
-        },
-        {
-          "name": "Eevee",
-          "series": "SSP",
-          "number": "143",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 114,
-      "phase": "P4",
-      "theme": "自身治疗 / 自身状态",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 1,
-      "note": "**落地 1 张**：Conkeldurr（招式内 `fx:attack_cost:self_set:0:colorless:if:own_active_status_any` —— 引擎 `attack_cost` 新增读取**招式自身 effects** 的来源）。**如实拒收 1 张**：Zarude（「可把自身全部能量收回手牌，使本招 +80」= 可选代价与效果耦合，需交互层）。",
-      "cards": [
-        {
-          "name": "Zarude",
-          "series": "SSP",
-          "number": "11",
-          "tier": "D"
-        },
-        {
-          "name": "Conkeldurr",
-          "series": "TWM",
-          "number": "105",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 115,
-      "phase": "P4",
-      "theme": "静态伤害缩放 D 组",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 6,
-      "note": "**落地 1 张**：Mega Mawile ex（`dmg_set:80:per:own_prizes_taken` + `dmg_set:30:if:opp_active_has_damage` —— 新增**条件基础伤害**）。**如实拒收 6 张**：Scovillain ex / Carbink（`Double Type` 双属性改写需类型层）、Lycanroc（进化触发贴 Spiky 能量需特殊能量按名附着）、Golduck（Damp：屏蔽「自爆型」特性需特性属性标记）、Gengar（被击倒时回手需击倒后去向改写）、Team Rocket's Articuno（拦「攻击效果」而非伤害，需效果免疫层）。",
-      "cards": [
-        {
-          "name": "Scovillain ex",
-          "series": "SSP",
-          "number": "37",
-          "tier": "D"
-        },
-        {
-          "name": "Lycanroc",
-          "series": "JTG",
-          "number": "85",
-          "tier": "D"
-        },
-        {
-          "name": "Golduck",
-          "series": "ASC",
-          "number": "40",
-          "tier": "D"
-        },
-        {
-          "name": "Gengar",
-          "series": "POR",
-          "number": "50",
-          "tier": "D"
-        },
-        {
-          "name": "Mega Mawile ex",
-          "series": "MEG",
-          "number": "94",
-          "tier": "D"
-        },
-        {
-          "name": "Team Rocket's Articuno",
-          "series": "DRI",
-          "number": "51",
-          "tier": "D"
-        },
-        {
-          "name": "Carbink",
-          "series": "ASC",
-          "number": "117",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 116,
-      "phase": "P4",
-      "theme": "对手下回合限制",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 5,
-      "note": "**部分完成（1 张进池 / 5 张如实拒收）**：Walrein 已进池 —— 「下回合 ≤2 能量的宝可梦不能出招」落成 `atk_energy_block:2`（**玩家级**、含之后上场者；逐只写会漏掉换上来的那只）。其余 5 张仍缺事件/延迟层：Sylveon ex（选 2 只后备洗回 + 上回合招式记忆）、TR Moltres ex（按 tag 筛能量 + `if_prev` 击倒）、Ethan's Sudowoodo（coin 嵌套的复制招式）、Palafin ex（登场限制，结构性）、Revavroom ex（自身离场动作）。",
-      "cards": [
-        {
-          "name": "Sylveon ex",
-          "series": "SSP",
-          "number": "86",
-          "tier": "D"
-        },
-        {
-          "name": "Team Rocket's Moltres ex",
-          "series": "DRI",
-          "number": "31",
-          "tier": "D"
-        },
-        {
-          "name": "Ethan's Sudowoodo",
-          "series": "DRI",
-          "number": "93",
-          "tier": "D"
-        },
-        {
-          "name": "Walrein",
-          "series": "SSP",
-          "number": "45",
-          "tier": "D"
-        },
-        {
-          "name": "Palafin ex",
-          "series": "TWM",
-          "number": "61",
-          "tier": "D"
-        },
-        {
-          "name": "Revavroom ex",
-          "series": "SFA",
-          "number": "15",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 117,
-      "phase": "P4",
-      "theme": "特殊进化 / 对手交互",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 3,
-      "note": "**整批受阻（0 张）**：Eevee ex（「可进化成任意 Eevee 系 ex」需进化链白名单层）、TR Persian ex（「看对手牌库顶 10 张并选其中一招使用」需跨牌库选择）、Espeon ex（`Amazez` 全体退化 —— 引擎只有正向 `evolve_to`，退化要重建物种与附着关系，与 102 批 Archeops 同一缺口）。",
-      "cards": [
-        {
-          "name": "Eevee ex",
-          "series": "PRE",
-          "number": "75",
-          "tier": "D"
-        },
-        {
-          "name": "Team Rocket's Persian ex",
-          "series": "DRI",
-          "number": "150",
-          "tier": "D"
-        },
-        {
-          "name": "Espeon ex",
-          "series": "PRE",
-          "number": "34",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 118,
-      "phase": "P4",
-      "theme": "能量附着 / 移动",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 3,
-      "note": "**整批受阻（0 张）**：Cinderace（`Explosiveness` 是开局上场规则，属结构性边界）、Forretress（「任意数量 {M} 能量在己方之间**自由分配**」需分配界面）、Dedenne（附着张数 = 对手全部能量数，且要自由分配给己方 {L} 宝可梦 —— 两个动态量叠加）。",
-      "cards": [
-        {
-          "name": "Cinderace",
-          "series": "MEG",
-          "number": "28",
-          "tier": "D"
-        },
-        {
-          "name": "Forretress",
-          "series": "DRI",
-          "number": "140",
-          "tier": "D"
-        },
-        {
-          "name": "Dedenne",
-          "series": "POR",
-          "number": "29",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 119,
-      "phase": "P4",
-      "theme": "牌库顶 / 底操作",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 2,
-      "note": "**落地 1 张**：Watchog（`self_attack_set_next:240:name:hyperfang` —— 下回合**基础伤害改为**，与既有 `self_attack_plus_next` 分开，避免「240 变 80+240」）。**如实拒收 2 张**：Fraxure（`Unnerve` 拦「对手道具/支援者对本只的效果」，需效果免疫层）、Meloetta ex（`Debut Performance` 是「先攻首回合可出招」的规则豁免）。",
-      "cards": [
-        {
-          "name": "Fraxure",
-          "series": "SFA",
-          "number": "45",
-          "tier": "D"
-        },
-        {
-          "name": "Watchog",
-          "series": "WHT",
-          "number": "73",
-          "tier": "D"
-        },
-        {
-          "name": "Meloetta ex",
-          "series": "BLK",
-          "number": "44",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 120,
-      "phase": "P4",
-      "theme": "杂项收尾",
-      "status": "done",
-      "actual_pool": 4,
-      "actual_refused": 4,
-      "note": "**落地 3 张**：Team Rocket's Mewtwo ex（`passive:attack_block_unless:own_field_name_at_least:teamrocket:4`）、Virizion（`heal:equal` —— 回复量 = 本次实际伤害）、Decidueye ex（`fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4` —— 新增**恰好 N 张手牌**条件与「忽略某色费用」）。**如实拒收 5 张**：Cetitan ex / Antique Sail Fossil（拦对手道具效果）、Tyrantrum（条件 +150 HP，引擎刻意不支持条件式上限）、Shiftry（「选 3 只后备、其余洗回牌库」需选择界面）、Iron Thorns ex（`Initialization`：规则框宝可梦无特性 except Future，需 rule_box 判定扩到场地外）。 第一百三十四批补充：Tyrantrum 补 `passive:hp_plus:150:if:special_energy`（条件式 +HP，判据只依赖**本只**附着卡，故在 `max_hp` 现算、特殊能量被弃即回落）。",
-      "cards": [
-        {
-          "name": "Cetitan ex",
-          "series": "DRI",
-          "number": "65",
-          "tier": "D"
-        },
-        {
-          "name": "Team Rocket's Mewtwo ex",
-          "series": "DRI",
-          "number": "81",
-          "tier": "D"
-        },
-        {
-          "name": "Virizion",
-          "series": "WHT",
-          "number": "10",
-          "tier": "D"
-        },
-        {
-          "name": "Tyrantrum",
-          "series": "POR",
-          "number": "45",
-          "tier": "D"
-        },
-        {
-          "name": "Decidueye ex",
-          "series": "POR",
-          "number": "12",
-          "tier": "D"
-        },
-        {
-          "name": "Shiftry",
-          "series": "TEF",
-          "number": "5",
-          "tier": "D"
-        },
-        {
-          "name": "Iron Thorns ex",
-          "series": "TWM",
-          "number": "77",
-          "tier": "D"
-        },
-        {
-          "name": "Antique Sail Fossil",
-          "series": "POR",
-          "number": "69",
-          "tier": "D"
-        }
-      ]
-    },
-    {
-      "id": 121,
-      "phase": "P5",
-      "theme": "特殊进化条件",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 0,
-      "note": "**落地 3 张**：Karrablast / Shelmet（`passive:evolve_same_turn:if:own_field_name:shelmet|karrablast`）、Luxio（`…:if:opp_active_is_ex`）。全部复用本阶段新增的**当回合进化**被动（含首个回合，与 Forest of Vitality 的「except first turn」相反）。",
-      "cards": [
-        {
-          "name": "Karrablast",
-          "series": "BLK",
-          "number": "9",
-          "tier": "C"
-        },
-        {
-          "name": "Shelmet",
-          "series": "WHT",
-          "number": "8",
-          "tier": "C"
-        },
-        {
-          "name": "Luxio",
-          "series": "POR",
-          "number": "27",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 122,
-      "phase": "P5",
-      "theme": "揭示对手手牌",
-      "status": "done",
-      "actual_pool": 3,
-      "actual_refused": 1,
-      "note": "**部分完成（3 张进池 / 1 张拒收）**：Hoothoot / Espurr / Pidove 的「对手展示手牌」落成 `info:reveal_hand`。**改判理由（第一百三十四批）**：引擎是完美信息的，展示不改变任何状态 —— 旧口径「一律不认领」会让这三张卡永远在池外；现在落成**显式建模的等价**（引擎有派发与日志、对账可查），与「未建模当无事发生」可区分。Mandibuzz 仍缺「对手手牌 → 放到对手后备」的动作。",
-      "cards": [
-        {
-          "name": "Hoothoot",
-          "series": "TEF",
-          "number": "126",
-          "tier": "C"
-        },
-        {
-          "name": "Espurr",
-          "series": "SSP",
-          "number": "84",
-          "tier": "C"
-        },
-        {
-          "name": "Pidove",
-          "series": "BLK",
-          "number": "71",
-          "tier": "C"
-        },
-        {
-          "name": "Mandibuzz",
-          "series": "WHT",
-          "number": "64",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 123,
-      "phase": "P5",
-      "theme": "奖赏区操作",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 3,
-      "note": "**部分完成（1 张进池 / 3 张拒收）**：N's Sigilyph「Victory Symbol」落成 `win_if:own_prizes_eq:1`（恰好剩 1 张奖赏时使用即获胜；条件不成立时本招**什么都不做**，不得按普通招式结算）。其余 3 张仍需：对手牌库顶 10 张里取招式（TR Persian ex）、翻阅对手面朝下奖赏卡（Blipbug / Bother-Bot）、奖赏卡洗回牌库重发（Redeemable Ticket）。",
-      "cards": [
-        {
-          "name": "N’s Sigilyph",
-          "series": "JTG",
-          "number": "64",
-          "tier": "C"
-        },
-        {
-          "name": "Team Rocket's Blipbug",
-          "series": "DRI",
-          "number": "15",
-          "tier": "C"
-        },
-        {
-          "name": "Redeemable Ticket",
-          "series": "JTG",
-          "number": "156",
-          "tier": "C"
-        },
-        {
-          "name": "Team Rocket's Bother-Bot",
-          "series": "DRI",
-          "number": "172",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 124,
-      "phase": "P5",
-      "theme": "能量提供规则",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 3,
-      "note": "**整批受阻（0 张）**：Boomerang Energy（被招式效果弃置时回到手牌，需特殊能量「离场后去向」钩子）、Meganium（基础 {G} 能量提供 {G}{G}，需能量提供倍率层）、Smeargle（抛 3 币、按正面数从弃牌堆附着并自由分配）。",
-      "cards": [
-        {
-          "name": "Boomerang Energy",
-          "series": "TWM",
-          "number": "166",
-          "tier": "C"
-        },
-        {
-          "name": "Meganium",
-          "series": "MEG",
-          "number": "10",
-          "tier": "C"
-        },
-        {
-          "name": "Smeargle",
-          "series": "PFL",
-          "number": "80",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 125,
-      "phase": "P5",
-      "theme": "牌库底 / 顶检视",
-      "status": "done",
-      "actual_pool": 2,
-      "actual_refused": 1,
-      "note": "**部分完成（1 张进池 / 2 张拒收）**：Dusk Ball 落成 `recon_bottom:7`（看**牌库底** 7 张取 1 张宝可梦，其余洗回；与 `recon:` 的牌库顶方向相反，前缀不互相覆盖）。Misty's Psyduck（弃牌库底 + 自身放回牌库顶）与 Gumshoos（手牌与牌库顶互换）仍需「牌库底」写入动作 + 选择层。 **S1c 补记**：Gumshoos「Evidence Gathering」已由决策分解表达（`choose:swap_hand_top`，选哪张手牌由牌手定）。",
-      "cards": [
-        {
-          "name": "Misty's Psyduck",
-          "series": "DRI",
-          "number": "45",
-          "tier": "C"
-        },
-        {
-          "name": "Dusk Ball",
-          "series": "SSP",
-          "number": "175",
-          "tier": "C"
-        },
-        {
-          "name": "Gumshoos",
-          "series": "MEG",
-          "number": "110",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 126,
-      "phase": "P5",
-      "theme": "道具触发式",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 1,
-      "note": "**部分完成（1 张进池 / 1 张拒收）**：Ruffian 落成 `discard_tool_senergy:1` —— **同一只**身上同时弃道具与特殊能量，缺一即不做（拆成两次挑选会变成「可跨两只」，静默加强）。Heavy Baton 仍需道具 `on_ko` 钩子 + 撤退费=4 的持有者限定。",
-      "cards": [
-        {
-          "name": "Heavy Baton",
-          "series": "TEF",
-          "number": "151",
-          "tier": "C"
-        },
-        {
-          "name": "Ruffian",
-          "series": "JTG",
-          "number": "157",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 127,
-      "phase": "P5",
-      "theme": "条件费用 / 特性触发",
-      "status": "done",
-      "actual_pool": 1,
-      "actual_refused": 1,
-      "note": "**落地 1 张**：Crawdaunt（招式内 `fx:attack_cost:self_set:1:darkness:if:own_active_has_damage`）。**如实拒收 1 张**：Latios（「Mega Latias ex 从后备换到战斗位时」触发，需对手/己方换位事件钩子）。",
-      "cards": [
-        {
-          "name": "Crawdaunt",
-          "series": "MEG",
-          "number": "85",
-          "tier": "C"
-        },
-        {
-          "name": "Latios",
-          "series": "MEG",
-          "number": "101",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 128,
-      "phase": "P5",
-      "theme": "延迟到回合末",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 1,
-      "note": "**整批受阻（0 张）**：Team Rocket's Grimer「对手下回合**结束时**弃掉守方及全部附着卡」需**延迟结算队列**（本批主题即「延迟到回合末」）。",
-      "cards": [
-        {
-          "name": "Team Rocket's Grimer",
-          "series": "DRI",
-          "number": "123",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 129,
-      "phase": "P5",
-      "theme": "条件 +HP（单只）",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 1,
-      "note": "**整批受阻（0 张）**：Okidogi 的 `+100 HP` 是**条件式**上限（有 {D} 能量时）。引擎刻意不支持条件式 `max_hp`（`max_hp` 被击倒/奖赏/前端广泛使用且拿不到 battle 上下文），只有无条件 `passive:hp_plus` 与场地重算两档；本批正是「条件 +HP」这一缺口的建档点。",
-      "cards": [
-        {
-          "name": "Okidogi",
-          "series": "TWM",
-          "number": "111",
-          "tier": "C"
-        }
-      ]
-    },
-    {
-      "id": 130,
-      "phase": "P5",
-      "theme": "结构性建档 · 全队 +HP（Ludicolo / Cynthia's Power Weight）",
-      "status": "done",
-      "actual_pool": 0,
-      "actual_refused": 0,
-      "note": "**结构性建档（无卡）**：全队 +HP（Ludicolo / Cynthia's Pokémon 一族）。引擎只有**单只**无条件 `passive:hp_plus`，全队条件式上限需重写 `max_hp` 求值链（同 129）。",
-      "cards": []
-    },
-    {
-      "id": 131,
-      "phase": "P5",
-      "theme": "结构性建档 · 指示物翻倍（N's Vanilluxe）",
-      "status": "done",
-      "actual_pool": 0,
-      "actual_refused": 0,
-      "note": "**结构性建档（无卡）**：指示物翻倍（N's Vanilluxe）。引擎所有指示物放置点都是 `damage += n`，翻倍需统一乘子在**放置入口**而非逐处改。",
-      "cards": []
-    },
-    {
-      "id": 132,
-      "phase": "P5",
-      "theme": "结构性建档 · 全局规则层（Psyduck / Milotic）",
-      "status": "done",
-      "actual_pool": 0,
-      "actual_refused": 0,
-      "note": "**结构性建档（无卡）**：全局规则层（Misty's Psyduck / Milotic）。需要「场上存在即改写某类结算」的接管点，当前只有 `fx:` 静态族覆盖了费用/免伤/禁打三类。",
-      "cards": []
-    },
-    {
-      "id": 133,
-      "phase": "P5",
-      "theme": "结构性建档 · gate 类（Anthea & Concordia）+ 边界收尾",
-      "status": "done",
-      "actual_pool": 0,
-      "actual_refused": 0,
-      "note": "**结构性建档（无卡）**：gate 类（Anthea & Concordia）+ 边界。该卡需要「多条件组合门槛」承载字段；池外 Tera 规则（PalossandEX / Miraidon ex / Koraidon ex）同属结构性边界。",
-      "cards": []
+     "name": "Koraidon ex",
+     "series": "ASC",
+     "number": "121",
+     "tier": "done"
     }
-  ],
-  "structural": [
+   ]
+  },
+  {
+   "id": 91,
+   "phase": "P1",
+   "theme": "训练家白名单补",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 0,
+   "note": "补 `TRAINER_TAGS` 的 `shuffle_top:`，并确认 `_do_trainer` 有派发（此前只在 `_apply_attack_effects`）。",
+   "cards": [
     {
-      "name": "Ludicolo",
-      "series": "JTG",
-      "number": "37"
-    },
-    {
-      "name": "Psyduck",
-      "series": "ASC",
-      "number": "39"
-    },
-    {
-      "name": "Milotic",
-      "series": "TWM",
-      "number": "50"
-    },
-    {
-      "name": "Anthea & Concordia",
-      "series": "ASC",
-      "number": "182"
+     "name": "Deduction Kit",
+     "series": "SSP",
+     "number": "171",
+     "tier": "done"
     }
-  ],
-  "deferred": [
+   ]
+  },
+  {
+   "id": 92,
+   "phase": "P1",
+   "theme": "训练家多动作合成复合 tag",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "解析侧合成**单条**复合 tag（训练家只认一个卡级 tag）；禁止「只落第一条」或建池放行多 tag。 **实际进池 3 张 = 本批 2 张 + `Duosion`(BLK 38) 顺带解禁**（原列批 102，现已划掉）。",
+   "cards": [
     {
-      "name": "Powerglass",
-      "series": "SFA",
-      "number": "63",
-      "tier": "A",
-      "reason": "效果为回合末/被击倒**触发式**，非 `tool:` 常驻；按 `build_trainer` 道具纪律保持拒收。需先给 `TrainerDef` 增「触发式道具」承载字段。"
+     "name": "Salvatore",
+     "series": "TEF",
+     "number": "160",
+     "tier": "done"
     },
     {
-      "name": "Amulet of Hope",
-      "series": "SSP",
-      "number": "162",
-      "tier": "A",
-      "reason": "效果为回合末/被击倒**触发式**，非 `tool:` 常驻；按 `build_trainer` 道具纪律保持拒收。需先给 `TrainerDef` 增「触发式道具」承载字段。"
+     "name": "Larry’s Skill",
+     "series": "PRE",
+     "number": "115",
+     "tier": "done"
     }
-  ],
-  "cross_batch": [
+   ]
+  },
+  {
+   "id": 93,
+   "phase": "P2",
+   "theme": "静态伤害缩放：条件型",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 1,
+   "note": "**落地 3 张**：Galvantula ex（`opp_active_is_ex_or_v`）、Team Rocket's Kangaskhan ex（`played_supporter_named:teamrocket`，读 `PlayerState.supporter_name`）、Pangoro（`own_bench_named_has_damage:pancham`）。**如实拒收 1 张**：Walking Wake「up to 9 damage counters on this Pokémon，按放置数缩放」——「up to」是玩家选择，且指示物与 `fp.damage` 合并，无法精确表达。",
+   "cards": [
     {
-      "name": "Doublade",
-      "series": "POR",
-      "number": "57",
-      "batches": [
-        94,
-        96
-      ],
-      "note": "两族都就位才进池，进度只记一次"
+     "name": "Team Rocket's Kangaskhan ex",
+     "series": "ASC",
+     "number": "162",
+     "tier": "B"
     },
     {
-      "name": "Scream Tail ex",
-      "series": "TWM",
-      "number": "94",
-      "batches": [
-        107,
-        108
-      ],
-      "note": "同上"
+     "name": "Galvantula ex",
+     "series": "SCR",
+     "number": "51",
+     "tier": "B"
     },
     {
-      "name": "Lucian",
-      "series": "TWM",
-      "number": "157",
-      "batches": [
-        100,
-        110
-      ],
-      "note": "同上"
+     "name": "Pangoro",
+     "series": "ASC",
+     "number": "140",
+     "tier": "B"
     },
     {
-      "name": "Feraligatr",
-      "series": "TEF",
-      "number": "41",
-      "batches": [
-        95,
-        97
-      ],
-      "note": "两批都要改：静态修正层（95）+ 指示物（97）；两处各记 1 槽，进度只记一次"
+     "name": "Walking Wake",
+     "series": "TWM",
+     "number": "63",
+     "tier": "B"
     }
-  ]
+   ]
+  },
+  {
+   "id": 94,
+   "phase": "P2",
+   "theme": "静态伤害缩放：计数源型",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 3,
+   "note": "**落地 2 张**：Zoroark（`dmg_set:60:per:opp_ex_or_v`）、Bronzong（`dmg_set:40:per:both_field_tools`，引擎既有计数源首次被解析产出）。**如实拒收 3 张**：Misty's Gyarados / Mega Abomasnow ex（「弃牌库顶 N 张，按其中被弃的 X 数量缩放」需磨牌结果与伤害耦合，引擎 `mill:` 不回传计数）、Doublade（`any number of` 揭示，属批 96 交互层）。",
+   "cards": [
+    {
+     "name": "Zoroark",
+     "series": "SFA",
+     "number": "32",
+     "tier": "B"
+    },
+    {
+     "name": "Misty's Gyarados",
+     "series": "DRI",
+     "number": "49",
+     "tier": "B"
+    },
+    {
+     "name": "Mega Abomasnow ex",
+     "series": "MEG",
+     "number": "36",
+     "tier": "B"
+    },
+    {
+     "name": "Bronzong",
+     "series": "PFL",
+     "number": "72",
+     "tier": "B"
+    },
+    {
+     "name": "Doublade",
+     "series": "POR",
+     "number": "57",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 95,
+   "phase": "P2",
+   "theme": "静态修正层",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 4,
+   "note": "**落地 2 张**：Iron Crown ex（`fx:static_dmg:add:20:team_category:future:except:ironcrown` —— 静态修正层新增**卡牌子类**范围与 `:except:` 扩展；旧拒绝理由「数据模型无 Future」已过期）、Feraligatr（`counters:5:scope:self|self_dmg_bonus:120:self` —— 新增**回合级加伤旗标** `dmg_bonus_until`，按持有者对象同一性判定范围，换位后同伴不沾光、跨回合自动过期）。**如实拒收 4 张**：Lillie's Clefairy ex（全局弱点层）、Hop's Choice Band（道具同时改费用+加伤，`fp.tool` 是单字符串，需复合道具承载）、Kieran（双模式 choose 1 + 回合级队伍加伤）、Archaludon ex（无弱点 + 弃牌堆自由分配附着）。",
+   "cards": [
+    {
+     "name": "Iron Crown ex",
+     "series": "TEF",
+     "number": "81",
+     "tier": "B"
+    },
+    {
+     "name": "Lillie’s Clefairy ex",
+     "series": "JTG",
+     "number": "56",
+     "tier": "B"
+    },
+    {
+     "name": "Hop’s Choice Band",
+     "series": "JTG",
+     "number": "148",
+     "tier": "B"
+    },
+    {
+     "name": "Kieran",
+     "series": "TWM",
+     "number": "154",
+     "tier": "B"
+    },
+    {
+     "name": "Archaludon ex",
+     "series": "SSP",
+     "number": "130",
+     "tier": "B"
+    },
+    {
+     "name": "Feraligatr",
+     "series": "TEF",
+     "number": "41",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 96,
+   "phase": "P2",
+   "theme": "`any number of` 自由数量",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 8,
+   "note": "**部分完成（1 张进池 / 8 张如实拒收）· 第一百三十五批（S1a）**：交互层（决策分解）落地 —— 引擎新增 `phase=\"choice\"` + `PendingChoice`，「弃任意数量手牌」不再需要默认值，由牌手逐张选、随时可 `stop`。Naveen 因此进池（`choose:discard_hand:any:then:draw_to:5`）。其余 8 张仍需各自的 choice kind（可选**能量代价**、多目标伤害分配、跨区选择：Alakazam / Dialga / Mega Charizard X ex / Honchkrow / Doublade / Alolan Exeggutor ex / Strange Timepiece / Lillie's Ribombee），属 S1b 范围。",
+   "cards": [
+    {
+     "name": "Alolan Exeggutor ex",
+     "series": "SSP",
+     "number": "133",
+     "tier": "B"
+    },
+    {
+     "name": "Alakazam",
+     "series": "TWM",
+     "number": "82",
+     "tier": "B"
+    },
+    {
+     "name": "Lillie’s Ribombee",
+     "series": "JTG",
+     "number": "67",
+     "tier": "B"
+    },
+    {
+     "name": "Gorebyss",
+     "series": "DRI",
+     "number": "56",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket's Honchkrow",
+     "series": "ASC",
+     "number": "127",
+     "tier": "B"
+    },
+    {
+     "name": "Accompanying Flute",
+     "series": "TWM",
+     "number": "142",
+     "tier": "B"
+    },
+    {
+     "name": "Strange Timepiece",
+     "series": "MEG",
+     "number": "128",
+     "tier": "B"
+    },
+    {
+     "name": "Naveen",
+     "series": "POR",
+     "number": "79",
+     "tier": "B"
+    },
+    {
+     "name": "Doublade",
+     "series": "POR",
+     "number": "57",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 97,
+   "phase": "P2",
+   "theme": "指示物目标 / 条件",
+   "status": "done",
+   "actual_pool": 4,
+   "actual_refused": 3,
+   "note": "**落地 3 张**：Team Rocket's Crobat ex（`evolve_act:counters:2:sc … **S1c 补记**：「Put N damage counters on your opponent’s Pokémon in any way you like」已由决策分解表达（`choose:counters_any:N`，目标**含战斗位**、允许重复同一只，min=max=N）。Sinistcha 因此进池。",
+   "cards": [
+    {
+     "name": "Feraligatr",
+     "series": "TEF",
+     "number": "41",
+     "tier": "B"
+    },
+    {
+     "name": "Sinistcha",
+     "series": "TWM",
+     "number": "22",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket's Ampharos",
+     "series": "DRI",
+     "number": "74",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket's Crobat ex",
+     "series": "DRI",
+     "number": "122",
+     "tier": "B"
+    },
+    {
+     "name": "Pachirisu",
+     "series": "MEG",
+     "number": "51",
+     "tier": "B"
+    },
+    {
+     "name": "Mismagius",
+     "series": "ASC",
+     "number": "86",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket's Dugtrio",
+     "series": "ASC",
+     "number": "101",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 98,
+   "phase": "P3",
+   "theme": "附加伤害目标扩展",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 1,
+   "note": "**落地 2 张**：Shaymin（`snipe:opp_bench:60:1:target:ex`）、Flygon ex（`snipe:opp:100:all:target:ex` + 无视弱抗）——引擎第四十一批就有 `:target:ex` 目标筛选，缺的是「{ex} or/and {V}」并集写法的**短语映射**。**如实拒收 1 张**：Wellspring Mask Ogerpon ex（「可以洗回 3 个能量，若如此做才对后备 +120」= 可选代价与效果耦合，需交互层）。",
+   "cards": [
+    {
+     "name": "Shaymin",
+     "series": "TEF",
+     "number": "13",
+     "tier": "B"
+    },
+    {
+     "name": "Wellspring Mask Ogerpon ex",
+     "series": "TWM",
+     "number": "64",
+     "tier": "B"
+    },
+    {
+     "name": "Flygon ex",
+     "series": "SSP",
+     "number": "106",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 99,
+   "phase": "P3",
+   "theme": "检索去向 / 数量由计数定",
+   "status": "done",
+   "actual_pool": 4,
+   "actual_refused": 2,
+   "note": "**落地 4 张**：Drilbur（`on_bench_act:search_discard:3:energy:type:fighting` —— 新增**上场触发**包装层，与 `evolve_act:` 同构；不包就是普通 field 特性，会变成「每回合白弃 3 张牌库」）、Lillie's Comfey（`search_bench:all:basic:name_has:lillies`）、Musharna（`search_trainer:all:name_has:fennel`）、Rotom（`search_bench:all:name_has:rotom`）—— 后三张补齐 `any number of` 的**具名**形态与 `:name_has:` 子串筛选。**如实拒收 2 张**：Palafin（「检索 Palafin ex 并**替换自身**，保留附着卡/伤害/状态」需场上实例替换，引擎没有该机制）、Grumpig（「检视牌库顶 4 张，把其中任意张 Basic Energy **自由分配**附着」需分配界面，`recon:` 的 `dest:attach` 只支持单目标）。",
+   "cards": [
+    {
+     "name": "Drilbur",
+     "series": "TEF",
+     "number": "85",
+     "tier": "B"
+    },
+    {
+     "name": "Palafin",
+     "series": "TWM",
+     "number": "60",
+     "tier": "B"
+    },
+    {
+     "name": "Lillie’s Comfey",
+     "series": "JTG",
+     "number": "68",
+     "tier": "B"
+    },
+    {
+     "name": "Musharna",
+     "series": "BLK",
+     "number": "36",
+     "tier": "B"
+    },
+    {
+     "name": "Rotom",
+     "series": "ASC",
+     "number": "92",
+     "tier": "B"
+    },
+    {
+     "name": "Grumpig",
+     "series": "MEG",
+     "number": "63",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 100,
+   "phase": "P3",
+   "theme": "抛币嵌套子效果",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**落地 1 张**：Vanilluxe（`coin_each:2:heads:dmg_set:90|cond:at_least_heads:1:paralyze`）——引擎早已支持多币阈值，缺的是「If **either** of them is heads」这句措辞（此前只认 both/all/at least）。**如实拒收 2 张**：Team Rocket's Great Ball（抛币两侧各检索不同类别，需 coin 嵌套检索）、Lucian（双手牌洗回 + 抛币抽牌，多段复合）。",
+   "cards": [
+    {
+     "name": "Vanilluxe",
+     "series": "WHT",
+     "number": "29",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket's Great Ball",
+     "series": "DRI",
+     "number": "175",
+     "tier": "B"
+    },
+    {
+     "name": "Lucian",
+     "series": "TWM",
+     "number": "157",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 101,
+   "phase": "P3",
+   "theme": "受击历史 `on_damaged`",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Team Rocket's Koffing（`on_damaged:search_bench:2:name_has:koffing`）、Mega Heracross ex（`dmg_plus_prev_taken`）、Team Rocket's Hypnotizer（`tool:on_damaged:status:sleep:holder:faction:teamrocket`）。新增三件：`FieldPokemon.dmg_taken_prev/mark`（回合开始把上回合累计量滚过来，**先快照再清零**）、`on_damaged` 的 `search_bench` kind、道具受击的 `status` kind + 阵营持有者限定。",
+   "cards": [
+    {
+     "name": "Team Rocket's Koffing",
+     "series": "DRI",
+     "number": "125",
+     "tier": "B"
+    },
+    {
+     "name": "Mega Heracross ex",
+     "series": "PFL",
+     "number": "4",
+     "tier": "B"
+    },
+    {
+     "name": "Team Rocket’s Hypnotizer",
+     "series": "ASC",
+     "number": "206",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "phase": "P3",
+   "theme": "特殊进化驱动 / 进化触发特性",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Noctowl（`evolve_act:search_trainer:2:gate:tera_in_play` —— 进化触发特性新增**前置门** `:gate:`，条件不满足整条不执行）。**如实拒收 1 张**：Archeops（「devolve 1 of your opponent's evolved Pokémon」需退化机制，引擎只有正向进化 `evolve_to`，反向要重建物种与附着关系）。",
+   "cards": [
+    {
+     "name": "Archeops",
+     "series": "WHT",
+     "number": "51",
+     "tier": "B"
+    },
+    {
+     "name": "Noctowl",
+     "series": "SCR",
+     "number": "115",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "phase": "P3",
+   "theme": "能量代价 / 提供规则",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**部分完成（1 张进池 / 2 张如实拒收）· 第一百三十五批（S1b）**：可选能量代价落成决策分解 `choose:optional_energy_cost:<n>:<type>:then:<status>` —— 挂起 confirm，付不付由牌手决定；付不出时记 `optional_unpaid` 日志且**不**施加后续效果。Mega Eelektross ex 因此进池；其余卡仍缺各自的 choice kind（多目标分配 / 跨区选择 / coin 嵌套），属 S1c/S5。",
+   "cards": [
+    {
+     "name": "Mega Charizard X ex",
+     "series": "PFL",
+     "number": "13",
+     "tier": "B"
+    },
+    {
+     "name": "Mega Eelektross ex",
+     "series": "ASC",
+     "number": "61",
+     "tier": "B"
+    },
+    {
+     "name": "Dialga",
+     "series": "MEG",
+     "number": "95",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "phase": "P3",
+   "theme": "回复范围 / 全量回复",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Hydrapple ex（`attach_energy:1:grass:hand:target:any:heal:30` —— 附能后回复**同一目标**，`:heal:` 挂在 attach tag 上保住了「that Pokémon」的指代）、Magearna（`passive:heal_on_attach:90` —— 手牌附能时的被动钩子，持有者须在战斗位）、Bianca's Devotion（`heal:all:choose:maxleft:30` —— `heal:all` 新增 `:maxleft:` 目标上限，超出时引擎回 0 而不是照常回满）。",
+   "cards": [
+    {
+     "name": "Hydrapple ex",
+     "series": "SCR",
+     "number": "14",
+     "tier": "B"
+    },
+    {
+     "name": "Magearna",
+     "series": "JTG",
+     "number": "107",
+     "tier": "B"
+    },
+    {
+     "name": "Bianca’s Devotion",
+     "series": "TEF",
+     "number": "142",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 105,
+   "phase": "P3",
+   "theme": "区分基本 / 特殊能量",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Enhanced Hammer（`discard_energy:1:opp:special:any`）——`senergy` 是**卡**列表，引擎本就能区分特殊/基本；缺的是训练家侧出口：该前缀此前只在 `ATTACK_TAG_PREFIXES`，训练家白名单没有 → `build_trainer` 整卡拒收（进池后还会报「未知训练家 tag」）。**如实拒收 1 张**：Megaton Blower（同时弃**全部**道具 + **全部**特殊能量 + 一张场地，需复合训练家 tag）。",
+   "cards": [
+    {
+     "name": "Enhanced Hammer",
+     "series": "TWM",
+     "number": "148",
+     "tier": "B"
+    },
+    {
+     "name": "Megaton Blower",
+     "series": "SSP",
+     "number": "182",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 106,
+   "phase": "P3",
+   "theme": "场地形态（S3 扩展）",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Nighttime Mine（`stadium:tera_cost_up:1` —— 场地抬高**双方** Tera 宝可梦招式 `{C}` 费用，接进 `families.attack_cost`）、Dizzying Valley（`stadium:keep_confuse` —— 进化时按场地**保留混乱**；`evolve_to` 会清空全部状态，故先记再补）。",
+   "cards": [
+    {
+     "name": "Dizzying Valley",
+     "series": "PFL",
+     "number": "88",
+     "tier": "B"
+    },
+    {
+     "name": "Nighttime Mine",
+     "series": "ASC",
+     "number": "197",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 107,
+   "phase": "P3",
+   "theme": "对手手牌禁打层",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Genesect（`fx:play_block:acespec:tool` —— 禁打层新增 ACE SPEC 类别 + 「持有者贴道具」生效时机）、Chi-Yu（`discard_stadium` + `play_lock:stadium:opp:turn:if_prev` —— 招式侧新增弃场地，且**没弃到就不封锁**）、Scream Tail ex（`play_lock:supporter:opp:turn` + `use_only:went_second_first_turn`）。新增 3 个手牌禁打字段（supporter/stadium/acespec）与招式**静态使用条件** `use_only:`/`use_not:`。⚠ ACE SPEC 当前数据集一张都没有 → 该锁定恒不生效，这是**有前提的等价**，由 `test_batch107_engine` 的数据集守卫钉住。",
+   "cards": [
+    {
+     "name": "Genesect",
+     "series": "SFA",
+     "number": "40",
+     "tier": "B"
+    },
+    {
+     "name": "Chi-Yu",
+     "series": "MEG",
+     "number": "31",
+     "tier": "B"
+    },
+    {
+     "name": "Scream Tail ex",
+     "series": "TWM",
+     "number": "94",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 108,
+   "phase": "P3",
+   "theme": "首回合 / 招式静态条件",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Terapagos ex（`use_not:went_second_first_turn` + 既有 `shield:` / `passive:bench_immune_dmg`）、Scream Tail ex（同上 `use_only:`，跨批与 107 共用）。",
+   "cards": [
+    {
+     "name": "Terapagos ex",
+     "series": "SCR",
+     "number": "128",
+     "tier": "B"
+    },
+    {
+     "name": "Scream Tail ex",
+     "series": "TWM",
+     "number": "94",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 109,
+   "phase": "P3",
+   "theme": "打出前置 gate",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Team Rocket's Archer（`shuffle_draw_split:5:3` + 新门槛 `own_ko_tr_last_turn` —— 只统计 **Team Rocket's** 宝可梦被击倒，不能并进 `own_ko_last_turn`，否则门槛被放宽）、Rosa's Encouragement（`attach:2:any:discard:target:stage2` + 既有 `own_behind_prizes` 门槛；训练家侧此前**没有** `attach:` 派发分支）。",
+   "cards": [
+    {
+     "name": "Team Rocket's Archer",
+     "series": "DRI",
+     "number": "170",
+     "tier": "B"
+    },
+    {
+     "name": "Rosa's Encouragement",
+     "series": "POR",
+     "number": "84",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 110,
+   "phase": "P3",
+   "theme": "抽牌分支 / 延迟队列",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**落地 1 张**：Team Rocket's Ariana（`draw_to_branch:5:8:if:own_all_name:teamrockets`）——新增「分支替换的抽到 N 张」：两条 `draw_to` 叠加与卡面等价（只补不弃），不需要回合状态。**如实拒收 2 张**：Amarys（回合末延迟弃手牌，需延迟队列）、Lucian（抛币嵌套抽牌）。",
+   "cards": [
+    {
+     "name": "Team Rocket's Ariana",
+     "series": "DRI",
+     "number": "171",
+     "tier": "B"
+    },
+    {
+     "name": "Amarys",
+     "series": "PRE",
+     "number": "93",
+     "tier": "B"
+    },
+    {
+     "name": "Lucian",
+     "series": "TWM",
+     "number": "157",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 111,
+   "phase": "P3",
+   "theme": "状态 / 免疫类 / 特性代价",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 1,
+   "note": "**落地 3 张**：Pecharunt ex（`switch_choose:darkness:except:pecharunt:then:poison` —— 带属性/例外筛选的换位 + 换入后状态，目标由 `action[\"bench\"]` 指定）、Hoothoot（`passive:status_immune:sleep` —— 状态免疫按**具体状态**判定，`status=None` 时只有 `all` 形态算数）、Lunatone（`draw:3:if:own_field_name:solrock` + 代价 `discard_hand_energy:1:fighting` —— 代价句从「只认 must」扩到 `may`，并新增具名在场条件）。**如实拒收 1 张**：Mismagius ex（「对手战斗位**撤退到后备**时，其新战斗位混乱」需对手撤退事件钩子）。",
+   "cards": [
+    {
+     "name": "Pecharunt ex",
+     "series": "SFA",
+     "number": "39",
+     "tier": "B"
+    },
+    {
+     "name": "Hoothoot",
+     "series": "PRE",
+     "number": "77",
+     "tier": "B"
+    },
+    {
+     "name": "Mismagius ex",
+     "series": "PFL",
+     "number": "36",
+     "tier": "B"
+    },
+    {
+     "name": "Lunatone",
+     "series": "MEG",
+     "number": "74",
+     "tier": "B"
+    }
+   ]
+  },
+  {
+   "id": 112,
+   "phase": "P4",
+   "theme": "自身弃能代价",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 3,
+   "note": "**落地 2 张**：Kyurem（`fx:attack_cost:self_set:1:colorless:name:trifrost:if:opp_discard_has_named:colress` —— 费用**整体改写**，新增 `self_set` 与对手弃牌堆具名计数）、Slaking ex（`passive:attack_block_unless:opp_has_ex_or_v` —— 新增「整只不能出招」被动）。**如实拒收 3 张**：Klinklang（「在手牌时直接放到后备」需手牌→场上动作）、Rotom ex（「同名宝可梦可贴 2 个道具」需道具上限字段）、Core Memory（「道具让附着者获得招式」需道具授予招式层）。",
+   "cards": [
+    {
+     "name": "Kyurem",
+     "series": "SFA",
+     "number": "47",
+     "tier": "D"
+    },
+    {
+     "name": "Klinklang",
+     "series": "SCR",
+     "number": "101",
+     "tier": "D"
+    },
+    {
+     "name": "Rotom ex",
+     "series": "PFL",
+     "number": "29",
+     "tier": "D"
+    },
+    {
+     "name": "Slaking ex",
+     "series": "SSP",
+     "number": "147",
+     "tier": "D"
+    },
+    {
+     "name": "Core Memory",
+     "series": "POR",
+     "number": "70",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 113,
+   "phase": "P4",
+   "theme": "自伤",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 0,
+   "note": "**落地 2 张**：Azumarill（`fx:attack_cost:self_set:1:psychic:name:doubleedge:if:tera_in_play`）、Eevee（`passive:evolve_same_turn:active` —— 当回合/首回合进化，限定战斗位）。",
+   "cards": [
+    {
+     "name": "Azumarill",
+     "series": "SSP",
+     "number": "74",
+     "tier": "D"
+    },
+    {
+     "name": "Eevee",
+     "series": "SSP",
+     "number": "143",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 114,
+   "phase": "P4",
+   "theme": "自身治疗 / 自身状态",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Conkeldurr（招式内 `fx:attack_cost:self_set:0:colorless:if:own_active_status_any` —— 引擎 `attack_cost` 新增读取**招式自身 effects** 的来源）。**如实拒收 1 张**：Zarude（「可把自身全部能量收回手牌，使本招 +80」= 可选代价与效果耦合，需交互层）。",
+   "cards": [
+    {
+     "name": "Zarude",
+     "series": "SSP",
+     "number": "11",
+     "tier": "D"
+    },
+    {
+     "name": "Conkeldurr",
+     "series": "TWM",
+     "number": "105",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 115,
+   "phase": "P4",
+   "theme": "静态伤害缩放 D 组",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 6,
+   "note": "**落地 1 张**：Mega Mawile ex（`dmg_set:80:per:own_prizes_taken` + `dmg_set:30:if:opp_active_has_damage` —— 新增**条件基础伤害**）。**如实拒收 6 张**：Scovillain ex / Carbink（`Double Type` 双属性改写需类型层）、Lycanroc（进化触发贴 Spiky 能量需特殊能量按名附着）、Golduck（Damp：屏蔽「自爆型」特性需特性属性标记）、Gengar（被击倒时回手需击倒后去向改写）、Team Rocket's Articuno（拦「攻击效果」而非伤害，需效果免疫层）。",
+   "cards": [
+    {
+     "name": "Scovillain ex",
+     "series": "SSP",
+     "number": "37",
+     "tier": "D"
+    },
+    {
+     "name": "Lycanroc",
+     "series": "JTG",
+     "number": "85",
+     "tier": "D"
+    },
+    {
+     "name": "Golduck",
+     "series": "ASC",
+     "number": "40",
+     "tier": "D"
+    },
+    {
+     "name": "Gengar",
+     "series": "POR",
+     "number": "50",
+     "tier": "D"
+    },
+    {
+     "name": "Mega Mawile ex",
+     "series": "MEG",
+     "number": "94",
+     "tier": "D"
+    },
+    {
+     "name": "Team Rocket's Articuno",
+     "series": "DRI",
+     "number": "51",
+     "tier": "D"
+    },
+    {
+     "name": "Carbink",
+     "series": "ASC",
+     "number": "117",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 116,
+   "phase": "P4",
+   "theme": "对手下回合限制",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 5,
+   "note": "**部分完成（1 张进池 / 5 张如实拒收）**：Walrein 已进池 —— 「下回合 ≤2 能量的宝可梦不能出招」落成 `atk_energy_block:2`（**玩家级**、含之后上场者；逐只写会漏掉换上来的那只）。其余 5 张仍缺事件/延迟层：Sylveon ex（选 2 只后备洗回 + 上回合招式记忆）、TR Moltres ex（按 tag 筛能量 + `if_prev` 击倒）、Ethan's Sudowoodo（coin 嵌套的复制招式）、Palafin ex（登场限制，结构性）、Revavroom ex（自身离场动作）。",
+   "cards": [
+    {
+     "name": "Sylveon ex",
+     "series": "SSP",
+     "number": "86",
+     "tier": "D"
+    },
+    {
+     "name": "Team Rocket's Moltres ex",
+     "series": "DRI",
+     "number": "31",
+     "tier": "D"
+    },
+    {
+     "name": "Ethan's Sudowoodo",
+     "series": "DRI",
+     "number": "93",
+     "tier": "D"
+    },
+    {
+     "name": "Walrein",
+     "series": "SSP",
+     "number": "45",
+     "tier": "D"
+    },
+    {
+     "name": "Palafin ex",
+     "series": "TWM",
+     "number": "61",
+     "tier": "D"
+    },
+    {
+     "name": "Revavroom ex",
+     "series": "SFA",
+     "number": "15",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 117,
+   "phase": "P4",
+   "theme": "特殊进化 / 对手交互",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 3,
+   "note": "**整批受阻（0 张）**：Eevee ex（「可进化成任意 Eevee 系 ex」需进化链白名单层）、TR Persian ex（「看对手牌库顶 10 张并选其中一招使用」需跨牌库选择）、Espeon ex（`Amazez` 全体退化 —— 引擎只有正向 `evolve_to`，退化要重建物种与附着关系，与 102 批 Archeops 同一缺口）。",
+   "cards": [
+    {
+     "name": "Eevee ex",
+     "series": "PRE",
+     "number": "75",
+     "tier": "D"
+    },
+    {
+     "name": "Team Rocket's Persian ex",
+     "series": "DRI",
+     "number": "150",
+     "tier": "D"
+    },
+    {
+     "name": "Espeon ex",
+     "series": "PRE",
+     "number": "34",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 118,
+   "phase": "P4",
+   "theme": "能量附着 / 移动",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 3,
+   "note": "**整批受阻（0 张）**：Cinderace（`Explosiveness` 是开局上场规则，属结构性边界）、Forretress（「任意数量 {M} 能量在己方之间**自由分配**」需分配界面）、Dedenne（附着张数 = 对手全部能量数，且要自由分配给己方 {L} 宝可梦 —— 两个动态量叠加）。",
+   "cards": [
+    {
+     "name": "Cinderace",
+     "series": "MEG",
+     "number": "28",
+     "tier": "D"
+    },
+    {
+     "name": "Forretress",
+     "series": "DRI",
+     "number": "140",
+     "tier": "D"
+    },
+    {
+     "name": "Dedenne",
+     "series": "POR",
+     "number": "29",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 119,
+   "phase": "P4",
+   "theme": "牌库顶 / 底操作",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 2,
+   "note": "**落地 1 张**：Watchog（`self_attack_set_next:240:name:hyperfang` —— 下回合**基础伤害改为**，与既有 `self_attack_plus_next` 分开，避免「240 变 80+240」）。**如实拒收 2 张**：Fraxure（`Unnerve` 拦「对手道具/支援者对本只的效果」，需效果免疫层）、Meloetta ex（`Debut Performance` 是「先攻首回合可出招」的规则豁免）。",
+   "cards": [
+    {
+     "name": "Fraxure",
+     "series": "SFA",
+     "number": "45",
+     "tier": "D"
+    },
+    {
+     "name": "Watchog",
+     "series": "WHT",
+     "number": "73",
+     "tier": "D"
+    },
+    {
+     "name": "Meloetta ex",
+     "series": "BLK",
+     "number": "44",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 120,
+   "phase": "P4",
+   "theme": "杂项收尾",
+   "status": "done",
+   "actual_pool": 4,
+   "actual_refused": 4,
+   "note": "**落地 3 张**：Team Rocket's Mewtwo ex（`passive:attack_block_unless:own_field_name_at_least:teamrocket:4`）、Virizion（`heal:equal` —— 回复量 = 本次实际伤害）、Decidueye ex（`fx:attack_cost:self_omit:colorless:if:opp_hand_exactly:4` —— 新增**恰好 N 张手牌**条件与「忽略某色费用」）。**如实拒收 5 张**：Cetitan ex / Antique Sail Fossil（拦对手道具效果）、Tyrantrum（条件 +150 HP，引擎刻意不支持条件式上限）、Shiftry（「选 3 只后备、其余洗回牌库」需选择界面）、Iron Thorns ex（`Initialization`：规则框宝可梦无特性 except Future，需 rule_box 判定扩到场地外）。 第一百三十四批补充：Tyrantrum 补 `passive:hp_plus:150:if:special_energy`（条件式 +HP，判据只依赖**本只**附着卡，故在 `max_hp` 现算、特殊能量被弃即回落）。",
+   "cards": [
+    {
+     "name": "Cetitan ex",
+     "series": "DRI",
+     "number": "65",
+     "tier": "D"
+    },
+    {
+     "name": "Team Rocket's Mewtwo ex",
+     "series": "DRI",
+     "number": "81",
+     "tier": "D"
+    },
+    {
+     "name": "Virizion",
+     "series": "WHT",
+     "number": "10",
+     "tier": "D"
+    },
+    {
+     "name": "Tyrantrum",
+     "series": "POR",
+     "number": "45",
+     "tier": "D"
+    },
+    {
+     "name": "Decidueye ex",
+     "series": "POR",
+     "number": "12",
+     "tier": "D"
+    },
+    {
+     "name": "Shiftry",
+     "series": "TEF",
+     "number": "5",
+     "tier": "D"
+    },
+    {
+     "name": "Iron Thorns ex",
+     "series": "TWM",
+     "number": "77",
+     "tier": "D"
+    },
+    {
+     "name": "Antique Sail Fossil",
+     "series": "POR",
+     "number": "69",
+     "tier": "D"
+    }
+   ]
+  },
+  {
+   "id": 121,
+   "phase": "P5",
+   "theme": "特殊进化条件",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 0,
+   "note": "**落地 3 张**：Karrablast / Shelmet（`passive:evolve_same_turn:if:own_field_name:shelmet|karrablast`）、Luxio（`…:if:opp_active_is_ex`）。全部复用本阶段新增的**当回合进化**被动（含首个回合，与 Forest of Vitality 的「except first turn」相反）。",
+   "cards": [
+    {
+     "name": "Karrablast",
+     "series": "BLK",
+     "number": "9",
+     "tier": "C"
+    },
+    {
+     "name": "Shelmet",
+     "series": "WHT",
+     "number": "8",
+     "tier": "C"
+    },
+    {
+     "name": "Luxio",
+     "series": "POR",
+     "number": "27",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 122,
+   "phase": "P5",
+   "theme": "揭示对手手牌",
+   "status": "done",
+   "actual_pool": 3,
+   "actual_refused": 1,
+   "note": "**部分完成（3 张进池 / 1 张拒收）**：Hoothoot / Espurr / Pidove 的「对手展示手牌」落成 `info:reveal_hand`。**改判理由（第一百三十四批）**：引擎是完美信息的，展示不改变任何状态 —— 旧口径「一律不认领」会让这三张卡永远在池外；现在落成**显式建模的等价**（引擎有派发与日志、对账可查），与「未建模当无事发生」可区分。Mandibuzz 仍缺「对手手牌 → 放到对手后备」的动作。",
+   "cards": [
+    {
+     "name": "Hoothoot",
+     "series": "TEF",
+     "number": "126",
+     "tier": "C"
+    },
+    {
+     "name": "Espurr",
+     "series": "SSP",
+     "number": "84",
+     "tier": "C"
+    },
+    {
+     "name": "Pidove",
+     "series": "BLK",
+     "number": "71",
+     "tier": "C"
+    },
+    {
+     "name": "Mandibuzz",
+     "series": "WHT",
+     "number": "64",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 123,
+   "phase": "P5",
+   "theme": "奖赏区操作",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 3,
+   "note": "**部分完成（1 张进池 / 3 张拒收）**：N's Sigilyph「Victory Symbol」落成 `win_if:own_prizes_eq:1`（恰好剩 1 张奖赏时使用即获胜；条件不成立时本招**什么都不做**，不得按普通招式结算）。其余 3 张仍需：对手牌库顶 10 张里取招式（TR Persian ex）、翻阅对手面朝下奖赏卡（Blipbug / Bother-Bot）、奖赏卡洗回牌库重发（Redeemable Ticket）。",
+   "cards": [
+    {
+     "name": "N’s Sigilyph",
+     "series": "JTG",
+     "number": "64",
+     "tier": "C"
+    },
+    {
+     "name": "Team Rocket's Blipbug",
+     "series": "DRI",
+     "number": "15",
+     "tier": "C"
+    },
+    {
+     "name": "Redeemable Ticket",
+     "series": "JTG",
+     "number": "156",
+     "tier": "C"
+    },
+    {
+     "name": "Team Rocket's Bother-Bot",
+     "series": "DRI",
+     "number": "172",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 124,
+   "phase": "P5",
+   "theme": "能量提供规则",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 3,
+   "note": "**整批受阻（0 张）**：Boomerang Energy（被招式效果弃置时回到手牌，需特殊能量「离场后去向」钩子）、Meganium（基础 {G} 能量提供 {G}{G}，需能量提供倍率层）、Smeargle（抛 3 币、按正面数从弃牌堆附着并自由分配）。",
+   "cards": [
+    {
+     "name": "Boomerang Energy",
+     "series": "TWM",
+     "number": "166",
+     "tier": "C"
+    },
+    {
+     "name": "Meganium",
+     "series": "MEG",
+     "number": "10",
+     "tier": "C"
+    },
+    {
+     "name": "Smeargle",
+     "series": "PFL",
+     "number": "80",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 125,
+   "phase": "P5",
+   "theme": "牌库底 / 顶检视",
+   "status": "done",
+   "actual_pool": 2,
+   "actual_refused": 1,
+   "note": "**部分完成（1 张进池 / 2 张拒收）**：Dusk Ball 落成 `recon_bottom:7`（看**牌库底** 7 张取 1 张宝可梦，其余洗回；与 `recon:` 的牌库顶方向相反，前缀不互相覆盖）。Misty's Psyduck（弃牌库底 + 自身放回牌库顶）与 Gumshoos（手牌与牌库顶互换）仍需「牌库底」写入动作 + 选择层。 **S1c 补记**：Gumshoos「Evidence Gathering」已由决策分解表达（`choose:swap_hand_top`，选哪张手牌由牌手定）。",
+   "cards": [
+    {
+     "name": "Misty's Psyduck",
+     "series": "DRI",
+     "number": "45",
+     "tier": "C"
+    },
+    {
+     "name": "Dusk Ball",
+     "series": "SSP",
+     "number": "175",
+     "tier": "C"
+    },
+    {
+     "name": "Gumshoos",
+     "series": "MEG",
+     "number": "110",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 126,
+   "phase": "P5",
+   "theme": "道具触发式",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**部分完成（1 张进池 / 1 张拒收）**：Ruffian 落成 `discard_tool_senergy:1` —— **同一只**身上同时弃道具与特殊能量，缺一即不做（拆成两次挑选会变成「可跨两只」，静默加强）。Heavy Baton 仍需道具 `on_ko` 钩子 + 撤退费=4 的持有者限定。",
+   "cards": [
+    {
+     "name": "Heavy Baton",
+     "series": "TEF",
+     "number": "151",
+     "tier": "C"
+    },
+    {
+     "name": "Ruffian",
+     "series": "JTG",
+     "number": "157",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 127,
+   "phase": "P5",
+   "theme": "条件费用 / 特性触发",
+   "status": "done",
+   "actual_pool": 1,
+   "actual_refused": 1,
+   "note": "**落地 1 张**：Crawdaunt（招式内 `fx:attack_cost:self_set:1:darkness:if:own_active_has_damage`）。**如实拒收 1 张**：Latios（「Mega Latias ex 从后备换到战斗位时」触发，需对手/己方换位事件钩子）。",
+   "cards": [
+    {
+     "name": "Crawdaunt",
+     "series": "MEG",
+     "number": "85",
+     "tier": "C"
+    },
+    {
+     "name": "Latios",
+     "series": "MEG",
+     "number": "101",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 128,
+   "phase": "P5",
+   "theme": "延迟到回合末",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 1,
+   "note": "**整批受阻（0 张）**：Team Rocket's Grimer「对手下回合**结束时**弃掉守方及全部附着卡」需**延迟结算队列**（本批主题即「延迟到回合末」）。",
+   "cards": [
+    {
+     "name": "Team Rocket's Grimer",
+     "series": "DRI",
+     "number": "123",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 129,
+   "phase": "P5",
+   "theme": "条件 +HP（单只）",
+   "status": "blocked",
+   "actual_pool": 0,
+   "actual_refused": 1,
+   "note": "**整批受阻（0 张）**：Okidogi 的 `+100 HP` 是**条件式**上限（有 {D} 能量时）。引擎刻意不支持条件式 `max_hp`（`max_hp` 被击倒/奖赏/前端广泛使用且拿不到 battle 上下文），只有无条件 `passive:hp_plus` 与场地重算两档；本批正是「条件 +HP」这一缺口的建档点。",
+   "cards": [
+    {
+     "name": "Okidogi",
+     "series": "TWM",
+     "number": "111",
+     "tier": "C"
+    }
+   ]
+  },
+  {
+   "id": 130,
+   "phase": "P5",
+   "theme": "结构性建档 · 全队 +HP（Ludicolo / Cynthia's Power Weight）",
+   "status": "done",
+   "actual_pool": 0,
+   "actual_refused": 0,
+   "note": "**结构性建档（无卡）**：全队 +HP（Ludicolo / Cynthia's Pokémon 一族）。引擎只有**单只**无条件 `passive:hp_plus`，全队条件式上限需重写 `max_hp` 求值链（同 129）。",
+   "cards": []
+  },
+  {
+   "id": 131,
+   "phase": "P5",
+   "theme": "结构性建档 · 指示物翻倍（N's Vanilluxe）",
+   "status": "done",
+   "actual_pool": 0,
+   "actual_refused": 0,
+   "note": "**结构性建档（无卡）**：指示物翻倍（N's Vanilluxe）。引擎所有指示物放置点都是 `damage += n`，翻倍需统一乘子在**放置入口**而非逐处改。",
+   "cards": []
+  },
+  {
+   "id": 132,
+   "phase": "P5",
+   "theme": "结构性建档 · 全局规则层（Psyduck / Milotic）",
+   "status": "done",
+   "actual_pool": 0,
+   "actual_refused": 0,
+   "note": "**结构性建档（无卡）**：全局规则层（Misty's Psyduck / Milotic）。需要「场上存在即改写某类结算」的接管点，当前只有 `fx:` 静态族覆盖了费用/免伤/禁打三类。",
+   "cards": []
+  },
+  {
+   "id": 133,
+   "phase": "P5",
+   "theme": "结构性建档 · gate 类（Anthea & Concordia）+ 边界收尾",
+   "status": "done",
+   "actual_pool": 0,
+   "actual_refused": 0,
+   "note": "**结构性建档（无卡）**：gate 类（Anthea & Concordia）+ 边界。该卡需要「多条件组合门槛」承载字段；池外 Tera 规则（PalossandEX / Miraidon ex / Koraidon ex）同属结构性边界。",
+   "cards": []
+  }
+ ],
+ "structural": [
+  {
+   "name": "Ludicolo",
+   "series": "JTG",
+   "number": "37"
+  },
+  {
+   "name": "Psyduck",
+   "series": "ASC",
+   "number": "39"
+  },
+  {
+   "name": "Milotic",
+   "series": "TWM",
+   "number": "50"
+  },
+  {
+   "name": "Anthea & Concordia",
+   "series": "ASC",
+   "number": "182"
+  }
+ ],
+ "deferred": [],
+ "cross_batch": [
+  {
+   "name": "Doublade",
+   "series": "POR",
+   "number": "57",
+   "batches": [
+    94,
+    96
+   ],
+   "note": "两族都就位才进池，进度只记一次"
+  },
+  {
+   "name": "Scream Tail ex",
+   "series": "TWM",
+   "number": "94",
+   "batches": [
+    107,
+    108
+   ],
+   "note": "同上"
+  },
+  {
+   "name": "Lucian",
+   "series": "TWM",
+   "number": "157",
+   "batches": [
+    100,
+    110
+   ],
+   "note": "同上"
+  },
+  {
+   "name": "Feraligatr",
+   "series": "TEF",
+   "number": "41",
+   "batches": [
+    95,
+    97
+   ],
+   "note": "两批都要改：静态修正层（95）+ 指示物（97）；两处各记 1 槽，进度只记一次"
+  }
+ ]
 }

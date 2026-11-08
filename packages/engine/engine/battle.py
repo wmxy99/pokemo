@@ -470,20 +470,19 @@ class Battle:
                     if _scope is not None:
                         # 借用招式：必须逐个列出「可借哪个招式」（裸动作 damage=0，
                         # 用了等于空过 —— 绝不列出）
+                        _pay = self._can_pay_attack(p.active, atk)
                         for _o in _opts:
-                            if not self._can_pay_attack(p.active, atk):
+                            if not _pay:
                                 continue
                             acts.append(self._borrow_action(ai, atk, _o))
+                        # S5：卡面写「**You may** choose an attack …」时可以放弃。
+                        # 不列裸动作 = 引擎替玩家决定「一定借」（S1 不变量）；
+                        # 也保证「牌库顶 10 张里没有宝可梦」时这一招仍可打出。
+                        if _pay and _borrow_optional(_scope):
+                            acts.append(_plain_attack_action(ai, atk))
                         continue
                     if self._can_pay_attack(p.active, atk):
-                        acts.append({"verb": "attack", "attack": ai,
-                                     "name": atk.name,
-                                     "name_zh": atk.name_zh,
-                                     "display": atk.name_zh or atk.name,
-                                     "damage": atk.damage,
-                                     "cost_map": list(atk.cost),
-                                     "desc_zh": atk.desc_zh,
-                                     "display_desc": atk.display_desc})
+                        acts.append(_plain_attack_action(ai, atk))
                     # Relicanth（`passive:prev_attacks`）：额外列出进化前形态的招式
                     for _o in _opts:
                         if not self._can_pay_attack(p.active, _o["atk"]):
@@ -906,6 +905,19 @@ class Battle:
                 # 通用检索（检索 n 张指定类别入手）——牌库需有可检索对象
                 if _deck_has_kind(p, _search_kind_of(tag), _search_filter(tag)):
                     out.append(dict(base))
+            elif tag.startswith("coin_search:"):
+                # S5（TR Great Ball）：正面/反面找**不同 stage** 的同一阵营宝可梦
+                # → 只要牌库里还有该阵营宝可梦就打得出去（不必两侧都有，
+                # 反面对应那一侧为空时只是检索失败，卡面写的是 up to 语义）。
+                _csr = str(tag).split(":")
+                _cf = {}
+                _i = 3
+                while _i + 1 < len(_csr):
+                    if _csr[_i] in ("category", "type", "hp", "resistance"):
+                        _cf[_csr[_i]] = _csr[_i + 1]
+                    _i += 2
+                if _cf and _deck_has_kind(p, "pokemon", _cf):
+                    out.append(dict(base))
             elif tag.startswith("stadium:"):
                 # S3 场地：无目标，手上有就能打（全场唯一，顶替旧场地）
                 out.append(dict(base))
@@ -1038,6 +1050,14 @@ class Battle:
                 # 再抽会直接判负 → 该卡不进合法动作表（避免 AI 自选自杀动作）。
                 _sbp = str(tag).split(":")
                 if len(_sbp) == 5 and all(x.isdigit() for x in _sbp[1:]) \
+                        and len(p.deck) + len(p.hand) - 1 > 0:
+                    out.append(dict(base))
+            elif tag.startswith("shuffle_both_bottom_coin_draw:"):
+                # S5（Lucian）：手牌放牌库**底**后再抽 → 同理，抽空即判负。
+                # 但这里**不洗牌**：放底后的牌库 = 底(手牌) + 原牌库，
+                # 只要「手牌-1 + 牌库」还有牌就抽得动。
+                _sbp = str(tag).split(":")
+                if len(_sbp) == 3 and all(x.isdigit() for x in _sbp[1:]) \
                         and len(p.deck) + len(p.hand) - 1 > 0:
                     out.append(dict(base))
             elif tag.startswith("shield_choose:"):
@@ -1528,7 +1548,8 @@ class Battle:
                 "desc_zh": src.desc_zh, "display_desc": src.display_desc,
                 "via": atk.name, "via_zh": atk.name_zh,
                 "borrow": {"src": opt["src"], "attack": opt["index"]}}
-        if opt["src"] == "ally":
+        if opt["src"] == "ally" or _borrow_scope_kind(opt["src"]) == \
+                "opp_deck_top":
             act_["borrow"]["pos"] = opt["pos"]
         return act_
 
@@ -1564,6 +1585,22 @@ class Battle:
                 if str(fp.pdef.category or "") != "Trainer's Pokémon(N)":
                     continue
                 _push("ally", bi, fp)
+        elif _borrow_scope_kind(scope) == "opp_deck_top":
+            # S5（2026-11-08）：TR Persian ex「Haughty Order」——「Reveal the top
+            # N cards of your opponent's deck. You **may** choose an attack from
+            # a Pokémon you find there and use it as this attack.」
+            # `pos` = 在**检视列表**里的下标（列表首 = 牌库顶），不是牌库下标：
+            # 牌库可能在「生成动作」与「结算」之间被洗动（本例不会，但下标语义
+            # 必须与来源绑定，否则会指到另一张卡上）。
+            n = _borrow_deck_top_n(scope) or 0
+            for k, ref in enumerate(reversed(list(opp.deck[-n:]))):
+                if not isinstance(ref, PokeRef):
+                    continue
+                if not ref.pdef.attacks:
+                    continue
+                for j, a2 in enumerate(ref.pdef.attacks):
+                    out.append({"src": scope, "pos": k, "index": j,
+                                "atk": a2, "card": ref})
         elif scope is None and self._prev_attacks_allowed(p, attacker):
             for k, a2 in enumerate(_prev_form_attacks(attacker.pdef)):
                 out.append({"src": "prev", "pos": None, "index": k, "atk": a2})
@@ -1580,8 +1617,10 @@ class Battle:
         for o in self._borrow_options(p, opp, attacker, base_atk):
             if str(req.get("src")) != o["src"]:
                 continue
-            if o["src"] == "ally" and int(req.get("pos", -1)) != o["pos"]:
-                continue
+            if o["src"] in ("ally",) or _borrow_scope_kind(o["src"]) == \
+                    "opp_deck_top":
+                if int(req.get("pos", -1)) != o["pos"]:
+                    continue
             if int(req.get("attack", -1)) != o["index"]:
                 continue
             return {"atk": o["atk"],
@@ -3403,6 +3442,16 @@ class Battle:
         elif tag.startswith("shuffle_both_coin_draw:"):
             # 双方洗回手牌 + 单次抛币分抽（第四十五批，Harlequin）
             placed = self._trainer_shuffle_both_coin_draw(p, tag, c, action)
+        elif tag.startswith("shuffle_both_bottom_coin_draw:"):
+            # S5（2026-11-08）：双方手牌放**牌库底**（不洗牌）+ 每人**各**抛一枚币
+            # 分抽（Lucian）。与上一条差两处：① 放底、**不洗牌**；② 币是每人
+            # 各一枚（卡面「each player flips a coin … **that player** draws」）
+            # —— 拿单币版顶替会让双方抽牌数完全相关，概率分布不同。
+            placed = self._trainer_shuffle_both_bottom_coin_draw(p, tag, c)
+        elif tag.startswith("coin_search:"):
+            # S5（2026-11-08）：抛币分岔检索（Team Rocket's Great Ball）——
+            # 正面找进化、反面找基础，类别由 `category:` 限定。
+            placed = self._trainer_coin_search(p, tag)
         elif tag.startswith("team_boost:"):
             # 全队本回合增伤（第六十批，Premium Power Pro / Black Belt's Training）
             placed = self._trainer_team_boost(p, tag)
@@ -5206,6 +5255,86 @@ class Battle:
                                       source="trainer")
         return f"coin {res}: draw {got_mine}/{got_opp}"
 
+    def _trainer_shuffle_both_bottom_coin_draw(self, p: PlayerState, tag: str,
+                                               card) -> str:
+        """``shuffle_both_bottom_coin_draw:<heads>:<tails>``（S5，Lucian）
+
+        卡面：「Each player shuffles their hand **and puts it on the bottom of
+        their deck**. If either player put any cards on the bottom of their deck
+        in this way, each player flips a coin. If heads, that player draws 6
+        cards. If tails, they draw 3 cards.」
+
+        ⚠ 三处**不能**照抄 `shuffle_both_coin_draw`（Harlequin）：
+          1. 去向是牌库**底**且**不洗牌**（Harlequin 是洗回整副）—— 洗了就等于
+             把「底下是什么」这条信息抹掉，牌库顺序完全不同。
+          2. 币是**每人各一枚**：四条分支（正/正、正/反、反/正、反/反）都要可达；
+             单币版只有两条，抽牌数完全相关。
+          3. 触发条件是「**任一**玩家真的放了牌到底」；双方手牌都空时**不抛币**。
+        自己那张支援者卡仍在手上结算，**不**参与放底（同 `shuffle_draw:`）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) != 3 or not all(x.isdigit() for x in parts[1:]):
+            raise ValueError(f"shuffle_both_bottom_coin_draw tag 非法：{tag}")
+        heads_n, tails_n = int(parts[1]), int(parts[2])
+        opp = self.players[1 - self.current]
+        own_others = [x for x in p.hand if x is not card]
+        p.hand = [x for x in p.hand if x is card]
+        own_n = zones.deck_bottom_put(p, own_others)
+        opp_n = len(opp.hand)
+        zones.deck_bottom_put(opp, opp.hand)
+        opp.hand = []
+        self._log("hand_bottom", {"player": self.current, "n": own_n})
+        self._log("hand_bottom", {"player": 1 - self.current, "n": opp_n})
+        if not own_n and not opp_n:
+            # 「If **either** player put any cards on the bottom」不成立 → 不抛币
+            return "no cards to bottom: no flip"
+        got = {}
+        for side in (self.current, 1 - self.current):
+            res = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": side, "result": res, "tag": tag})
+            want = heads_n if res == "heads" else tails_n
+            got[side] = self._safe_draw(side, want, source="trainer")
+            if self.finished:
+                break
+        return (f"bottom {own_n}/{opp_n}; draw "
+                f"{got.get(self.current, 0)}/{got.get(1 - self.current, 0)}")
+
+    def _trainer_coin_search(self, p: PlayerState, tag: str) -> str:
+        """``coin_search:<heads_stage>:<tails_stage>[:category:<c>]``（S5）
+
+        卡面（Team Rocket's Great Ball）：「Flip a coin. If heads, search your deck
+        for an Evolution Team Rocket's Pokémon, reveal it, and put it into your
+        hand. If tails, search your deck for a Basic Team Rocket's Pokémon …
+        Then, shuffle your deck.」
+
+        ⚠ 两侧**类别不同**：把 tag 压成单一的 `search_pokemon:1` 会静默变成
+        「随便找一张宝可梦」（少了 stage 与类别两道限定）。洗牌无论是否找到
+        都必须做（卡面「Then, shuffle your deck.」是无条件的）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 3:
+            raise ValueError(f"coin_search tag 非法：{tag}")
+        h_stage, t_stage = parts[1], parts[2]
+        flt: dict = {}
+        i = 3
+        while i + 1 < len(parts):
+            if parts[i] in ("stage", "category", "type", "hp", "resistance"):
+                flt[parts[i]] = parts[i + 1]
+            i += 2
+        if not flt.get("category"):
+            # 卡面类别限定是这张卡的**全部意义**（「Team Rocket's Pokémon」）；
+            # 缺了就退化成「任意宝可梦」，属静默放宽 —— 直接报错而不是照做。
+            raise ValueError(f"coin_search 缺少类别限定：{tag}")
+        res = "heads" if self.rng.random() < 0.5 else "tails"
+        self._log("coin", {"player": self.current, "result": res, "tag": tag})
+        flt = dict(flt, stage=(h_stage if res == "heads" else t_stage))
+        found = _take_kind_from_deck(p, 1, "pokemon", flt)
+        self.rng.shuffle(p.deck)
+        self._log("search", {"player": self.current, "kind": "pokemon",
+                             "n": found, "stage": flt["stage"],
+                             "category": flt["category"], "tag": tag})
+        return f"coin {res}: search {found} ({flt['stage']}/{flt['category']})"
+
     def _trainer_shuffle_draw_split(self, p: PlayerState, tag: str,
                                     hi: int) -> str:
         """双方洗回手牌后**各抽不同张数**（``shuffle_draw_split:<mine>:<theirs>``）
@@ -6027,11 +6156,44 @@ class Battle:
                 return {"ok": True, "event": self.events[-1]}
         # 借用招式（2026-10-28）：`borrow_attack:<scope>` / Relicanth 的进化前招式。
         # 费用的支付方**取决于来源**：复制招式付本招式的费用；进化前招式付它自己的。
-        borrow = self._resolve_borrow(p, self.players[1 - self.current],
-                                      p.active, atk, action)
+        # S5（2026-11-08）：**抛币门**必须先抛 —— 卡面「Flip a coin. **If heads**,
+        # choose 1 of … attacks and use it as this attack.」：反面时 action 里带的
+        # `borrow` 整条作废，本招按印刷效果结算（0 伤害、无附加）。
+        # ⚠ 不能把币留给 `_attack_mods`：那里抛币发生在借用解析**之后**，而且
+        #   `_apply_coin_non_damage` 只消费 `pre_mods` 里已记录的币 → 会静默变成
+        #   「一定借用」（= 静默加强）。
+        _gate_tag = _borrow_coin_gate(atk)
+        _gate_ok = True
+        if _gate_tag is not None:
+            _gres = "heads" if self.rng.random() < 0.5 else "tails"
+            self._log("coin", {"player": self.current, "result": _gres,
+                               "tag": _gate_tag, "borrow_gate": True})
+            _gate_ok = _gres == "heads"
+            if not _gate_ok:
+                self._log("borrow_skipped", {"player": self.current,
+                                             "attack": atk.name,
+                                             "reason": "抛币反面"})
+            elif not action.get("borrow"):
+                # 正面就必须真的借 —— 引擎不得替玩家挑一个招式（S1 不变量）
+                raise ValueError(f"{atk.name}：抛币正面后必须指定借用的招式")
+        borrow = (self._resolve_borrow(p, self.players[1 - self.current],
+                                       p.active, atk, action)
+                  if _gate_ok else None)
         pay_atk = borrow["pay"] if borrow else atk
         if borrow:
             atk = borrow["atk"]
+        # S5（2026-11-08）：`opp_deck_top:N` 借用 —— 先记「翻开了哪 N 张」
+        # （卡面明文 Reveal，双方可见），**洗回**要等招式结算完再做（见下方），
+        # 否则复制的招式看牌库时会看到「已经洗过」的另一副牌。
+        _base_scope = _borrow_scope(p.active.pdef.attacks[ai])
+        _deck_top_n = _borrow_deck_top_n(_base_scope)
+        if _deck_top_n:
+            _ropp = self.players[1 - self.current]
+            _rtop = list(reversed(list(_ropp.deck[-_deck_top_n:])))
+            self._log("reveal", {"player": 1 - self.current, "from": "deck_top",
+                                 "n": len(_rtop),
+                                 "cards": [_card_label(x) for x in _rtop],
+                                 "via": p.active.pdef.attacks[ai].name})
         if not self._can_pay_attack(p.active, pay_atk):
             raise ValueError("能量不足（无法支付招式费用）")
         attacker = p.active
@@ -6216,6 +6378,14 @@ class Battle:
                 self._apply_attack_effects(attacker, atk.effects,
                                            plan=action.get("targets"),
                                            action=action, pre_mods=mods)
+            # S5：`opp_deck_top:N` 借用的收尾 ——「Shuffle the revealed cards into
+            # your opponent's deck.」翻开的牌从未离开牌库，等价于洗整副。
+            # 放在效果之后是卡面顺序（reveal → choose → use → shuffle）。
+            if _deck_top_n:
+                self.rng.shuffle(_ropp.deck)
+                self._log("deck_shuffle", {"player": 1 - self.current,
+                                           "n": len(_ropp.deck),
+                                           "reason": "borrow_deck_top"})
             # S2 第二阶段：道具触发钩子（卡面写 even if Knocked Out → 先于击倒结算）
             self._trigger_tool_on_damaged(defender, attacker, damage_dealt)
             # 2026-10-27：受击反应**特性**（`on_damaged:*`），同一时点
@@ -7180,6 +7350,12 @@ class Battle:
                         out["set"] = self._dmg_set_value(":".join(_dp[:_i]))
                 else:
                     out["set"] = self._dmg_set_value(tag)
+            elif tag.startswith(_BORROW_COIN_GATE_PREFIX):
+                # S5：抛币门的借用招式已在 `_do_attack` 开头抛过（**必须**早于
+                # 借用来源解析）。这里再抛一次会得到第二枚互不相干的币，日志里
+                # 两枚矛盾且不可复现；子效果由 `_apply_coin_non_damage` 处理 ——
+                # 它只消费 `pre_mods` 里记录的币，这里不记 → 自然什么都不做。
+                continue
             elif tag.startswith("coin:") or tag.startswith("coin_each:"):
                 self._resolve_coin_tag(attacker, tag, out)
             elif tag.startswith("coin_all:"):
@@ -10847,15 +11023,29 @@ def _take_any_from_deck(p: PlayerState, n: int) -> int:
 
 
 def _search_filter(tag: str) -> dict:
-    """``search_pokemon:N[:type:<c>][:stage:<s>][:hp:<n>][:resistance:<c>]`` → 筛选字典"""
+    """``search_pokemon:N[:type:<c>][:stage:<s>][:hp:<n>][:resistance:<c>]
+    [:category:<c>]`` → 筛选字典"""
     parts = tag.split(":")
     flt = {}
     i = 2
     while i + 1 < len(parts):
-        if parts[i] in ("type", "stage", "hp", "resistance"):
+        if parts[i] in ("type", "stage", "hp", "resistance", "category"):
             flt[parts[i]] = parts[i + 1]
         i += 2
     return flt
+
+
+def _category_key(cat) -> str:
+    """`category` 的比对键：括号里的**阵营名**归一（S5）
+
+    「Trainer's Pokémon(Team Rocket)」→ ``teamrocket``；「N」这类无括号的
+    整体归一。⚠ 不能用「子串包含」比对：归一后几乎每个类别都含 ``n``
+    （``trainerspokemon…``），任何 ``category:n`` 都会命中全部阵营。
+    """
+    s = str(cat or "")
+    m = re.search(r"\(([^)]*)\)", s)
+    key = m.group(1) if m else s
+    return _NAME_KEY_RE.sub("", key.lower())
 
 
 def _poke_matches_filter(c, flt: dict) -> bool:
@@ -10883,6 +11073,12 @@ def _poke_matches_filter(c, flt: dict) -> bool:
     # Resistance」（Fletchling）—— 抗性筛选，按 `pdef.resistance` 精确匹配。
     res = flt.get("resistance")
     if res and str(getattr(pdef, "resistance", "") or "").lower() != res.lower():
+        return False
+    # S5：阵营限定（「an Evolution Team Rocket's Pokémon」）—— 只比括号里的
+    # 阵营名，不碰卡名（卡名前缀不是判据：阵营外的卡也可能带同样的词）。
+    cat = flt.get("category")
+    if cat and _category_key(getattr(pdef, "category", "")) != \
+            _category_key(cat):
         return False
     return True
 
@@ -11436,13 +11632,73 @@ def _take_energy_from_deck(p: PlayerState, n: int,
     return got
 
 
+# S5（2026-11-08）：**抛币门**的借用招式（Ethan's Sudowoodo「Try to Imitate」
+# 「Flip a coin. If heads, choose 1 of your opponent's Active Pokémon's attacks
+#  and use it as this attack.」）。币必须在**解析借用来源之前**抛，且
+# `_attack_mods` 不得为同一条 tag 再抛一次（否则同一次攻击里有两枚互不相干的币）。
+_BORROW_COIN_GATE_PREFIX = "coin:heads:borrow_attack:"
+
+
 def _borrow_scope(atk) -> Optional[str]:
-    """招式的借用来源（`borrow_attack:<scope>`）；普通招式返回 None"""
+    """招式的借用来源（`borrow_attack:<scope>`）；普通招式返回 None
+
+    也认抛币门形态 `coin:heads:borrow_attack:<scope>`（scope 相同）。
+    """
     for t in getattr(atk, "effects", ()) or ():
         t = str(t)
         if t.startswith("borrow_attack:"):
             return t.split(":", 1)[1]
+        if t.startswith(_BORROW_COIN_GATE_PREFIX):
+            return t[len(_BORROW_COIN_GATE_PREFIX):]
     return None
+
+
+def _borrow_coin_gate(atk) -> Optional[str]:
+    """抛币门的 tag 形态（`coin:heads:borrow_attack:<scope>`）；无门返回 None"""
+    for t in getattr(atk, "effects", ()) or ():
+        t = str(t)
+        if t.startswith(_BORROW_COIN_GATE_PREFIX):
+            return t
+    return None
+
+
+def _borrow_scope_kind(scope: Optional[str]) -> str:
+    """scope 的**形态**（去掉参数）：`opp_deck_top:10` → `opp_deck_top`"""
+    return str(scope or "").split(":")[0]
+
+
+# 「**You may** choose an attack … and use it as this attack.」—— 可以放弃。
+# 只有牌库顶形态这么印（TR Persian ex）；其余借用（对手战斗位 / 进化前形态）
+# 都是「choose 1 of …」的强制语义。判据按**卡面措辞**区分，不能按引擎实现猜。
+_OPTIONAL_BORROW_KINDS = ("opp_deck_top",)
+
+
+def _borrow_optional(scope: Optional[str]) -> bool:
+    return _borrow_scope_kind(scope) in _OPTIONAL_BORROW_KINDS
+
+
+def _borrow_deck_top_n(scope: Optional[str]) -> Optional[int]:
+    """`opp_deck_top:<n>` → n；其它形态返回 None"""
+    if _borrow_scope_kind(scope) != "opp_deck_top":
+        return None
+    parts = str(scope).split(":")
+    if len(parts) < 2 or not parts[1].isdigit():
+        raise ValueError(f"opp_deck_top 借用缺少张数：{scope}")
+    return int(parts[1])
+
+
+def _plain_attack_action(ai: int, atk) -> dict:
+    """「按本招式的印刷效果结算」的裸动作（不借用）
+
+    抽成函数是为了让「可放弃的借用」（S5 · you may）能给同一个动作形态：
+    两处各抄一份后一旦字段漂移（例如以后加 `borrow_optional` 标记），
+    AI 选到的动作与人类点出来的动作就会不同。
+    """
+    return {"verb": "attack", "attack": ai,
+            "name": atk.name, "name_zh": atk.name_zh,
+            "display": atk.name_zh or atk.name,
+            "damage": atk.damage, "cost_map": list(atk.cost),
+            "desc_zh": atk.desc_zh, "display_desc": atk.display_desc}
 
 
 def _prev_form_attacks(pdef) -> list:

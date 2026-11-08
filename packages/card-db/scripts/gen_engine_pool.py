@@ -158,6 +158,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "coin_flip:",
                 # 2026-11-03 第四十五批：双方洗回手牌 + 抛币分抽（Harlequin）
                 "shuffle_both_coin_draw:",
+                # S5（2026-11-08）：抛币分岔检索（TR Great Ball）/ 手牌放牌库底
+                # 后**每人各**抛一枚币分抽（Lucian）。⚠ 后者与上面那条只差语义：
+                # `shuffle_both_coin_draw:` 洗整副 + 单币，这条放底不洗 + 逐人币；
+                # 前缀不重叠，必须各自放行。
+                "coin_search:", "shuffle_both_bottom_coin_draw:",
                 # 2026-11-03 第四十六批：全队限时减伤（Iron Defender）/
                 # 单体限时护盾 + 奖赏数打出前置条件（Acerola's Mischief）
                 "team_shield:", "shield_choose:",

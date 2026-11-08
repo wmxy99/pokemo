@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1204/1267 = 95.0%**，池 **1189**，
-> 未 ready **63**（批内如实拒收 57 + 结构性 4 + 待新能力 2），测试 **2575**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 / S2a / S2b 已落地**（见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1207/1267 = 95.3%**，池 **1192**，
+> 未 ready **60**（批内如实拒收 54 + 结构性 4 + 待新能力 2），测试 **2583**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 / S2a / S2b / S2c 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -540,6 +540,34 @@ Heavy Baton（撤退费恰为 4 的条件 + 能量转移）。
 
 **数字**：`engine_ready` **1204 / 1267 = 95.0%** · 池 **1189** · 未 ready **63** ·
 测试 **2575**（engine 1392）· 对账 46 类 · CI 8/8。
+
+---
+
+### S2c · 击倒订阅 / 回合末被动道具 / 延迟弃置（2026-11-08 完成，进池 3 张）
+
+| 项 | 落点 |
+|---|---|
+| `ko` 事件 | 在 `_resolve_ko` 里发出，**必须在本体移出场上之前**（订阅可能挂在被击倒那只的道具上；第一版放在移除之后 → 道具订阅永远收不到，实测 0 张入手） |
+| `scope:own_by_attack` | 「**我的**宝可梦被对手**招式伤害**击倒」：非招式击倒（中毒/指示物/自爆）不得触发 |
+| 订阅式道具 | `on_event:` 前缀的 tool：`build_trainer` 准入 + `_do_trainer`/`_trainer_legals` 与 `tool:` 同等（否则「池内死卡」） |
+| `turn_end` 事件 | `_end_turn` 里先发事件（被动道具），再结算队列（一次性延迟）；**回合末挂起选择时必须延后换手**（`_defer_end_turn`），否则选择落到对手回合 |
+| 队列体 `discard_defender` | 「discard the Defending Pokémon and all attached cards」——**弃置不是击倒**，不取奖赏（取名撞上 `knockout:` 会让对账误判，故独立命名） |
+| 目标快照 | 招式侧 `queue:` 在**入队时**把 Defending 存进 ctx；延迟到对手回合末时那只可能早已换下 |
+| 进池 | Amulet of Hope（`on_event:ko:search_any:3:…:own_by_attack`）· Powerglass（`on_event:turn_end:attach_basic:on:holder:scope:own_turn:while:active`）· Team Rocket's Grimer（`queue:opp_next_turn_end:discard_defender:all`） |
+
+**踩到的坑**
+1. **`while:active` 只加在特性分支**：道具载体扫到后直接 append，绕过了判定 → Powerglass 放后备仍触发。测试抓到的。
+2. **`search_any:` 在既有实现里排除能量**：`_kind_matches(c, "any")` 不含能量卡，Amulet「up to 3 cards」
+   用它会静默少检索（实测 12 张能量的牌库一张都拿不到）。改用 `_take_any_from_deck`。
+3. **两处 `_defer_end_turn` 块文本完全相同**：注入验证时 `str.replace(..., 1)` 命中的是**开头**的 S1b 块，
+   于是「守卫没变红」是假象。注入必须用**带上下文的唯一锚点**。
+
+**仍未做（S2d 候选，剩余 6 张）**：Pachirisu（attach_energy + 限时订阅）· Boomerang Energy
+（attack_done + 特殊能量载体）· Heavy Baton（撤退费=4 条件 + 能量转移）· Latios（energy_move 选择）·
+Palafin（检索换位且保留附着卡）· Lycanroc（指定特殊能量的检索附着）。
+
+**数字**：`engine_ready` **1207 / 1267 = 95.3%** · 池 **1192** · 未 ready **60** ·
+测试 **2583**（engine 1400）· 对账 46 类 · CI 8/8。
 
 ---
 

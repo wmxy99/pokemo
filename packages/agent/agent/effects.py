@@ -3291,12 +3291,47 @@ _S2_SHIELD_NO_WEAKNESS_RE = re.compile(
     re.I)
 
 
+# --- S2c（2026-11-08）：击倒订阅 / 回合末被动道具 / 延迟弃置 ---
+# Amulet of Hope（ACE SPEC 道具）：「If the Pokémon this card is attached to is
+#  Knocked Out by damage from an attack from your opponent's Pokémon, search your
+#  deck for up to 3 cards and put them into your hand. Then, shuffle your deck.」
+_S2_KO_SEARCH_RE = re.compile(
+    r"^if the pok[eé]mon this card is attached to is knocked out by damage from "
+    r"an attack from your opponent'?s pok[eé]mon,? search your deck for up to "
+    r"(\d+) cards? and put them into your hand\.?\s*then,? shuffle your deck\.?$",
+    re.I)
+
+# Powerglass（道具）：「At the end of your turn (after your attack), if the
+#  Pokémon this card is attached to is in the Active Spot, you may attach a Basic
+#  Energy card from your discard pile to it.」
+_S2_TURN_END_ATTACH_RE = re.compile(
+    r"^at the end of your turn \(after your attack\),? if the pok[eé]mon this "
+    r"card is attached to is in the active spot,? you may attach a basic energy "
+    r"card from your discard pile to it\.?$", re.I)
+
+# Team Rocket's Grimer「Corrosive Sludge」：「At the end of your opponent's next
+#  turn, discard the Defending Pokémon and all attached cards.」
+_S2_DELAY_DISCARD_DEFENDER_RE = re.compile(
+    r"^at the end of your opponent'?s next turn,? discard the defending "
+    r"pok[eé]mon and all attached cards\.?$", re.I)
+
+
 def _detect_s2(text: str, kind: str) -> list:
     """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
     if kind == "attack":
         if _S2_SHIELD_NO_WEAKNESS_RE.match(t):
             return [act("shield", None, "self", {"no_weakness": True})]
+        if _S2_DELAY_DISCARD_DEFENDER_RE.match(t):
+            # 延迟弃置：目标 = 出招时的 Defending Pokémon（入队时快照）
+            return [act("rule", None, "opp", {"queue_discard_defender": True})]
+        return []
+    if kind in ("item", "tool"):
+        m = _S2_KO_SEARCH_RE.match(t)
+        if m:
+            return [act("rule", None, "self", {"ko_search_any": int(m.group(1))})]
+        if _S2_TURN_END_ATTACH_RE.match(t):
+            return [act("rule", None, "self", {"turn_end_attach_basic": True})]
         return []
     if kind == "ability":
         m = _S2_SWITCH_OUT_COUNTERS_RE.match(t)
@@ -10238,6 +10273,18 @@ def to_engine_tags(specs: list) -> dict:
                     _dn, _lim = extra["draw_then_queue_discard"]
                     tags.append(f"draw:{int(_dn)}|queue:turn_end:discard_hand:all"
                                 f":if:own_hand_at_least:{int(_lim)}")
+                    continue
+                if extra.get("queue_discard_defender"):
+                    tags.append("queue:opp_next_turn_end:discard_defender:all")
+                    continue
+                if extra.get("ko_search_any") is not None:
+                    tags.append("on_event:ko:search_any:"
+                                f"{int(extra['ko_search_any'])}"
+                                ":on:leaving:scope:own_by_attack")
+                    continue
+                if extra.get("turn_end_attach_basic"):
+                    tags.append("on_event:turn_end:attach_basic:on:holder"
+                                ":scope:own_turn:while:active")
                     continue
                 if extra.get("watch_switch_out_counters") is not None:
                     tags.append("on_event:switch_out:counters:"

@@ -3772,6 +3772,18 @@ _S2_SWIRL = re.compile(
     r"their new active pok[eé]mon is now confused", re.I)
 
 
+_S2C_KO_SEARCH = re.compile(
+    r"is knocked out by damage from an attack from your opponent[’']?s "
+    r"pok[eé]mon,? search your deck for up to (\d+) cards?", re.I)
+_S2C_TURN_END_ATTACH = re.compile(
+    r"at the end of your turn \(after your attack\),? if the pok[eé]mon this "
+    r"card is attached to is in the active spot,? you may attach a basic energy",
+    re.I)
+_S2C_DELAY_DISCARD = re.compile(
+    r"at the end of your opponent[’']?s next turn,? discard the defending "
+    r"pok[eé]mon and all attached cards", re.I)
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -3819,6 +3831,33 @@ def audit_s2_events(card_name: str, item_name: str, desc: str,
         if "shield:no_weakness" not in tags:
             errs.append(f"{card_name} · {item_name}：卡面「限时无弱点」应产 "
                         f"`shield:no_weakness`，实际 {tags}")
+    # S2c：击倒订阅 / 回合末被动道具 / 延迟弃置
+    m = _S2C_KO_SEARCH.search(d)
+    if m:
+        want = f"on_event:ko:search_any:{int(m.group(1))}:on:leaving"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「被招式击倒时检索 "
+                        f"{m.group(1)} 张」应产 `{want}:scope:own_by_attack`，"
+                        f"实际 {tags}")
+        elif "own_by_attack" not in joined:
+            errs.append(f"{card_name} · {item_name}：击倒订阅缺 "
+                        f"`scope:own_by_attack`（非招式击倒不得触发），实际 {tags}")
+    if _S2C_TURN_END_ATTACH.search(d):
+        want = "on_event:turn_end:attach_basic:on:holder"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「回合末可附着基本能量」"
+                        f"应产 `{want}:scope:own_turn:while:active`，实际 {tags}")
+        elif ":while:active" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `while:active` —— "
+                        f"卡面限定「在战斗位时」，否则后备也生效")
+    if _S2C_DELAY_DISCARD.search(d):
+        # ⚠ 用 `discard_defender` 而不是 `knockout:` —— 后者在本项目里专指
+        # 「击倒并**取奖赏**」，这里是「弃置、不取奖赏」，混用会让对账误判
+        # （实测：`knockout:queued` 被对账当成未知的击倒范围）。
+        want = "queue:opp_next_turn_end:discard_defender"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手下回合末弃置战斗位」"
+                        f"应产 `{want}:all`，实际 {tags}")
     return errs
 
 

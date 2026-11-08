@@ -424,3 +424,147 @@ class TestTimedNoWeakness(unittest.TestCase):
         b.step({"verb": "pass"})        # 回到我的回合开始 → 清零
         self.assertFalse(attacker.shield_no_weakness,
                          "该护盾在自己下个回合开始时清除（只活过对手一个回合）")
+
+
+# ---------------- S2c：击倒订阅 / 回合末被动道具 / 延迟弃置 ----------------
+
+from engine.cards import TrainerDef, TrainerRef  # noqa: E402
+
+
+def _tool(tag: str, name: str = "Tool") -> TrainerRef:
+    return TrainerRef(TrainerDef(tag=tag, kind="tool", name=name,
+                                 name_zh=name))
+
+
+class TestKoSubscription(unittest.TestCase):
+    """Amulet of Hope：被**招式伤害**击倒时检索 3 张（非招式击倒不触发）"""
+
+    TAG = ("on_event:ko:search_any:3:on:leaving:scope:own_by_attack")
+
+    def _setup(self):
+        b = arena()
+        p = b.players[0]
+        p.active.tool = self.TAG
+        p.active.tool_name = "Amulet of Hope"
+        p.active.tool_ref = _tool(self.TAG, "Amulet of Hope")
+        p.hand = []
+        # 被击倒方是 p（owner=0）：让 p.active 直接 KO
+        return b, p
+
+    def test_search_on_attack_ko(self):
+        b, p = self._setup()
+        deck_before = len(p.deck)
+        b._ko_from_attack = True
+        b._resolve_ko(0, p.active)
+        self.assertEqual(len(p.hand), 3, "检索至多 3 张入手")
+        self.assertEqual(len(p.deck), deck_before - 3)
+
+    def test_no_search_when_not_attack(self):
+        b, p = self._setup()
+        b._ko_from_attack = False          # 中毒 / 指示物击倒
+        b._resolve_ko(0, p.active)
+        self.assertEqual(len(p.hand), 0, "非招式击倒不该触发")
+
+    def test_tool_attaches_as_trainer_action(self):
+        b = arena()
+        p = b.players[0]
+        p.hand = [_tool(self.TAG, "Amulet of Hope")]
+        self.assertTrue(b._trainer_legals(p, b.players[1]),
+                        "订阅式道具必须能进合法动作表（否则池内死卡）")
+        r = b.step({"verb": "trainer", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(p.active.tool, self.TAG)
+
+
+class TestTurnEndTool(unittest.TestCase):
+    """Powerglass：回合末可选附着 1 个基本能量（**必须由牌手选**）"""
+
+    TAG = ("on_event:turn_end:attach_basic:on:holder"
+           ":scope:own_turn:while:active")
+
+    def _setup(self, on_active=True):
+        from engine.cards import EnergyRef
+        b = arena()
+        p = b.players[0]
+        holder = p.active
+        holder.tool = self.TAG
+        holder.tool_name = "Powerglass"
+        holder.tool_ref = _tool(self.TAG, "Powerglass")
+        if not on_active:
+            p.bench = [holder]
+            p.active = make_pokemon(_pdef("Other", hp=100))
+        p.discard_refs = [EnergyRef(EnergyDef("water")),
+                          EnergyRef(EnergyDef("fire")),
+                          EnergyRef(EnergyDef("fire"))]
+        return b, p, holder
+
+    def test_offers_choice_at_turn_end(self):
+        b, p, holder = self._setup()
+        b.step({"verb": "pass"})
+        self.assertEqual(b.phase, "choice", "回合末挂起选择（不默认附着）")
+        # ★ 换手必须**等选择闭合**：否则「我方回合末的选择」会落到对手回合
+        #   （owner 错、窗口错，对局结果被静默改动）
+        self.assertEqual(b.current, 0, "挂起期间不得换手")
+        self.assertEqual(b._pending.kind, "attach_basic_confirm")
+        kinds = sorted(o.get("etype") for o in b._pending.options
+                       if o.get("etype"))
+        self.assertEqual(kinds, ["fire", "water"], "每个颜色一个选项 + 不附着")
+
+    def test_attach_then_turn_hands_over(self):
+        b, p, holder = self._setup()
+        b.step({"verb": "pass"})
+        fire = next(i for i, o in enumerate(b._pending.options)
+                    if o.get("etype") == "fire")
+        b.step({"verb": "choose", "pick": fire})
+        self.assertEqual(holder.energy_of("fire"), 1)
+        self.assertEqual(b.current, 1, "选择闭合后补做换手")
+        self.assertEqual(b.phase, "main")
+
+    def test_decline_attaches_nothing(self):
+        b, p, holder = self._setup()
+        b.step({"verb": "pass"})
+        self.assertEqual(b.current, 0, "挂起期间不得换手")
+        stop = next(i for i, o in enumerate(b._pending.options) if o.get("pass"))
+        b.step({"verb": "choose", "pick": stop})
+        self.assertEqual(holder.total_energy(), 0)
+        self.assertEqual(b.current, 1)
+
+    def test_bench_holder_does_nothing(self):
+        b, p, holder = self._setup(on_active=False)
+        b.step({"verb": "pass"})
+        self.assertEqual(b.phase, "main", "后备时不订阅（while:active）")
+        self.assertEqual(b.current, 1)
+
+
+class TestQueuedDiscardDefender(unittest.TestCase):
+    """Team Rocket's Grimer：对手下回合末弃置当时的战斗位（**不取奖赏**）"""
+
+    def _setup(self):
+        b = arena()
+        atk = AttackDef("Corrosive Sludge", cost=1,
+                        effects=("queue:opp_next_turn_end:discard_defender:all",))
+        b.players[0].active = make_pokemon(
+            PokemonDef("Grimer", hp=80, ptype="darkness", attacks=(atk,)))
+        b.players[0].active.add_energy("darkness")
+        b.players[1].active = make_pokemon(_pdef("Defender", hp=200))
+        b.players[1].bench = [make_pokemon(_pdef("Backup", hp=100))]
+        b.current = 0
+        # 「对手的**下个**回合末」= turn_counts[1] 还是 0（对手还没开过回合），
+        # 入队时 due = 0+1 = 1，对手第一次回合结束就到期。夹具必须用真实计数。
+        b.turn_counts = [1, 0]
+        return b
+
+    def test_discards_defender_without_prizes(self):
+        b = self._setup()
+        defender = b.players[1].active
+        prizes_before = b.players[0].prizes_left
+        r = b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(len(b._queue), 1, "延迟效果应入队")
+        self.assertIn(defender, b.players[1].all_field(), "攻击当回合不弃置")
+        # 走到「对手的下个回合末」：攻击已结束我方回合 → 对手第一次回合
+        b.step({"verb": "pass"})
+        self.assertNotIn(defender, b.players[1].all_field(), "到点弃置")
+        self.assertEqual(b.players[0].prizes_left, prizes_before,
+                         "**弃置不是击倒**，不得取奖赏")
+        self.assertEqual(len(b._queue), 0)

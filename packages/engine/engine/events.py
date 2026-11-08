@@ -184,9 +184,14 @@ def _watchers(battle, kind: str) -> list:
                 out.append((pi, tpos, fp, ab.name, body))
             tool = str(getattr(fp, "tool", "") or "")
             if tool.startswith(want):
+                body = tool[len(want):]
+                # ⚠ 道具载体也**必须**过 `while:active` 这一关 —— 只在特性分支里
+                # 判断会让「挂着道具、站后备」也触发（实测：Powerglass 放后备
+                # 仍会在回合末挂起附着选择）。这条测试抓到的就是它。
+                if ":while:active" in body and tpos != 0:
+                    continue
                 out.append((pi, tpos, fp,
-                            getattr(fp, "tool_name", "") or "tool",
-                            tool[len(want):]))
+                            getattr(fp, "tool_name", "") or "tool", body))
     return out
 
 

@@ -196,6 +196,16 @@ export const TRAINER_TAG_DESC = {
     }
     return { zh: `奖赏卡操作（${a || '未知'}）。`, en: `Prize-card operation (${a || 'unknown'}).` }
   },
+  // S2c（2026-11-08）：**订阅式道具**（Amulet of Hope / Powerglass）——
+  // 卡面只写触发条件与效果，这里按事件点给出可读说明（C1/C5 自述转写）。
+  on_event: (a, b) => {
+    const when = { ko: '所附宝可梦被招式击倒时', turn_end: '你的回合末（在战斗位时）',
+                   switch_out: '对手换下战斗位时', switch_in: '对手换上新战斗位时',
+                   evolve: '对手进化时' }[a] || a || '触发时'
+    const what = { search_any: `从牌库检索 ${b || 'N'} 张卡加入手牌`, attach_basic: '可从弃牌堆附着 1 个基本能量',
+                   counters: `放置 ${b || 'N'} 个伤害指示物`, status: '施加特殊状态' }[b] || (b || '按卡面结算')
+    return { zh: `${when}：${what}。`, en: `When ${a}: ${b}.` }
+  },
   flute: (a) => ({ zh: `亮出对手牌库顶 ${argOf(a)} 张，可将其中任意数量的基础宝可梦放到对手的后备；其余洗回对手牌库。`, en: `Reveal the top ${argOf(a)} cards of your opponent’s deck; put any number of Basic Pokémon found there onto their Bench, then shuffle the rest back.` }),
   // S2（2026-11-08）：**延迟生效**（Amarys「At the end of this turn, …」）
   queue: (a, _x, parts) => {
@@ -338,6 +348,12 @@ export const EFFECT_TAG_LABEL = {
   evolve_act: { zh: '进化触发', en: 'On evolve' },
   on_event: { zh: '事件订阅', en: 'Event' },
   shield: { zh: '护盾/限时', en: 'Shield' },
+  // S2c（2026-11-08）：击倒订阅 / 回合末被动道具 / 延迟弃置
+  ko: { zh: '被击倒时', en: 'On KO' },
+  turn_end: { zh: '回合末', en: 'Turn end' },
+  attach_basic: { zh: '附基本能量', en: 'Attach Basic' },
+  search_any: { zh: '检索任意卡', en: 'Search any' },
+  discard_defender: { zh: '弃置战斗位', en: 'Discard Defender' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

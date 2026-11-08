@@ -176,8 +176,12 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "prize:", "flute:",
                 # S2（2026-11-08）：**延迟效果**入队（Amarys「At the end of this
                 # turn, …」）。复合形态 `draw:N|queue:…` 的首段是 `draw:`（已在表内），
-                # 但 queue 打头的卡（Grimer / Powerglass）必须显式放行。
-                "queue:")
+                # 但 queue 打头的卡必须显式放行。
+                "queue:",
+                # S2c（2026-11-08）：**订阅式道具**（Amulet of Hope / Powerglass）——
+                # 道具侧白名单与训练家共用（`build_trainer` 只按 kind 分流），
+                # 漏写就是「卡在池外凭空消失」。
+                "on_event:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -209,6 +213,9 @@ ATTACK_TAG_PREFIXES = (
     # ⚠ `info:` 是**完美信息等价**（引擎里显式记 no-op 日志），不写进这里
     #   就会让「整句展示手牌」的卡永远在池外（Hoothoot / Espurr / Pidove）。
     "info:", "counters_double:", "atk_energy_block:", "win_if:",
+    # S2c（2026-11-08）：招式侧**延迟效果**（TR Grimer「At the end of your
+    # opponent's next turn, discard the Defending Pokémon …」）
+    "queue:",
     # 第一百三十五批（S1a/S1b）：决策分解 —— 招式侧「可选能量代价」
     # （Mega Eelektross ex）。训练家侧同名前缀另见 TRAINER_TAGS。
     "choose:",
@@ -574,7 +581,11 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
         # 在击倒点读取，不参与 `_do_trainer` 派发）。
         tool_tags = [t for t in tags
                      if str(t).startswith("tool:")
-                     or str(t).startswith("ko_prize_minus:")]
+                     or str(t).startswith("ko_prize_minus:")
+                     # S2c（2026-11-08）：**订阅式道具**（Amulet of Hope /
+                     # Heavy Baton / Powerglass）。引擎按 `fp.tool` 前缀在事件点
+                     # 读取，与 `tool:` 一样是「附着后才生效」，不参与普通派发。
+                     or str(t).startswith("on_event:")]
         if len(tool_tags) != 1 or len(tags) != 1:
             return None
     # 多 tag 训练家（2026-10-28 第十二批）：引擎的 `TrainerDef.tag` 只有**一个**

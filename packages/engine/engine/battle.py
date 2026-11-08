@@ -371,8 +371,22 @@ class Battle:
         # S2（2026-11-08）：**唯一**的延迟效果结算点。放在 `turn_end` 日志之前、
         # 换手之前 —— 卡面写的是「At the end of **this** turn」，此时 current
         # 仍是结束回合的这一方，`_run_queued_tag` 的作用域天然正确。
+        # S2c：先发 `turn_end` 事件（Powerglass 一类「回合末」被动道具挂在这里），
+        # 再结算队列（一次性延迟效果）。
+        events.emit(self, "turn_end", {"player": self.current,
+                                       "turn_owner": self.current})
+        if self.finished:
+            return
         events.resolve_turn_end(self, self.current)
         if self.finished:
+            return
+        # S2c：回合末的被动道具可能**挂起选择**（Powerglass「you may attach …」）。
+        # 此时绝不能换手 —— 否则选择会落到对手回合（owner 错、窗口错）。
+        # 与招式侧同一手法：置 `_defer_end_turn`，由 `_close_choice` 补做换手。
+        if getattr(self, "_pending", None) is not None:
+            self._defer_end_turn = True
+            self._log("turn_end_deferred", {"player": self.current,
+                                            "choice": self._pending.kind})
             return
         self._log("turn_end", {"player": self.current})
         self.current = 1 - self.current
@@ -900,6 +914,14 @@ class Battle:
                     out.append(dict(base))
             elif tag.startswith("tool:"):
                 # S2 道具：列出**尚未附着道具**的己方位置（每只最多 1 张）
+                targets = []
+                if p.active is not None and not p.active.tool:
+                    targets.append(0)
+                targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
+                for tpos in targets:
+                    out.append(dict(base, target=tpos))
+            elif tag.startswith("on_event:") and kind == "tool":
+                # S2c：订阅式道具可以附着（每只最多 1 张，与 tool: 同规则）
                 targets = []
                 if p.active is not None and not p.active.tool:
                     targets.append(0)
@@ -2409,6 +2431,32 @@ class Battle:
                  {"display": "不交换", "yes": False}],
                 min_pick=1, max_pick=1, tag=ch.tag,
                 ctx={"slot": si, "hand_index": hi})
+        elif ch.kind == "attach_basic_confirm":
+            # S2c：Powerglass —— 由牌手选**哪个颜色**的能量附着，或干脆不附着
+            opt = ch.chosen()[0] if ch.chosen() else {"pass": True}
+            side = int(ch.ctx.get("side", ch.owner))
+            tgt = ch.ctx.get("fp")
+            p = self.players[side]
+            if opt.get("pass"):
+                self._log("optional_declined", {"player": side,
+                                                "tag": ch.tag})
+                return
+            et = str(opt.get("etype") or "")
+            idx = next((i for i, ref in enumerate(p.discard_refs)
+                        if isinstance(ref, EnergyRef)
+                        and not getattr(ref.edef, "is_special", False)
+                        and str(ref.edef.type) == et), None)
+            if idx is None or tgt is None or tgt not in p.all_field():
+                self._log("no_effect", {"player": side, "tag": ch.tag,
+                                        "reason": "目标或能量已失效"})
+                return
+            ref = p.discard_refs.pop(idx)
+            p.discard = [x for x in p.discard]      # 文本层后续补一条即可
+            p.discard.append(_card_label(ref))
+            tgt.add_energy(et, 1)
+            self._log("attach_energy", {"player": side, "target": tgt.name,
+                                        "etype": et, "by": "on_event"})
+            return
         elif ch.kind == "prize_swap_confirm":
             opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
             opp = self.players[1 - ch.owner]
@@ -2514,6 +2562,49 @@ class Battle:
             self._log("discard_hand", {"player": it.owner, "n": len(dropped),
                                        "by": it.source, "tag": tag})
             return
+        if parts[:1] == ["discard_defender"]:
+            # S2c：「discard the Defending Pokémon and all attached cards」
+            # （TR Grimer）。**这是「弃置」不是「击倒」** → 不取奖赏
+            # （取奖赏会凭空给对手 1~3 张，属于实质改变胜负）。
+            side = int(it.ctx.get("side", 1))
+            tgt = it.ctx.get("target")
+            q = self.players[side]
+            if tgt is None or tgt not in q.all_field():
+                self._log("no_effect", {"tag": tag, "player": side,
+                                        "reason": "目标已不在场上"})
+                return
+            was_active = q.active is tgt
+            for _et, _cnt in list(tgt.energy.items()):
+                for _ in range(_cnt):
+                    q.discard.append(f"{_et} energy")
+            for _sref in list(tgt.senergy):
+                self._to_discard(q, _sref)
+            if tgt.tool:
+                if tgt.tool_ref is not None:
+                    self._to_discard(q, tgt.tool_ref)
+                else:
+                    q.discard.append(tgt.tool)
+            tgt.energy.clear()
+            tgt.senergy.clear()
+            _drop_tool(tgt)
+            if was_active:
+                q.active = None
+            else:
+                q.bench = [x for x in q.bench if x is not tgt]
+            self._to_discard(q, PokeRef(tgt.pdef))
+            self._log("discard_from_field", {"player": side,
+                                             "card": tgt.name,
+                                             "by": it.source,
+                                             "active": was_active})
+            if was_active:
+                if q.bench:
+                    q.active = q.bench.pop(0)
+                    q.active.moved_active_turn = self.turn_number
+                    q.active.clear_status()
+                    self._log("promote", {"player": side, "to": q.active.name})
+                else:
+                    self._finish(1 - side, "no_pokemon", {"loser": side})
+            return
         raise ValueError(f"未实现的延迟 tag：{tag}")
 
     def _run_watch_body(self, owner: int, fp, name: str, body: str,
@@ -2544,9 +2635,47 @@ class Battle:
                                                "owner": owner, "mover": who,
                                                "turn_owner": turn_owner})
                 return
+        elif scope == "own_by_attack":
+            # S2c：「**我的**宝可梦被对手宝可梦的招式伤害击倒」（道具载体）。
+            # 两个条件都不能省：① 被击倒的是订阅者自己那侧；② 必须是**招式伤害**
+            # （中毒 / 烧伤 / 自爆击倒时不触发 —— 卡面写死 by damage from an attack）。
+            if who != owner or not ctx.get("by_attack"):
+                self._log("event_scope_skip", {"kind": kind, "by": name,
+                                               "owner": owner, "mover": who,
+                                               "by_attack": ctx.get("by_attack")})
+                return
+        elif scope == "own_turn":
+            # S2c：「At the end of **your** turn …」—— 回合归属必须是订阅者自己
+            if who != owner or turn_owner != owner:
+                self._log("event_scope_skip", {"kind": kind, "by": name,
+                                               "owner": owner, "mover": who,
+                                               "turn_owner": turn_owner})
+                return
         elif scope != "any":
             raise ValueError(f"未知 on_event scope：{scope}")
-        tgt = ctx.get("leaving") if subj == "leaving" else ctx.get("entering")
+        head = parts[0]
+        if head == "search_any":
+            # S2c：「search your deck for up to N cards and put them into your
+            # hand. Then, shuffle your deck.」（Amulet of Hope）—— 与目标无关，
+            # 因此**在**目标存在性检查之前处理（被击倒的那只已经下场了）。
+            n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+            # ⚠ 必须用 `_take_any_from_deck`（连能量卡也算）。`_kind_matches(c,
+            # "any")` 在既有实现里**排除能量**，用 `search_any:` 会静默少检索
+            # （实测：牌库里 12 张能量、一张都拿不到）。卡面写的是「any cards」。
+            pq = self.players[owner]
+            got = _take_any_from_deck(pq, n)
+            if got:
+                self.rng.shuffle(pq.deck)
+            self._log("event_search", {"kind": kind, "by": name,
+                                       "owner": owner, "n": got,
+                                       "shuffled": bool(got)})
+            return
+        if subj == "holder":
+            tgt = fp                       # 载体自己（Powerglass 的持有者）
+        elif subj == "leaving":
+            tgt = ctx.get("leaving")
+        else:
+            tgt = ctx.get("entering")
         if tgt is None:
             return
         if tgt not in self.players[who].all_field():
@@ -2554,7 +2683,23 @@ class Battle:
             self._log("no_effect", {"kind": kind, "by": name, "owner": owner,
                                     "reason": "目标已离场", "target": tgt.name})
             return
-        head = parts[0]
+        if head == "attach_basic":
+            # S2c：Powerglass「you may attach a Basic Energy card from your
+            # discard pile to it」—— **可选**：落成 confirm 选择，绝不默认附着。
+            kinds = sorted({str(ref.edef.type) for ref in self.players[owner].discard_refs
+                            if isinstance(ref, EnergyRef)
+                            and not getattr(ref.edef, "is_special", False)})
+            if not kinds:
+                self._log("no_effect", {"kind": kind, "by": name,
+                                        "reason": "弃牌堆没有基本能量"})
+                return
+            self._open_choice(
+                "attach_basic_confirm",
+                [{"display": f"附着 1 个{_k}能量", "etype": _k} for _k in kinds]
+                + [{"display": "不附着", "pass": True}],
+                min_pick=1, max_pick=1, tag=f"on_event:{kind}",
+                ctx={"side": owner, "fp": tgt})
+            return
         if head == "counters":
             n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
             # 指示物**不吃弱点/抗性**（与 counters: 族同口径）
@@ -2857,6 +3002,11 @@ class Battle:
         elif tag.startswith("ko_prize_minus:"):
             # Lillie's Pearl：kind=tool 但 tag 走被动奖赏修正前缀（见 legals 注释）。
             # 不接这一支，这张卡打出去就是「未知训练家 tag」。
+            placed = self._trainer_attach_tool(p, c, tag,
+                                               int(action.get("target", 0)))
+        elif tag.startswith("on_event:") and kind == "tool":
+            # S2c：**订阅式道具**（Amulet of Hope / Heavy Baton / Powerglass）——
+            # 与普通道具一样「附着到 1 只己方宝可梦」，效果由 `events.emit` 触发。
             placed = self._trainer_attach_tool(p, c, tag,
                                                int(action.get("target", 0)))
         elif tag.startswith("stadium:"):
@@ -7784,6 +7934,27 @@ class Battle:
                 self._log("self_to_deck_top", {"player": self.current,
                                                "card": attacker.name,
                                                "dropped": _dropped})
+            elif tag.startswith("queue:"):
+                # S2c：招式侧的**延迟效果**（Team Rocket's Grimer「Corrosive
+                # Sludge」：「At the end of your opponent's next turn, discard the
+                # Defending Pokémon and all attached cards.」）。
+                # ⚠ 目标必须在**入队时快照**：到对方回合末时「Defending Pokémon」
+                #   早已不是当时那只（甚至已换下），延迟结算不能重新猜目标。
+                _qp = str(tag).split(":")
+                if len(_qp) < 3 or not _qp[2]:
+                    raise ValueError(f"queue tag 非法（缺延迟体）：{tag}")
+                _when, _body = _qp[1], ":".join(_qp[2:])
+                if _when == "opp_next_turn_end":
+                    _owner, _delay = 1 - self.current, 1
+                elif _when == "next_turn_end":
+                    _owner, _delay = self.current, 1
+                elif _when == "turn_end":
+                    _owner, _delay = self.current, 0
+                else:
+                    raise ValueError(f"未知延迟时点：{_when}")
+                events.push(self, _owner, _delay, _body, source=str(tag),
+                            ctx={"target": opp.active,
+                                 "side": 1 - self.current})
             elif tag.startswith("recon:") and not _parse_recon_tag(tag)["legacy"]:
                 # S2b（2026-11-08）：**进化触发**里的「看牌库顶 N 张 → 附着/铺场」
                 # （Grumpig「Energized Steps」：`evolve_act:recon:4:all:basic_energy:
@@ -9084,6 +9255,17 @@ class Battle:
         _attacker = opp.active if self._ko_from_attack else None
         _energy_snapshot = dict(fp.energy)
         _ptype = str(fp.pdef.ptype).lower()
+        # S2c（2026-11-08）：**击倒事件**。必须在本体离开场上**之前**发出 ——
+        # 道具订阅（Amulet of Hope / Heavy Baton）挂在被击倒的那只身上，
+        # 一旦先移除就再也扫不到它了。
+        _ko_ctx = {"player": owner, "leaving": fp,
+                   "by_attack": bool(self._ko_from_attack),
+                   "was_active": pos == "active",
+                   "turn_owner": self.current}
+        # ⚠ 事件必须在**移出场上之前**发出：订阅可能挂在被击倒那只的**道具**上
+        #   （Amulet of Hope / Heavy Baton），一旦先移除，`_watchers` 就扫不到它了。
+        #   （第一版把 emit 放在移除之后 → 道具订阅永远收不到，测试实测 0 张入手。）
+        events.emit(self, "ko", _ko_ctx)
         if pos == "active":
             p.active = None
         else:

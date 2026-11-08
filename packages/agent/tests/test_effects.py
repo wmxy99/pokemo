@@ -1597,12 +1597,24 @@ class TestActionOrdering(unittest.TestCase):
                           "Burned. Draw 2 cards.", "attack")["tags"]
         self.assertEqual(tags[0], "burn")
 
-    def test_delayed_discard_refused(self):
-        """Amarys：「回合末才弃手牌」引擎无延迟队列 → 拒绝而不是立即弃"""
+    def test_delayed_discard_now_modeled(self):
+        """Amarys：「回合末才弃手牌」—— **改判**（S2a，2026-11-08）
+
+        原判据：引擎没有延迟队列 → 整卡拒收（绝不能在**抽牌前**就弃手牌，
+        那会让「抽 4 张再判 5 张」变成「先弃光再抽」，两条线强度完全不同）。
+        S2a 落地后 `queue:turn_end:<tag>` 可以精确表达，因此：
+          · tag 必须是**复合**形态（先 draw、后 queue），顺序不能反；
+          · 弃手牌必须带 `if:own_hand_at_least:5`（条件在**结算时**求值）。
+        断言「不得产出立即执行的 `discard:all`」这一条仍然保留 —— 那是这条用例
+        真正要钉死的东西（历史缺陷：把延迟句当立即句）。
+        """
         r = self._tags("Draw 4 cards. At the end of this turn, if you have 5 "
                        "or more cards in your hand, discard your hand.")
         self.assertNotIn("discard:all", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["unsupported"], [])
+        self.assertEqual(
+            r["tags"],
+            ["draw:4|queue:turn_end:discard_hand:all:if:own_hand_at_least:5"])
 
 
 class TestReactiveDamageSplit(unittest.TestCase):

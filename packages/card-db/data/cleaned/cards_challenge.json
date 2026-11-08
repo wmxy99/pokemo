@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 13:15:29",
+  "reparsed_at": "2026-11-08 13:35:31",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1198,
+  "engine_ready": 1200,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1198,
-   "engine_approximated": 1183,
-   "engine_unmatched": 69,
+   "zh_backfill": 1200,
+   "engine_approximated": 1185,
+   "engine_unmatched": 67,
    "engine_namekey_mismatch": 9
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 151,
-   "engine_tags": 1505,
-   "unsupported": 69,
+   "errors": 152,
+   "engine_tags": 1506,
+   "unsupported": 67,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1183,
+  "engine_approximated": 1185,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -117201,14 +117201,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Dugtrio@ASC 101",
    "parse": {
     "items": [
      {
@@ -117224,24 +117226,24 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "opp",
           "extra": {
-           "note": "放置伤害指示物：目标/条件未识别（that Pokémon）"
+           "watch_switch_out_counters": 2
           }
          }
         ],
-        "source_text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon."
+        "source_text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.",
+        "citations": []
        }
       ],
-      "errors": [],
-      "engine_tags": [],
+      "errors": [
+       "[0] action.target 非法：opp"
+      ],
+      "engine_tags": [
+       "on_event:switch_out:counters:2:on:leaving:scope:opp_their_turn"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -117254,23 +117256,23 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "opp",
         "extra": {
-         "note": "放置伤害指示物：目标/条件未识别（that Pokémon）"
+         "watch_switch_out_counters": 2
         }
        }
       ],
-      "source_text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon."
+      "source_text": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.",
+      "citations": []
      }
     ],
-    "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "放置伤害指示物：目标/条件未识别（that Pokémon）"
-     }
+    "errors": [
+     "[0] action.target 非法：opp"
     ],
+    "engine_tags": [
+     "on_event:switch_out:counters:2:on:leaving:scope:opp_their_turn"
+    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -155182,14 +155184,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抽 4 张牌。在本回合结束时，若你的手牌为 5 张或更多，弃置你的手牌。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Amarys@PRE 93",
    "parse": {
     "items": [
      {
@@ -155203,34 +155207,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "draw",
-          "amount": 4,
-          "target": "deck"
-         },
-         {
           "type": "rule",
           "amount": null,
-          "target": "hand",
+          "target": "self",
           "extra": {
-           "note": "回合末才执行的弃手牌（需延迟队列，B4）"
+           "draw_then_queue_discard": [
+            4,
+            5
+           ]
           }
          }
         ],
-        "source_text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand."
+        "source_text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "draw:4"
+       "draw:4|queue:turn_end:discard_hand:all:if:own_hand_at_least:5"
       ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "回合末才执行的弃手牌（需延迟队列，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -155241,32 +155239,26 @@
       "conditions": [],
       "actions": [
        {
-        "type": "draw",
-        "amount": 4,
-        "target": "deck"
-       },
-       {
         "type": "rule",
         "amount": null,
-        "target": "hand",
+        "target": "self",
         "extra": {
-         "note": "回合末才执行的弃手牌（需延迟队列，B4）"
+         "draw_then_queue_discard": [
+          4,
+          5
+         ]
         }
        }
       ],
-      "source_text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand."
+      "source_text": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "draw:4"
+     "draw:4|queue:turn_end:discard_hand:all:if:own_hand_at_least:5"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "回合末才执行的弃手牌（需延迟队列，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

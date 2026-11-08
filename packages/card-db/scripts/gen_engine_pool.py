@@ -173,7 +173,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # S3（2026-11-08）：**区域对象化**族 —— 奖赏卡重发（Redeemable
                 # Ticket）/ 翻面对手奖赏卡（Bother-Bot）/ 亮出对手牌库顶后
                 # 任意数量基础宝可梦上对手后备（Accompanying Flute）。
-                "prize:", "flute:")
+                "prize:", "flute:",
+                # S2（2026-11-08）：**延迟效果**入队（Amarys「At the end of this
+                # turn, …」）。复合形态 `draw:N|queue:…` 的首段是 `draw:`（已在表内），
+                # 但 queue 打头的卡（Grimer / Powerglass）必须显式放行。
+                "queue:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -357,6 +361,9 @@ ABILITY_TAG_PREFIXES = (
     "switch_choose:",
     # 第一百三十五批（S1c）：决策分解 —— 手牌与牌库顶互换（Gumshoos）。
     "choose:",
+    # S2（2026-11-08）：**事件订阅**（`on_event:<kind>:<body>`，Team Rocket's
+    # Dugtrio「Holes」）。被动钩子，不进合法动作表（`_ability_legals` 已跳过）。
+    "on_event:",
     # S3（2026-11-08）：弃牌库**底** N 张（Misty's Psyduck「Flustered Leap」第一段）。
     # 复合形态 `deck_bottom_discard:1|self_to_deck_top` 由本前缀一并覆盖；
     # 漏写 → 特性在池外静默消失（引擎派发写在 `_apply_attack_effects`）。

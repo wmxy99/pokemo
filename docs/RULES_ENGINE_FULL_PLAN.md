@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1198/1267 = 94.6%**，池 **1183**，
-> 未 ready **69**（批内如实拒收 63 + 结构性 4 + 待新能力 2），测试 **2551**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 已落地**（见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1200/1267 = 94.7%**，池 **1185**，
+> 未 ready **67**（批内如实拒收 61 + 结构性 4 + 待新能力 2），测试 **2565**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 / S2a 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -483,6 +483,37 @@ S6 放最后，因为它会改 K1 基线与观测量，必须等其它结构件�
 （63 如实拒收 + 4 结构性 + 2 待新能力）· 测试 **2551**（engine 1368 / agent 1029 /
 api 142 / gym 12）· 对账 **45 类**全绿 · CI **8/8** · K1 双盲 200 局 **0.795**
 （真发牌 + 编码口径变化后复测，判据 ≥0.70，与历史最好值持平）。
+
+---
+
+### S2a · 事件总线 + 延迟队列（2026-11-08 完成，仅骨架 + 两条端到端）
+
+**做了什么**
+
+| 项 | 落点 |
+|---|---|
+| 延迟队列 | `engine/events.py::EffectQueue` + `QueuedEffect{owner, due_count, when, tag, ctx}`：到「该玩家第 N 个回合结束」结算；**过期未结算抛错**，未到期显式结转并写日志 |
+| 事件订阅 | `on_event:<kind>:<body>`（特性 / 道具两类载体）+ `emit()`：每张卡每事件**每回合 1 次**上限（对应卡面「doesn't stack」+ 防 A→B→A 无限链），抑制也写日志 |
+| 唯一结算点 | `Battle._end_turn` 里结算队列（在 `turn_end` 日志与换手之前）；订阅由 `step()` 的快照/比对触发 |
+| 换位事件 | **快照 + diff** 而非逐处 emit：`step()` 分发前记 active 对象、分发后比对 → `switch_out` / `switch_in`。撤退 / Switch / 拉人 / 换位特性 / 回手 全部自动覆盖（逐处 emit 必漏，历史纪律） |
+| 复合 tag | `_do_trainer` 拆出 `_dispatch_trainer_tag`，`a\|b` 按卡面顺序逐段执行（代价只付一次、卡只弃一次）；`_trainer_legals` 只看**第一段**判合法性 |
+| 进池 | **2 张**：Amarys（`draw:4\|queue:turn_end:discard_hand:all:if:own_hand_at_least:5`）· Team Rocket's Dugtrio（`on_event:switch_out:counters:2:on:leaving:scope:opp_their_turn`） |
+| 对账 | 新增第 46 类（回合末延迟弃手牌 / 对手换下时放指示物），并放宽既有「`that Pokémon` 不可精确表达」规则（换位订阅里它是精确定义的） |
+
+**明确的边界（S2b 继续）**
+- 只接线了 `switch_out` / `switch_in` 两类事件点；`evolve` / `attach_energy` /
+  `attack_done` / `ko` 已有登记但**未接线**（未接线的 kind 永远不会被 emit，不会静默生效）。
+- 队列只支持 `turn_end` 时点（`turn_end` / `next_turn_end` / `opp_next_turn_end` 三种归属已实现）；
+  `after_attack`（Boomerang Energy）留 S2b。
+- 订阅 body 目前只开放 `counters:N` 与 `status:<st>`，且需 `on:leaving|entering`；
+  未实现的 body **抛错**（`_run_watch_body`），绝不静默跳过。
+
+**偏差登记**：计划里 S2 的「12 + 3 = 15 张」本阶段只落地 **2 张**（原因：整批 15 张各自需要
+不同的 body 形态 —— 附能 / 检索换位 / 复制招式 / 状态扩散；骨架必须先证明「不泄漏、可复现、
+不自选」，再铺开）。这与 S1 拆成 S1a/S1b/S1c 是同一策略。
+
+**数字**：`engine_ready` **1200 / 1267 = 94.7%** · 池 **1185** · 未 ready **67** ·
+测试 **2565**（engine 1382）· 对账 **46 类** · CI 8/8。
 
 ---
 

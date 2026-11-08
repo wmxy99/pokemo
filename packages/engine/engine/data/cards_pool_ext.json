@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1183,
+      "kept": 1185,
       "by_Energy": 19,
-      "by_Pokemon": 993,
-      "by_Trainer": 171,
+      "by_Pokemon": 994,
+      "by_Trainer": 172,
       "skipped": {
-        "存在未建模项（整卡不收）": 67,
+        "存在未建模项（整卡不收）": 65,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -40428,6 +40428,57 @@
       "uid": "Team Rocket's Diglett@ASC 100"
     },
     {
+      "name": "Team Rocket's Dugtrio",
+      "name_zh": "火箭队的三地鼠",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Team Rocket)",
+      "evolves_from": "Team Rocket's Diglett",
+      "attacks": [
+        {
+          "name": "Mud Shot",
+          "cost": {
+            "fighting": 1,
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [],
+          "desc": "",
+          "name_zh": "泥巴射击",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Holes",
+          "name_zh": "洞穴",
+          "tag": "on_event:switch_out:counters:2:on:leaving:scope:opp_their_turn",
+          "location": "field",
+          "desc": "Whenever your opponent’s Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.",
+          "desc_zh": "每当对手的战斗宝可梦在其回合中移动到后备，就在该宝可梦上放置 2 个伤害指示物。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "101"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 882,
+      "name_key": "teamrocketsdugtrio",
+      "uid": "Team Rocket's Dugtrio@ASC 101"
+    },
+    {
       "name": "Meditite",
       "name_zh": "玛沙那",
       "supertype": "Pokemon",
@@ -51656,6 +51707,23 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1206,
       "uid": "Larry’s Skill@PRE 115"
+    },
+    {
+      "name": "Amarys",
+      "name_zh": "阿玛丽丝",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "draw:4|queue:turn_end:discard_hand:all:if:own_hand_at_least:5",
+      "desc": "Draw 4 cards. At the end of this turn, if you have 5 or more cards in your hand, discard your hand.",
+      "desc_zh": "抽 4 张牌。在本回合结束时，若你的手牌为 5 张或更多，弃置你的手牌。",
+      "real": {
+        "set": "PRE",
+        "number": "93"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1207,
+      "uid": "Amarys@PRE 93"
     },
     {
       "name": "Iris’s Fighting Spirit",

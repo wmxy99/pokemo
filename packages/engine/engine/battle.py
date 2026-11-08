@@ -19,6 +19,8 @@ from .state import GameConfig, PlayerState
 from .choice import PendingChoice
 # S3（2026-11-08）区域对象化：奖赏卡槽 / 牌库底 / 只读检视
 from . import zones
+# S2（2026-11-08）事件总线 + 延迟队列
+from . import events
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield, STATUSES)
 # 特殊能量子系统（2026-10-28）：提供量/附着限制/静态效果集中在一处
@@ -144,6 +146,10 @@ class Battle:
         # 避免 `getattr(self, "_pending", None)` 在某些装配路径下读到**上一次**的值。
         self._pending: Optional[PendingChoice] = None
         self._defer_end_turn: bool = False
+        # S2：延迟队列 + 事件订阅记账（每张卡每事件每回合 1 次）+ 换位快照
+        self._queue = events.EffectQueue()
+        self._watch_fired: dict = {}
+        self._switch_snap = None
         self.finished: bool = False
         self.winner: Optional[int] = None
         self.win_reason: Optional[str] = None
@@ -274,6 +280,7 @@ class Battle:
         self.turn_counts[self.current] += 1
         p = self.players[self.current]
         self.phase = "main"
+        events.reset_turn_counters(self)      # S2：订阅「每回合 N 次」记账归零
         p.attached_energy_this_turn = 0
         p.supporter_used = 0
         p.supporter_name = ""                     # S3：在场地上判定的支援者卡名
@@ -360,6 +367,12 @@ class Battle:
                 self._log("checkup", {**ev, "player": self.current})
         # 2026-10-28：Ignition Energy「discard it at the end of your turn」
         special_energy.discard_at_end_of_turn(self, cur)
+        # S2（2026-11-08）：**唯一**的延迟效果结算点。放在 `turn_end` 日志之前、
+        # 换手之前 —— 卡面写的是「At the end of **this** turn」，此时 current
+        # 仍是结束回合的这一方，`_run_queued_tag` 的作用域天然正确。
+        events.resolve_turn_end(self, self.current)
+        if self.finished:
+            return
         self._log("turn_end", {"player": self.current})
         self.current = 1 - self.current
         self._begin_turn()
@@ -522,6 +535,10 @@ class Battle:
                 # 被动型 field 特性不进合法动作表（由结算路径自动触发）
                 if ab.tag.startswith(("ko_draw:", "weak_change:", "evolve_attach:",
                                       "evolve_act:", "on_bench_act:",
+                                      # S2：`on_event:` 是**订阅**（等别人触发），
+                                      # 不是可主动发动的特性 —— 进 legals 会让随机
+                                      # 对局报「未知 field tag」。
+                                      "on_event:",
                                       "passive:", "on_damaged:",
                                       "on_ko:", "ko_prize_plus:",
                                       # 第五十批：被击倒时的奖赏减少也是**被动**钩子
@@ -734,7 +751,14 @@ class Battle:
         for i, c in enumerate(p.hand):
             if not isinstance(c, TrainerRef):
                 continue
-            tag, kind = c.tdef.tag, c.tdef.kind
+            full_tag, kind = c.tdef.tag, c.tdef.kind
+            tag = full_tag
+            # S2（2026-11-08）：**复合 tag**（`a|b`）的合法性只看**第一段** ——
+            # 第一段合法就能打出；后续段是同一张卡的追加效果，不该把卡变成摆设。
+            # 动作里仍带**完整** tag（`base["tag"]`），由 `_do_trainer` 逐段执行。
+            # `coin:` / `coin_flip:` 的 `|` 是同一枚币的两面，不能拆。
+            if "|" in tag and not tag.startswith(("coin:", "coin_flip:")):
+                tag = tag.split("|")[0]
             # 跨回合手牌禁打（Budew / Frillish / Galvantula ex 的 Item 封锁）
             # 官方规则中 Pokémon Tool 属于 Item，故一并封锁。
             if kind in ("item", "tool") \
@@ -777,7 +801,7 @@ class Battle:
             # 供前端、AI 与「按名称下达指令」（engine.commands.find_action）使用。
             base = {"verb": "trainer", "hand": i,
                     "name": c.tdef.name, "name_zh": c.tdef.name_zh,
-                    "display": c.tdef.display, "tag": tag, "kind": kind}
+                    "display": c.tdef.display, "tag": full_tag, "kind": kind}
             if tag == "poffin":
                 if len(p.bench) < self.cfg.max_bench:
                     out.append(dict(base))
@@ -1131,6 +1155,9 @@ class Battle:
                     out.append(dict(base))
             elif tag.startswith("mill:"):
                 out.append(dict(base))
+            elif tag.startswith("queue:"):
+                # 延迟效果本身总能入队（结算时再判条件，条件不满足记 no_effect）
+                out.append(dict(base))
             elif tag.startswith("prize:redeal"):
                 # S3：有奖赏卡才能重发（对象化模式；只计数模式下必然抛错 → 不许进表）
                 if zones.has_real_prizes(p) and p.prizes and p.deck:
@@ -1336,33 +1363,42 @@ class Battle:
             return self._step_choice(action)
         if self.phase != "main":
             return {"ok": False, "error": f"phase={self.phase}"}
+        # S2（2026-11-08）：换位事件的**唯一**检测点 —— 分发前快照、分发后比对。
+        # 这样撤退 / Switch / 拉人 / 换位特性 / 回手 等所有换位路径自动被覆盖，
+        # 不必在 10 个 helper 里各写一次 emit（写必有漏，漏即静默丢效果）。
         p = self.players[self.current]
-        verb = action.get("verb")
+        events.snapshot_switch(self)
         try:
-            if verb == "play":
-                return self._do_play(p, action)
-            if verb == "attach":
-                return self._do_attach(p, action)
-            if verb == "attack":
-                return self._do_attack(p, action)
-            if verb == "retreat":
-                return self._do_retreat(p, action)
-            if verb == "evolve":
-                return self._do_evolve(p, action)
-            if verb == "ability":
-                return self._do_ability(p, action)
-            if verb == "trainer":
-                return self._do_trainer(p, action)
-            if verb == "stadium_use":
-                return self._do_stadium_use(p, action)
-            if verb == "discard_fossil":
-                return self._do_discard_fossil(p, action)
-            if verb == "pass":
-                self._end_turn()
-                return {"ok": True, "event": None}
-            return {"ok": False, "error": f"unknown verb {verb}"}
+            res = self._step_main(p, action.get("verb"), action)
         except ValueError as e:
-            return {"ok": False, "error": str(e)}
+            res = {"ok": False, "error": str(e)}
+        events.emit_switch_diff(self)
+        return res
+
+    def _step_main(self, p: PlayerState, verb, action: dict) -> dict:
+        """主阶段的动词分发（`step` 只负责事件快照/比对，逻辑留在这里）"""
+        if verb == "play":
+            return self._do_play(p, action)
+        if verb == "attach":
+            return self._do_attach(p, action)
+        if verb == "attack":
+            return self._do_attack(p, action)
+        if verb == "retreat":
+            return self._do_retreat(p, action)
+        if verb == "evolve":
+            return self._do_evolve(p, action)
+        if verb == "ability":
+            return self._do_ability(p, action)
+        if verb == "trainer":
+            return self._do_trainer(p, action)
+        if verb == "stadium_use":
+            return self._do_stadium_use(p, action)
+        if verb == "discard_fossil":
+            return self._do_discard_fossil(p, action)
+        if verb == "pass":
+            self._end_turn()
+            return {"ok": True, "event": None}
+        return {"ok": False, "error": f"unknown verb {verb}"}
 
     def _do_play(self, p: PlayerState, action: dict) -> dict:
         idx = _hand_index_from_action(p.hand, action, want="basic")
@@ -2432,6 +2468,100 @@ class Battle:
             return
         raise ValueError(f"未实现的收尾 tag：{t}")
 
+    # ---------- S2（2026-11-08）：延迟效果 / 事件订阅的执行体 ----------
+
+    def _run_queued_tag(self, it) -> None:
+        """执行一条**到期**的延迟效果（由 `events.resolve_turn_end` 调用）
+
+        ⚠ 未知形态一律抛错：延迟效果「到点了却没执行」是最隐蔽的静默丢效果，
+          而对局里完全看不出来（卡面说做了，实际没做）。
+        """
+        tag = str(it.tag)
+        p = self.players[it.owner]
+        parts = [x for x in tag.split(":") if x]
+        if parts[:1] == ["discard_hand"]:
+            # 「At the end of this turn, if you have 5 or more cards in your hand,
+            #   discard your hand.」（Amarys）
+            mode = parts[1] if len(parts) > 1 else "all"
+            cond = ":".join(parts[parts.index("if") + 1:]) if "if" in parts else ""
+            if cond and not _eval_condition(self, cond):
+                self._log("no_effect", {"tag": tag, "reason": "条件不满足",
+                                        "player": it.owner})
+                return
+            n = len(p.hand) if mode == "all" else int(mode)
+            n = max(0, min(n, len(p.hand)))
+            dropped = list(p.hand[:n])
+            for c in dropped:
+                self._to_discard(p, c)
+            del p.hand[:n]
+            self._log("discard_hand", {"player": it.owner, "n": len(dropped),
+                                       "by": it.source, "tag": tag})
+            return
+        raise ValueError(f"未实现的延迟 tag：{tag}")
+
+    def _run_watch_body(self, owner: int, fp, name: str, body: str,
+                        kind: str, ctx: dict) -> None:
+        """执行一条 `on_event:<kind>:<body>` 订阅
+
+        body 文法（S2a 只开放两种，未知即抛错）::
+
+            counters:<N>:on:<leaving|entering>[:scope:<...>]
+            status:<st>:on:<leaving|entering>[:scope:<...>]
+
+        `scope`：
+          · `opp_their_turn`（默认）—— 换位方必须是**订阅者的对手**，且这次换位
+            发生在**换位方自己的回合**（卡面「during their turn」）；
+          · `any` —— 不限定（卡面没写「during their turn」时用）。
+        """
+        parts = [x for x in str(body).split(":") if x]
+        if "on" not in parts:
+            raise ValueError(f"on_event 订阅缺少 on: 段：{body}")
+        subj = parts[parts.index("on") + 1]
+        scope = (parts[parts.index("scope") + 1]
+                 if "scope" in parts else "opp_their_turn")
+        who = int(ctx.get("player", -1))
+        turn_owner = int(ctx.get("turn_owner", -1))
+        if scope == "opp_their_turn":
+            if who == owner or turn_owner != who:
+                self._log("event_scope_skip", {"kind": kind, "by": name,
+                                               "owner": owner, "mover": who,
+                                               "turn_owner": turn_owner})
+                return
+        elif scope != "any":
+            raise ValueError(f"未知 on_event scope：{scope}")
+        tgt = ctx.get("leaving") if subj == "leaving" else ctx.get("entering")
+        if tgt is None:
+            return
+        if tgt not in self.players[who].all_field():
+            # 已经离场（回手 / 洗回牌库）→ 放置类效果无对象，记日志而不是假装做了
+            self._log("no_effect", {"kind": kind, "by": name, "owner": owner,
+                                    "reason": "目标已离场", "target": tgt.name})
+            return
+        head = parts[0]
+        if head == "counters":
+            n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+            # 指示物**不吃弱点/抗性**（与 counters: 族同口径）
+            tgt.damage += n * 10
+            self._log("damage", {"player": owner, "target": tgt.name,
+                                 "dmg": n * 10, "counters": True,
+                                 "by": name, "event": kind})
+            if tgt.is_ko:
+                self._resolve_ko(who, tgt)
+            return
+        if head == "status":
+            st = parts[1] if len(parts) > 1 else ""
+            if st not in STATUSES:
+                raise ValueError(f"on_event status 状态词非法：{st}")
+            if self._status_blocked(tgt, st):
+                self._log("blocked", {"target": tgt.name, "by": "status_immune",
+                                      "effect": st})
+                return
+            tgt.status.add(st)
+            self._log("status", {"player": owner, "target": tgt.name,
+                                 "status": st, "by": name, "event": kind})
+            return
+        raise ValueError(f"未实现的 on_event 效果：{body}")
+
     def _do_recon(self, p: PlayerState, tag: str, action: dict) -> str:
         """检视牌库顶 N 张 → 按筛选取 ≤K 张 → 入手 / 铺场 / 附着，其余放回牌库。
 
@@ -2600,44 +2730,13 @@ class Battle:
         if _is_acespec(c) and getattr(p, "acespec_lock_until", 0) > _tc:
             raise ValueError("本回合无法打出 ACE SPEC（手牌禁打）")
 
-    def _do_trainer(self, p: PlayerState, action: dict) -> dict:
-        hi = _hand_index_from_action(p.hand, action)
-        if hi is None:
-            known = "、".join(
-                c.tdef.display for c in p.hand if isinstance(c, TrainerRef))
-            raise ValueError(
-                f"无法识别训练家卡「{_name_hint(action)}」"
-                f"（手牌可用：{known or '无'}）")
-        c = p.hand[hi]
-        if not isinstance(c, TrainerRef):
-            raise ValueError("该牌不是训练家")
-        tag, kind = c.tdef.tag, c.tdef.kind
-        if kind in ("item", "tool") \
-                and p.item_lock_until > self.turn_counts[self.current]:
-            raise ValueError("本回合无法打出手牌中的物品卡（物品封锁）")
-        # 第一百零七批：支援者 / 场地 / ACE SPEC 三类跨回合手牌禁打
-        self._check_play_locks(p, c)
-        # 静态禁令（「你的对手不能从手牌打出物品卡」等，效果族提供）
-        if families.blocked_play(self, p, c):
-            raise ValueError("场上效果禁止打出该卡")
-        if kind == "supporter":
-            if p.supporter_used:
-                raise ValueError("本回合已使用支援者")
-        opp = self.players[1 - self.current]
-        # 打出代价（2026-11-02 第三十六批）：**先付账、后效果**。
-        #
-        # 顺序必须与卡面一致：先做效果再弃牌，会让「手牌其实不够付账」的情形
-        # 也把效果先拿到手（`_pay_play_cost` 随后才失败，但效果已经发生）。
-        # 付账会改动手牌 → 之后各 helper 用到的 `hi` 必须**按身份重算**，
-        # 不能沿用旧索引（`p.hand.pop` 会让它指向别的牌）。
-        cost_log = ""
-        if tag not in _BUILTIN_COST_TAGS:
-            cost_log = self._pay_play_cost(p, c, hi, action)
-            if cost_log:
-                hi = next((i for i, x in enumerate(p.hand) if x is c), None)
-                if hi is None:      # 代价搬家把本卡弄丢了 → 绝不继续派发
-                    raise ValueError("打出代价后找不到本卡（内部状态异常）")
-        # 执行（tag 派发）
+    def _dispatch_trainer_tag(self, p: PlayerState, opp: PlayerState, c, tag: str,
+                             kind: str, action: dict, hi: int) -> str:
+        """单个训练家 tag 的派发（`_do_trainer` 负责代价、弃置与复合 tag 拆分）
+
+        抽成独立方法是为了让**复合 tag**（`a|b`）能按卡面顺序逐段执行：
+        代价只付一次、卡也只弃一次，但两段效果都要落地。
+        """
         if tag == "poffin":
             placed = self._trainer_poffin(p)
         elif tag == "ultra_ball":
@@ -2969,8 +3068,64 @@ class Battle:
             placed = families.apply_action(
                 self, tag, {"kind": "trainer", "card": c, "action": action,
                             "player": self.current, "hand_index": hi})
+        elif tag.startswith("queue:"):
+            # S2：**延迟效果**入队（Amarys「At the end of this turn, …」）
+            placed = self._trainer_queue(p, tag)
         else:
             raise ValueError(f"未知训练家 tag={tag}")
+        return placed
+
+    def _do_trainer(self, p: PlayerState, action: dict) -> dict:
+        hi = _hand_index_from_action(p.hand, action)
+        if hi is None:
+            known = "、".join(
+                c.tdef.display for c in p.hand if isinstance(c, TrainerRef))
+            raise ValueError(
+                f"无法识别训练家卡「{_name_hint(action)}」"
+                f"（手牌可用：{known or '无'}）")
+        c = p.hand[hi]
+        if not isinstance(c, TrainerRef):
+            raise ValueError("该牌不是训练家")
+        tag, kind = c.tdef.tag, c.tdef.kind
+        if kind in ("item", "tool") \
+                and p.item_lock_until > self.turn_counts[self.current]:
+            raise ValueError("本回合无法打出手牌中的物品卡（物品封锁）")
+        # 第一百零七批：支援者 / 场地 / ACE SPEC 三类跨回合手牌禁打
+        self._check_play_locks(p, c)
+        # 静态禁令（「你的对手不能从手牌打出物品卡」等，效果族提供）
+        if families.blocked_play(self, p, c):
+            raise ValueError("场上效果禁止打出该卡")
+        if kind == "supporter":
+            if p.supporter_used:
+                raise ValueError("本回合已使用支援者")
+        opp = self.players[1 - self.current]
+        # 打出代价（2026-11-02 第三十六批）：**先付账、后效果**。
+        #
+        # 顺序必须与卡面一致：先做效果再弃牌，会让「手牌其实不够付账」的情形
+        # 也把效果先拿到手（`_pay_play_cost` 随后才失败，但效果已经发生）。
+        # 付账会改动手牌 → 之后各 helper 用到的 `hi` 必须**按身份重算**，
+        # 不能沿用旧索引（`p.hand.pop` 会让它指向别的牌）。
+        cost_log = ""
+        if tag not in _BUILTIN_COST_TAGS:
+            cost_log = self._pay_play_cost(p, c, hi, action)
+            if cost_log:
+                hi = next((i for i, x in enumerate(p.hand) if x is c), None)
+                if hi is None:      # 代价搬家把本卡弄丢了 → 绝不继续派发
+                    raise ValueError("打出代价后找不到本卡（内部状态异常）")
+        # S2（2026-11-08）：**复合 tag**（一句两动作）按卡面顺序逐段执行。
+        # 训练家卡只认一个卡级 tag（纪律 #11），因此 `a|b` 必须在这里拆开跑，
+        # 而不是让某一支把另一支吃掉。`coin:` / `coin_flip:` 里的 `|` 是**分支**
+        # 分隔符（同一枚币的两面），绝不能拆。
+        _subs = ([x for x in tag.split("|") if x]
+                 if "|" in tag and not tag.startswith(("coin:", "coin_flip:"))
+                 else [tag])
+        placed = ""
+        for _t in _subs:
+            _d = self._dispatch_trainer_tag(p, opp, c, _t, kind, action, hi)
+            # 子效果可能改动牌序 → 按**身份**重算本卡位置（与代价支付同口径）
+            hi = next((i for i, x in enumerate(p.hand) if x is c), hi)
+            if _d:
+                placed = f"{placed} | {_d}" if placed else _d
         # 按身份移除已使用的训练家卡（helper 内部弃牌会造成 hand 索引漂移，
         # 用 pop(hi) 会误删——真实卡池的高频物品 Ultra Ball 会踩到）
         p.hand = [x for x in p.hand if x is not c]
@@ -3878,6 +4033,32 @@ class Battle:
         self._log("recon_bottom", {"player": self.current, "look": n,
                                    "got": _card_label(pick)})
         return f"bottom{n} got 1"
+
+    def _trainer_queue(self, p: PlayerState, tag: str) -> str:
+        """`queue:<when>:<tag>` —— 把后续效果**存到未来某时点**再执行
+
+        `when`（S2a 接线两种）：
+          · `turn_end`            → 本回合结束（owner = 自己，延迟 0）
+          · `opp_next_turn_end`   → 对手的下个回合结束（owner = 对手，延迟 1）
+        到期由 `events.resolve_turn_end` 在 `_end_turn` 的固定点结算；
+        过期未结算会**抛错**（`EffectQueue.stale`）。未知 `when` 直接抛错。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 3 or not parts[2]:
+            raise ValueError(f"queue tag 非法（缺延迟体）：{tag}")
+        when = parts[1]
+        body = ":".join(parts[2:])
+        if when == "turn_end":
+            owner, delay = self.current, 0
+        elif when == "next_turn_end":
+            owner, delay = self.current, 1
+        elif when == "opp_next_turn_end":
+            owner, delay = 1 - self.current, 1
+        else:
+            raise ValueError(f"未知延迟时点：{when}")
+        events.push(self, owner, delay, body, when="turn_end",
+                    source=str(tag))
+        return f"queue {when}"
 
     # ---------- S3（2026-11-08）：奖赏卡 / 牌库底 / 对手区域 ----------
 

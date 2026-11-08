@@ -3229,6 +3229,43 @@ _TOOL_HP_HOLDER_RE = re.compile(
     r"\+(\d+) hp\.?$", re.I)
 
 
+# ---------------- S2（2026-11-08）：延迟队列 / 事件订阅 ----------------
+# 「At the end of this turn, …」（延迟执行）与「Whenever <别人的动作> …, …」（事件
+# 订阅）此前**无可挂载之处**，一律落 unsupported 整卡拒收。
+
+# Amarys：「Draw 4 cards. At the end of this turn, if you have 5 or more cards in
+#  your hand, discard your hand.」
+_S2_DELAY_DISCARD_RE = re.compile(
+    r"^draw (\d+) cards?\.? at the end of this turn,? if you have (\d+) or more "
+    r"cards in your hand,? discard your hand\.?$", re.I)
+
+# Team Rocket's Dugtrio「Holes」：「Whenever your opponent's Active Pokémon moves
+#  to the Bench during their turn, place 2 damage counters on that Pokémon.」
+_S2_SWITCH_OUT_COUNTERS_RE = re.compile(
+    r"^whenever your opponent'?s active pok[eé]mon moves to the bench during "
+    r"their turn,? (?:place|put) (\d+) damage counters? on that pok[eé]mon\.?$",
+    re.I)
+
+
+def _detect_s2(text: str, kind: str) -> list:
+    """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind == "ability":
+        m = _S2_SWITCH_OUT_COUNTERS_RE.match(t)
+        if m:
+            # 换下的那只吃 N 个指示物；`scope:opp_their_turn` = 必须是**对手的回合**
+            return [act("rule", None, "opp", {"watch_switch_out_counters": int(m.group(1))})]
+        return []
+    if kind != "supporter":
+        return []
+    m = _S2_DELAY_DISCARD_RE.match(t)
+    if m:
+        # 先抽 N 张，再把「回合末弃手牌」入队（复合 tag：训练家只认一个卡级 tag）
+        return [act("rule", None, "self", {"draw_then_queue_discard": (
+            int(m.group(1)), int(m.group(2)))})]
+    return []
+
+
 def _detect_b134(text: str, kind: str) -> list:
     """第一百三十四批的八类单句规则（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
@@ -3654,6 +3691,13 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 奖赏胜利 / 牌库底取牌 / 双弃同目标 / 条件 +HP / 道具阵营 +HP）。
     # 位置在 `_detect_value_rules` 之前：这些文本里出现的 "attacks"、"energy"
     # 等词会被后面的宽口径规则族误读成「静态伤害增减」或「费用改写」。
+    # S2（2026-11-08）：延迟队列 / 换位订阅 —— 必须在通用「放置指示物 / 状态 / 抽牌」
+    # 分支之前整句认领，否则「that Pokémon」「at the end of this turn」会被丢弃。
+    _s2 = _detect_s2(t_raw, kind)
+    if _s2:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _s2,
+                "source_text": str(text or ""), "citations": []}
     _b134 = _detect_b134(t_raw, kind)
     if _b134:
         return {"kind": kind, "name": name, "trigger": "on_use",
@@ -10120,6 +10164,17 @@ def to_engine_tags(specs: list) -> dict:
                 if _tg:
                     tags.append(_tg)
             elif t == "rule":
+                # ---- S2（2026-11-08，延迟队列 / 事件订阅）----
+                if extra.get("draw_then_queue_discard") is not None:
+                    _dn, _lim = extra["draw_then_queue_discard"]
+                    tags.append(f"draw:{int(_dn)}|queue:turn_end:discard_hand:all"
+                                f":if:own_hand_at_least:{int(_lim)}")
+                    continue
+                if extra.get("watch_switch_out_counters") is not None:
+                    tags.append("on_event:switch_out:counters:"
+                                f"{int(extra['watch_switch_out_counters'])}"
+                                ":on:leaving:scope:opp_their_turn")
+                    continue
                 # ---- S3（2026-11-08，区域对象化）----
                 if extra.get("prize_redeal"):
                     tags.append("prize:redeal")

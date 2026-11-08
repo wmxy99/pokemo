@@ -197,6 +197,11 @@ export const TRAINER_TAG_DESC = {
     return { zh: `奖赏卡操作（${a || '未知'}）。`, en: `Prize-card operation (${a || 'unknown'}).` }
   },
   flute: (a) => ({ zh: `亮出对手牌库顶 ${argOf(a)} 张，可将其中任意数量的基础宝可梦放到对手的后备；其余洗回对手牌库。`, en: `Reveal the top ${argOf(a)} cards of your opponent’s deck; put any number of Basic Pokémon found there onto their Bench, then shuffle the rest back.` }),
+  // S2（2026-11-08）：**延迟生效**（Amarys「At the end of this turn, …」）
+  queue: (a, _x, parts) => {
+    const when = a === 'turn_end' ? '本回合结束' : (a === 'opp_next_turn_end' ? '对手的下个回合结束' : '稍后')
+    return { zh: `${when}时执行后续效果（${(parts || []).slice(2).join(':') || '—'}）。`, en: `Delayed effect, resolved ${when === '本回合结束' ? 'at the end of this turn' : 'later'} (${(parts || []).slice(2).join(':') || '—'}).` }
+  },
   search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),
   attach: (a, _x, parts) => {
     const tv = (parts || []).find((x) => TY[x] && x !== 'any')
@@ -246,7 +251,15 @@ export const TRAINER_TAG_DESC = {
  * @param {string} tag 引擎的 TrainerDef.tag，如 'boss' / 'recover:1:any'
  */
 export function trainerDesc(tag) {
-  const parts = String(tag || '').split(':')
+  // S2（2026-11-08）：**复合 tag**（`a|b`，一句两动作）必须两段都说明 ——
+  // 只显示第一段 = 静默隐藏后半句（C5「差异透明」不允许）。`coin_flip:` 的
+  // `|` 是同一枚币的两面，不拆。
+  const _raw = String(tag || '')
+  if (_raw.includes('|') && !_raw.startsWith('coin')) {
+    return _raw.split('|').filter(Boolean).map(trainerDesc)
+      .join(cc({ zh: '；', en: '; ' }))
+  }
+  const parts = _raw.split(':')
   const [head, arg, extra] = parts
   const entry = TRAINER_TAG_DESC[head] || TRAINER_TAG_DESC[tag]
   if (!entry) {
@@ -287,6 +300,9 @@ export function abilityDesc(tag) {
     case 'choose':
       // S1c：手牌与牌库顶互换（Gumshoos「Evidence Gathering」）
       return { zh: `每回合 1 次：将手牌中的 1 张卡与牌库顶的卡交换（由你选择哪一张）。`, en: `Once per turn: switch a card from your hand with the top card of your deck (you choose which).` }
+    case 'on_event':
+      // S2（2026-11-08）：**事件订阅**（如 Team Rocket's Dugtrio「Holes」）
+      return { zh: `被动：对手的宝可梦在其回合换下战斗位时，结算后续效果（${extra || '换下目标'}）。`, en: `Passive: when your opponent's Active Pokémon moves to the Bench during their turn, resolve the subscribed effect.` }
     case 'unsupported':
       return { zh: '该特性尚未在引擎中建模。', en: 'Ability not yet modeled by the engine.' }
     default:

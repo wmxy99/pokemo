@@ -416,6 +416,12 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         if re.search(r"in any way you like", _norm(raw or clause or "")) and \
                 any(str(e).startswith("choose:counters_any:") for e in effects):
             return []
+        # S2（2026-11-08）：`that Pokémon` 在**换位订阅**里是精确定义的 ——
+        # 指「刚被换下去的那一只」。`on_event:switch_out:counters:N:on:leaving`
+        # 就是它，不能因为字面是 "that Pokémon" 就判成不可表达。
+        if any(str(e).startswith("on_event:switch_out:counters:")
+               and ":on:leaving" in str(e) for e in effects):
+            return []
         return [f"{card_name} · {item_name}：不可精确表达的目标 "
                 f"`{raw[:60]}` **却在池内**（应整卡不收）"]
     if want == "self":
@@ -3741,6 +3747,45 @@ def audit_s3_zones(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---------------- S2（2026-11-08）：延迟队列 / 事件订阅 ----------------
+# 独立实现（不 import 解析包）。
+_S2_DELAY = re.compile(
+    r"at the end of this turn,? if you have (\d+) or more cards in your hand,? "
+    r"discard your hand", re.I)
+_S2_WATCH = re.compile(
+    r"whenever your opponent[’']?s active pok[eé]mon moves to the bench during "
+    r"their turn,? (?:place|put) (\d+) damage counters? on that pok[eé]mon", re.I)
+
+
+def audit_s2_events(card_name: str, item_name: str, desc: str,
+                    effects: list) -> list:
+    """S2 对账：延迟生效 / 换位订阅
+
+    这两族的错法都是「认了半句」：
+      · 只认「弃手牌」不认「回合末」→ 变成**立即**弃（强度天差地别）；
+      · 只认「放指示物」不认「对手换下」→ 变成**无条件**每回合放。
+    所以这里要求 tag 里同时含时点与条件。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+    m = _S2_DELAY.search(d)
+    if m:
+        want = (f"queue:turn_end:discard_hand:all:if:own_hand_at_least:"
+                f"{int(m.group(1))}")
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「回合末手牌 ≥"
+                        f"{m.group(1)} 则弃手牌」应产 `{want}`，实际 {tags}")
+    m = _S2_WATCH.search(d)
+    if m:
+        want = f"on_event:switch_out:counters:{int(m.group(1))}:on:leaving"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手回合换下时放 "
+                        f"{m.group(1)} 个指示物」应产 `{want}`，实际 {tags}")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3804,6 +3849,7 @@ def main() -> int:
                 errs += audit_batch85(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch93_94(c["name"], it.get("name"), desc, eff)
                 errs += audit_s3_zones(c["name"], it.get("name"), desc, eff)
+                errs += audit_s2_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3836,6 +3882,8 @@ def main() -> int:
                                   [_ctag] if _ctag else [])
             errs += audit_s3_zones(c["name"], c["name"], _cdesc,
                                    [_ctag] if _ctag else [])
+            errs += audit_s2_events(c["name"], c["name"], _cdesc,
+                                    [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -3886,8 +3934,9 @@ def main() -> int:
           "双方洗抽/道具+HP/训练家能量洗回/指示物Defending/指示物this · "
           "搜索族（牌库顶筛支援者/四类别各取1/任意数量铺后备/检索放回牌库顶） · "
           "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 · "
-          "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 "
-          "四十五类对账全部一致")
+          "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 · "
+          "回合末延迟弃手牌/对手换下时放指示物 "
+          "四十六类对账全部一致")
     return 0
 
 

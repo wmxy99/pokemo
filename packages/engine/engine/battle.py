@@ -12,6 +12,7 @@ v1 沿用：回合开始检查→抽卡→主阶段→攻击即结束回合；�
 from __future__ import annotations
 import random
 import re
+from dataclasses import fields
 from typing import Optional
 from .cards import (PokeRef, EnergyRef, EnergyDef, TrainerRef, FieldPokemon,
                     make_pokemon, _tool_value, COLORLESS, TYPES)
@@ -496,6 +497,7 @@ class Battle:
         # E2 进化：手牌 x → 场上同名 evolves_from 目标
         for hi, c in enumerate(p.hand):
             if isinstance(c, PokeRef) and c.pdef.stage > 0 \
+                    and not _no_evolve_into(c.pdef) \
                     and p.evolution_lock_until <= self.turn_counts[pi]:
                 for tpos, tgt in _field_iter(p):
                     if tgt is not None \
@@ -1678,6 +1680,13 @@ class Battle:
         if tgt.pdef.name != c.pdef.evolves_from \
                 or tgt.stage + 1 != c.pdef.stage:
             raise ValueError("进化链不匹配")
+        # S2e（2026-11-08）：「Put this Pokémon into play only with the effect of
+        # Palafin's Zero to Hero Ability.」（Palafin ex「Hero's Spirit」）——
+        # 这类卡**不能**从手牌进化上场，只能由指定效果放进场。
+        # ⚠ 只挡进化不够：`legal_actions` 也得挡，否则 AI 会一直提非法动作。
+        if _no_evolve_into(c.pdef):
+            raise ValueError(
+                f"{c.pdef.display} 只能由卡面指定的效果上场（不能从手牌进化）")
         old_name = tgt.name
         p.hand.pop(hi)
         # Dizzying Valley：「Confused Pokémon don't recover from that Special
@@ -2374,6 +2383,43 @@ class Battle:
             self._log("swap_hand_top", {"player": ch.owner,
                                         "put": _card_label(card),
                                         "got": _card_label(top)})
+        elif ch.kind == "may_use":
+            # S2e：可选触发的「使用 / 不使用」。选「使用」→ 跑子效果（可能再开
+            # 一层选择；此时上一层已经关闭，不构成嵌套挂起）。
+            opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+            if not opt.get("yes"):
+                self._log("optional_declined", {"player": ch.owner,
+                                                "tag": ch.tag})
+                return
+            self._run_simple_tag(str(ch.ctx.get("body") or ""),
+                                 holder=ch.ctx.get("fp"))
+        elif ch.kind == "pick_energy":
+            # S2e：Latios「Move **any amount** of Energy from your Benched
+            # Pokémon to your Active Pokémon」——逐点搬（每个选项 = 从某只搬 1 点
+            # 某色，或搬走 1 张特殊能量卡）。玩家选几次就搬几次，`stop` 结束。
+            dst = p.active
+            moved = 0
+            for opt in ch.chosen():
+                fp = _field_at(p, int(opt.get("pos", 0)))
+                if fp is None or dst is None or fp is dst:
+                    continue
+                if opt.get("sref") is not None:
+                    sref = opt["sref"]
+                    if any(r is sref for r in fp.senergy):
+                        fp.senergy.remove(sref)
+                        dst.senergy.append(sref)
+                        moved += 1
+                    continue
+                et = str(opt.get("etype") or "")
+                if fp.energy.get(et, 0) > 0:
+                    fp.energy[et] -= 1
+                    if fp.energy[et] <= 0:
+                        del fp.energy[et]
+                    dst.add_energy(et, 1)
+                    moved += 1
+            self._log("energy_move", {"player": ch.owner, "n": moved,
+                                      "from": "bench", "to": "active",
+                                      "by": "may_use"})
         elif ch.kind == "confirm":
             opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
             if not opt.get("yes"):
@@ -2514,14 +2560,46 @@ class Battle:
         else:
             raise ValueError(f"未实现的 choice kind：{ch.kind}")
 
-    def _run_simple_tag(self, tag: str) -> None:
-        """执行「选择之后」的收尾 tag（S1a 只支持少数几种，其余**抛错**）
+    def _run_simple_tag(self, tag: str, holder=None) -> None:
+        """执行「选择之后」的收尾 tag（未知形态**抛错**）
 
         ⚠ 绝不静默跳过：`then` 里的动作如果没执行，卡面就少做了一半，
           而对局里看不出来（正是历史「整卡已建模」误判的来源）。
+
+        `holder`（S2e）：可选触发的载体宝可梦（`may_use` 选择里存下来的那只）。
+        `replace_self` / `pick_energy` 这类效果要知道「是谁」在做事。
         """
         p = self.players[self.current]
         t = str(tag)
+        if t.startswith("pick_energy:"):
+            # S2e：Latios「Move any amount of Energy from your Benched Pokémon to
+            # your Active Pokémon」——**逐点选**，玩家 `stop` 才结束。
+            # 选项 = 每个「后备位置 × 可搬的能量」；特殊能量按**卡**单独一项
+            # （卡面是「Energy」，特殊能量是卡、基本能量是点数）。
+            opts: list = []
+            for bi, fp in enumerate(p.bench, start=1):
+                if fp is None:
+                    continue
+                for et in sorted(fp.energy):
+                    if fp.energy.get(et, 0) <= 0:
+                        continue
+                    opts.append({"display": f"从 {fp.name} 搬 1 点 {et} 能量到战斗位",
+                                 "pos": bi, "etype": et})
+                for ref in list(fp.senergy):
+                    opts.append({"display": f"从 {fp.name} 搬 1 张特殊能量到战斗位",
+                                 "pos": bi, "sref": ref})
+            if not opts or p.active is None:
+                self._log("no_effect", {"tag": t, "reason": "后备没有能量可搬"})
+                return
+            self._open_choice("pick_energy", opts, min_pick=0, max_pick=-1,
+                              tag=t, allow_repeat=True,
+                              ctx={"by": "may_use"})
+            return
+        if t.startswith("replace_self:"):
+            # S2e：Palafin「Zero to Hero」——检索指定卡，**原地替换**（附着卡 /
+            # 伤害指示物 / 特殊状态 / 在场回合数全部保留），旧卡洗回牌库。
+            self._do_replace_self(p, holder, t)
+            return
         if t.startswith("paralyze") or t == "confuse" or t == "sleep":
             t = {"paralyzed": "paralyze", "confused": "confuse",
                  "asleep": "sleep"}.get(t, t)
@@ -2539,6 +2617,56 @@ class Battle:
                             source="choice")
             return
         raise ValueError(f"未实现的收尾 tag：{t}")
+
+    def _do_replace_self(self, p: PlayerState, holder, tag: str) -> None:
+        """把 `holder` 与牌库里指定的卡**原地对调**（S2e，Palafin「Zero to Hero」）
+
+        tag：``replace_self:<卡名>:to_deck``
+
+        卡面：「search your deck for a Palafin {ex} and switch it with this
+        Pokémon. **Any attached cards, damage counters, Special Conditions,
+        turns in play, and any other effects remain on the new Pokémon.** If you
+        switched a Pokémon in this way, put this card into your deck. Then,
+        shuffle your deck.」
+
+        ⚠ 三条容易做错的地方：
+          1. **原地**替换：新卡顶到旧卡的**那个位置**（旧卡在备位就还是备位，
+             绝不能让新卡跑去战斗位或后备末尾 —— 那会改变战斗位）。
+          2. **全量继承状态**：不只是能量，还有伤害、特殊状态、道具、护盾、
+             跨回合锁定、在场回合数、已用特性……逐字段抄（见 `_inherit_state`）。
+          3. 旧卡**洗回牌库**而不是进弃牌堆，然后**洗牌**。
+        """
+        parts = str(tag).split(":")
+        want = parts[1] if len(parts) > 1 else ""
+        mode = parts[2] if len(parts) > 2 else "to_deck"
+        if mode != "to_deck":
+            raise ValueError(f"replace_self 只支持 to_deck：{tag}")
+        if holder is None or holder not in p.all_field():
+            self._log("no_effect", {"tag": tag, "reason": "载体不在场上"})
+            return
+        key = _name_key(want)
+        di = next((i for i, ref in enumerate(p.deck)
+                   if isinstance(ref, PokeRef) and _name_key(ref.pdef.name) == key),
+                  None)
+        if di is None:
+            self._log("no_effect", {"tag": tag, "reason": "牌库没有该卡",
+                                    "want": want})
+            return
+        ref = p.deck.pop(di)
+        new = make_pokemon(ref.pdef)
+        _inherit_state(holder, new)
+        if p.active is holder:
+            p.active = new
+            pos = "active"
+        else:
+            bi = p.bench.index(holder)
+            p.bench[bi] = new
+            pos = f"bench{bi + 1}"
+        p.deck.append(PokeRef(holder.pdef))
+        self.rng.shuffle(p.deck)
+        self._log("replace_self", {"player": self.current, "from": holder.name,
+                                   "to": new.name, "pos": pos,
+                                   "into": "deck", "shuffle": True})
 
     # ---------- S2（2026-11-08）：延迟效果 / 事件订阅的执行体 ----------
 
@@ -2711,6 +2839,27 @@ class Battle:
                                                "owner": owner,
                                                "reason": "非快照目标"})
                 return
+        # `match:event_leaving`（S2e）——「**这只**从战斗位下场」
+        # （Palafin「Zero to Hero」：`when this Pokémon moves from the Active Spot
+        # to the Bench`）。不判就会变成「任何一只换下都触发」。
+        if "match" in parts:
+            _mk = parts[parts.index("match") + 1]
+            if _mk == "event_leaving" and ctx.get("leaving") is not tgt:
+                self._log("event_scope_skip", {"kind": kind, "by": name,
+                                               "owner": owner,
+                                               "reason": "不是本次换下的那只"})
+                return
+            if _mk == "event_name" and len(parts) > parts.index("match") + 2:
+                _want = _name_key(parts[parts.index("match") + 2])
+                _ev_fp = (ctx.get("entering") if ctx.get("entering") is not None
+                          else ctx.get("leaving"))
+                _got = _name_key(getattr(_ev_fp, "name", ""))
+                if _got != _want:
+                    self._log("event_scope_skip", {"kind": kind, "by": name,
+                                                   "owner": owner,
+                                                   "reason": "事件对象名称不符",
+                                                   "want": _want, "got": _got})
+                    return
         # `require:` 前置条件（S2d）：写清每种判定，未知条件直接抛错
         _req = {}
         _i = 0
@@ -2743,6 +2892,19 @@ class Battle:
             # 已经离场（回手 / 洗回牌库）→ 放置类效果无对象，记日志而不是假装做了
             self._log("no_effect", {"kind": kind, "by": name, "owner": owner,
                                     "reason": "目标已离场", "target": tgt.name})
+            return
+        # `may`（S2e）：「you may use this Ability / you may search your deck …」
+        # —— **必须由牌手决定**。引擎自选 = 替玩家做决定（S1 定下的不变量）。
+        # 选项只有「使用 / 不使用」；具体怎么做交给子效果（关掉这次选择后再开
+        # 下一次选择，绝不嵌套挂起）。
+        if "may" in parts:
+            _sub = ":".join([x for x in parts if x != "may"])
+            self._open_choice(
+                "may_use",
+                [{"display": "使用该效果", "yes": True},
+                 {"display": "不使用", "yes": False}],
+                min_pick=1, max_pick=1, tag=f"on_event:{kind}",
+                ctx={"body": _sub, "fp": tgt})
             return
         if head == "move_energy_to_bench":
             # S2d：Heavy Baton「move up to N Basic Energy cards from that Pokémon
@@ -10403,6 +10565,40 @@ def _deck_has_kind(p: PlayerState, kind: str, flt: dict | None = None) -> bool:
 
 
 _NAME_KEY_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _inherit_state(old, new) -> None:
+    """把 `old` 身上的**全部**状态搬到 `new`（S2e，`replace_self` 用）
+
+    「Any attached cards, damage counters, Special Conditions, turns in play, and
+    any other effects remain on the new Pokémon.」—— 卡面把「一切」都说死了，
+    所以这里**逐字段**抄（跳过身份字段 `pdef`），而不是列举几个常见字段：
+    列举法每加一个新字段（护盾 / 跨回合锁定 / 受击历史…）就会静默漏一次。
+    """
+    import copy as _copy
+    for f in fields(old):
+        if f.name == "pdef":
+            continue
+        val = getattr(old, f.name)
+        if isinstance(val, dict):
+            val = _copy.deepcopy(val)
+        elif isinstance(val, list):
+            val = list(val)
+        elif isinstance(val, set):
+            val = set(val)
+        setattr(new, f.name, val)
+
+
+def _no_evolve_into(pdef) -> bool:
+    """该物种是否**禁止**从手牌进化上场（S2e，「Put this Pokémon into play only
+    with the effect of …」）
+
+    判据是它自己的特性 tag `passive:no_evolve_into`。放在特性上而不是卡级字段：
+    卡池条目对宝可梦只有 abilities / attacks 两个效果位，加字段要动 gen_engine_pool
+    与 reallib 两处结构（S2b 的 `shield:no_weakness` 已证明「能塞进 tag 就别加字段」）。
+    """
+    return any(str(getattr(ab, "tag", "")) == "passive:no_evolve_into"
+               for ab in (getattr(pdef, "abilities", ()) or ()))
 
 
 def _name_key(name) -> str:

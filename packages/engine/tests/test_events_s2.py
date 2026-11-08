@@ -806,3 +806,187 @@ class TestBoomerangEnergy(unittest.TestCase):
         self.assertEqual(len(victim.senergy), 0)
         self.assertIn("Boomerang Energy", b.players[1].discard,
                       "卡进弃牌堆，但不该回附到对手身上")
+
+
+# ---------------- S2e：可选触发 / 原地替换 / 只能由效果上场 ----------------
+
+LATIOS_TAG = ("on_event:switch_in:pick_energy:bench:active:on:entering"
+              ":scope:own_turn:match:event_name:Mega Latias ex:may")
+PALAFIN_TAG = ("on_event:switch_out:replace_self:Palafin ex:to_deck:on:holder"
+               ":scope:own_turn:match:event_leaving:may")
+
+
+def _latios_arena():
+    b = arena()
+    p = b.players[0]
+    latios = make_pokemon(PokemonDef(
+        "Latios", hp=120, ptype="psychic",
+        abilities=(AbilityDef("Lustrous Assist", tag=LATIOS_TAG,
+                              location="field"),)))
+    latios.add_energy("grass")
+    latios.add_energy("grass")
+    active = make_pokemon(_pdef("Filler", hp=100))
+    for _ in range(3):
+        active.add_energy("water")          # 撤退费要付得起
+    mlat = make_pokemon(PokemonDef("Mega Latias ex", hp=300, ptype="psychic"))
+    p.active, p.bench = active, [mlat, latios]
+    return b, p
+
+
+class TestMayTrigger(unittest.TestCase):
+    """Latios「Lustrous Assist」：**可选**触发 + 逐点搬能量"""
+
+    def test_opens_choice_when_mega_latias_enters(self):
+        b, p = _latios_arena()
+        self.assertTrue(b.step({"verb": "retreat", "bench": 0})["ok"])
+        self.assertEqual(b.phase, "choice")
+        self.assertEqual(b._pending.kind, "may_use")
+        self.assertEqual([o.get("display") for o in b._pending.options],
+                         ["使用该效果", "不使用"])
+
+    def test_decline_moves_nothing(self):
+        b, p = _latios_arena()
+        b.step({"verb": "retreat", "bench": 0})
+        before = p.active.total_energy()
+        stop = next(i for i, o in enumerate(b._pending.options)
+                    if not o.get("yes"))
+        b.step({"verb": "choose", "pick": stop})
+        self.assertEqual(p.active.total_energy(), before, "选「不使用」不得搬能量")
+        self.assertEqual(b.phase, "main")
+
+    def test_accept_then_pick_each_energy(self):
+        """「any amount」= 逐点选，玩家 `stop` 才结束（引擎不自选数量）"""
+        b, p = _latios_arena()
+        b.step({"verb": "retreat", "bench": 0})
+        b.step({"verb": "choose", "pick": 0})       # 使用
+        self.assertEqual(b._pending.kind, "pick_energy")
+        opts = b._pending.options
+        self.assertTrue(opts, "后备有能量 → 必须有可搬选项")
+        self.assertTrue(all("pos" in o for o in opts))
+        before = p.active.total_energy()
+        b.step({"verb": "choose", "pick": 0})
+        b.step({"verb": "choose", "pick": 0})
+        b.step({"verb": "stop"})
+        self.assertEqual(p.active.total_energy(), before + 2, "选 2 次搬 2 点")
+        self.assertEqual(b.phase, "main")
+
+    def test_other_pokemon_entering_does_not_trigger(self):
+        """`match:event_name`：不是 Mega Latias ex 上场就不该问"""
+        b, p = _latios_arena()
+        # 把 Mega Latias 换成普通宝可梦：上场的是它
+        p.bench[0] = make_pokemon(_pdef("Random mon", hp=100))
+        b.step({"verb": "retreat", "bench": 0})
+        self.assertEqual(b.phase, "main", "名称不符 → 不挂起选择")
+
+    def test_opponent_switch_does_not_trigger(self):
+        """`scope:own_turn`：对手回合的换位不该触发 Latios"""
+        b, p = _latios_arena()
+        opp = b.players[1]
+        opp.bench = [make_pokemon(PokemonDef("Mega Latias ex", hp=300,
+                                             ptype="psychic"))]
+        opp.active.add_energy("water")
+        b.current = 1
+        b.step({"verb": "retreat", "bench": 0})
+        self.assertEqual(b.phase, "main")
+
+
+def _palafin_arena(deck_has_ex=True):
+    b = arena()
+    p = b.players[0]
+    pal = make_pokemon(PokemonDef(
+        "Palafin", hp=130, ptype="water",
+        abilities=(AbilityDef("Zero to Hero", tag=PALAFIN_TAG,
+                              location="field"),)))
+    for _ in range(3):
+        pal.add_energy("water")
+    pal.damage = 40
+    pal.tool = "tool:hp_plus:30"
+    pal.tool_name = "Buff"
+    pal.tool_ref = TrainerRef(TrainerDef(tag="tool:hp_plus:30", kind="tool",
+                                         name="Buff", name_zh=""))
+    other = make_pokemon(_pdef("Bench1", hp=100))
+    other.add_energy("fire")
+    p.active, p.bench = pal, [other]
+    if deck_has_ex:
+        p.deck = ([EnergyRef(EnergyDef("fire")) for _ in range(5)]
+                  + [PokeRef(PokemonDef("Palafin ex", hp=340, ptype="water",
+                                        stage=1, evolves_from="Finizen"))])
+    else:
+        p.deck = [EnergyRef(EnergyDef("fire")) for _ in range(5)]
+    return b, p, pal
+
+
+class TestReplaceSelf(unittest.TestCase):
+    """Palafin「Zero to Hero」：可选 + **原地**替换 + 全量继承状态"""
+
+    def test_swaps_in_place_and_keeps_state(self):
+        b, p, pal = _palafin_arena()
+        b.step({"verb": "retreat", "bench": 0})
+        self.assertEqual(b._pending.kind, "may_use")
+        b.step({"verb": "choose", "pick": 0})       # 使用
+        self.assertEqual([x.name for x in p.bench], ["Palafin ex"],
+                         "替换必须发生在**原来那个位置**（后备），不是战斗位")
+        new = p.bench[0]
+        self.assertEqual(new.damage, 40, "伤害指示物保留")
+        self.assertEqual(new.total_energy(), 2, "能量保留（撤退费已付 1 点）")
+        self.assertEqual(new.tool, "tool:hp_plus:30", "道具保留")
+        self.assertTrue(any(isinstance(r, PokeRef) and r.pdef.name == "Palafin"
+                            for r in p.deck), "旧卡洗回牌库")
+        self.assertEqual(len(p.deck), 6, "牌库总数不变（旧卡进库、新卡出库）")
+
+    def test_decline_keeps_palafin(self):
+        b, p, pal = _palafin_arena()
+        b.step({"verb": "retreat", "bench": 0})
+        stop = next(i for i, o in enumerate(b._pending.options)
+                    if not o.get("yes"))
+        b.step({"verb": "choose", "pick": stop})
+        self.assertEqual([x.name for x in p.bench], ["Palafin"])
+
+    def test_other_pokemon_leaving_does_not_trigger(self):
+        """`match:event_leaving`：**别的**宝可梦下场不该触发 Zero to Hero"""
+        b, p, pal = _palafin_arena()
+        other = p.bench[0]
+        other.add_energy("water")
+        other.add_energy("water")
+        p.active, p.bench[0] = other, pal      # Palafin 进后备、别的进战斗位
+        b.step({"verb": "retreat", "bench": 0})
+        self.assertEqual(b.phase, "main", "换下的不是 Palafin → 不挂起")
+
+    def test_no_target_in_deck_is_logged(self):
+        b, p, pal = _palafin_arena(deck_has_ex=False)
+        b.step({"verb": "retreat", "bench": 0})
+        b.step({"verb": "choose", "pick": 0})
+        self.assertEqual([x.name for x in p.bench], ["Palafin"], "没有目标 → 不变")
+        self.assertTrue([e for e in b.events if e["type"] == "no_effect"])
+
+
+class TestNoEvolveInto(unittest.TestCase):
+    """Palafin ex「Hero's Spirit」：只能由效果上场（不能从手牌进化）"""
+
+    def _arena(self, gate=True):
+        b = arena()
+        p = b.players[0]
+        p.active = make_pokemon(PokemonDef("Finizen", hp=70, ptype="water",
+                                          stage=0))
+        ab = ((AbilityDef("Hero's Spirit", tag="passive:no_evolve_into",
+                          location="field"),) if gate else ())
+        p.hand = [PokeRef(PokemonDef("Palafin ex", hp=340, ptype="water",
+                                     stage=1, evolves_from="Finizen",
+                                     abilities=ab))]
+        return b, p
+
+    def test_not_in_legal_actions(self):
+        b, p = self._arena()
+        self.assertFalse([a for a in b.legal_actions() if a.get("verb") == "evolve"],
+                         "只能由效果上场的卡不得出现在进化合法动作里")
+
+    def test_step_rejects_even_if_forced(self):
+        b, p = self._arena()
+        r = b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertFalse(r["ok"])
+        self.assertIn("只能由卡面指定的效果上场", r["error"])
+
+    def test_without_tag_it_would_evolve(self):
+        """反向对照：去掉 tag 就能进化 —— 证明「挡住」的是这条门禁，不是别的原因"""
+        b, p = self._arena(gate=False)
+        self.assertTrue(b.step({"verb": "evolve", "hand": 0, "target": 0})["ok"])

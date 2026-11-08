@@ -324,9 +324,36 @@ export function abilityDesc(tag) {
     case 'evolve_act':
       // S2b：**进化触发**（Archaludon ex「Assemble Alloy」/ Grumpig「Energized Steps」）
       return { zh: `进化时触发一次：${String(tag).split(':').slice(1).join(':') || '按卡面结算'}。`, en: `Triggers once when this Pokémon evolves: ${String(tag).split(':').slice(1).join(':') || 'see card text'}.` }
-    case 'on_event':
-      // S2（2026-11-08）：**事件订阅**（如 Team Rocket's Dugtrio「Holes」）
+    case 'on_event': {
+      // S2/S2e（2026-11-08）：**事件订阅**。文案要按 tag 的三段实际内容说清，
+      // 不能一律套「对手换下」——S2e 的 Latios / Palafin 也是 on_event，
+      // 套旧文案就是把卡面说错（C1/C5 差异透明不允许）。
+      const ps = String(tag || '').split(':')
+      const kind = ps[1] || ''
+      const body = ps[2] || ''
+      const may = ps.includes('may') ? '（可选）' : ''
+      if (kind === 'switch_in' && body === 'pick_energy') {
+        const nm = ps.includes('event_name') ? ps[ps.indexOf('event_name') + 1] : '指定宝可梦'
+        return { zh: `每回合 1 次：当你的 ${nm} 从后备上场时${may}，可将后备宝可梦身上的任意数量能量移到战斗位。`, en: `Once during your turn, when your ${nm} moves to the Active Spot, you may move any amount of Energy from your Benched Pokémon to your Active Pokémon.` }
+      }
+      if (kind === 'switch_out' && body === 'replace_self') {
+        const nm = ps[3] || '指定卡'
+        return { zh: `每回合 1 次：当此宝可梦从战斗位下场时${may}，可从牌库检索 ${nm} 与之交换；附着卡、伤害指示物、特殊状态与所有效果保留在新宝可梦身上，此卡洗回牌库。`, en: `Once during your turn, when this Pokémon moves to the Bench, you may search your deck for a ${nm} and switch it with this Pokémon; all attached cards, damage counters, Special Conditions and other effects remain, then put this card into your deck.` }
+      }
+      if (kind === 'ko') {
+        return { zh: `被动：所附宝可梦被招式击倒时，结算后续效果（${body || '按卡面'}）。`, en: `Passive: when the attached Pokémon is KO'd by an attack, resolve the subscribed effect.` }
+      }
+      if (kind === 'turn_end') {
+        return { zh: `被动：你的回合末结算后续效果（${body || '按卡面'}）。`, en: `Passive: resolves at the end of your turn.` }
+      }
       return { zh: `被动：对手的宝可梦在其回合换下战斗位时，结算后续效果（${extra || '换下目标'}）。`, en: `Passive: when your opponent's Active Pokémon moves to the Bench during their turn, resolve the subscribed effect.` }
+    }
+    case 'passive':
+      // S2e：`passive:no_evolve_into`（Palafin ex「Hero's Spirit」）
+      if (String(tag).includes('no_evolve_into')) {
+        return { zh: '此宝可梦只能由卡面指定的效果放入场（不能从手牌进化上场）。', en: 'Put this Pokémon into play only with the effect named on the card (not by evolving from your hand).' }
+      }
+      return { zh: `被动：${String(tag).split(':').slice(1).join(':') || '按卡面结算'}。`, en: `Passive: ${String(tag).split(':').slice(1).join(':') || 'see card text'}.` }
     case 'unsupported':
       return { zh: '该特性尚未在引擎中建模。', en: 'Ability not yet modeled by the engine.' }
     default:
@@ -369,6 +396,10 @@ export const EFFECT_TAG_LABEL = {
   arm: { zh: '限时登记', en: 'Arm' },
   move_energy_to_bench: { zh: '能量搬到后备', en: 'Move energy' },
   attach_named: { zh: '附具名能量', en: 'Attach named' },
+  // S2e（2026-11-08）：可选触发 / 原地替换 / 只能由效果上场
+  pick_energy: { zh: '搬能量', en: 'Move energy' },
+  replace_self: { zh: '原地替换', en: 'Replace self' },
+  passive: { zh: '被动', en: 'Passive' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

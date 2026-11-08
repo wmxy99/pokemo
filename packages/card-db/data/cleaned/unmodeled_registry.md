@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-08 14:34:59
+- 生成时间：2026-11-08 15:17:08
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **57** 条 · 已映射 tag 1516 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1211 张**
-- 解析层面「无未建模动作」卡：1063 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **54** 条 · 已映射 tag 1518 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1214 张**
+- 解析层面「无未建模动作」卡：1066 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -25,7 +25,7 @@
 | B4 | extra_damage_target | `damage` | 1 | 1 | 附加伤害目标未建模（1 of your opponent’s Benched Pokémon） |
 | B4 | coin_flip | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B4 | type:cost | `cost` | 1 | 1 | 能量代价子句未被映射（可选/任意数量代价，B4） |
-| B5 | S6 | `rule` | 20 | 20 | 静态/未建模（英文） |
+| B5 | S6 | `rule` | 18 | 18 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 4 | 4 | 「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4） |
 | B5 | S5 | `rule` | 2 | 2 | 静态/未建模（英文） |
 | B5 | S2 | `rule` | 2 | 2 | 静态/未建模（英文） |
@@ -59,11 +59,11 @@
 
 - `Mega Charizard X ex`（超级喷火龙X ex）：Discard any amount of {R} Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way.
 
-**B5 · S6**（20 条）
+**B5 · S6**（18 条）
 
 - `Shiftry`（狡猾天狗）：Choose 3 of your opponent’s Benched Pokémon. If you do, shuffle all of your opponent’s Benched Pokémon that you didn’t choose, and all cards attached to those P
 - `Milotic`（美纳斯）：Your opponent’s Pokémon in play and all attached cards can’t be put into your opponent’s hand.
-- `Palafin ex`（海豚侠 ex）：Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability.
+- `Revavroom ex`（普隆隆姆 ex）：Discard this Pokémon and all attached cards.
 
 **B5 · S6**（4 条）
 

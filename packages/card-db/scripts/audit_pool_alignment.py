@@ -3860,6 +3860,69 @@ def audit_s2d_events(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---------------- S2e（2026-11-08）：可选触发 / 原地替换 / 只能由效果上场 ----
+_S2E_PICK = re.compile(
+    r"when your (?P<name>[a-z][a-z' \-]*?)(?: \{ex\}| ex)? moves from your bench "
+    r"to the active spot,? you may use this ability\.? move any amount of "
+    r"energy from your benched pok[eé]mon to your active pok[eé]mon", re.I)
+_S2E_REPLACE = re.compile(
+    r"when this pok[eé]mon moves from the active spot to the bench,? you may "
+    r"search your deck for a (?P<name>[a-z][a-z' \-]*?)(?: \{ex\}| ex)? and "
+    r"switch it with this pok[eé]mon\. any attached cards", re.I)
+_S2E_ONLY_BY = re.compile(
+    r"put this pok[eé]mon into play only with the effect of (?P<src>.+?) ability",
+    re.I)
+
+
+def audit_s2e_events(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """S2e 对账：可选触发 / 原地替换 / 只能由效果上场
+
+    这三族的错法都是「**把选择权拿走了**」：
+      · 丢了 `:may` → 引擎替玩家决定「用不用」（S1 的不变量被破坏）；
+      · 丢了 `match:event_name:` → 任意宝可梦上场/下场都触发；
+      · 丢了 `passive:no_evolve_into` → Palafin ex 可以从手牌直接进化上场，
+        整条 Zero to Hero 的设计被绕过。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+    m = _S2E_PICK.search(d)
+    if m:
+        _en = " ".join(w.capitalize() for w in m.group("name").split())
+        if " {ex}" in desc.lower() or " ex" in m.group(0).lower()[:200]:
+            _en = f"{_en} ex" if not _en.lower().endswith(" ex") else _en
+        want = "on_event:switch_in:pick_energy:bench:active"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「指定宝可梦上场时可选搬能量」"
+                        f"应产 `{want}:…`，实际 {tags}")
+        elif f"match:event_name:{_en}" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `match:event_name:{_en}` "
+                        f"—— 任意宝可梦上场都会触发，实际 {tags}")
+        elif ":may" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `:may` —— 卡面是"
+                        f"「you may」，引擎不得替玩家决定")
+    m = _S2E_REPLACE.search(d)
+    if m:
+        _en = " ".join(w.capitalize() for w in m.group("name").split())
+        want = f"on_event:switch_out:replace_self:{_en}"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「本只下场时可选换成 "
+                        f"{_en}」应产 `{want}:to_deck:…`，实际 {tags}")
+        elif "match:event_leaving" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `match:event_leaving` "
+                        f"—— 别的宝可梦下场也会触发")
+        elif ":may" not in joined:
+            errs.append(f"{card_name} · {item_name}：缺 `:may` —— 卡面是"
+                        f"「you may」，引擎不得替玩家决定")
+    if _S2E_ONLY_BY.search(d):
+        if "passive:no_evolve_into" not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「只能由指定效果上场」应产 "
+                        f"`passive:no_evolve_into`，实际 {tags}")
+    return errs
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -4002,6 +4065,7 @@ def main() -> int:
                 errs += audit_s3_zones(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s2d_events(c["name"], it.get("name"), desc, eff)
+                errs += audit_s2e_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4037,6 +4101,8 @@ def main() -> int:
             errs += audit_s2_events(c["name"], c["name"], _cdesc,
                                     [_ctag] if _ctag else [])
             errs += audit_s2d_events(c["name"], c["name"], _cdesc,
+                                     [_ctag] if _ctag else [])
+            errs += audit_s2e_events(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
@@ -4090,8 +4156,9 @@ def main() -> int:
           "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 · "
           "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 · "
           "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 · "
-          "限时订阅/撤退费+战斗位搬能量/具名能量附着 "
-          "四十七类对账全部一致")
+          "限时订阅/撤退费+战斗位搬能量/具名能量附着 · "
+          "可选触发/原地替换/只能由效果上场 "
+          "四十八类对账全部一致")
     return 0
 
 

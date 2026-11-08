@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 14:34:55",
+  "reparsed_at": "2026-11-08 15:17:07",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1211,
+  "engine_ready": 1214,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1211,
-   "engine_approximated": 1196,
-   "engine_unmatched": 56,
-   "engine_namekey_mismatch": 9
+   "zh_backfill": 1214,
+   "engine_approximated": 1199,
+   "engine_unmatched": 53,
+   "engine_namekey_mismatch": 8
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 156,
-   "engine_tags": 1516,
-   "unsupported": 57,
+   "engine_tags": 1518,
+   "unsupported": 54,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1196,
+  "engine_approximated": 1199,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -14487,14 +14487,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Palafin@TWM 60",
    "parse": {
     "items": [
      {
@@ -14504,85 +14506,55 @@
        {
         "kind": "ability",
         "name": "Zero to Hero",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
-          "type": "search",
-          "amount": 1,
-          "target": "deck",
-          "extra": {
-           "what": "any"
-          }
-         },
-         {
-          "type": "switch",
+          "type": "rule",
           "amount": null,
-          "target": "self"
+          "target": "self",
+          "extra": {
+           "watch_replace_self_on_switch_out": "Palafin ex"
+          }
          }
         ],
-        "source_text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck."
+        "source_text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "switch_self"
+       "on_event:switch_out:replace_self:Palafin ex:to_deck:on:holder:scope:own_turn:match:event_leaving:may"
       ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "search",
-        "reason": "检索去向不可判（B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Zero to Hero",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
-        "type": "search",
-        "amount": 1,
-        "target": "deck",
-        "extra": {
-         "what": "any"
-        }
-       },
-       {
-        "type": "switch",
+        "type": "rule",
         "amount": null,
-        "target": "self"
+        "target": "self",
+        "extra": {
+         "watch_replace_self_on_switch_out": "Palafin ex"
+        }
        }
       ],
-      "source_text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck."
+      "source_text": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "switch_self"
+     "on_event:switch_out:replace_self:Palafin ex:to_deck:on:holder:scope:own_turn:match:event_leaving:may"
     ],
-    "unsupported": [
-     {
-      "type": "search",
-      "reason": "检索去向不可判（B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -14634,14 +14606,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Palafin ex@TWM 61",
    "parse": {
     "items": [
      {
@@ -14688,24 +14662,22 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "no_evolve_into": true
           }
          }
         ],
-        "source_text": "Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability."
+        "source_text": "Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:no_evolve_into"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -14736,27 +14708,24 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "no_evolve_into": true
         }
        }
       ],
-      "source_text": "Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability."
+      "source_text": "Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability.",
+      "citations": []
      }
     ],
     "errors": [
      "[0] action.type 非法：attack_lock"
     ],
     "engine_tags": [
-     "attack_lock:all:turn"
+     "attack_lock:all:turn",
+     "passive:no_evolve_into"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -101222,14 +101191,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Latios@MEG 101",
    "parse": {
     "items": [
      {
@@ -101239,71 +101210,55 @@
        {
         "kind": "ability",
         "name": "Lustrous Assist",
-        "trigger": "static",
-        "conditions": [
-         {
-          "field": "limit",
-          "op": "eq",
-          "value": "once_per_turn"
-         }
-        ],
+        "trigger": "on_use",
+        "conditions": [],
         "actions": [
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "watch_pick_energy_on_switch_in": "Mega Latias ex"
           }
          }
         ],
-        "source_text": "Once during your turn, when your Mega Latias {ex} moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon."
+        "source_text": "Once during your turn, when your Mega Latias {ex} moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon.",
+        "citations": []
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "on_event:switch_in:pick_energy:bench:active:on:entering:scope:own_turn:match:event_name:Mega Latias ex:may"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
      {
       "kind": "ability",
       "name": "Lustrous Assist",
-      "trigger": "static",
-      "conditions": [
-       {
-        "field": "limit",
-        "op": "eq",
-        "value": "once_per_turn"
-       }
-      ],
+      "trigger": "on_use",
+      "conditions": [],
       "actions": [
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "watch_pick_energy_on_switch_in": "Mega Latias ex"
         }
        }
       ],
-      "source_text": "Once during your turn, when your Mega Latias {ex} moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon."
+      "source_text": "Once during your turn, when your Mega Latias {ex} moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon.",
+      "citations": []
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "on_event:switch_in:pick_energy:bench:active:on:entering:scope:own_turn:match:event_name:Mega Latias ex:may"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

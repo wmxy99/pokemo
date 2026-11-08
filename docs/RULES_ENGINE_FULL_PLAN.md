@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1211/1267 = 95.6%**，池 **1196**，
-> 未 ready **56**（批内如实拒收 50 + 结构性 4 + 待新能力 2），测试 **2597**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 / S2a / S2b / S2c / S2d 已落地**（见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1214/1267 = 95.8%**，池 **1199**，
+> 未 ready **53**（批内如实拒收 47 + 结构性 4 + 待新能力 2），测试 **2609**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 / S2a–S2e 已落地**（S2 全部完成，见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -602,6 +602,41 @@ Palafin（检索换位且保留附着卡）· Lycanroc（指定特殊能量的�
 
 **数字**：`engine_ready` **1211 / 1267 = 95.6%** · 池 **1196** · 未 ready **56** ·
 测试 **2597**（engine 1414）· 对账 **47 类** · CI 8/8。
+
+---
+
+### S2e · 可选触发 / 原地替换 / 只能由效果上场（2026-11-08 完成，S2 收尾，进池 3 张）
+
+| 项 | 落点 |
+|---|---|
+| **可选触发 `:may`** | `on_event` body 末尾加 `may` → 挂起 `may_use` 选择（「使用 / 不使用」）。这是 S1 不变量「引擎从不自选」在**事件触发**上的落地：卡面写「you may」时，引擎不得替玩家决定 |
+| `match:event_leaving` | 「**这只**从战斗位下场」（Palafin）；不判就变成「任何一只换下都触发」 |
+| `match:event_name:<X>` | 「我方 **X** 上场时」（Latios 的 Mega Latias ex）；卡名里的 `{ex}` 必须**捕获**成 `ex`，否则与真实卡名不匹配（订阅永不触发且无报错） |
+| `pick_energy:bench:active` | 「Move **any amount** of Energy」→ 逐点选（每个选项 = 从某只搬 1 点某色 / 搬 1 张特殊能量卡），`stop` 结束。**引擎不替玩家定数量** |
+| `replace_self:<卡名>:to_deck` | 原地替换 + **全量继承状态**（`_inherit_state` 逐字段抄，跳过 `pdef`）+ 旧卡洗回牌库。⚠ 原地：旧卡在备位就还是备位 |
+| `passive:no_evolve_into` | 「Put this Pokémon into play only with the effect of …」→ **进化合法动作 + `_do_evolve` 两处**同时挡（只挡一处 = AI 一直提非法动作 或 玩家能绕过） |
+| 进池 | **3 张**：Latios（`on_event:switch_in:pick_energy:bench:active:…:match:event_name:Mega Latias ex:may`）· Palafin（`on_event:switch_out:replace_self:Palafin ex:to_deck:…:match:event_leaving:may`）· Palafin ex（`passive:no_evolve_into`，招式 Giga Impact 原本已建模） |
+| 对账 | 新增第 48 类（可选触发 / 原地替换 / 只能由效果上场），三族的共同错法都是「**把选择权或限定词拿走了**」 |
+
+**踩到的坑**
+
+1. **`{ex}` 被当成游离后缀**：`(?: \{ex\}| ex)?` 不捕获 → 卡名得到 "Mega Latias"，
+   而真实卡名是 "Mega Latias ex" → `match:event_name` 永不匹配。症状是「效果从不触发、
+   日志里也没有任何异常」。改成捕获 `(?P<ex> \{ex\}| ex)?` 再拼回去。
+2. **`_inherit_state` 必须逐字段抄**：卡面写死「Any attached cards, damage counters,
+   Special Conditions, turns in play, and **any other effects** remain」——列举法
+   （只抄能量/伤害）每加一个新字段就静默漏一次（护盾、跨回合锁定、受击历史…）。
+   用 `dataclasses.fields` 遍历、跳过 `pdef`，一次做对。
+3. **门禁必须两处同时挡**：`legal_actions` 与 `_do_evolve`。只挡 dispatch →
+   AI 反复提出会被拒的动作（对局噪声 + 训练信号被污染）；只挡 legals →
+   人类/回放仍能绕过。
+
+**S2 收尾结论**：S2（事件总线 + 延迟队列）计划 15 张已全部落地（S2a 2 张 / S2b 4 张 /
+S2c 3 张 / S2d 4 张 / S2e 3 张，含连带卡）。下一步按计划进入 **S4（效果免疫层）**，
+其次 S5（复制招式）与 S6（奖赏卡「取哪张」的选择）。
+
+**数字**：`engine_ready` **1214 / 1267 = 95.8%** · 池 **1199** · 未 ready **53** ·
+测试 **2609**（engine 1426）· 对账 **48 类** · CI 8/8。
 
 ---
 

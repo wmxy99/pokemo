@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1196,
+      "kept": 1199,
       "by_Energy": 20,
-      "by_Pokemon": 1001,
+      "by_Pokemon": 1004,
       "by_Trainer": 175,
       "skipped": {
-        "存在未建模项（整卡不收）": 56,
+        "存在未建模项（整卡不收）": 53,
         "人工卡池已有同一印刷（人工优先）": 15
       }
     }
@@ -4379,6 +4379,109 @@
       "source_card_id": 105,
       "name_key": "finizen",
       "uid": "Finizen@TWM 59"
+    },
+    {
+      "name": "Palafin",
+      "name_zh": "海豚侠",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Finizen",
+      "attacks": [
+        {
+          "name": "Wave Splash",
+          "cost": {
+            "water": 1,
+            "colorless": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "波浪飞溅",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Zero to Hero",
+          "name_zh": "从零到英雄",
+          "tag": "on_event:switch_out:replace_self:Palafin ex:to_deck:on:holder:scope:own_turn:match:event_leaving:may",
+          "location": "field",
+          "desc": "Once during your turn, when this Pokémon moves from the Active Spot to the Bench, you may search your deck for a Palafin {ex} and switch it with this Pokémon. Any attached cards, damage counters, Special Conditions, turns in play, and any other effects remain on the new Pokémon. If you switched a Pokémon in this way, put this card into your deck. Then, shuffle your deck.",
+          "desc_zh": "在你的回合中，你可以使用 1 次。当此宝可梦从战斗区移动到后备时，你可以从牌库中检索 1 只海豚侠 ex 并与此宝可梦互换。所有附着卡、伤害指示物、特殊状态、在场回合数及其他效果均留在新宝可梦上。若你以此方式互换了宝可梦，则将这张卡放入你的牌库。然后洗牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "60"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 106,
+      "name_key": "palafin",
+      "uid": "Palafin@TWM 60"
+    },
+    {
+      "name": "Palafin ex",
+      "name_zh": "海豚侠 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 340,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Finizen",
+      "attacks": [
+        {
+          "name": "Giga Impact",
+          "cost": {
+            "water": 1
+          },
+          "damage": 250,
+          "effects": [
+            "attack_lock:all:turn"
+          ],
+          "desc": "During your next turn, this Pokémon can’t use attacks.",
+          "name_zh": "终极冲击",
+          "desc_zh": "在你的下个回合中，此宝可梦无法使用招式。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Hero’s Spirit",
+          "name_zh": "英雄之魂",
+          "tag": "passive:no_evolve_into",
+          "location": "field",
+          "desc": "Put this Pokémon into play only with the effect of Palafin’s Zero to Hero Ability.",
+          "desc_zh": "此宝可梦只能通过「海豚侠」的「从零到英雄」特性的效果被放入场上。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "61"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 107,
+      "name_key": "palafinex",
+      "uid": "Palafin ex@TWM 61"
     },
     {
       "name": "Abra",
@@ -34902,6 +35005,58 @@
       "source_card_id": 754,
       "name_key": "megalatiasex",
       "uid": "Mega Latias ex@MEG 100"
+    },
+    {
+      "name": "Latios",
+      "name_zh": "拉帝欧斯",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Dragon Claw",
+          "cost": {
+            "water": 1,
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 130,
+          "effects": [],
+          "desc": "",
+          "name_zh": "龙爪",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Lustrous Assist",
+          "name_zh": "光辉相助",
+          "tag": "on_event:switch_in:pick_energy:bench:active:on:entering:scope:own_turn:match:event_name:Mega Latias ex:may",
+          "location": "field",
+          "desc": "Once during your turn, when your Mega Latias {ex} moves from your Bench to the Active Spot, you may use this Ability. Move any amount of Energy from your Benched Pokémon to your Active Pokémon.",
+          "desc_zh": "在你的回合中，当你的超级拉帝亚斯 {ex} 从后备区移动到战斗区时，你可以使用 1 次此特性。将你后备宝可梦身上任意数量的能量移动到你的战斗宝可梦身上。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "101"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 755,
+      "name_key": "latios",
+      "uid": "Latios@MEG 101"
     },
     {
       "name": "Mega Kangaskhan ex",

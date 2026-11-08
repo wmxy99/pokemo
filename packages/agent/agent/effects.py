@@ -3351,6 +3351,51 @@ _S2D_EVOLVE_ATTACH_NAMED_RE = re.compile(
     r"pok[eé]mon\.?$", re.I)
 
 
+# --- S2e（2026-11-08）：可选触发 / 原地替换 / 只能由效果上场 ---
+# Latios「Lustrous Assist」：「Once during your turn, when your Mega Latias {ex}
+#  moves from your Bench to the Active Spot, you may use this Ability. Move any
+#  amount of Energy from your Benched Pokémon to your Active Pokémon.」
+_S2E_LATIOS_RE = re.compile(
+    # ⚠ `{ex}` 必须**捕获**而不是当游离后缀：漏掉它，卡名就少一个 "ex"
+    #   （实测：`match:event_name:Mega Latias` 与真实卡名 "Mega Latias ex" 不匹配，
+    #    订阅永远不触发，而日志里看不出任何异常）。
+    r"^once during your turn,? when your (?P<name>[a-z][a-z' \-]*?)"
+    r"(?P<ex> \{ex\}| ex)? moves from your bench to the active spot,? you may use "
+    r"this ability\.? move any amount of energy from your benched pok[eé]mon to "
+    r"your active pok[eé]mon\.?$", re.I)
+
+# Palafin「Zero to Hero」：「Once during your turn, when this Pokémon moves from
+#  the Active Spot to the Bench, you may search your deck for a Palafin {ex} and
+#  switch it with this Pokémon. Any attached cards, damage counters, Special
+#  Conditions, turns in play, and any other effects remain on the new Pokémon.
+#  If you switched a Pokémon in this way, put this card into your deck. Then,
+#  shuffle your deck.」
+_S2E_PALAFIN_RE = re.compile(
+    r"^once during your turn,? when this pok[eé]mon moves from the active spot "
+    r"to the bench,? you may search your deck for a (?P<name>[a-z][a-z' \-]*?)"
+    r"(?P<ex> \{ex\}| ex)? and switch it with this pok[eé]mon\. any attached "
+    r"cards,? damage counters,? special conditions,? turns in play,? and any "
+    r"other effects remain on the new pok[eé]mon\. if you switched a "
+    r"pok[eé]mon in this way,? put this card into your deck\. then,? shuffle "
+    r"your deck\.?$", re.I)
+
+# Palafin ex「Hero's Spirit」：「Put this Pokémon into play only with the effect
+#  of Palafin's Zero to Hero Ability.」
+_S2E_ONLY_BY_EFFECT_RE = re.compile(
+    r"^put this pok[eé]mon into play only with the effect of (?P<src>.+?) "
+    r"ability\.?$", re.I)
+
+
+def _dedupe_ex(name: str) -> str:
+    """归一化「Mega Latias {ex}」→ ``Mega Latias ex``（引擎卡名口径）"""
+    n = re.sub(r"\s*\{ex\}\s*", " ex", str(name or ""), flags=re.I)
+    return re.sub(r"\s+", " ", n).strip()
+
+
+def _title(name: str) -> str:
+    return " ".join(w.capitalize() for w in re.sub(r"\s+", " ", name).split())
+
+
 def _detect_s2(text: str, kind: str) -> list:
     """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
@@ -3390,6 +3435,22 @@ def _detect_s2(text: str, kind: str) -> list:
         if _S2_SWIRLING_RE.match(t):
             # 「As long as this Pokémon is in the Active Spot」→ 订阅带 `while:active`
             return [act("rule", None, "opp", {"watch_switch_in_confuse": True})]
+        m = _S2E_LATIOS_RE.match(t)
+        if m:
+            return [act("rule", None, "self",
+                        {"watch_pick_energy_on_switch_in":
+                         _dedupe_ex(_title(m.group("name"))
+                                    + (" ex" if m.group("ex") else ""))})]
+        m = _S2E_PALAFIN_RE.match(t)
+        if m:
+            return [act("rule", None, "self",
+                        {"watch_replace_self_on_switch_out":
+                         _dedupe_ex(_title(m.group("name"))
+                                    + (" ex" if m.group("ex") else ""))})]
+        m = _S2E_ONLY_BY_EFFECT_RE.match(t)
+        if m:
+            # 「只能由某个效果放进场」→ 禁止从手牌进化上场（`passive:no_evolve_into`）
+            return [act("rule", None, "self", {"no_evolve_into": True})]
         m = _S2_EVOLVE_ATTACH_SCOPE_RE.match(t)
         if m:
             # 进化触发：从弃牌堆取 ≤N 张基本 {X} 能量，自由分配给**己方 {Y} 宝可梦**
@@ -10327,6 +10388,23 @@ def to_engine_tags(specs: list) -> dict:
                     _dn, _lim = extra["draw_then_queue_discard"]
                     tags.append(f"draw:{int(_dn)}|queue:turn_end:discard_hand:all"
                                 f":if:own_hand_at_least:{int(_lim)}")
+                    continue
+                if extra.get("watch_pick_energy_on_switch_in"):
+                    # Latios：我方 **Mega Latias ex** 从后备上场时，可选搬能量
+                    tags.append("on_event:switch_in:pick_energy:bench:active"
+                                ":on:entering:scope:own_turn"
+                                f":match:event_name:"
+                                f"{extra['watch_pick_energy_on_switch_in']}:may")
+                    continue
+                if extra.get("watch_replace_self_on_switch_out"):
+                    # Palafin：**本只**从战斗位下场时，可选原地换成指定卡
+                    tags.append("on_event:switch_out:replace_self:"
+                                f"{extra['watch_replace_self_on_switch_out']}"
+                                ":to_deck:on:holder:scope:own_turn"
+                                ":match:event_leaving:may")
+                    continue
+                if extra.get("no_evolve_into"):
+                    tags.append("passive:no_evolve_into")
                     continue
                 if extra.get("arm_attach_counters") is not None:
                     tags.append("arm:attach_energy:counters:"

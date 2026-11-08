@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1211（95.6%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **56** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 57） |
-| 引擎池 | **1196** | `cards_pool_ext.json` 的 `cards` 长度 |
-| 对账类目 | **47 类全绿** | `scripts/audit_pool_alignment.py` |
+| `engine_ready` | **1214（95.8%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **53** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 54） |
+| 引擎池 | **1199** | `cards_pool_ext.json` 的 `cards` 长度 |
+| 对账类目 | **48 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.785**（200 局双盲，`artifacts/k1_rich.pt` = `k1_rich40k` 复测）· ⚠ 原 **0.795** 权重在一次失败的「动作编码 +2 维」迁移尝试中被覆盖（迁移已回退，代码未变）；现权重仍 ≥0.70 判据（PASS），但**不是**原基线值 | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **56** = 批内如实拒收 **52** + 结构性边界 **4** + 待新能力 **2** = **58** ❌ 需修 JSON。
+**口径校验（本文件自洽的判据）**：未 ready **53** = 批内如实拒收 **49** + 结构性边界 **4** + 待新能力 **2** = **55** ❌ 需修 JSON。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 39 · 整批受阻 5），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1211 / 1267 = 95.6%**（44 批全部处理完毕）。剩余 52 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 2 张待新能力卡需引擎重构（交互层：任意数量/可选代价 · 延迟队列 · 奖赏卡对象与牌库底**写入** · 事件触发（换位/进化/附能时）· 效果免疫层 · 退化 devolve）才可能归零。
+**终局**：`engine_ready` **1214 / 1267 = 95.8%**（44 批全部处理完毕）。剩余 49 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 2 张待新能力卡需引擎重构（交互层：任意数量/可选代价 · 延迟队列 · 奖赏卡对象与牌库底**写入** · 事件触发（换位/进化/附能时）· 效果免疫层 · 退化 devolve）才可能归零。
 
 ---
 
@@ -53,7 +53,7 @@
    → gen_engine_pool.py
    → import_challenge_dataset.py --reparse-only
    → coverage_backlog.py --registry
-   → audit_pool_alignment.py        # 必须 47 类全绿
+   → audit_pool_alignment.py        # 必须 48 类全绿
    ```
 
 **每批 DoD（全部满足才算完成）**：
@@ -209,7 +209,7 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Drilbur | TEF | 85 | done（已完成） |  |
-| Palafin | TWM | 60 | B（有具体缺口·可归族） |  |
+| Palafin | TWM | 60 | done（已完成） |  |
 | Lillie’s Comfey | JTG | 68 | done（已完成） |  |
 | Musharna | BLK | 36 | done（已完成） |  |
 | Rotom | ASC | 92 | done（已完成） |  |
@@ -425,7 +425,7 @@
 | Team Rocket's Moltres ex | DRI | 31 | D（兜底·复合句） |  |
 | Ethan's Sudowoodo | DRI | 93 | D（兜底·复合句） |  |
 | Walrein | SSP | 45 | done（已完成） |  |
-| Palafin ex | TWM | 61 | D（兜底·复合句） |  |
+| Palafin ex | TWM | 61 | done（已完成） |  |
 | Revavroom ex | SFA | 15 | D（兜底·复合句） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **5** 张。
@@ -569,7 +569,7 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Crawdaunt | MEG | 85 | done（已完成） |  |
-| Latios | MEG | 101 | C（兜底·单句） |  |
+| Latios | MEG | 101 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **1** 张。
 
@@ -743,11 +743,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 84 张 |
-| 批次内待做 | 52 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 87 张 |
+| 批次内待做 | 49 | 全部未 ready |
 | 结构性边界 | 4 | 不承载 tag，仅建档 |
 | 待新能力 | 2 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **58** | 应等于基线 56 |
+| **合计（= 未 ready 卡数）** | **55** | 应等于基线 53 |
 
 ---
 

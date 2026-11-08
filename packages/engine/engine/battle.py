@@ -2458,19 +2458,24 @@ class Battle:
         """把选择结果落到状态上（每种 kind 一个分支，未知即抛错）"""
         p = self.players[ch.owner]
         if ch.kind == "pick_prize":
-            # S6b：「取哪张奖赏卡」。选面朝上的那张 → 指定槽位；选背面 → 随机。
+            # S6b/S6d：「取哪张奖赏卡」。选面朝上的那张 → 指定槽位；选背面 → 随机。
+            # 一次只取 1 张；还有剩余就再挂一次（官方是逐张取的）。
             taker = int(ch.ctx.get("taker", ch.owner))
-            n = int(ch.ctx.get("n", 1))
+            remaining = int(ch.ctx.get("remaining", 1))
+            taken_before = int(ch.ctx.get("taken", 0))
             opt = ch.chosen()[0]
             slot = opt.get("slot") if opt.get("mode") == "up" else None
-            taken = zones.take_prizes(self, taker, n, first_face_up=slot)
+            got = zones.take_prizes(self, taker, 1, first_face_up=slot)
             self._log("prize_pick", {"player": taker, "mode": opt.get("mode"),
                                      "slot": slot,
                                      "card": opt.get("label"),
-                                     "taken": taken})
+                                     "taken": got,
+                                     "remaining": remaining - 1})
             ko_state = ch.ctx.get("ko")
             if ko_state:
-                self._ko_after_prizes(ko_state, taken)
+                # 未取完 → 续取（可能再挂选择）；取完 → 结算尾段（只结算一次）
+                self._take_prizes_step(taker, remaining - 1, ko_state,
+                                       taken_before + got)
             return
         if ch.kind == "discard_hand":
             # 「you may discard any number of cards from your hand」—— 逐张弃。
@@ -5686,13 +5691,25 @@ class Battle:
         弃牌堆（简化：统一记到当前玩家弃牌堆并在日志标注 owner，弃牌堆不参与胜负判定）。
         """
         old = self.stadium
+        # S6d：**留下旧场地的卡对象与拥有者下标** —— 顶替时要把它送进
+        # 拥有者的弃牌堆（官方）。此前只存 name/tag/owner 三个字符串字段，
+        # 于是「旧场地进弃牌堆」只写在注释里、代码根本没做（见下面 if old 分支）。
         self.stadium = {"name": card.tdef.name, "tag": tag,
-                        "owner": p.name}
+                        "owner": p.name, "owner_idx": int(self.current),
+                        "ref": card}
         self._refresh_stadium_hp()
         detail = "stadium set"
         if old:
             # 旧场地进弃牌堆（简化：记到打出方弃牌堆；弃牌堆不参与胜负判定）
             detail = f"replace {old.get('name')}"
+            # 官方：被顶替的场地卡进**其拥有者**的弃牌堆。
+            # ⚠ 旧实现只改 `self.stadium` 就结束（注释写着进弃牌堆但没做）：
+            #   卡面「from your discard pile」类效果会取不到这张场地卡，
+            #   而且没有任何报错 —— 典型「注释承诺了行为、代码没做」。
+            # 直接装配 `battle.stadium` 的历史夹具没有 `ref`/`owner_idx` → 跳过。
+            _old_ref, _old_i = old.get("ref"), old.get("owner_idx")
+            if _old_ref is not None and _old_i is not None:
+                self._to_discard(self.players[int(_old_i)], _old_ref)
             self._log("stadium_replace", {"old": old.get("name"),
                                           "new": card.tdef.name,
                                           "by": p.name})
@@ -10130,20 +10147,28 @@ class Battle:
                      "energy": _energy_snapshot, "ptype": _ptype}
         self._take_prizes(1 - owner, give, _ko_state)
 
-    def _take_prizes(self, taker: int, n: int, ko_state: dict) -> None:
-        """取奖赏（S6b）：面朝上 + 本人取 → 挂起「取哪张」；否则确定性取
+    def _take_prizes(self, taker: int, n: int, ko_state: dict) -> int:
+        """取奖赏（S6b/S6d）：**逐张**取，有面朝上的卡就由牌手选
 
-        判据三条**同时**成立才挂起：
-          · 有**面朝上**的奖赏卡（面朝下的互相不可区分，选它们不构成决策）；
-          · 取奖赏方 == 当前行动方（对手取奖赏时代理没有「自己选」的入口，
-            与 `shuffle_opp_hand` 等「对手选择由引擎确定性代理」的既有口径一致）；
-          · 只取 **1 张**。取多张时「逐张选择」要连开多次选择，当前实现按
-            **面朝下优先**确定性取并写 `prize_pick_auto` 日志（**显式记录的简化**，
-            不是静默决定）。
+        官方是一张一张取的（击倒 ex 取 2 张就是取两次）。这里按「取一张 → 若还有
+        剩余且仍有面朝上的卡 → 再挂一次选择」循环，`taken` 在 ctx 里累计，尾段
+        （KO 触发 / 胜负 / 补位）只在**最后一张取完**时执行一次。
+
+        ⚠ 什么时候**不**挂选择（都是「没有真决策」而非「偷懒」）：
+          · 没有面朝上的卡：面朝下的奖赏卡对双方都不可区分，选它们等于假装有选择；
+          · 取奖赏方不是当前行动方（自己被击倒时对手取）：代理没有「替对手选」的
+            入口，与 `shuffle_opp_hand` 等既有口径一致 → 确定性取并写
+            `prize_pick_auto`（**显式记录**，不是静默决定）；
+          · 奖赏区空了（应给对方拿但没得拿）：直接结算尾段。
+        返回本次**同步**取到的张数（0 表示已挂起选择，等 `_close_choice` 续）。
         """
+        return self._take_prizes_step(int(taker), int(n), ko_state, 0)
+
+    def _take_prizes_step(self, taker: int, remaining: int, ko_state: dict,
+                          taken: int) -> int:
         p = self.players[taker]
         ups = zones.face_up_slots(p)
-        if ups and taker == self.current and int(n) == 1:
+        if remaining > 0 and ups and taker == self.current:
             opts = [{"mode": "up", "slot": i,
                      "display": f"（正面）{_card_label(p.prizes[i].ref)}",
                      "label": _card_label(p.prizes[i].ref)}
@@ -10151,16 +10176,17 @@ class Battle:
             opts.append({"mode": "down", "display": "面朝下的奖赏卡（随机）"})
             self._open_choice("pick_prize", opts, min_pick=1, max_pick=1,
                               tag="prize_pick",
-                              ctx={"taker": int(taker), "n": int(n),
-                                   "ko": ko_state})
-            return
-        if ups and int(n) > 1:
-            self._log("prize_pick_auto", {"player": taker, "n": int(n),
+                              ctx={"taker": taker, "remaining": remaining,
+                                   "taken": taken, "ko": ko_state})
+            return 0
+        if remaining > 0 and ups:
+            self._log("prize_pick_auto", {"player": taker, "n": remaining,
                                           "faces_up": len(ups),
-                                          "reason": "多张取奖赏：逐张选择未建模"
-                                                    "（面朝下优先）"})
-        taken = zones.take_prizes(self, taker, int(n))
-        self._ko_after_prizes(ko_state, taken)
+                                          "reason": "取奖赏方不是当前行动方"
+                                                    "（对手取，代理确定性取）"})
+        got = zones.take_prizes(self, taker, remaining)
+        self._ko_after_prizes(ko_state, taken + got)
+        return got
 
     def _ko_after_prizes(self, ko_state: dict, taken: int) -> None:
         """取完奖赏后的 KO 尾段（S6b 从 `_resolve_ko` 抽出，供两条路径复用）"""

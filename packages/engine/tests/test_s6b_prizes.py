@@ -113,15 +113,31 @@ class TestPickPrizeChoice(unittest.TestCase):
         self.assertEqual(len(ups), 1, "没被取走的面朝上卡应仍在奖赏区")
         self.assertEqual(_card_label(b.players[taker].prizes[ups[0]].ref), label)
 
-    def test_multi_prize_take_is_deterministic_with_log(self):
-        """取 2 张（ex）→ 不逐张选择，但必须写 `prize_pick_auto`（显式简化）"""
+    def test_multi_prize_take_is_one_by_one(self):
+        """取 2 张（ex）→ **逐张**选择（S6d）：连开两次，尾段只结算一次"""
         b = _battle()
         taker, _ = _setup_ko(b, ex=True)
         r = b.step({"verb": "attack", "attack": 0})
         self.assertTrue(r["ok"], r.get("error"))
-        self.assertEqual(b.phase, "main", "多张取奖赏不挂选择")
-        self.assertIn("prize_pick_auto", [e["type"] for e in b.events])
-        self.assertEqual(b.players[taker].prizes_left, 4)
+        self.assertEqual(b.phase, "choice", "第 1 张要挂选择")
+        # 第 1 张：选面朝下（随机）
+        r = _choose(b, "down")
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.phase, "choice", "还有 1 张 → 再挂一次选择")
+        self.assertEqual(b.players[taker].prizes_left, 5)
+        # 第 2 张：选面朝上那张
+        opts = [a for a in b.legal_actions() if a.get("verb") == "choose"]
+        up = next(a for a in opts if a["option"].get("mode") == "up")
+        r = b.step({"verb": "choose", "pick": up["pick"]})
+        self.assertTrue(r["ok"], r.get("error"))
+        self.assertEqual(b.phase, "main")
+        self.assertEqual(b.players[taker].prizes_left, 4, "两张都要取到")
+        # 逐张选择已建模 → 不应再有「代理自动取」的日志
+        self.assertNotIn("prize_pick_auto", [e["type"] for e in b.events])
+        # 尾段（击倒触发 / 补位 / 胜负）只结算**一次**，且总额是 2
+        prizes = [e for e in b.events if e["type"] == "prize"]
+        self.assertEqual(len(prizes), 1, "尾段不得每张都结算一次")
+        self.assertEqual(prizes[0]["take"], 2)
 
     def test_opponent_take_is_deterministic(self):
         """自伤击倒（自己的宝可梦）→ **对手**取奖赏，代理确定性取、不开选择"""

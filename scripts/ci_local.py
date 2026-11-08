@@ -129,6 +129,10 @@ def build_jobs() -> list:
             Step("engine 零依赖可导入", [PY, "-c",
                  "import engine; print('OK: engine 导入成功（零三方依赖）')"],
                  _p("packages", "engine")),
+            # 规则一致性矩阵：实现点符号 / 守卫测试 / 覆盖卡数全部机械核对
+            # （只读 JSON + 源码，不需要 torch/三方依赖，放在 decl-check 里最省）
+            Step("规则一致性矩阵（docs/RULE_CONFORMANCE.md）",
+                 [PY, "scripts/check_conformance.py"], REPO),
         ]),
         Job("web-build", [
             Step("Build (vite)", [npm, "run", "build"], _p("apps", "web"),

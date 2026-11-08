@@ -14,8 +14,14 @@ class GameConfig:
     mega_prizes: int = 3           # Mega ex 被击倒对手拿取数（2026-11-02）
     max_bench: int = 5
     opening_hand: int = 7
-    first_turn_no_attack: bool = False   # 官方现行规则先手第一回合不可攻击；v1 默认关（简化）
-    first_turn_no_draw: bool = False     # v1 默认每回合都抽 1（与官方差异见 README）
+    # ⚠ 两条先手规则的**事实核对**（2026-11-08，官方 Q&A + Battle Academy 2024）：
+    #   · 先手第一回合**不能攻击**（2013 起）→ 官方口径，本默认 False = 允许攻击，
+    #     属**简化偏差**，S6 要改为 True；
+    #   · 先手第一回合**要抽牌**（官方 Q&A 明确「always draw a card at the
+    #     beginning of your turn」）→ 本默认 False 已符合官方，**不是**偏差。
+    #   （原注释把两条写反了：把「不抽牌」当成官方规则，会误导后续开工。）
+    first_turn_no_attack: bool = False   # False = 简化（官方应为 True）
+    first_turn_no_draw: bool = False     # False = 符合官方（每回合都抽，含先手 T1）
     mulligan_compensation: bool = True   # 对手因我方 mulligan 补抽 1
     max_turns: int = 300                 # 超限判平（防死循环）
     max_hand: int = 30                   # 手牌上限防御（超出丢弃，简易保护）

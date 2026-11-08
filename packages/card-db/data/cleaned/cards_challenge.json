@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 07:04:19",
+  "reparsed_at": "2026-11-08 07:53:47",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1189,
+  "engine_ready": 1190,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1189,
-   "engine_approximated": 1174,
-   "engine_unmatched": 78,
+   "zh_backfill": 1190,
+   "engine_approximated": 1175,
+   "engine_unmatched": 77,
    "engine_namekey_mismatch": 9
   },
   "parse": {
@@ -129,12 +129,12 @@
    "specs": 1481,
    "errors": 149,
    "engine_tags": 1498,
-   "unsupported": 78,
+   "unsupported": 77,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1174,
+  "engine_approximated": 1175,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -158339,14 +158339,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can’t draw any cards in this way, you can’t use this card.)",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "抽牌直到你的手牌为 5 张。在抽牌之前，你可以从手牌中弃置任意数量的卡。（若你无法以此方式抽牌，则不能使用此卡。）",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Naveen@POR 79",
    "parse": {
     "items": [
      {
@@ -158360,37 +158362,27 @@
         "conditions": [],
         "actions": [
          {
-          "type": "draw",
-          "amount": null,
-          "target": "deck",
-          "extra": {
-           "to_hand_size": 5
-          }
-         },
-         {
           "type": "rule",
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "choose_discard_then_draw_to": 5,
+           "play_gate": "own_hand_at_most:4"
           }
          }
         ],
-        "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)"
+        "play_gate": "own_hand_at_most:4",
+        "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "draw_to:5"
+       "choose:discard_hand:any:then:draw_to:5"
       ],
       "play_cost": "",
-      "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "play_gate": "own_hand_at_most:4",
+      "unsupported": []
      }
     ],
     "specs": [
@@ -158401,35 +158393,25 @@
       "conditions": [],
       "actions": [
        {
-        "type": "draw",
-        "amount": null,
-        "target": "deck",
-        "extra": {
-         "to_hand_size": 5
-        }
-       },
-       {
         "type": "rule",
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "choose_discard_then_draw_to": 5,
+         "play_gate": "own_hand_at_most:4"
         }
        }
       ],
-      "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)"
+      "play_gate": "own_hand_at_most:4",
+      "source_text": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can't draw any cards in this way, you can't use this card.)",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
-     "draw_to:5"
+     "choose:discard_hand:any:then:draw_to:5"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

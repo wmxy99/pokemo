@@ -3267,6 +3267,40 @@ def _detect_b134(text: str, kind: str) -> list:
     return []
 
 
+# ---------------- 第一百三十五批（2026-11-08 · S1a）：决策分解 ----------------
+# 「Before drawing cards, you may discard any number of cards from your hand.」
+# 是**选择**而不是默认值：引擎在 `phase="choice"` 里等牌手逐张选（可随时结束），
+# 选完才继续抽牌。落成 `choose:discard_hand:any:then:draw_to:<n>`。
+#
+# 前置条件（同一句括号里的）：「If you can't draw any cards in this way, you
+# can't use this card.」等价于「打出时手牌数 < n」—— 因为效果是「抽到 n 张」，
+# 手牌已 ≥ n 时一张都抽不到 → 本卡不可使用。落成 `play_gate`
+# `own_hand_at_most:<n-1>`（**不是**代价，满足时什么都不发生）。
+_CHOOSE_NAVEEN_RE = re.compile(
+    r"^draw cards until you have (\d+) cards? in your hand\. before drawing "
+    r"cards, you may discard any number of cards from your hand\. "
+    r"\(if you can't draw any cards in this way, you can't use this card\.\)$",
+    re.I)
+
+
+def _detect_b135(text: str, kind: str) -> list:
+    """第一百三十五批：带「任意数量」选择的卡（整句精确匹配）
+
+    返回动作列表；`play_gate` 由调用方（`_parse_rule_en`）写进 spec ——
+    这里通过动作的 `extra["play_gate"]` 携带，避免与其它族抢 spec 字段。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind != "supporter":
+        return []
+    m = _CHOOSE_NAVEEN_RE.match(t)
+    if m:
+        n = int(m.group(1))
+        return [act("rule", None, "any", {
+            "choose_discard_then_draw_to": n,
+            "play_gate": f"own_hand_at_most:{max(0, n - 1)}"})]
+    return []
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -3504,6 +3538,14 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     if _b134:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _b134,
+                "source_text": str(text or ""), "citations": []}
+    # 第一百三十五批（S1a）：带「任意数量」选择的卡（Naveen）—— 挂起选择。
+    _b135 = _detect_b135(t_raw, kind)
+    if _b135:
+        _pg = str((_b135[0].get("extra") or {}).get("play_gate") or "")
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _b135,
+                "play_gate": _pg,
                 "source_text": str(text or ""), "citations": []}
     _vr = _detect_value_rules(t_raw, kind)
     if _vr:
@@ -9965,6 +10007,11 @@ def to_engine_tags(specs: list) -> dict:
                 if extra.get("win_if_prizes") is not None:
                     tags.append(f"win_if:own_prizes_eq:"
                                 f"{int(extra['win_if_prizes'])}")
+                    continue
+                if extra.get("choose_discard_then_draw_to") is not None:
+                    # 「弃任意数量手牌」→ 先挂起选择，选完再抽到 N 张
+                    tags.append(f"choose:discard_hand:any:then:draw_to:"
+                                f"{int(extra['choose_discard_then_draw_to'])}")
                     continue
                 if extra.get("recon_bottom") is not None:
                     tags.append(f"recon_bottom:{int(extra['recon_bottom'])}")

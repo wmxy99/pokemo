@@ -17,6 +17,14 @@ from typing import Optional
 ENGINE_TYPES = ("grass", "fire", "water", "lightning", "psychic", "fighting",
                 "darkness", "metal", "dragon", "colorless")
 
+# ⚠ 第一百三十五批（S1a）**故意没有**把 `choose` / `stop` 加进来：
+#   加进去就 +2 维 → action_dim 14→16 / 31→33 → 现有 `artifacts/k1_rich.pt`
+#   全部不兼容（6 个加载用例 + api 的最小训练用例当场红）。
+#   「加动词 + 重训 + 重测 K1」必须**同一个 PR** 完成（方案 §6.3 / S1b），
+#   否则要么权重报废、要么编码层静默把 choose 当 pass（两者都不可接受）。
+#   在此之前：动作字符串仍原样带 `verb="choose"/"stop"` 传给引擎（规则侧正确），
+#   只是策略特征里两者都落成「未知动词 → 全零 one-hot」—— 这是**策略特征缺口**，
+#   不是规则缺口；S1b 一并修。
 VERBS = ("play", "attach", "attack", "retreat", "evolve", "trainer", "pass")
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 

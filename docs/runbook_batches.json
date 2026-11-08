@@ -209,10 +209,10 @@
       "id": 96,
       "phase": "P2",
       "theme": "`any number of` 自由数量",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 9,
-      "note": "**整批受阻（0 张）**：`any number of` 全部需要**交互层**（玩家自选张数），现有 `choose` 类一律确定性默认。按纪律**不以确定性默认冒充**——对攻/弃牌类（Doublade / TR Honchkrow）默认取「全部」会误弃整手，取「0」则伤害归零，两种默认都会实质改变对局结果，属静默错映射。",
+      "status": "done",
+      "actual_pool": 1,
+      "actual_refused": 8,
+      "note": "**部分完成（1 张进池 / 8 张如实拒收）· 第一百三十五批（S1a）**：交互层（决策分解）落地 —— 引擎新增 `phase=\"choice\"` + `PendingChoice`，「弃任意数量手牌」不再需要默认值，由牌手逐张选、随时可 `stop`。Naveen 因此进池（`choose:discard_hand:any:then:draw_to:5`）。其余 8 张仍需各自的 choice kind（可选**能量代价**、多目标伤害分配、跨区选择：Alakazam / Dialga / Mega Charizard X ex / Honchkrow / Doublade / Alolan Exeggutor ex / Strange Timepiece / Lillie's Ribombee），属 S1b 范围。",
       "cards": [
         {
           "name": "Alolan Exeggutor ex",

@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1174,
+      "kept": 1175,
       "by_Energy": 19,
       "by_Pokemon": 988,
-      "by_Trainer": 167,
+      "by_Trainer": 168,
       "skipped": {
-        "存在未建模项（整卡不收）": 76,
+        "存在未建模项（整卡不收）": 75,
         "人工卡池已有同一印刷（人工优先）": 15,
         "Trainer 不可执行": 2
       }
@@ -51849,6 +51849,24 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1238,
       "uid": "Tarragon@POR 85"
+    },
+    {
+      "name": "Naveen",
+      "name_zh": "纳文",
+      "supertype": "Trainer",
+      "kind": "supporter",
+      "tag": "choose:discard_hand:any:then:draw_to:5",
+      "desc": "Draw cards until you have 5 cards in your hand. Before drawing cards, you may discard any number of cards from your hand. (If you can’t draw any cards in this way, you can’t use this card.)",
+      "desc_zh": "抽牌直到你的手牌为 5 张。在抽牌之前，你可以从手牌中弃置任意数量的卡。（若你无法以此方式抽牌，则不能使用此卡。）",
+      "real": {
+        "set": "POR",
+        "number": "79"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1239,
+      "play_gate": "own_hand_at_most:4",
+      "uid": "Naveen@POR 79"
     },
     {
       "name": "Rosa's Encouragement",

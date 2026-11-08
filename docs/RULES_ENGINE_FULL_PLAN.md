@@ -273,13 +273,15 @@ def _apply_effect(self, kind, source, target, tag, ctx):
 
 ### S6 · 官方规则对齐（L · 无新卡，但决定「完整」与否）
 
-| 简化开关（`state.py::GameConfig`） | 现状 | 官方规则 | 影响 |
+| 简化开关（`state.py::GameConfig`） | 现状 | 官方规则（已核对，见 §5.1） | 影响 |
 |---|---|---|---|
-| `first_turn_no_attack` | **False**（先手首回合可攻击） | 先手第一回合**不能**攻击 | 改变开局胜率与 K1 基线；Meloetta ex「Debut Performance」正是**例外**卡，改完才有意义 |
-| `first_turn_no_draw` | **False**（每回合都抽 1） | 先手第一回合**不抽牌** | 同上 |
-| `max_hand` | 30（超了弃牌，简易保护） | 无手牌上限 | 移除后需防死循环 |
-| `mulligan_compensation` | 重抽直到有基础宝可梦（隐式） | 玩家**可选**重抽，对手补抽 1 | 需 choice 协议（S1） |
+| `first_turn_no_attack` | **False**（先手首回合可攻击） | 先手第一回合**不能**攻击（2013 起） | 改变开局胜率与 K1 基线；Meloetta ex「Debut Performance」正是**例外**卡，改完才有意义 |
+| ~~`first_turn_no_draw`~~ | False（每回合都抽 1） | **官方就是要抽**（先手首回合也抽）—— 该开关是**伪需求**，应删除或恒 False | 无（现默认已符合官方） |
+| **（缺失）先手首回合禁支援者** | 无此判定 | 先手第一回合**不能打 Supporter**（2020-02 现行规则） | 需在 `_trainer_legals` 与 `_do_trainer` 两处同时加（否则 AI 会反复尝试非法动作） |
+| `max_hand` | 30（超了弃牌，简易保护） | **无手牌上限**（官方 Q&A 明确） | 移除后需防死循环 |
+| `mulligan_compensation` | 重抽直到有基础宝可梦（隐式），对手**自动**补抽 | 无基础宝可梦**必须**重抽（非可选）；对手**可**（may）每 mulligan 抽 1 | 需 choice 协议（S1）让对手自己决定抽不抽 |
 | 奖赏卡 | **不实际发牌**（只计数） | 开局从牌库取 6 张，面朝下 | S3 |
+| 进化时机 | setup 上场的宝可梦 `just_played` **未置位**（只有手牌上场/进化时才置位） | setup 上场的宝可梦**当回合也不能进化** | 需在 `_setup_openings` 置位；否则首回合就能进化（静默加强） |
 
 除开关外，完整规则还要求（逐条进一致性矩阵）：
 
@@ -296,6 +298,27 @@ def _apply_effect(self, kind, source, target, tag, ctx):
    引擎完美信息，但**奖赏卡面朝下**是真实隐藏信息，S3 落地后必须区分）
 
 ---
+
+### 5.1 规则事实核对表（含出处，2026-11-08 核对）
+
+> 本节存在的理由：S6 的每一条都必须是**官方规则**，不能凭记忆。核对过程发现
+> 方案初稿有 1 处判断错误（首回合抽牌）与 2 处遗漏（禁支援者、setup 进化），已改。
+
+| # | 规则 | 结论 | 出处 |
+|---|---|---|---|
+| 1 | 先手第一回合能否攻击 | **不能** | Battle Academy 2024 Rules Reference「First Turn」；Bulbapedia：2013 起先手 T1 不能攻击 |
+| 2 | 先手第一回合能否打 Supporter | **不能**（其它 Trainer 可以） | 同上（2020-02 现行：先手抽牌，但 T1 不能用 Supporter、不能攻击） |
+| 3 | 先手第一回合是否抽牌 | **抽**（每回合都抽，含先手 T1） | 官方 Q&A（asia.pokemon-card.com）：「Does the player going first draw a card at the start of their first turn? **Yes, always draw a card at the beginning of your turn.**」→ **初稿写反了，已改** |
+| 4 | 手牌上限 | **无上限** | 官方 Q&A：「No, there is no limit to how many cards a player can have in their hand.」 |
+| 5 | mulligan | 无基础宝可梦 → **必须**洗回重抽；对手**可**（may）每 mulligan 抽 1 | Battle Academy 2024「Mulligan」 |
+| 6 | setup 上场的宝可梦能否当回合进化 | **不能** | Battle Academy 2024：「Neither player can evolve any of the Pokémon that they played during setup」 |
+| 7 | 奖赏卡 | 开局从牌库顶取 **6** 张面朝下；ex 被击倒取 2、Mega ex 取 3 | Setup 第 7 步；本数据集规则栏 |
+| 8 | 后备上限 / 弱点 / 抗性 | 后备 5；弱点 ×2；抗性 −30（历史约定，DP 起以卡面为准） | 规则书 + 卡面 |
+| 9 | 牌库抽空 | 回合开始该抽而抽不到 → **判负** | 官方 Q&A / 规则书 |
+| 10 | 检查期顺序 | 攻击结束 → Pokémon Checkup（中毒/灼伤结算、KO、回合末效果）→ 换手 | 规则书「Pokémon Checkup」 |
+
+**注意**：第 3 条说明「引擎现状已经符合官方」，S6 里不需要动它 —— 方案初稿把它列成
+「要改的简化」，那是错的；真正缺的是第 2 条（禁支援者）与第 6 条（setup 进化）。
 
 ## 6. 验收体系（防「改完更假」）
 

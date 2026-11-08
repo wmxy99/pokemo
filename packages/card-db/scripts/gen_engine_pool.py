@@ -165,7 +165,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # （Dusk Ball）与「同一只身上的道具 + 特殊能量一起弃」（Ruffian）。
                 # ⚠ `recon_bottom:` **不**被 `recon:` 覆盖（第 6 位是 `_`），
                 #   漏写就是静默丢弃（卡凭空消失，对账也看不出来）。
-                "recon_bottom:", "discard_tool_senergy:")
+                "recon_bottom:", "discard_tool_senergy:",
+                # 第一百三十五批（S1a）：**决策分解**族 —— 「弃任意数量手牌」
+                # （Naveen）。引擎挂起 `phase="choice"`，由牌手逐张选；
+                # 白名单漏写 = 卡在池外凭空消失。
+                "choose:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (

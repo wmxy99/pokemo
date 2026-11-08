@@ -16,6 +16,7 @@ from typing import Optional
 from .cards import (PokeRef, EnergyRef, EnergyDef, TrainerRef, FieldPokemon,
                     make_pokemon, _tool_value, COLORLESS, TYPES)
 from .state import GameConfig, PlayerState
+from .choice import PendingChoice
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield, STATUSES)
 # 特殊能量子系统（2026-10-28）：提供量/附着限制/静态效果集中在一处
@@ -137,6 +138,9 @@ class Battle:
         self.turn_number: int = 0
         self.turn_counts: list = [0, 0]
         self.phase: str = "main"
+        # 决策分解（S1a）：挂起中的选择（None = 无）。字段在 `__init__` 显式初始化，
+        # 避免 `getattr(self, "_pending", None)` 在某些装配路径下读到**上一次**的值。
+        self._pending: Optional[PendingChoice] = None
         self.finished: bool = False
         self.winner: Optional[int] = None
         self.win_reason: Optional[str] = None
@@ -346,7 +350,12 @@ class Battle:
     # ---------- 合法动作 ----------
     def legal_actions(self, pi: Optional[int] = None) -> list:
         pi = self.current if pi is None else pi
-        if self.finished or pi != self.current or self.phase != "main":
+        if self.finished or pi != self.current:
+            return []
+        # 决策分解（S1a）：挂起期间合法动作**只有**选择项与「结束选择」。
+        if self.phase == "choice":
+            return self._choice_legals()
+        if self.phase != "main":
             return []
         p = self.players[pi]
         opp = self.players[1 - pi]
@@ -747,6 +756,11 @@ class Battle:
             elif tag == "ultra_ball":
                 if len(p.hand) >= 3:   # 自身 + 弃 2
                     out.append(dict(base))
+            elif tag.startswith("choose:"):
+                # 决策分解（S1a）：打出后**挂起选择**。合法性只取决于上面的
+                # `play_gate`（Naveen 是「手牌 < 5」）；不在这里按「有没有可弃的牌」
+                # 过滤 —— 卡面允许弃 0 张（"any number"），过滤掉会漏掉合法对局。
+                out.append(dict(base))
             elif tag == "hammer":
                 if opp.active is not None and opp.active.total_energy() > 0:
                     out.append(dict(base))
@@ -1186,6 +1200,11 @@ class Battle:
     def step(self, action: dict) -> dict:
         if self.finished:
             return {"ok": False, "error": "game_over"}
+        # 决策分解（S1a）：挂起期间只接受「选第 i 个 / 结束选择」两类动作。
+        # ⚠ 这里**不能**回落到普通动作：一旦回落，「任意数量」就会被「先做别的动作」
+        #   绕过去（选择被跳过 = 引擎自选空集），正是要禁止的静默默认。
+        if self.phase == "choice":
+            return self._step_choice(action)
         if self.phase != "main":
             return {"ok": False, "error": f"phase={self.phase}"}
         p = self.players[self.current]
@@ -2022,6 +2041,125 @@ class Battle:
             return True
         return _eval_condition(self, gate)
 
+    # ---------- 决策分解层（S1a，2026-11-08） ----------
+    # 为什么放在 battle 里而不是 choice.py：选择必须能**读状态、改状态**（弃牌、
+    # 放指示物），所以「选项构造」与「结果落地」天然属于 Battle；choice.py 只放
+    # 纯数据结构（PendingChoice），便于回放序列化与单测。
+
+    def _open_choice(self, kind: str, options: list, *, min_pick: int = 0,
+                     max_pick: int = -1, tag: str = "", then: str = "",
+                     allow_repeat: bool = False) -> None:
+        """挂起一次选择（把 phase 切到 choice）
+
+        ⚠ 不允许多项挂起：本引擎的效果是**串行**的，两层待决会让「谁的选优先」
+          变成隐式规则（改对局结果）。真需要嵌套时（S1b）再引入栈，并把排序
+          写成显式 choice。
+        """
+        if getattr(self, "_pending", None) is not None:
+            raise ValueError("已有未完成的决策（不允许嵌套挂起）")
+        self._pending = PendingChoice(
+            kind=str(kind), owner=self.current, options=list(options),
+            min=int(min_pick), max=int(max_pick), tag=str(tag), then=str(then),
+            allow_repeat=bool(allow_repeat))
+        self.phase = "choice"
+        self._log("choice_open", {"player": self.current, "kind": kind,
+                                  "n_options": len(self._pending.options),
+                                  "min": int(min_pick), "max": int(max_pick),
+                                  "tag": str(tag)})
+
+    def _choice_legals(self) -> list:
+        ch = getattr(self, "_pending", None)
+        if ch is None:
+            return []
+        out = []
+        for i in ch.available():
+            opt = ch.options[i]
+            out.append({"verb": "choose", "pick": i, "index": i,
+                        "display": opt.get("display") or f"选项 {i}",
+                        "option": opt, "kind": ch.kind})
+        if ch.can_stop():
+            out.append({"verb": "stop", "display": "结束选择",
+                        "kind": ch.kind, "picked": len(ch.picked)})
+        return out
+
+    def _step_choice(self, action: dict) -> dict:
+        ch = getattr(self, "_pending", None)
+        if ch is None:
+            return {"ok": False, "error": "no_pending_choice"}
+        verb = action.get("verb")
+        if verb == "choose":
+            try:
+                ch.pick(int(action.get("pick", -1)))
+            except (TypeError, ValueError) as e:
+                return {"ok": False, "error": f"bad_pick: {e}"}
+            self._log("choice_pick", {"player": self.current, "kind": ch.kind,
+                                      "pick": ch.picked[-1],
+                                      "option": ch.options[ch.picked[-1]]})
+            if ch.is_full():
+                return self._close_choice()
+            return {"ok": True, "event": self.events[-1]}
+        if verb == "stop":
+            if not ch.can_stop():
+                return {"ok": False,
+                        "error": f"choose at least {ch.min} before stop"}
+            return self._close_choice()
+        # ⚠ 明确拒绝其它动词：挂起期间做别的事 = 跳过选择（静默默认）
+        return {"ok": False, "error": f"phase=choice 只接受 choose/stop（收到 {verb}）"}
+
+    def _close_choice(self) -> dict:
+        ch = self._pending
+        self._pending = None
+        self.phase = "main"
+        self._log("choice_close", {"player": self.current, "kind": ch.kind,
+                                   "picked": len(ch.picked)})
+        self._apply_choice_result(ch)
+        if ch.then:
+            for t in [x for x in str(ch.then).split("|") if x]:
+                self._run_simple_tag(t)
+        return {"ok": True, "event": self.events[-1] if self.events else None}
+
+    def _apply_choice_result(self, ch) -> None:
+        """把选择结果落到状态上（每种 kind 一个分支，未知即抛错）"""
+        p = self.players[ch.owner]
+        if ch.kind == "discard_hand":
+            # 「you may discard any number of cards from your hand」—— 逐张弃。
+            # 选项里存的是**手牌下标快照**：弃牌会让后面的下标失效，因此按
+            # **卡对象身份**定位（`_card_identity`），不按下标。
+            for opt in ch.chosen():
+                ref = opt.get("ref")
+                idx = next((i for i, c in enumerate(p.hand) if c is ref), None)
+                if idx is None:
+                    raise ValueError("选择的手牌已不在手中（内部状态异常）")
+                self._to_discard(p, p.hand.pop(idx))
+        elif ch.kind == "counters_any_opp":
+            # 「Put N damage counters on your opponent's Pokémon in any way you
+            # like」—— 指示物**不吃弱点/抗性**，直接加 damage（10/枚）。
+            opp = self.players[1 - ch.owner]
+            for opt in ch.chosen():
+                tgt = _field_at(opp, int(opt["target"]))
+                if tgt is None:
+                    raise ValueError("指示物目标已不在场上（内部状态异常）")
+                tgt.damage += 10
+                self._log("counters_choice", {"player": ch.owner,
+                                              "target": tgt.name, "n": 1})
+        else:
+            raise ValueError(f"未实现的 choice kind：{ch.kind}")
+
+    def _run_simple_tag(self, tag: str) -> None:
+        """执行「选择之后」的收尾 tag（S1a 只支持少数几种，其余**抛错**）
+
+        ⚠ 绝不静默跳过：`then` 里的动作如果没执行，卡面就少做了一半，
+          而对局里看不出来（正是历史「整卡已建模」误判的来源）。
+        """
+        p = self.players[self.current]
+        t = str(tag)
+        if t.startswith("draw_to:"):
+            n = int(t.split(":")[1])
+            self._safe_draw(self.current, max(0, n - len(p.hand)),
+                            source="choice")
+            return
+        raise ValueError(f"未实现的收尾 tag：{t}")
+
     def _do_recon(self, p: PlayerState, tag: str, action: dict) -> str:
         """检视牌库顶 N 张 → 按筛选取 ≤K 张 → 入手 / 铺场 / 附着，其余放回牌库。
 
@@ -2271,6 +2409,10 @@ class Battle:
             placed = self._trainer_discard_search_energy(p, tag, hi)
         elif tag.startswith("search_energy:"):
             placed = self._trainer_search_energy(p, tag)
+        elif tag.startswith("choose:"):
+            # 决策分解（S1a）：「you may discard any number of cards from your
+            # hand」类。挂起选择，选完由 `_close_choice` 落盘并跑 `then`。
+            placed = self._trainer_choose(p, tag, hi)
         elif tag.startswith("recon_bottom:"):
             # 「Look at the bottom N cards of your deck. You may reveal a
             #  Pokémon you find there and put it into your hand. Shuffle the
@@ -3389,6 +3531,36 @@ class Battle:
                                           "left": len(pl.hand)})
             done.append(moved)
         return tuple(done)
+
+    def _trainer_choose(self, p: PlayerState, tag: str, hi: int) -> str:
+        """``choose:<kind>:<arg>:then:<后续 tag>`` —— 挂起一次选择后返回
+
+        目前只实现 ``choose:discard_hand:any:then:…``（Naveen）：
+        选项 = **本卡以外**的手牌（卡面写的是 "discard any number of cards
+        from your hand"，本卡此时还没进弃牌堆）。
+
+        ⚠ 选项存的是**卡对象身份**（`ref`）而不是下标：弃牌会移动下标，
+          按下标落地会弃错牌（对局里只表现为「AI 弃了不该弃的牌」）。
+        """
+        parts = str(tag).split(":")
+        if len(parts) < 3:
+            raise ValueError(f"choose tag 非法：{tag}")
+        kind = parts[1]
+        then = ""
+        if "then" in parts:
+            i = parts.index("then")
+            then = ":".join(parts[i + 1:])
+        if kind != "discard_hand":
+            raise ValueError(f"未实现的 choose kind：{kind}")
+        options = [{"kind": "hand", "hand_index": i,
+                    "display": _card_label(c), "ref": c}
+                   for i, c in enumerate(p.hand) if i != hi]
+        # 数量约束：`any` = 不限（直到 stop）；数字 = 上限（达到即自动闭合）
+        _cap = parts[2] if len(parts) > 2 else "any"
+        max_pick = int(_cap) if str(_cap).isdigit() else -1
+        self._open_choice("discard_hand", options, min_pick=0,
+                          max_pick=max_pick, tag=tag, then=then)
+        return f"choose {len(options)} cards (then {then or '无'})"
 
     def _trainer_recon_bottom(self, p: PlayerState, tag: str) -> str:
         """检视**牌库底** N 张，取 1 张宝可梦入手，其余洗回（Dusk Ball）
@@ -10579,6 +10751,7 @@ _CONDITION_PARAMS = {
     "used_attack_last_turn": "招式名归一化键（我上回合用过）",
     "own_bench_at_most": "整数 n ≥ 0（我方后备数 ≤ n）",
     "own_hand_exactly": "整数 n ≥ 0（我方手牌数 = n）",
+    "own_hand_at_most": "整数 n ≥ 0（我方手牌数 ≤ n）",
     "opp_prizes_in": "剩余奖赏数列表（逗号分隔，任一命中）",
     "own_bench_named_all": "卡名归一化键（+ 分隔，需**全部**在后备）",
     # ---- 第九十三批（2026-11-05）----
@@ -10898,6 +11071,12 @@ def _eval_condition(battle, cond: str) -> bool:
         if not arg.isdigit():
             raise ValueError(f"条件参数非整数：{cond}")
         return len(p.hand) == int(arg)
+    # 「If you can't draw any cards in this way, you can't use this card.」
+    # 等价于「打出时手牌数 < N」（抽到 N 张；若已 ≥ N 则一张都抽不到）。
+    if name == "own_hand_at_most":
+        if not arg.isdigit():
+            raise ValueError(f"条件参数非整数：{cond}")
+        return len(p.hand) <= int(arg)
     if name == "opp_prizes_in":
         want = {int(x) for x in arg.split(",") if x.strip().isdigit()}
         if not want:

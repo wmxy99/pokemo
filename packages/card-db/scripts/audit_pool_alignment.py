@@ -3099,10 +3099,18 @@ def audit_batch58_62(card_name: str, item_name: str, desc: str,
     # ⑤ play_gate 形状校验（card-level 字段）
     if play_gate:
         if play_gate not in _PLAY_GATE_OK and \
-                not re.match(r"opp_prizes_exactly:\d+", play_gate):
+                not re.match(r"opp_prizes_exactly:\d+", play_gate) and \
+                not re.match(r"own_hand_at_most:\d+", play_gate):
             errs.append(f"{card_name} · {item_name}：play_gate=`{play_gate}` "
                         "不是已识别的门槛形态")
-        if "you can use this card only if" not in d:
+        # 第一百三十五批：门槛有两种合法句式 ——
+        #   ①「You can use this card only if …」（历史形态）
+        #   ② Naveen 的括注「(If you can't draw any cards in this way, you can't
+        #      use this card.)」—— 同样是**使用前置条件**，只是写法不同。
+        # ⚠ 仍要求卡面确有一句「不能用」的依据；否则「有 gate 无依据」= 凭空限制。
+        _gate_src = ("you can use this card only if" in d) or (
+            "you can't use this card" in d and "in this way" in d)
+        if not _gate_src:
             errs.append(f"{card_name} · {item_name}：有 play_gate=`{play_gate}` "
                         "但卡面没有「You can use this card only if …」"
                         "（门槛静默消失 = 任何时机都能打）")

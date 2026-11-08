@@ -143,8 +143,10 @@ def render(data: dict, m: dict) -> str:
     A("| 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |")
     A("| 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |")
     A("| CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |")
-    A("| K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`） "
-      "| `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |")
+    A("| K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`）· "
+      "⚠ 第一百三十五批起 **权重与新编码不兼容**（`VERBS` 增加 choose/stop → "
+      "action_dim 14→16 / 31→33），需重训后才可再测 | "
+      "`examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |")
     A("")
     # 「批内待做」与「批内已判拒收」必须分开说：全部批次处理完之后，剩下的卡
     # **不是待办**，而是走完全流程后如实判定做不了（原因逐条在批次 note 里）。

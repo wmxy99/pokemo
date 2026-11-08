@@ -28,7 +28,7 @@
 | 对账类目 | **44 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
-| K1 双盲 | **0.795**（200 局，`artifacts/k1_rich.pt`）· ⚠ 第一百三十五批起 **权重与新编码不兼容**（`VERBS` 增加 choose/stop → action_dim 14→16 / 31→33），需重训后才可再测 | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
+| K1 双盲 | **0.785**（200 局双盲，`artifacts/k1_rich.pt` = `k1_rich40k` 复测）· ⚠ 原 **0.795** 权重在一次失败的「动作编码 +2 维」迁移尝试中被覆盖（迁移已回退，代码未变）；现权重仍 ≥0.70 判据（PASS），但**不是**原基线值 | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
 **口径校验（本文件自洽的判据）**：未 ready **76** = 批内如实拒收 **70** + 结构性边界 **4** + 待新能力 **2** = **76** ✅。
 

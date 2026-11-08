@@ -201,6 +201,9 @@ ATTACK_TAG_PREFIXES = (
     # ⚠ `info:` 是**完美信息等价**（引擎里显式记 no-op 日志），不写进这里
     #   就会让「整句展示手牌」的卡永远在池外（Hoothoot / Espurr / Pidove）。
     "info:", "counters_double:", "atk_energy_block:", "win_if:",
+    # 第一百三十五批（S1a/S1b）：决策分解 —— 招式侧「可选能量代价」
+    # （Mega Eelektross ex）。训练家侧同名前缀另见 TRAINER_TAGS。
+    "choose:",
     # 第一百零七批（2026-11-06）：招式侧弃场地（Chi-Yu「Scorching Earth」）。
     # 该 tag 此前只在特性/训练家侧存在。
     "discard_stadium",

@@ -1427,9 +1427,11 @@ def audit_energy_cost(card_name: str, item_name: str, desc: str,
 
     # ③ 代价子句被吞（`and` 绑定式）
     if _ENERGY_COST_CLAUSE.search(d):
+        # 第一百三十五批（S1b）：`choose:optional_energy_cost:` 也是**真的付账**
+        # （引擎挂起 confirm，选中 yes 才弃能量）→ 与其它代价 tag 同等看待。
         cost_tags = [t for t in tags if t.startswith(
             ("discard_energy", "discard_hand_energy", "energy_to_deck",
-             "energy_self_to_deck", "self:"))]
+             "energy_self_to_deck", "self:", "choose:optional_energy_cost:"))]
         if not cost_tags:
             errs.append(f"{card_name} · {item_name}：卡面有能量代价子句（and 绑定），"
                         f"却没有任何代价 tag —— 招式会白拿附加效果")

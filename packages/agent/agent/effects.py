@@ -3283,6 +3283,16 @@ _CHOOSE_NAVEEN_RE = re.compile(
     re.I)
 
 
+# 「You may discard 2 {L} Energy from this Pokémon and make your opponent's
+# Active Pokémon Paralyzed.」（Mega Eelektross ex「Disaster Shock」）
+# 这是**可选代价**：付不付由牌手决定 → `choose:optional_energy_cost:2:lightning
+# :then:paralyze`（引擎挂起 confirm 选择）。绝不默认「付」（多弃能量）或
+# 「不付」（少一个麻痹）—— 两种默认都会实质改结果。
+_OPT_ENERGY_RE = re.compile(
+    r"^you may discard (\d+) \{([a-z])\} energy from this pok[eé]mon and make "
+    r"your opponent'?s active pok[eé]mon (paralyzed|confused|asleep)\.$", re.I)
+
+
 def _detect_b135(text: str, kind: str) -> list:
     """第一百三十五批：带「任意数量」选择的卡（整句精确匹配）
 
@@ -3290,6 +3300,20 @@ def _detect_b135(text: str, kind: str) -> list:
     这里通过动作的 `extra["play_gate"]` 携带，避免与其它族抢 spec 字段。
     """
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind == "attack":
+        m = _OPT_ENERGY_RE.match(t)
+        if m:
+            _ty = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+            if _ty:
+                # 卡面是过去分词（paralyzed/confused/asleep），引擎状态词是
+                # 动词原形（paralyze/confuse/sleep）—— 不归一化会让状态**加不进去**
+                # （`status.add("paralyzed")` 与 `_NO_ATTACK_STATUS` 对不上）。
+                _st = {"paralyzed": "paralyze", "confused": "confuse",
+                       "asleep": "sleep"}.get(m.group(3).lower(),
+                                              m.group(3).lower())
+                return [act("rule", None, "any", {"optional_energy_cost": (
+                    int(m.group(1)), _ty, _st)})]
+        return []
     if kind != "supporter":
         return []
     m = _CHOOSE_NAVEEN_RE.match(t)
@@ -10008,6 +10032,11 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"win_if:own_prizes_eq:"
                                 f"{int(extra['win_if_prizes'])}")
                     continue
+                if extra.get("optional_energy_cost"):
+                    _n, _ty, _st = extra["optional_energy_cost"]
+                    tags.append(f"choose:optional_energy_cost:{int(_n)}:"
+                                f"{_ty}:then:{_st}")
+                    continue
                 if extra.get("choose_discard_then_draw_to") is not None:
                     # 「弃任意数量手牌」→ 先挂起选择，选完再抽到 N 张
                     tags.append(f"choose:discard_hand:any:then:draw_to:"
@@ -10801,7 +10830,11 @@ def to_engine_tags(specs: list) -> dict:
                 _newt = [str(x) for x in tags[_tag_start:]]
                 if not any(x.startswith(("discard_energy", "discard_hand_energy",
                                          "energy_to_deck", "energy_self_to_deck",
-                                         "self:"))
+                                         "self:",
+                                         # 第一百三十五批（S1b）：可选代价已落成
+                                         # 决策分解 tag（`choose:optional_energy_cost:`）
+                                         # —— 它**真的会弃能量**，不算未映射。
+                                         "choose:"))
                            for x in _newt):
                     unsupported.append({
                         "type": "cost",

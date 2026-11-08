@@ -94,9 +94,22 @@ class TestEnergyCostGuard(unittest.TestCase):
         return any(u.get("type") == "cost"
                    for u in _tags(text)["unsupported"])
 
-    def test_eelektross_rejected(self):
-        """可选能量代价 + 麻痹：代价不可表达 → 必须报 unsupported"""
-        self.assertTrue(self._has_cost_gap(EELEKTROSS))
+    def test_eelektross_cost_now_modeled(self):
+        """⚠ 决策反转（第一百三十五批 S1b）：可选能量代价已可精确表达
+
+        本用例原断言「代价不可表达 → 必须报 unsupported」。决策分解落地后，
+        「You may discard N {T} Energy … and <后续>」可以落成
+        ``choose:optional_energy_cost``（挂起 confirm，由牌手决定付不付），
+        因此现在应当**有 tag、无代价缺口**。
+
+        守的性质不变：**不得白嫖附加效果** —— 下面同时断言 tag 形状正确
+        （`then:` 段带后续效果），且一旦 tag 缺失仍必须报 cost 缺口。
+        """
+        r = _tags(EELEKTROSS)
+        self.assertFalse(self._has_cost_gap(EELEKTROSS),
+                         "代价已可表达 → 不应再报 cost 缺口")
+        self.assertIn("choose:optional_energy_cost:2:lightning:then:paralyze",
+                      r["tags"])
 
     def test_skarmory_cost_now_modeled(self):
         """⚠ 决策反转（第四十一批）：Mega Skarmory ex 的「洗回牌库」已建模

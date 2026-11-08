@@ -141,6 +141,7 @@ class Battle:
         # 决策分解（S1a）：挂起中的选择（None = 无）。字段在 `__init__` 显式初始化，
         # 避免 `getattr(self, "_pending", None)` 在某些装配路径下读到**上一次**的值。
         self._pending: Optional[PendingChoice] = None
+        self._defer_end_turn: bool = False
         self.finished: bool = False
         self.winner: Optional[int] = None
         self.win_reason: Optional[str] = None
@@ -334,6 +335,14 @@ class Battle:
 
     def _end_turn(self) -> None:
         if self.finished:
+            return
+        # 决策分解（S1b）：招式结算里挂起的「可选代价」还没选完时**不得换手** ——
+        # 否则选择会落到对手回合（owner 错、窗口错），对局结果被静默改动。
+        # 由 `_close_choice` 在闭合后补做这次 `_end_turn`。
+        if getattr(self, "_pending", None) is not None:
+            self._defer_end_turn = True
+            self._log("turn_end_deferred", {"player": self.current,
+                                            "choice": self._pending.kind})
             return
         # 回合结束检查：麻痹只在本回合结束才恢复（见 rules.status_checkup 的 phase 说明）。
         # 放在切换 current **之前**，作用于「刚结束回合的这一方」。
@@ -2116,6 +2125,11 @@ class Battle:
         if ch.then:
             for t in [x for x in str(ch.then).split("|") if x]:
                 self._run_simple_tag(t)
+        # 招式侧挂起时回合结束被延后（见 `_end_turn`）→ 这里补上。
+        if getattr(self, "_defer_end_turn", False):
+            self._defer_end_turn = False
+            if not self.finished:
+                self._end_turn()
         return {"ok": True, "event": self.events[-1] if self.events else None}
 
     def _apply_choice_result(self, ch) -> None:
@@ -2131,6 +2145,34 @@ class Battle:
                 if idx is None:
                     raise ValueError("选择的手牌已不在手中（内部状态异常）")
                 self._to_discard(p, p.hand.pop(idx))
+        elif ch.kind == "confirm":
+            opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+            if not opt.get("yes"):
+                self._log("optional_declined", {"player": ch.owner,
+                                                "tag": ch.tag})
+                return
+            fp = opt.get("fp")
+            n = int(opt.get("n") or 0)
+            etype = str(opt.get("etype") or "")
+            if fp is None or fp.total_energy() < n:
+                # 付不出 → 选择作废（卡面「You may … and …」按不支付处理），
+                # 但必须记日志：静默吞掉会让「AI 选了却什么都没发生」无法追查。
+                self._log("optional_unpaid", {"player": ch.owner,
+                                              "n": n, "etype": etype})
+                return
+            left = n
+            for _ in range(n):
+                if fp.energy.get(etype, 0) > 0:
+                    fp.energy[etype] -= 1
+                    if fp.energy[etype] <= 0:
+                        fp.energy.pop(etype, None)
+                    left -= 1
+                elif fp.senergy:
+                    fp.senergy.pop()
+                    left -= 1
+            self._log("optional_paid", {"player": ch.owner, "n": n - left,
+                                        "etype": etype})
+            self._run_simple_tag(str(opt.get("then_tag") or ""))
         elif ch.kind == "counters_any_opp":
             # 「Put N damage counters on your opponent's Pokémon in any way you
             # like」—— 指示物**不吃弱点/抗性**，直接加 damage（10/枚）。
@@ -2153,6 +2195,17 @@ class Battle:
         """
         p = self.players[self.current]
         t = str(tag)
+        if t.startswith("paralyze") or t == "confuse" or t == "sleep":
+            t = {"paralyzed": "paralyze", "confused": "confuse",
+                 "asleep": "sleep"}.get(t, t)
+            # 「… and make your opponent's Active Pokémon Paralyzed.」
+            opp = self.players[1 - self.current]
+            if opp.active is None or opp.active.is_ko:
+                return
+            opp.active.status.add(t)
+            self._log("status", {"player": self.current,
+                                 "target": opp.active.name, "status": t})
+            return
         if t.startswith("draw_to:"):
             n = int(t.split(":")[1])
             self._safe_draw(self.current, max(0, n - len(p.hand)),
@@ -7178,6 +7231,23 @@ class Battle:
                 self._log("info", {"player": self.current,
                                    "target": attacker.name,
                                    "what": tag[len("info:"):]})
+            elif tag.startswith("choose:optional_energy_cost:"):
+                # 「You may discard N {T} Energy from this Pokémon and <后续>」
+                # （Mega Eelektross ex「Disaster Shock」）
+                # **可选** = 由牌手决定付不付：落成 confirm 选择（yes/no），
+                # 绝不默认「付」或「不付」（两种默认都会实质改结果）。
+                _v = tag.split(":")
+                # choose : optional_energy_cost : <n> : <type> : then : <tag>
+                if len(_v) < 6 or not _v[2].isdigit() or _v[4] != "then":
+                    raise ValueError(f"optional_energy_cost tag 非法：{tag}")
+                _n, _ty, _then = int(_v[2]), _v[3], ":".join(_v[5:])
+                self._open_choice(
+                    "confirm",
+                    [{"display": f"弃 {_n} 个 {_ty} 能量并执行 {_then}",
+                      "yes": True, "n": _n, "etype": _ty, "then_tag": _then,
+                      "fp": attacker},
+                     {"display": "不支付（本招按原效果结束）", "yes": False}],
+                    min_pick=0, max_pick=1, tag=tag)
             elif tag.startswith("counters_double"):
                 # 「Double the number of damage counters on each of your
                 #  opponent's Pokémon.」（N's Vanilluxe「Snow Coating」）

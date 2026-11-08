@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 07:53:47",
+  "reparsed_at": "2026-11-08 08:16:11",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1190,
+  "engine_ready": 1191,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1190,
-   "engine_approximated": 1175,
-   "engine_unmatched": 77,
+   "zh_backfill": 1191,
+   "engine_approximated": 1176,
+   "engine_unmatched": 76,
    "engine_namekey_mismatch": 9
   },
   "parse": {
@@ -129,12 +129,12 @@
    "specs": 1481,
    "errors": 149,
    "engine_tags": 1498,
-   "unsupported": 77,
+   "unsupported": 76,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1175,
+  "engine_approximated": 1176,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -115215,14 +115215,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Eelektross ex@ASC 61",
    "parse": {
     "items": [
      {
@@ -115269,27 +115271,28 @@
         "conditions": [],
         "actions": [
          {
-          "type": "status",
+          "type": "rule",
           "amount": null,
-          "target": "active_opponent",
+          "target": "any",
           "extra": {
-           "status": "paralyze"
+           "optional_energy_cost": [
+            2,
+            "lightning",
+            "paralyze"
+           ]
           }
          }
         ],
-        "source_text": "You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed."
+        "play_gate": "",
+        "source_text": "You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed.",
+        "citations": []
        }
       ],
       "errors": [],
       "engine_tags": [
-       "paralyze"
+       "choose:optional_energy_cost:2:lightning:then:paralyze"
       ],
-      "unsupported": [
-       {
-        "type": "cost",
-        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -115322,28 +115325,29 @@
       "conditions": [],
       "actions": [
        {
-        "type": "status",
+        "type": "rule",
         "amount": null,
-        "target": "active_opponent",
+        "target": "any",
         "extra": {
-         "status": "paralyze"
+         "optional_energy_cost": [
+          2,
+          "lightning",
+          "paralyze"
+         ]
         }
        }
       ],
-      "source_text": "You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed."
+      "play_gate": "",
+      "source_text": "You may discard 2 {L} Energy from this Pokémon and make your opponent’s Active Pokémon Paralyzed.",
+      "citations": []
      }
     ],
     "errors": [],
     "engine_tags": [
      "snipe:opp:60:2",
-     "paralyze"
+     "choose:optional_energy_cost:2:lightning:then:paralyze"
     ],
-    "unsupported": [
-     {
-      "type": "cost",
-      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

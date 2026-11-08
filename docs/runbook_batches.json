@@ -484,10 +484,10 @@
       "id": 103,
       "phase": "P3",
       "theme": "能量代价 / 提供规则",
-      "status": "blocked",
-      "actual_pool": 0,
-      "actual_refused": 3,
-      "note": "**整批受阻（0 张）**：三张都要「**可选**能量代价」这一交互层 —— Mega Charizard X ex（弃**任意数量** {R} 能量、按弃掉张数缩放）、Mega Eelektross ex（可选弃 2 {L} → 麻痹）、Dialga（可选把全部能量洗回牌库 → +80）。用确定性默认冒充会实质改变对局（「全弃」把能量打空、「不弃」白丢效果），属静默错映射 → 全部如实拒收。",
+      "status": "done",
+      "actual_pool": 1,
+      "actual_refused": 2,
+      "note": "**部分完成（1 张进池 / 2 张如实拒收）· 第一百三十五批（S1b）**：可选能量代价落成决策分解 `choose:optional_energy_cost:<n>:<type>:then:<status>` —— 挂起 confirm，付不付由牌手决定；付不出时记 `optional_unpaid` 日志且**不**施加后续效果。Mega Eelektross ex 因此进池；其余卡仍缺各自的 choice kind（多目标分配 / 跨区选择 / coin 嵌套），属 S1c/S5。",
       "cards": [
         {
           "name": "Mega Charizard X ex",

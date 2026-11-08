@@ -126,6 +126,7 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | **原地替换(S2e)** | `replace_self:<卡名>:to_deck`：检索指定卡与载体**原地**对调，`_inherit_state` 逐字段继承全部状态（附着卡/伤害/状态/护盾/跨回合锁定…），旧卡洗回牌库。⚠ 原地 = 旧卡在备位就还是备位；`passive:no_evolve_into` 则在「合法动作 + `_do_evolve`」两处挡「只能由效果上场」的卡 |
 | **特殊能量回收(S2d)** | `senergy:boomerang`：被**持有者自己的招式效果**弃置时，攻击结束后从弃牌堆回附。判定=「弃置差分快照 + 卡对象身份」，不是按名字猜；弃能量时特殊能量**卡**会真的进 `discard_refs`（`_discard_energy_from`） |
 | **开局回合(S6a)** | `GameConfig.first_turn_no_attack` / `first_turn_no_supporter` 默认 **True**（官方）：先手第 1 回合**不能攻击、不能打 Supporter**。判据 `_opening_turn()` = `setup_done and turn_number == 1`（**不能**用 `turn_counts` —— 那会连后手的第 2 回合一起锁）。两处同挡：合法动作表逐招跳过 + 派发拒绝。例外卡靠 `use_any:first_turn`（招式级 4 张 / 卡级 2 张 Supporter，卡级是复合 tag `a|use_any:first_turn`，`_do_trainer` 对它是 no-op） |
+| **取奖赏(S6b)** | 击倒后取的是**自己**的奖赏卡。若有**面朝上**的卡，由牌手选（`pick_prize` 选择：正面逐张列名 / 背面随机）；全背面时互相不可区分 → 不挂选择。取多张（ex=2）时按面朝下优先确定性取并写 `prize_pick_auto`（**显式记录的简化**）。挂起期间的第二只击倒**入队**，闭合后补做。`zones.face_up_slots` 只暴露正面槽位；`take_prizes(first_face_up=…)` 拒绝指定背面槽位 |
 | **setup 与手牌(S6a)** | setup 上场的宝可梦带 `just_played`（当回合不能进化；后手 T2 自动解锁）；`max_hand = 0` 表示**无手牌上限**（官方），>0 仅供对拍；`first_turn_no_draw` 恒 False（官方每回合都抽） |
 | 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库（官方：该抽而抽不到即判负）；超 `max_turns` 判平 |
 | 招式效果 tag | 状态 5 种 · `spread_free:N`(任意分配) · `spread:N:per`(随机散布) · `heal:N` · `self:N`(反伤) · `draw:N` · `discard/…` · `switch_self` · `gust` · `attach:N[:type]` · `move_damage:N` · 以及上列 B4 各家族 |

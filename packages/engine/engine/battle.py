@@ -167,6 +167,10 @@ class Battle:
         # 「先手第一回合不能攻击 / 不能打 Supporter」只对**走过 setup 的对局**成立
         # （没有 setup 的合成对局不存在「开局回合」，见 `GameConfig` 的注释）。
         self.setup_done: bool = False
+        # S6b：挂起「取哪张奖赏卡」期间**不能再处理下一只被击倒的宝可梦**
+        # （多只同时被击倒：先排队，等选择闭合后按序补做）。
+        # 不入队就会在 `_open_choice` 处撞「不允许嵌套挂起」。
+        self._ko_queue: list = []
         self._setup_openings()
         # 先手：硬币
         self.current = 0 if self.rng.random() < 0.5 else 1
@@ -2435,11 +2439,15 @@ class Battle:
         self._log("choice_close", {"player": self.current, "kind": ch.kind,
                                    "picked": len(ch.picked)})
         self._apply_choice_result(ch)
+        # S6b：挂起期间被拦下的击倒 → 现在按序补做（可能再开一次选择）
+        self._drain_ko_queue()
         if ch.then:
             for t in [x for x in str(ch.then).split("|") if x]:
                 self._run_simple_tag(t)
         # 招式侧挂起时回合结束被延后（见 `_end_turn`）→ 这里补上。
-        if getattr(self, "_defer_end_turn", False):
+        # ⚠ S6b：补做击倒后又可能**再挂一个选择**（多只 + 面朝上奖赏卡），
+        #   此时不能换手 —— 否则选择会落到对手回合。保持延后标记，等它闭合。
+        if getattr(self, "_defer_end_turn", False) and self._pending is None:
             self._defer_end_turn = False
             if not self.finished:
                 self._end_turn()
@@ -2448,6 +2456,21 @@ class Battle:
     def _apply_choice_result(self, ch) -> None:
         """把选择结果落到状态上（每种 kind 一个分支，未知即抛错）"""
         p = self.players[ch.owner]
+        if ch.kind == "pick_prize":
+            # S6b：「取哪张奖赏卡」。选面朝上的那张 → 指定槽位；选背面 → 随机。
+            taker = int(ch.ctx.get("taker", ch.owner))
+            n = int(ch.ctx.get("n", 1))
+            opt = ch.chosen()[0]
+            slot = opt.get("slot") if opt.get("mode") == "up" else None
+            taken = zones.take_prizes(self, taker, n, first_face_up=slot)
+            self._log("prize_pick", {"player": taker, "mode": opt.get("mode"),
+                                     "slot": slot,
+                                     "card": opt.get("label"),
+                                     "taken": taken})
+            ko_state = ch.ctx.get("ko")
+            if ko_state:
+                self._ko_after_prizes(ko_state, taken)
+            return
         if ch.kind == "discard_hand":
             # 「you may discard any number of cards from your hand」—— 逐张弃。
             # 选项里存的是**手牌下标快照**：弃牌会让后面的下标失效，因此按
@@ -9962,6 +9985,15 @@ class Battle:
 
     # ---------- 击倒/奖赏 ----------
     def _resolve_ko(self, owner: int, fp: FieldPokemon) -> None:
+        if getattr(self, "_pending", None) is not None:
+            # S6b：正在等「取哪张奖赏卡」的选择 → 本只排队（见 `_drain_ko_queue`）。
+            # ⚠ 不能按 `fp.is_ko` 过滤：那是「伤害 ≥ HP」（待击倒）的判据，
+            #   正要处理的这只**恰好**满足它 —— 用它当「已处理」会把这只好几只
+            #   全部丢掉（实测双 KO 时队列恒为 0，第二只永远不结算）。
+            #   重复入队无害：补做时若已被处理，`pos is None` 会直接返回。
+            if fp is not None:
+                self._ko_q().append((owner, fp))
+            return
         p = self.players[owner]
         opp = self.players[1 - owner]
         pos = None
@@ -10029,10 +10061,59 @@ class Battle:
         give = max(0, give + self._trainer_prize_bonus(owner, _attacker,
                                                        _was_active))
         # S3（2026-11-08）：取奖赏走**真实卡对象**（进手牌），不再是「计数器 -N」。
-        # `zones.take_prizes` 在「只计数」兼容模式下与旧实现逐字节一致。
-        _taken = zones.take_prizes(self, 1 - owner, give)
-        opp.prizes_taken_this_turn += _taken   # 「上回合取走几张」记账
-        self._log("prize", {"player": 1 - owner, "take": _taken,
+        # S6b（2026-11-08）：有**面朝上**奖赏卡且由本人取时，先挂起「取哪张」的
+        # 选择（真决策）；其余情况确定性取。尾段（KO 触发 / 胜负 / 补位）抽到
+        # `_ko_after_prizes`，两条路径共用 —— 挂起时由 `_apply_choice_result` 恢复。
+        _ko_state = {"owner": owner, "fp": fp, "pos": pos,
+                     "was_active": _was_active, "attacker": _attacker,
+                     "energy": _energy_snapshot, "ptype": _ptype}
+        self._take_prizes(1 - owner, give, _ko_state)
+
+    def _take_prizes(self, taker: int, n: int, ko_state: dict) -> None:
+        """取奖赏（S6b）：面朝上 + 本人取 → 挂起「取哪张」；否则确定性取
+
+        判据三条**同时**成立才挂起：
+          · 有**面朝上**的奖赏卡（面朝下的互相不可区分，选它们不构成决策）；
+          · 取奖赏方 == 当前行动方（对手取奖赏时代理没有「自己选」的入口，
+            与 `shuffle_opp_hand` 等「对手选择由引擎确定性代理」的既有口径一致）；
+          · 只取 **1 张**。取多张时「逐张选择」要连开多次选择，当前实现按
+            **面朝下优先**确定性取并写 `prize_pick_auto` 日志（**显式记录的简化**，
+            不是静默决定）。
+        """
+        p = self.players[taker]
+        ups = zones.face_up_slots(p)
+        if ups and taker == self.current and int(n) == 1:
+            opts = [{"mode": "up", "slot": i,
+                     "display": f"（正面）{_card_label(p.prizes[i].ref)}",
+                     "label": _card_label(p.prizes[i].ref)}
+                    for i in ups]
+            opts.append({"mode": "down", "display": "面朝下的奖赏卡（随机）"})
+            self._open_choice("pick_prize", opts, min_pick=1, max_pick=1,
+                              tag="prize_pick",
+                              ctx={"taker": int(taker), "n": int(n),
+                                   "ko": ko_state})
+            return
+        if ups and int(n) > 1:
+            self._log("prize_pick_auto", {"player": taker, "n": int(n),
+                                          "faces_up": len(ups),
+                                          "reason": "多张取奖赏：逐张选择未建模"
+                                                    "（面朝下优先）"})
+        taken = zones.take_prizes(self, taker, int(n))
+        self._ko_after_prizes(ko_state, taken)
+
+    def _ko_after_prizes(self, ko_state: dict, taken: int) -> None:
+        """取完奖赏后的 KO 尾段（S6b 从 `_resolve_ko` 抽出，供两条路径复用）"""
+        owner = int(ko_state["owner"])
+        fp = ko_state["fp"]
+        pos = ko_state["pos"]
+        p = self.players[owner]
+        opp = self.players[1 - owner]
+        _was_active = ko_state["was_active"]
+        _attacker = ko_state["attacker"]
+        _energy_snapshot = ko_state["energy"]
+        _ptype = ko_state["ptype"]
+        opp.prizes_taken_this_turn += taken   # 「上回合取走几张」记账
+        self._log("prize", {"player": 1 - owner, "take": taken,
                             "left": opp.prizes_left})
         # v1.3：击倒触发型特性（ko_draw:N，如 Fezandipiti ex「逆转局势」）
         # 在被击倒方的**剩余场上**扫描；先结算抽牌再判定胜负/补位
@@ -10052,6 +10133,25 @@ class Battle:
                 self._log("promote", {"player": owner, "to": p.active.name})
             else:
                 self._finish(1 - owner, "no_pokemon", {"loser": owner})
+
+    def _ko_q(self) -> list:
+        """挂起期间待补做的击倒队列（惰性创建，兼容 `object.__new__` 装配的夹具）"""
+        v = getattr(self, "_ko_queue", None)
+        if v is None:
+            v = []
+            self._ko_queue = v
+        return v
+
+    def _drain_ko_queue(self) -> None:
+        """补做挂起期间被拦下的击倒（S6b）
+
+        每处理一只都可能**再开**一次「取哪张」选择 → 一旦挂起就停下，
+        剩下的留到下次 `_close_choice` 继续（顺序 = 入队顺序）。
+        """
+        q = self._ko_q()
+        while q and self._pending is None and not self.finished:
+            owner, fp = q.pop(0)
+            self._resolve_ko(owner, fp)
 
     def _trigger_ko_draw(self, owner: int) -> None:
         """己方宝可梦被击倒时触发 ``ko_draw:N`` 特性（每回合一次限制不适用）"""

@@ -36,6 +36,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -97,10 +98,26 @@ def deal_prizes(battle, pi: int, n: int) -> int:
     return got
 
 
-def take_prizes(battle, taker: int, n: int) -> int:
+def face_up_slots(p) -> list:
+    """面朝上的奖赏卡槽位（S6b）—— 只有这些卡的身份是**公开信息**
+
+    面朝下的奖赏卡对双方都不可区分（官方：不得查看），所以「取哪一张」只在
+    存在面朝上卡时才是**真决策**；引擎不得借着完美信息替玩家挑。
+    """
+    if not has_real_prizes(p):
+        return []
+    return [i for i, s in enumerate(p.prizes) if s.face_up]
+
+
+def take_prizes(battle, taker: int, n: int,
+                first_face_up: Optional[int] = None) -> int:
     """取 n 张奖赏卡入手（击倒结算 / 效果取卡共用）
 
     返回**实际**取到的张数（剩余不足时按剩余算，绝不凭空生成）。
+
+    ``first_face_up``（S6b）：「先取哪一张」由牌手指定 —— 只允许**面朝上**的槽位
+    （面朝下的互相不可区分，指定它们等于假装有选择）。指定后其余按原口径
+    （面朝下优先）补齐。
     """
     n = int(n)
     if n <= 0:
@@ -115,6 +132,16 @@ def take_prizes(battle, taker: int, n: int) -> int:
     # 面朝下优先（不可区分信息），其后才是面朝上的
     order = ([i for i, s in enumerate(p.prizes) if not s.face_up]
              + [i for i, s in enumerate(p.prizes) if s.face_up])
+    if first_face_up is not None:
+        i0 = int(first_face_up)
+        if not (0 <= i0 < len(p.prizes)):
+            raise ValueError(f"奖赏卡槽位越界：{i0}")
+        if not p.prizes[i0].face_up:
+            # 面朝下的卡身份不可知，指定它不构成决策 → 明确拒绝（不静默照做）
+            raise ValueError("只能指定**面朝上**的奖赏卡")
+        if n < 1:
+            raise ValueError("取奖赏张数必须 ≥1")
+        order = [i0] + [i for i in order if i != i0]
     sel = order[:n]
     got = []
     for i in sorted(sel, reverse=True):

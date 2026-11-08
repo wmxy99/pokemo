@@ -246,3 +246,181 @@ class TestSnapshotBoundaries(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------- S2b：进化事件 / 进化触发附能 / 限时无弱点 ----------------
+
+from engine.cards import AttackDef, PokeRef  # noqa: E402
+
+
+def _stage1(name="Evo", hp=140, evolves_from="Attacker", attacks=()):
+    return PokemonDef(name, hp=hp, ptype="colorless", stage=1,
+                      evolves_from=evolves_from, attacks=attacks)
+
+
+class TestEvolveSubscription(unittest.TestCase):
+    """Team Rocket's Ampharos「Darkest Impulse」——**对手**进化时放 4 个指示物"""
+
+    def _setup(self, amp_on_field=True):
+        b = arena()
+        if amp_on_field:
+            b.players[0].bench = [_watcher(
+                "TR Ampharos",
+                "on_event:evolve:counters:4:on:entering:scope:opp_their_turn")]
+        opp = b.players[1]
+        opp.hand = [PokeRef(_stage1("Evolved", evolves_from="Victim"))]
+        b.current = 1
+        return b, opp
+
+    def test_opponent_evolve_places_counters(self):
+        b, opp = self._setup()
+        r = b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(opp.active.damage, 40, "4 个指示物 = 40 点")
+        self.assertEqual(opp.active.name, "Evolved")
+
+    def test_subscriber_own_evolve_does_not_trigger(self):
+        """订阅方的**自己**进化不该被自己的「对手进化」订阅打中"""
+        b = arena()
+        b.players[0].bench = [_watcher(
+            "TR Ampharos",
+            "on_event:evolve:counters:4:on:entering:scope:opp_their_turn")]
+        p = b.players[0]
+        p.hand = [PokeRef(_stage1("Evolved", evolves_from="Attacker"))]
+        b.current = 0
+        b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertEqual(p.active.damage, 0,
+                         "自己进化 → who == owner → 作用域必须挡下")
+
+    def test_only_once_per_turn(self):
+        b, opp = self._setup()
+        b.step({"verb": "evolve", "hand": 0, "target": 0})
+        first = opp.active.damage
+        opp.hand = [PokeRef(_stage1("Evolved2", evolves_from="Evolved"))]
+        b.step({"verb": "evolve", "hand": 0, "target": 0})
+        self.assertEqual(opp.active.damage, first,
+                         "同一回合第二次进化不再触发（doesn't stack）")
+
+
+class TestWhileActiveGate(unittest.TestCase):
+    """Mismagius ex「Swirling Prose」：**在战斗位时**才订阅（`while:active`）"""
+
+    TAG = ("on_event:switch_in:status:confuse:on:entering"
+           ":scope:opp_their_turn:while:active")
+
+    def _run(self, on_active: bool):
+        b = arena()
+        mag = _watcher("Mismagius ex", self.TAG)
+        if on_active:
+            b.players[0].bench = [make_pokemon(_pdef("Bench0", hp=100))]
+            b.players[0].active = mag
+        else:
+            b.players[0].bench = [mag]
+        opp = b.players[1]
+        opp.bench = [make_pokemon(_pdef("B1", hp=100))]
+        opp.active.add_energy("colorless")
+        b.current = 1
+        b.step({"verb": "retreat", "bench": 0})
+        return opp.active
+
+    def test_confuses_when_active(self):
+        self.assertIn("confuse", self._run(True).status)
+
+    def test_no_effect_when_on_bench(self):
+        """后备时不订阅 —— 少了这个判定就是静默加强（放后备也生效）"""
+        self.assertNotIn("confuse", self._run(False).status)
+
+
+class TestEvolveAttachSpread(unittest.TestCase):
+    """Archaludon ex「Assemble Alloy」：从弃牌堆取 ≤2 张基本{M}能量自由分配"""
+
+    def test_attaches_only_to_typed_targets(self):
+        from engine.cards import EnergyRef
+        b = arena()
+        p = b.players[0]
+        metal = make_pokemon(PokemonDef("Metal", hp=100, ptype="metal"))
+        water = make_pokemon(PokemonDef("Water", hp=100, ptype="water"))
+        b.players[0].bench = [metal, water]
+        p.active = make_pokemon(PokemonDef("Attacker", hp=300, ptype="metal"))
+        p.discard_refs = [EnergyRef(EnergyDef("metal")),
+                          EnergyRef(EnergyDef("metal")),
+                          EnergyRef(EnergyDef("fire"))]
+        p.hand = [PokeRef(PokemonDef(
+            "Archaludon ex", hp=180, ptype="metal", stage=1,
+            evolves_from="Attacker", abilities=(AbilityDef(
+                "Assemble Alloy",
+                tag="evolve_act:attach_spread:2:metal:discard:target:type-metal",
+                location="field"),)))]
+        b._do_evolve(p, {"hand": 0, "target": 0})
+        metal_total = (p.active.energy_of("metal") + metal.energy_of("metal")
+                       + water.energy_of("metal"))
+        self.assertEqual(metal_total, 2, "取满 2 张基本钢能量")
+        self.assertEqual(water.energy_of("metal"), 0,
+                         "卡面限定 your {M} Pokémon —— 水属性目标不得被附着")
+
+
+class TestEvolveReconAttach(unittest.TestCase):
+    """Grumpig「Energized Steps」：看顶 4 张，把基本能量自由分配，余牌洗回"""
+
+    def test_attaches_found_energy_and_shuffles_rest(self):
+        from engine.cards import EnergyRef
+        b = arena()
+        p = b.players[0]
+        p.active = make_pokemon(PokemonDef("Attacker", hp=300, ptype="psychic"))
+        p.hand = [PokeRef(PokemonDef(
+            "Grumpig", hp=130, ptype="psychic", stage=1,
+            evolves_from="Attacker", abilities=(AbilityDef(
+                "Energized Steps",
+                tag="evolve_act:recon:4:all:basic_energy:"
+                    "dest:attach_spread:rest:shuffle",
+                location="field"),)))]
+        # 牌库：末尾 = 顶。顶 4 张 = 2 张非能量（在下）+ 2 张基本能量（在上）
+        p.deck = ([EnergyRef(EnergyDef("grass")) for _ in range(FILLER)]
+                  + [PokeRef(_pdef("T1")), PokeRef(_pdef("T2")),
+                     EnergyRef(EnergyDef("water")), EnergyRef(EnergyDef("fire"))])
+        deck_before = len(p.deck)
+        b._do_evolve(p, {"hand": 0, "target": 0})
+        self.assertEqual(p.active.total_energy(), 2, "顶 4 张里的 2 张能量全附着")
+        self.assertEqual(len(p.deck), deck_before - 2,
+                         "其余牌洗回（总数只少了被附着的 2 张）")
+
+
+class TestTimedNoWeakness(unittest.TestCase):
+    """Archaludon ex「Metal Defender」：限时无弱点（不是常驻）"""
+
+    def _pair(self):
+        b = arena()
+        atk = AttackDef("Hit", cost=1, damage=100, effects=("shield:no_weakness",))
+        b.players[0].active = make_pokemon(
+            PokemonDef("Attacker", hp=300, ptype="fire", attacks=(atk,)))
+        b.players[0].active.add_energy("fire")
+        b.players[1].active = make_pokemon(
+            PokemonDef("Victim", hp=900, ptype="grass", weakness="fire"))
+        return b
+
+    def test_sets_flag_and_does_not_change_this_hit(self):
+        """卡面是「During your opponent's **next** turn」→ 本招命中仍吃弱点"""
+        b = self._pair()
+        defender = b.players[1].active
+        attacker = b.players[0].active
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(defender.damage, 200, "本招的伤害照常算弱点")
+        # 卡面「**this** Pokémon has no Weakness」→ 挂在**出招者**身上
+        self.assertTrue(attacker.shield_no_weakness, "出招者获得限时无弱点")
+
+    def test_active_flag_ignores_weakness(self):
+        b = self._pair()
+        defender = b.players[1].active
+        defender.shield_no_weakness = True          # 模拟「对手的下个回合」
+        b.step({"verb": "attack", "attack": 0})
+        self.assertEqual(defender.damage, 100, "限时无弱点生效 → 不乘 2")
+
+    def test_expires_at_owner_turn_start(self):
+        b = self._pair()
+        attacker = b.players[0].active
+        b.step({"verb": "attack", "attack": 0})
+        self.assertTrue(attacker.shield_no_weakness)
+        b.step({"verb": "pass"})        # 换手到对手
+        b.step({"verb": "pass"})        # 回到我的回合开始 → 清零
+        self.assertFalse(attacker.shield_no_weakness,
+                         "该护盾在自己下个回合开始时清除（只活过对手一个回合）")

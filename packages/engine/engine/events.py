@@ -173,8 +173,15 @@ def _watchers(battle, kind: str) -> list:
                 continue
             for ab in fp.pdef.abilities:
                 t = str(getattr(ab, "tag", ""))
-                if t.startswith(want):
-                    out.append((pi, tpos, fp, ab.name, t[len(want):]))
+                if not t.startswith(want):
+                    continue
+                body = t[len(want):]
+                # `while:active` —— 卡面「As long as this Pokémon is in the
+                # Active Spot」（Mismagius ex「Swirling Prose」）：持有者在后备
+                # 时**不订阅**。不在扫描处判断就变成「放后备也生效」= 静默加强。
+                if ":while:active" in body and tpos != 0:
+                    continue
+                out.append((pi, tpos, fp, ab.name, body))
             tool = str(getattr(fp, "tool", "") or "")
             if tool.startswith(want):
                 out.append((pi, tpos, fp,

@@ -6,9 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1200/1267 = 94.7%**，池 **1185**，
-> 未 ready **67**（批内如实拒收 61 + 结构性 4 + 待新能力 2），测试 **2565**，CI 8/8。
-> 进度：**S1a / S1b / S1c / S3 / S2a 已落地**（见 §10 的落地记录与偏差登记）。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1204/1267 = 95.0%**，池 **1189**，
+> 未 ready **63**（批内如实拒收 57 + 结构性 4 + 待新能力 2），测试 **2575**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 / S2a / S2b 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -514,6 +514,32 @@ api 142 / gym 12）· 对账 **45 类**全绿 · CI **8/8** · K1 双盲 200 局
 
 **数字**：`engine_ready` **1200 / 1267 = 94.7%** · 池 **1185** · 未 ready **67** ·
 测试 **2565**（engine 1382）· 对账 **46 类** · CI 8/8。
+
+---
+
+### S2b · 进化事件 + 进化触发附能 + 限时无弱点（2026-11-08 完成，进池 4 张）
+
+| 项 | 落点 |
+|---|---|
+| `evolve` 事件 | 唯一落点 = `Battle._trigger_evolve_attach`（**4 处** `evolve_to` 之后都调它）；`_owner_of(fp)` 反查进化方，方向错了会变成「自己进化打自己」 |
+| `while:active` | 订阅只在**持有者位于战斗位**时生效（Mismagius ex「As long as this Pokémon is in the Active Spot」）；不加这个门槛 = 放后备也生效（静默加强） |
+| 进化触发附能 | `evolve_act:attach_spread:N:<type>:discard:target:type-<T>`（Archaludon ex，只给指定属性目标）· `evolve_act:recon:N:all:basic_energy:dest:attach_spread:rest:shuffle`（Grumpig，看顶 N 张→自由附着→余牌洗回）。⚠ 后者需要 `_apply_attack_effects` 开放**扩展口径** recon（旧口径 `recon:N` 仍不开放） |
+| 限时无弱点 | `shield:no_weakness`（Archaludon ex「Metal Defender」）：新增 `FieldPokemon.shield_no_weakness`，并入既有护盾清零窗口。⚠ 与常驻 `passive:no_weakness` 是两回事 —— 写成静态会整局没弱点 |
+| 进池 | **4 张**：Team Rocket's Ampharos（`on_event:evolve:counters:4:on:entering`）· Mismagius ex（`on_event:switch_in:status:confuse:…:while:active`）· Archaludon ex（`evolve_act:attach_spread:…` + `shield:no_weakness`）· Grumpig（`evolve_act:recon:…:dest:attach_spread`） |
+| 对账 | 第 46 类扩展三句式（对手进化时放指示物 / 战斗位订阅 / 限时无弱点），并放宽「`that Pokémon` 不可精确表达」到进化订阅 |
+
+**踩到的坑**：`shield:no_weakness` 最初写成独立 `elif tag == …` 分支，**永远不可达** ——
+既有 `elif tag.startswith("shield:")` 先吃掉它并抛「未知 shield 形式」。新 tag 必须检查
+**前缀家族**是否已有更早的分支（与「加函数前先 grep 名字」同类）。
+
+**仍未做（S2c 候选）**：`attach_energy` 事件（Pachirisu，需要「限时订阅」）·
+`attack_done`（Boomerang Energy）· `ko` 事件 + 道具载体（Amulet of Hope / Heavy Baton）·
+Powerglass / TR Grimer（队列 body 需要「可选附能」「延迟击倒」）· Latios（energy_move 选择）·
+Palafin（检索换位并保留附着卡）· Lycanroc（**指定特殊能量**的检索附着）·
+Heavy Baton（撤退费恰为 4 的条件 + 能量转移）。
+
+**数字**：`engine_ready` **1204 / 1267 = 95.0%** · 池 **1189** · 未 ready **63** ·
+测试 **2575**（engine 1392）· 对账 46 类 · CI 8/8。
 
 ---
 

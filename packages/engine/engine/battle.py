@@ -315,6 +315,7 @@ class Battle:
             fp.shield_prevent_all = False
             fp.shield_prevent_effects = False
             fp.shield_prevent_qual = ""
+            fp.shield_no_weakness = False
         # v1.4「上回合被击倒」标记：该方回合开始即清零（卡面为「对手的上个回合」）
         self._ko_flags()[self.current] = 0
         self._ko_tr_flags()[self.current] = 0
@@ -1667,12 +1668,28 @@ class Battle:
         self._trigger_evolve_attach(tgt)
         return {"ok": True, "event": self.events[-1]}
 
-    def _trigger_evolve_attach(self, fp: FieldPokemon) -> None:
-        """进化时触发的附能特性（``evolve_attach:<n>[:<type>][:<zone>]``）
+    def _owner_of(self, fp: FieldPokemon) -> int:
+        """反查某只宝可梦属于哪一方（进化事件的承载者需要它）"""
+        for pi in (0, 1):
+            if fp in self.players[pi].all_field():
+                return pi
+        return self.current
 
-        对应 Blaziken ex「火焰之舞」：从手牌进化时，从弃牌堆取 n 张指定色
-        基础能量附到自身（引擎子集：附到自身而非后备，差异见 cards_real.json note）。
+    def _trigger_evolve_attach(self, fp: FieldPokemon) -> None:
+        """进化完成后的统一钩子：**进化事件** + 附能特性
+
+        S2b（2026-11-08）：这里同时是所有「进化刚完成」的**唯一**落点 ——
+        4 处 `evolve_to` 之后都会调用本函数，因此事件不会漏发。
+        ⚠ 谁进化了就报谁的 `player`：Team Rocket's Ampharos「Darkest Impulse」
+          看的是**对手**进化，方向搞反会变成「自己进化时给自己放指示物」。
+
+        下面是既有的附能钩子说明：对应 Blaziken ex「火焰之舞」——从手牌进化时，
+        从弃牌堆取 n 张指定色基础能量附到自身（引擎子集：附到自身而非后备，
+        差异见 cards_real.json note）。
         """
+        _who = self._owner_of(fp)
+        events.emit(self, "evolve", {"player": _who, "entering": fp,
+                                     "turn_owner": self.current})
         p = self.players[self.current]
         for ab in fp.pdef.abilities:
             tag = str(getattr(ab, "tag", "") or "")
@@ -5520,6 +5537,9 @@ class Battle:
                                          attacker, defender),
                                      ignore_weakness=(mods["ignore_weakness"]
                                                       or static["no_weakness"]
+                                                      # S2b：**限时**无弱点
+                                                      # （`shield:no_weakness`）
+                                                      or defender.shield_no_weakness
                                                       or ignore_wr),
                                      ignore_resistance=(mods["ignore_resistance"]
                                                         or ignore_wr))
@@ -7508,6 +7528,15 @@ class Battle:
                     self._log("shield", {"player": self.current,
                                          "target": attacker.name,
                                          "kind": "reduce", "n": n})
+                elif parts[1] == "no_weakness":
+                    # S2b（2026-11-08）：「During your opponent's next turn, this
+                    # Pokémon has no Weakness.」（Archaludon ex「Metal Defender」）
+                    # ⚠ 与常驻的 `passive:no_weakness` 是两回事：写进静态层会
+                    #   变成整局都没弱点（静默加强）。到期窗口与 shield_reduce 相同。
+                    attacker.shield_no_weakness = True
+                    self._log("shield", {"player": self.current,
+                                         "target": attacker.name,
+                                         "kind": "no_weakness"})
                 elif parts[1] == "prevent_all":
                     # 卡面两种语义必须分开：只写「prevent all damage」的护盾
                     # **不挡效果**；写明「from and effects of attacks」的才连效果一起挡。
@@ -7755,6 +7784,16 @@ class Battle:
                 self._log("self_to_deck_top", {"player": self.current,
                                                "card": attacker.name,
                                                "dropped": _dropped})
+            elif tag.startswith("recon:") and not _parse_recon_tag(tag)["legacy"]:
+                # S2b（2026-11-08）：**进化触发**里的「看牌库顶 N 张 → 附着/铺场」
+                # （Grumpig「Energized Steps」：`evolve_act:recon:4:all:basic_energy:
+                #  dest:attach_spread:rest:shuffle`）。
+                # ⚠ 只开放**扩展口径**：旧口径 `recon:N`（随机取 1 张入手）是训练家
+                #   与主动特性的语义，放进招式/进化路径会变成「每次进化白拿一张」。
+                self._log("ability", {"player": self.current,
+                                      "name": str(tag),
+                                      "trigger": "on_evolve",
+                                      "detail": self._do_recon(p, tag, action)})
             elif tag.startswith("info:peek_prize:"):
                 # S3：查看对手 1 张**背面朝上**的奖赏卡（Blipbug「Searching Eyes」）
                 # 本引擎是完美信息的，「查看」不改变任何状态 —— 与 `info:reveal_hand`

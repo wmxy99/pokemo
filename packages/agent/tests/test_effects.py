@@ -1772,12 +1772,22 @@ class TestReactiveDamageSplit(unittest.TestCase):
         self.assertEqual(r["unsupported"], [])
 
     def test_switch_trigger_is_not_infliction(self):
+        """换位触发 —— **改判**（S2b，2026-11-08）
+
+        原判据：引擎没有「别人换位」这个事件 → 整卡拒收（关键仍是**不得**产出
+        裸 `confuse`：那是「立刻让对手战斗位混乱」，与卡面「换上来的那只混乱」
+        是两回事，会静默加强）。S2b 接上 switch_in 事件后可以精确表达。
+        """
         r = self._tags("As long as this Pok\u00e9mon is in the Active Spot, "
                        "whenever your opponent's Active Pok\u00e9mon moves to the "
                        "Bench during their turn, their new Active Pok\u00e9mon is "
                        "now Confused.")
         self.assertNotIn("confuse", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["unsupported"], [])
+        self.assertEqual(
+            r["tags"],
+            ["on_event:switch_in:status:confuse:on:entering"
+             ":scope:opp_their_turn:while:active"])
 
     def test_ability_cost_mapped(self):
         """**决策反转**（2026-11-04 第四十九批）：带着代价的特性现在可建模

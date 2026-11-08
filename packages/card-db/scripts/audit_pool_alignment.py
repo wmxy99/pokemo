@@ -422,6 +422,11 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
         if any(str(e).startswith("on_event:switch_out:counters:")
                and ":on:leaving" in str(e) for e in effects):
             return []
+        # S2b：「that Pokémon」在**进化订阅**里同样是精确定义的 —— 指「刚进化出来
+        # 的那一只」（Team Rocket's Ampharos「Darkest Impulse」）。
+        if any(str(e).startswith("on_event:evolve:counters:")
+               and ":on:entering" in str(e) for e in effects):
+            return []
         return [f"{card_name} · {item_name}：不可精确表达的目标 "
                 f"`{raw[:60]}` **却在池内**（应整卡不收）"]
     if want == "self":
@@ -3757,6 +3762,16 @@ _S2_WATCH = re.compile(
     r"their turn,? (?:place|put) (\d+) damage counters? on that pok[eé]mon", re.I)
 
 
+_S2_EVOLVE_WATCH = re.compile(
+    r"whenever your opponent plays? a pok[eé]mon from .{0,12}hand to evolve 1 of "
+    r".{0,12}pok[eé]mon,? (?:put|place) (\d+) damage counters? on that "
+    r"pok[eé]mon", re.I)
+_S2_SWIRL = re.compile(
+    r"as long as this pok[eé]mon is in the active spot,? whenever your "
+    r"opponent[’']?s active pok[eé]mon moves to the bench during their turn,? "
+    r"their new active pok[eé]mon is now confused", re.I)
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -3783,6 +3798,27 @@ def audit_s2_events(card_name: str, item_name: str, desc: str,
         if want not in joined:
             errs.append(f"{card_name} · {item_name}：卡面「对手回合换下时放 "
                         f"{m.group(1)} 个指示物」应产 `{want}`，实际 {tags}")
+    m = _S2_EVOLVE_WATCH.search(d)
+    if m:
+        want = f"on_event:evolve:counters:{int(m.group(1))}:on:entering"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手进化时放 "
+                        f"{m.group(1)} 个指示物」应产 `{want}`，实际 {tags}")
+    if _S2_SWIRL.search(d):
+        # 「As long as … in the Active Spot」必须带 `while:active`，否则放后备也生效
+        want = "on_event:switch_in:status:confuse:on:entering"
+        if want not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「对手换上的新战斗位混乱」"
+                        f"应产 `{want}:scope:opp_their_turn:while:active`，实际 {tags}")
+        elif ":while:active" not in joined:
+            errs.append(f"{card_name} · {item_name}：订阅缺 `while:active` —— "
+                        f"卡面限定「在战斗位时」，否则后备也生效（静默加强）")
+    # 限时无弱点（Archaludon ex）
+    if re.search(r"during your opponent[’']?s next turn,? this pok[eé]mon has no "
+                 r"weakness", d, re.I):
+        if "shield:no_weakness" not in tags:
+            errs.append(f"{card_name} · {item_name}：卡面「限时无弱点」应产 "
+                        f"`shield:no_weakness`，实际 {tags}")
     return errs
 
 
@@ -3935,7 +3971,7 @@ def main() -> int:
           "搜索族（牌库顶筛支援者/四类别各取1/任意数量铺后备/检索放回牌库顶） · "
           "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 · "
           "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 · "
-          "回合末延迟弃手牌/对手换下时放指示物 "
+          "回合末延迟弃手牌/对手换下时放指示物/对手进化时放指示物/战斗位订阅/限时无弱点 "
           "四十六类对账全部一致")
     return 0
 

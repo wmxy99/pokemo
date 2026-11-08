@@ -252,6 +252,10 @@ class FieldPokemon:
     # 护盾的来源/门槛限定（`from:basic` / `from:basic_non_colorless` /
     # `if_damage:le:N`；空串 = 无限定）。无来源限定的形态才是真「全挡」。
     shield_prevent_qual: str = ""
+    # S2b（2026-11-08）：「During your opponent's next turn, this Pokémon has no
+    # Weakness.」（Archaludon ex「Metal Defender」）—— **限时**无弱点，与常驻的
+    # `passive:no_weakness` 是两回事：写进静态层会变成「整局都没有弱点」。
+    shield_no_weakness: bool = False
     # ---- 静态修正（v1.5 · S1 静态修正层，2026-10-26）----
     # `passive:hp_plus:N`（**无条件的自身**加 HP）。为什么放在**实例**上而不是
     # 每次现算：`max_hp` 被 `is_ko` / 奖赏结算 / 前端展示广泛使用，而它拿不到

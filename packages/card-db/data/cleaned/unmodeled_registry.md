@@ -3,11 +3,11 @@
 > **性质**：本清单是项目对外的**规范性披露**（合规红线 **C5 差异透明**），同时也是**实现队列**。
 > ⚠ 2026-10-26 起：**已取消「永久不建模」豁免** —— 下列条目全部纳入实现范围，按 S1–S6 机制族分批实现。在实现完成前，对应卡牌仍如实标记为 `engine_ready=false`，**绝不静默降级或假装支持**（披露义务不因「要做」而消失）。
 
-- 生成时间：2026-11-08 13:35:32
+- 生成时间：2026-11-08 13:52:29
 - 数据源：`packages/card-db/data/db/pokelab.db`（解析后端 `rule（离线确定性基线）`）
-- 全库 1267 张 · 未建模动作条目 **67** 条 · 已映射 tag 1506 条
-- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1200 张**
-- 解析层面「无未建模动作」卡：1054 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
+- 全库 1267 张 · 未建模动作条目 **62** 条 · 已映射 tag 1511 条
+- **引擎可对战卡（严格口径，与 `/cards/stats` 同源的 `engine_ready`）：1204 张**
+- 解析层面「无未建模动作」卡：1058 张 —— **口径不同**：它只表示「解析链未产生未建模动作」，**不含**库内 `engine_ready` 标志的其它条件（近似/fidelity 等）；两者相差的部分即「解析通过但标志仍不可对战」的卡。**对外引用统一以严格口径（上一行）为准。**
 
 ## 批次图例
 
@@ -30,11 +30,9 @@
 | B5 | S2 | `rule` | 3 | 3 | 静态/未建模（英文） |
 | B5 | S5 | `rule` | 2 | 2 | 静态/未建模（英文） |
 | B5 | S4 | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B5 | S1 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S1 | `rule` | 1 | 1 | 静态/未建模（英文） |
 | B5 | S6 | `rule` | 1 | 1 | 静态规则修改（弱点/抗性/伤害减免/限制） |
 | B5 | S3 | `rule` | 1 | 1 | 静态/未建模（英文） |
-| B5 | S6 | `rule` | 1 | 1 | 状态词非主动施加（免疫/追加伤害/换位触发，B4） |
 | B5 | S6 | `rule` | 1 | 1 | 条件伤害缩放：计数源未识别（card you revealed in this way） |
 | B5 | S2 | `rule` | 1 | 1 | 同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4） |
 | B5 | S2 | `rule` | 1 | 1 | 静态伤害增减（需引擎静态修正层，B4） |
@@ -91,10 +89,6 @@
 
 **B5 · S1**（1 条）
 
-- `Archaludon ex`（铝钢桥龙 ex）：During your opponent’s next turn, this Pokémon has no Weakness.
-
-**B5 · S1**（1 条）
-
 - `Ludicolo`（乐天河童）：All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack.
 
 **B5 · S6**（1 条）
@@ -104,10 +98,6 @@
 **B5 · S3**（1 条）
 
 - `Cetitan ex`（浩大鲸 ex）：Whenever your opponent plays an Item or Supporter card from their hand, prevent all effects of that card done to this Pokémon.
-
-**B5 · S6**（1 条）
-
-- `Mismagius ex`（梦妖魔 ex）：As long as this Pokémon is in the Active Spot, whenever your opponent’s Active Pokémon moves to the Bench during their turn, their new Active Pokémon is now Con
 
 **B5 · S6**（1 条）
 

@@ -300,6 +300,9 @@ export function abilityDesc(tag) {
     case 'choose':
       // S1c：手牌与牌库顶互换（Gumshoos「Evidence Gathering」）
       return { zh: `每回合 1 次：将手牌中的 1 张卡与牌库顶的卡交换（由你选择哪一张）。`, en: `Once per turn: switch a card from your hand with the top card of your deck (you choose which).` }
+    case 'evolve_act':
+      // S2b：**进化触发**（Archaludon ex「Assemble Alloy」/ Grumpig「Energized Steps」）
+      return { zh: `进化时触发一次：${String(tag).split(':').slice(1).join(':') || '按卡面结算'}。`, en: `Triggers once when this Pokémon evolves: ${String(tag).split(':').slice(1).join(':') || 'see card text'}.` }
     case 'on_event':
       // S2（2026-11-08）：**事件订阅**（如 Team Rocket's Dugtrio「Holes」）
       return { zh: `被动：对手的宝可梦在其回合换下战斗位时，结算后续效果（${extra || '换下目标'}）。`, en: `Passive: when your opponent's Active Pokémon moves to the Bench during their turn, resolve the subscribed effect.` }
@@ -331,6 +334,10 @@ export const EFFECT_TAG_LABEL = {
   prize: { zh: '奖赏卡', en: 'Prize' },
   flute: { zh: '对手牌库', en: 'Opp deck' },
   deck_bottom_discard: { zh: '弃牌库底', en: 'Deck bottom' },
+  // S2b（2026-11-08）
+  evolve_act: { zh: '进化触发', en: 'On evolve' },
+  on_event: { zh: '事件订阅', en: 'Event' },
+  shield: { zh: '护盾/限时', en: 'Shield' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

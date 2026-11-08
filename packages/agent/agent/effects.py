@@ -3247,14 +3247,83 @@ _S2_SWITCH_OUT_COUNTERS_RE = re.compile(
     re.I)
 
 
+# --- S2b（2026-11-08）：进化订阅 / 进化触发附能 ---
+# Team Rocket's Ampharos「Darkest Impulse」：「Whenever your opponent plays a
+#  Pokémon from their hand to evolve 1 of their Pokémon, put 4 damage counters on
+#  that Pokémon. The effect of Darkest Impulse doesn't stack.」
+_S2_EVOLVE_COUNTERS_RE = re.compile(
+    r"^whenever your opponent plays? a pok[eé]mon from (?:their|his or her) hand "
+    r"to evolve 1 of (?:their|his or her) pok[eé]mon,? (?:put|place) (\d+) "
+    r"damage counters? on that pok[eé]mon\.?(?:\s*the effect of [^.]{0,60} "
+    r"doesn[’']?t stack\.?)?$", re.I)
+
+# Mismagius ex「Swirling Prose」：「As long as this Pokémon is in the Active Spot,
+#  whenever your opponent's Active Pokémon moves to the Bench during their turn,
+#  their new Active Pokémon is now Confused.」
+_S2_SWIRLING_RE = re.compile(
+    r"^as long as this pok[eé]mon is in the active spot,? whenever your "
+    r"opponent'?s active pok[eé]mon moves to the bench during their turn,? their "
+    r"new active pok[eé]mon is now confused\.?$", re.I)
+
+# Archaludon ex「Assemble Alloy」：「… you may attach up to 2 Basic {M} Energy
+#  cards from your discard pile to your {M} Pokémon in any way you like.」
+_S2_EVOLVE_ATTACH_SCOPE_RE = re.compile(
+    r"^(?:once during your turn,? )?when you play this pok[eé]mon from your hand "
+    r"to evolve 1 of your pok[eé]mon(?: during your turn)?,? you may attach up to "
+    r"(\d+) basic \{([a-z])\} energy cards? from your discard pile to your "
+    r"\{([a-z])\} pok[eé]mon in any way you like\.?$", re.I)
+
+# Grumpig「Energized Steps」：「… look at the top 4 cards of your deck and attach
+#  any number of Basic Energy cards you find there to your Pokémon in any way you
+#  like. Shuffle the other cards back into your deck.」
+_S2_EVOLVE_RECON_ATTACH_RE = re.compile(
+    r"^(?:once during your turn,? )?when you play this pok[eé]mon from your hand "
+    r"to evolve 1 of your pok[eé]mon,? you may use this ability\.?\s*look at the "
+    r"top (\d+) cards of your deck and attach any number of basic energy cards "
+    r"you find there to your pok[eé]mon in any way you like\.?\s*shuffle the "
+    r"other cards back into your deck\.?$", re.I)
+
+
+# Archaludon ex「Metal Defender」：「During your opponent's next turn, this
+#  Pokémon has no Weakness.」—— **限时**（不是常驻 passive）。
+_S2_SHIELD_NO_WEAKNESS_RE = re.compile(
+    r"^during your opponent'?s next turn,? this pok[eé]mon has no weakness\.?$",
+    re.I)
+
+
 def _detect_s2(text: str, kind: str) -> list:
     """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind == "attack":
+        if _S2_SHIELD_NO_WEAKNESS_RE.match(t):
+            return [act("shield", None, "self", {"no_weakness": True})]
+        return []
     if kind == "ability":
         m = _S2_SWITCH_OUT_COUNTERS_RE.match(t)
         if m:
             # 换下的那只吃 N 个指示物；`scope:opp_their_turn` = 必须是**对手的回合**
             return [act("rule", None, "opp", {"watch_switch_out_counters": int(m.group(1))})]
+        m = _S2_EVOLVE_COUNTERS_RE.match(t)
+        if m:
+            # 对手进化出来的那只吃 N 个指示物（「doesn't stack」由每回合 1 次上限表达）
+            return [act("rule", None, "opp", {"watch_evolve_counters": int(m.group(1))})]
+        if _S2_SWIRLING_RE.match(t):
+            # 「As long as this Pokémon is in the Active Spot」→ 订阅带 `while:active`
+            return [act("rule", None, "opp", {"watch_switch_in_confuse": True})]
+        m = _S2_EVOLVE_ATTACH_SCOPE_RE.match(t)
+        if m:
+            # 进化触发：从弃牌堆取 ≤N 张基本 {X} 能量，自由分配给**己方 {Y} 宝可梦**
+            _n = int(m.group(1))
+            _ety = _EN_SYMBOL_COLOR.get(m.group(2).upper())
+            _sty = _EN_SYMBOL_COLOR.get(m.group(3).upper())
+            if _ety and _sty:
+                return [act("rule", None, "self", {"evolve_attach_spread": (
+                    _n, _ety, _sty)})]
+            return []
+        m = _S2_EVOLVE_RECON_ATTACH_RE.match(t)
+        if m:
+            # 进化触发：看顶 N 张，把所有基本能量自由分配附着，余牌洗回
+            return [act("rule", None, "self", {"evolve_recon_attach": int(m.group(1))})]
         return []
     if kind != "supporter":
         return []
@@ -10175,6 +10244,26 @@ def to_engine_tags(specs: list) -> dict:
                                 f"{int(extra['watch_switch_out_counters'])}"
                                 ":on:leaving:scope:opp_their_turn")
                     continue
+                if extra.get("watch_evolve_counters") is not None:
+                    tags.append("on_event:evolve:counters:"
+                                f"{int(extra['watch_evolve_counters'])}"
+                                ":on:entering:scope:opp_their_turn")
+                    continue
+                if extra.get("watch_switch_in_confuse"):
+                    tags.append("on_event:switch_in:status:confuse:on:entering"
+                                ":scope:opp_their_turn:while:active")
+                    continue
+                if extra.get("evolve_attach_spread") is not None:
+                    _n, _ety, _sty = extra["evolve_attach_spread"]
+                    tags.append(f"evolve_act:attach_spread:{int(_n)}:{_ety}"
+                                f":discard:target:type-{_sty}")
+                    continue
+                if extra.get("evolve_recon_attach") is not None:
+                    tags.append("evolve_act:recon:"
+                                f"{int(extra['evolve_recon_attach'])}"
+                                ":all:basic_energy:dest:attach_spread"
+                                ":rest:shuffle")
+                    continue
                 # ---- S3（2026-11-08，区域对象化）----
                 if extra.get("prize_redeal"):
                     tags.append("prize:redeal")
@@ -10560,6 +10649,10 @@ def to_engine_tags(specs: list) -> dict:
                 kind_ = extra.get("kind")
                 if kind_ == "reduce":
                     tags.append(f"shield:reduce:{int(amt or 0)}")
+                elif extra.get("no_weakness"):
+                    # S2b：**限时**无弱点（Archaludon ex「Metal Defender」）。
+                    # 不是 `passive:no_weakness`（常驻）—— 那会整局都没弱点。
+                    tags.append("shield:no_weakness")
                 elif kind_ == "prevent_all":
                     # 来源/门槛限定（`:from:…` / `:if_damage:le:N`）必须带进 tag：
                     # 丢掉限定等于把「只挡某类攻击」放大成「挡全部」（静默错算）。

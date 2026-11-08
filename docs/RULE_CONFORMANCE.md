@@ -55,6 +55,7 @@
 | 训练家卡类别门禁（item / supporter / stadium / tool 的出场条件） | `packages/engine/engine/battle.py::_trainer_legals` | `packages/engine/tests/test_batch58_59_trainer_gate.py::TestPlayGate` | — | — | ✅ |
 | 退化 devolve：把最高阶进化卡退回手牌、本体降级、当回合不能再进化 | `packages/engine/engine/cards.py::devolve`、`packages/engine/engine/battle.py::_apply_devolve` | `packages/engine/tests/test_s6d_devolve.py::TestDevolveBasics.test_one_step_returns_highest_card_to_hand` | `devolve:` | 2 | ✅ |
 | 打出前置条件（含**多个**具名卡同时在场） | `packages/engine/engine/battle.py::_play_gate_ok`、`packages/engine/engine/battle.py::_gate_name_norm` | `packages/engine/tests/test_s6d_gate.py::TestAllInPlayGate.test_gate_blocks_when_one_missing` | — | — | ✅ |
+| 静态被动族：队伍 +HP / 双属性 / 能力封锁（Rule Box · 自身击倒代价）/ 工具上限 | `packages/engine/engine/battle.py::_global_ability_blocked`、`packages/engine/engine/battle.py::_refresh_stadium_hp`、`packages/engine/engine/rules.py::attacker_types` | `packages/engine/tests/test_d4_static_passives.py::TestTeamHpPlus.test_team_hp_applies_to_all_and_does_not_stack` | — | — | ✅ |
 | 池内每张卡的每个训练家 tag 都必须有可执行落点（池内死卡守卫） | `packages/engine/tests/test_legals_coverage.py::_tag_prefixes` | `packages/engine/tests/test_legals_coverage.py::TestPoolTrainersArePlayable` | — | — | ✅ |
 
 ## 已知差异（`⚠️` 行的展开）

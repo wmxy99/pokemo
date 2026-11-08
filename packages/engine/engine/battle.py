@@ -573,6 +573,9 @@ class Battle:
                 # 静态封印（「场上的宝可梦没有特性」等，效果族提供）
                 if families.ability_blocked(self, fp, ab):
                     continue
+                # D4：场上级被动封锁（Rule Box 无特性 / 自身击倒代价特性失效）
+                if self._global_ability_blocked(fp, ab):
+                    continue
                 # 决策分解型特性的**动作前置条件**（S1c）：手牌/牌库为空时无法交换，
                 # 必须**不进**合法动作表 —— 否则 AI 会反复尝试必然抛错的动作。
                 if ab.tag.startswith("choose:swap_hand_top") \
@@ -1934,6 +1937,43 @@ class Battle:
             fp, tuple(s for s in sub.split("|") if s), action=action)
         return f"coin {res}: {sub}"
 
+    def _global_ability_blocked(self, fp, ab) -> bool:
+        """**场上被动**对特性的封锁（D4）
+
+        两种卡面（都是「场上任何一只持有 → 全场生效」）：
+          · ``passive:no_ability_rulebox[:while:active][:except:future]``
+            （Iron Thorns ex「Initialization」）—— 有规则框的宝可梦**没有特性**，
+            但 `except:` 指定的分类除外（卡面写「except for Future Pokémon」）。
+          · ``passive:no_ability_selfko``（Psyduck / Golduck「Damp」）——
+            需要**自身击倒**作为代价的特性失效。
+
+        ⚠ 只用在 `_ability_legals` 与 `_do_ability` 两处（双门禁）：只挡一侧时
+        AI 会反复提出必然抛错的动作，人类也会在列表里看到点了就报错的项。
+        """
+        for pi in (0, 1):
+            for holder in self.players[pi].all_field():
+                for other in holder.pdef.abilities:
+                    tag = str(getattr(other, "tag", "") or "")
+                    if not tag.startswith("passive:"):
+                        continue
+                    parts = tag.split(":")
+                    kind = parts[1] if len(parts) > 1 else ""
+                    if kind == "no_ability_rulebox":
+                        if "while:active" in tag \
+                                and self.players[pi].active is not holder:
+                            continue
+                        if not _has_rulebox(fp):
+                            continue
+                        if "except:future" in tag and "future" in str(
+                                getattr(fp.pdef, "category", "") or "").lower():
+                            continue
+                        return True
+                    if kind == "no_ability_selfko":
+                        cost = str(getattr(ab, "cost", "") or "")
+                        if cost.startswith("selfko") or cost == "ko_self":
+                            return True
+        return False
+
     def _do_ability(self, p: PlayerState, action: dict) -> dict:
         """特性发动（E3）：field=场上每回合一次；hand=手牌弃卡发动"""
         name, tag = action["name"], action.get("tag", "")
@@ -1946,6 +1986,8 @@ class Battle:
                        if x.name == name and x.location == "field"), None)
             if ab is None:
                 raise ValueError(f"无 field 特性 {name}")
+            if self._global_ability_blocked(fp, ab):
+                raise ValueError(f"{name} 被场上效果封锁（无特性）")
             if name in fp.ability_used:
                 raise ValueError("该特性本回合已发动")
             fp.ability_used.add(name)
@@ -5938,8 +5980,26 @@ class Battle:
             if bi >= len(p.bench):
                 raise ValueError("道具目标越界")
             fp = p.bench[bi]
+        # D4：工具上限可被场上被动抬到 2（Rotom ex「Multi Adapter」：
+        # 「Each of your Pokémon that has "Rotom" in its name may have up to 2
+        # Pokémon Tool cards attached」）。上限按**名字**限定，不是全队。
         if fp.tool:
-            raise ValueError(f"{fp.name} 已附着道具（每只最多 1 张）")
+            cap = 1
+            for holder in p.all_field():
+                for ab in holder.pdef.abilities:
+                    tag = str(getattr(ab, "tag", "") or "")
+                    if not tag.startswith("passive:tool_limit:"):
+                        continue
+                    seg = tag.split(":")
+                    if len(seg) > 2 and seg[2].isdigit():
+                        key = ""
+                        for i in range(3, len(seg) - 1):
+                            if seg[i] == "name":
+                                key = seg[i + 1]
+                        if key and key in _name_key(fp.name):
+                            cap = max(cap, int(seg[2]))
+            if cap <= 1:
+                raise ValueError(f"{fp.name} 已附着道具（每只最多 1 张）")
         fp.tool = tag
         fp.tool_name = getattr(card.tdef, "display", "") or card.tdef.name
         fp.tool_ref = card
@@ -6927,7 +6987,18 @@ class Battle:
                         raw = tag.split(":")
                         if len(raw) > 2 and raw[2].isdigit():
                             base += int(raw[2])
-                fp.bonus_hp = base + self._stadium_hp_delta(fp)
+                # D4：**队伍 +HP**（「All of your Pokémon in play get +N HP」）。
+                # ⚠ 取 **max** 而不是求和：卡面明确「doesn't stack」，两张同名在
+                # 场时求和会凭空多给一档上限（多给上限 = 「被打到 0 还活着」）。
+                _team = 0
+                for mate in self.players[pi].all_field():
+                    for ab2 in mate.pdef.abilities:
+                        t2 = str(getattr(ab2, "tag", "") or "")
+                        if t2.startswith("passive:team_hp_plus:"):
+                            _n2 = t2.split(":")[2] if len(t2.split(":")) > 2 else ""
+                            if _n2.isdigit():
+                                _team = max(_team, int(_n2))
+                fp.bonus_hp = base + _team + self._stadium_hp_delta(fp)
                 # Jamming Tower：道具失效标志（与 +HP 同一次重算，避免漂移）
                 fp.tool_disabled = tools_off
         # Area Zero：失去 Tera 宝可梦后把后备裁到上限（不取奖赏）
@@ -7710,6 +7781,23 @@ class Battle:
         #     damage (before …)」→ 自身 `self_atk_plus_next`（按招式名匹配）
         # 到期比较用**持有者**的 `turn_counts`（与 attack_lock 同口径）。
         now = self.turn_counts[self.current]
+        # D4：**自身静态加伤**（「If this Pokémon has any {D} Energy attached, …
+        # the attacks it uses do 100 more damage」）。条件只依赖本只附着的能量，
+        # 与 `passive:hp_plus:N:if:` 同一套判据（`cards._hp_cond_ok`）。
+        for ab in attacker.pdef.abilities:
+            tag = str(getattr(ab, "tag", "") or "")
+            if not tag.startswith("passive:dmg_plus:"):
+                continue
+            seg = tag.split(":")
+            if len(seg) < 3 or not seg[2].isdigit():
+                continue
+            cond = ":".join(seg[4:]) if len(seg) > 4 and seg[3] == "if" else ""
+            if cond and not _hp_cond_ok_pub(attacker, cond):
+                continue
+            out["plus"] += int(seg[2])
+            if cond:
+                self._log("passive_dmg_plus", {"target": attacker.name,
+                                               "n": int(seg[2])})
         if attacker.atk_minus_next_until > now and attacker.atk_minus_next_n:
             out["minus"] += attacker.atk_minus_next_n
             self._log("atk_minus_next_applied", {
@@ -13087,6 +13175,20 @@ def _eval_counter(battle, counter: str) -> int:
     raise ValueError(
         f"未知计数源 {counter}（可用：{'、'.join(sorted(_COUNTERS))} 或 "
         f"<zone>_energy[_<color>]，zone ∈ {'/'.join(_ENERGY_ZONES)}）")
+
+
+def _hp_cond_ok_pub(fp, cond: str) -> bool:
+    """`cards._hp_cond_ok` 的公开别名（条件式 +HP / +伤害共用同一套判据）"""
+    from .cards import _hp_cond_ok
+    return _hp_cond_ok(fp, cond)
+
+
+def _has_rulebox(fp) -> bool:
+    """该宝可梦是否有规则框（{ex} / Mega ex / {V} 等）—— 按**分类字段**判，不猜卡名"""
+    cat = str(getattr(getattr(fp, "pdef", None), "category", "") or "").lower()
+    return bool(getattr(getattr(fp, "pdef", None), "is_ex", False)
+                or getattr(getattr(fp, "pdef", None), "is_mega", False)
+                or cat)
 
 
 def _gate_name_norm(s: str) -> str:

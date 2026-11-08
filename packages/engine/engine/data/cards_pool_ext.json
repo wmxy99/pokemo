@@ -11,12 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1210,
+      "kept": 1217,
       "by_Energy": 20,
-      "by_Pokemon": 1010,
+      "by_Pokemon": 1017,
       "by_Trainer": 180,
       "skipped": {
-        "存在未建模项（整卡不收）": 42,
+        "存在未建模项（整卡不收）": 35,
         "人工卡池已有同一印刷（人工优先）": 15
       }
     }
@@ -1150,6 +1150,59 @@
       "source_card_id": 36,
       "name_key": "morpeko",
       "uid": "Morpeko@TWM 72"
+    },
+    {
+      "name": "Iron Thorns ex",
+      "name_zh": "铁荆棘 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 230,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 4,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Future",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Volt Cyclone",
+          "cost": {
+            "lightning": 1,
+            "colorless": 2
+          },
+          "damage": 140,
+          "effects": [
+            "energy_move:1:from:active:to:bench"
+          ],
+          "desc": "Move an Energy from this Pokémon to 1 of your Benched Pokémon.",
+          "name_zh": "伏特旋风",
+          "desc_zh": "将此宝可梦身上的 1 个能量移动到你的 1 只后备宝可梦上。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Initialization",
+          "name_zh": "初始化",
+          "tag": "passive:no_ability_rulebox:while:active:except:future",
+          "location": "field",
+          "desc": "As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent’s) have no Abilities, except for Future Pokémon. (Pokémon {ex}, Pokémon {V}, etc. have Rule Boxes.)",
+          "desc_zh": "只要此宝可梦位于战斗区，场上拥有规则栏的宝可梦（你的与对手的）就没有特性，未来宝可梦除外。（宝可梦 ex、宝可梦 V 等拥有规则栏。）",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "77"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 37,
+      "name_key": "ironthornsex",
+      "uid": "Iron Thorns ex@TWM 77"
     },
     {
       "name": "Girafarig",
@@ -8908,6 +8961,58 @@
       "uid": "Charcadet@SSP 33"
     },
     {
+      "name": "Scovillain ex",
+      "name_zh": "狠辣椒 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 260,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Capsakid",
+      "attacks": [
+        {
+          "name": "Spicy Rage",
+          "cost": {
+            "fire": 2
+          },
+          "damage": 10,
+          "effects": [
+            "dmg_plus:70:per:own_active_counters"
+          ],
+          "desc": "This attack does 70 more damage for each damage counter on this Pokémon.",
+          "name_zh": "辛辣愤怒",
+          "desc_zh": "此宝可梦每有 1 个伤害指示物，此招式就造成 +70 伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Double Type",
+          "name_zh": "双重属性",
+          "tag": "passive:dual_type:fire,grass",
+          "location": "field",
+          "desc": "As long as this Pokémon is in play, it is {G} and {R} type.",
+          "desc_zh": "只要此宝可梦在场上，它就是 {G} 属性和 {R} 属性。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SSP",
+        "number": "37"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 205,
+      "name_key": "scovillainex",
+      "uid": "Scovillain ex@SSP 37"
+    },
+    {
       "name": "Feebas",
       "name_zh": "笨笨鱼",
       "supertype": "Pokemon",
@@ -11625,6 +11730,57 @@
       "source_card_id": 261,
       "name_key": "lombre",
       "uid": "Lombre@JTG 36"
+    },
+    {
+      "name": "Ludicolo",
+      "name_zh": "乐天河童",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 140,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Lombre",
+      "attacks": [
+        {
+          "name": "Hydro Splash",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 130,
+          "effects": [],
+          "desc": "",
+          "name_zh": "水之飞溅",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Vibrant Dance",
+          "name_zh": "活力之舞",
+          "tag": "passive:team_hp_plus:40",
+          "location": "field",
+          "desc": "All of your Pokémon in play get +40 HP. The effect of Vibrant Dance doesn’t stack.",
+          "desc_zh": "你场上所有宝可梦的 HP +40。活力之舞的效果不会叠加。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "37"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 262,
+      "name_key": "ludicolo",
+      "uid": "Ludicolo@JTG 37"
     },
     {
       "name": "Wailmer",
@@ -37717,6 +37873,59 @@
       "uid": "Prinplup@PFL 28"
     },
     {
+      "name": "Rotom ex",
+      "name_zh": "洛托姆 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 190,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Thunderbolt",
+          "cost": {
+            "lightning": 1,
+            "colorless": 1
+          },
+          "damage": 130,
+          "effects": [
+            "discard_energy:all"
+          ],
+          "desc": "Discard all Energy from this Pokémon.",
+          "name_zh": "十万伏特",
+          "desc_zh": "弃置此宝可梦身上的所有能量。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Multi Adapter",
+          "name_zh": "多功能转换器",
+          "tag": "passive:tool_limit:2:name:rotom",
+          "location": "field",
+          "desc": "Each of your Pokémon that has \"Rotom\" in its name may have up to 2 Pokémon Tool cards attached. If this Ability goes away, discard Pokémon Tools from those Pokémon until only 1 remains on each.",
+          "desc_zh": "你的每只名称中含有「洛托姆」的宝可梦最多可附着 2 张宝可梦道具卡。若此特性消失，则从那些宝可梦上弃置宝可梦道具，直到每只仅剩 1 张。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "PFL",
+        "number": "29"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 806,
+      "name_key": "rotomex",
+      "uid": "Rotom ex@PFL 29"
+    },
+    {
       "name": "Yamper",
       "name_zh": "来电汪",
       "supertype": "Pokemon",
@@ -40124,6 +40333,108 @@
       "source_card_id": 857,
       "name_key": "camerupt",
       "uid": "Camerupt@ASC 28"
+    },
+    {
+      "name": "Psyduck",
+      "name_zh": "可达鸭",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 70,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Ram",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 20,
+          "effects": [],
+          "desc": "",
+          "name_zh": "冲撞",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Damp",
+          "name_zh": "湿气",
+          "tag": "passive:no_ability_selfko",
+          "location": "field",
+          "desc": "Pokémon in play (both yours and your opponent’s) lose any Ability that requires the Pokémon using it to Knock Out itself.",
+          "desc_zh": "场上双方的所有宝可梦，失去那些需要使用的宝可梦击倒自身才能发动的特性。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "39"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 858,
+      "name_key": "psyduck",
+      "uid": "Psyduck@ASC 39"
+    },
+    {
+      "name": "Golduck",
+      "name_zh": "哥达鸭",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Psyduck",
+      "attacks": [
+        {
+          "name": "Hydro Pump",
+          "cost": {
+            "colorless": 3
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_plus:20:per:own_active_energy_water"
+          ],
+          "desc": "This attack does 20 more damage for each {W} Energy attached to this Pokémon.",
+          "name_zh": "水炮",
+          "desc_zh": "附着于此宝可梦的每 1 个 {W} 能量，此招式的伤害 +20。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Damp",
+          "name_zh": "湿气",
+          "tag": "passive:no_ability_selfko",
+          "location": "field",
+          "desc": "Pokémon in play (both yours and your opponent’s) lose any Ability that requires the Pokémon using it to Knock Out itself.",
+          "desc_zh": "场上双方的所有宝可梦，失去那些需要使用的宝可梦击倒自身才能发动的特性。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "40"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 859,
+      "name_key": "golduck",
+      "uid": "Golduck@ASC 40"
     },
     {
       "name": "Snorunt",
@@ -45711,6 +46022,59 @@
       "source_card_id": 975,
       "name_key": "stunfiskex",
       "uid": "Stunfisk ex@ASC 114"
+    },
+    {
+      "name": "Carbink",
+      "name_zh": "小碎钻",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 90,
+      "types": [
+        "fighting"
+      ],
+      "weakness": "grass",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Counter Jewel",
+          "cost": {
+            "fighting": 2,
+            "colorless": 1
+          },
+          "damage": 70,
+          "effects": [
+            "dmg_plus:100:if:opp_prizes_at_most:2"
+          ],
+          "desc": "If your opponent has 2 or fewer Prize cards remaining, this attack does 100 more damage.",
+          "name_zh": "反击宝石",
+          "desc_zh": "若对手剩余的奖赏卡为 2 张或更少，此招式的伤害 +100。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Double Type",
+          "name_zh": "双重属性",
+          "tag": "passive:dual_type:fighting,psychic",
+          "location": "field",
+          "desc": "As long as this Pokémon is in play, it is {F} and {P} type.",
+          "desc_zh": "只要此宝可梦在场，它就是 {F} 和 {P} 属性。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "ASC",
+        "number": "117"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 976,
+      "name_key": "carbink",
+      "uid": "Carbink@ASC 117"
     },
     {
       "name": "Crabrawler",

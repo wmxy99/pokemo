@@ -845,11 +845,13 @@ class TestV14Modifiers(unittest.TestCase):
                 self.assertEqual(
                     [t for t in r["tags"] if t.startswith("passive:")], [],
                     "全体范围被误映射成自身常驻")
-        # 仍无全队实现的形态：必须**整卡**如实未建模（不能半建模）
+        # D4（2026-11-08）：**队伍 +HP 已建模** → `passive:team_hp_plus:N`
+        # （此前这里是「如实未建模」。改判原因：引擎新增全队 +HP 的唯一消费点
+        #  `_refresh_stadium_hp`，并按卡面「doesn't stack」取 max 不求和。）
         r = self._tags("All of your Pok\u00e9mon in play get +40 HP.",
                        kind="ability")
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(r["tags"], ["passive:team_hp_plus:40"])
+        self.assertEqual(r["unsupported"], [])
 
     def test_real_status_effect_still_applies(self):
         """对照：非条件句的「is now Burned」仍然要产出状态效果（不能修过头）"""

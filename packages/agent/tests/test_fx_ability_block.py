@@ -52,15 +52,21 @@ class TestAbilityBlockDetect(unittest.TestCase):
         self.assertEqual(unsup, [])
 
     # ---- 负向守卫：近邻写法必须仍被拒绝 ----
-    def test_iron_thorns_rejected(self):
-        # Rule Box + Future 例外：数据模型无 rule_box / Future 子类型 → 必须落未建模
+    def test_iron_thorns_modeled(self):
+        """D4 起：Rule Box + Future 例外**已建模**（`passive:no_ability_rulebox`）
+
+        改判依据：引擎有规则框判据（`is_ex` / `is_mega` / `category`）与
+        `except:future` 例外，且 `_ability_legals` / `_do_ability` 两处同挡。
+        此前拒收的理由是「数据模型无 rule_box / Future 子类型」—— 该前提已不成立。
+        """
         tags, unsup = self._tags(
             "As long as this Pokémon is in the Active Spot, Pokémon with a Rule "
             "Box in play (both yours and your opponent’s) have no Abilities, "
             "except for Future Pokémon.",
             "ability", "Initialization")
-        self.assertEqual(tags, [])
-        self.assertTrue(unsup, "Iron Thorns 必须保持未建模")
+        self.assertEqual(
+            tags, ["passive:no_ability_rulebox:while:active:except:future"])
+        self.assertEqual(unsup, [])
 
     def test_benched_no_stage2_rejected(self):
         # 只说 "Benched Pokémon" 没限定 Stage 2 → 子集不可表达 → 拒绝

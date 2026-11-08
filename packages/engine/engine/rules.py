@@ -23,13 +23,33 @@ def compute_damage(attacker: FieldPokemon, defender: FieldPokemon, base: int,
     affected by Weakness/Resistance」的显式忽略（v1.4）。
     """
     dmg = base
-    at = attacker.pdef.ptype
+    # D4：**双属性**（「it is {F} and {P} type」）—— 出招方同时算两种属性，
+    # 弱点/抗性对**任一**属性成立即可（单一属性时 tuple 只有一个元素，行为不变）。
+    ats = attacker_types(attacker)
     weak = defender.pdef.weakness if weakness_override is None else weakness_override
-    if not ignore_weakness and weak and weak == at:
+    if not ignore_weakness and weak and weak in ats:
         dmg *= 2
-    if not ignore_resistance and defender.pdef.resistance == at:
+    if not ignore_resistance and defender.pdef.resistance in ats:
         dmg = max(0, dmg - 30)
     return dmg
+
+
+def attacker_types(fp) -> tuple:
+    """出招方的**全部**属性（双属性被动叠加，D4）
+
+    ⚠ 只看 `pdef.ptype` 会让「Double Type」的卡按单一属性结算 —— 打不出本应
+    翻倍的弱点，而且没有任何报错（数值差异只能靠对拍发现）。
+    """
+    base = str(getattr(getattr(fp, "pdef", None), "ptype", "") or "")
+    out = [base] if base else []
+    for ab in (getattr(getattr(fp, "pdef", None), "abilities", ()) or ()):
+        tag = str(getattr(ab, "tag", "") or "")
+        if tag.startswith("passive:dual_type:"):
+            for t in tag.split(":", 2)[2].split(","):
+                t = t.strip()
+                if t and t not in out:
+                    out.append(t)
+    return tuple(out)
 
 
 def apply_shield(defender: FieldPokemon, dmg: int,

@@ -1855,8 +1855,16 @@ def audit_knockout(card_name: str, item_name: str, desc: str,
         if not re.search(rx, low):
             errs.append(f"{card_name} · {item_name}：`{tag}` 与卡面目标不符")
     if re.search(r"knock out", low) and not kos:
-        errs.append(f"{card_name} · {item_name}：卡面写了 Knock Out，"
-                    f"却没有 knockout tag（击倒被静默丢弃）")
+        # D4（2026-11-08）：Damp 族（Psyduck / Golduck）的「requires the Pokémon
+        # using it to Knock Out itself」是**特性的前置代价描述**，不是击倒效果 ——
+        # 把它当「击倒被静默丢弃」是假阳性。屏蔽这一句（等长空格，位置守恒），
+        # 其余任何提到 Knock Out 的写法仍然要求有 knockout tag。
+        _damp_masked = re.sub(
+            r"requires the pok[eé]mon using it to knock out itself", " " * 54,
+            low)
+        if re.search(r"knock out", _damp_masked):
+            errs.append(f"{card_name} · {item_name}：卡面写了 Knock Out，"
+                        f"却没有 knockout tag（击倒被静默丢弃）")
     # 第八十六批：确定性「least HP remaining」击倒句式（Inteleon「Bring Down」）
     # 不带 tag 时无法被通用「knock out」正则捕获（卡面用「… and it is Knocked
     # Out」被动语态）→ 单独守卫，避免该句式被静默丢效果。

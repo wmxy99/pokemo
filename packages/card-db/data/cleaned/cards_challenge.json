@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 19:26:09",
+  "reparsed_at": "2026-11-08 20:35:44",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1225,
+  "engine_ready": 1232,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1225,
-   "engine_approximated": 1210,
-   "engine_unmatched": 42,
-   "engine_namekey_mismatch": 7
+   "zh_backfill": 1232,
+   "engine_approximated": 1217,
+   "engine_unmatched": 35,
+   "engine_namekey_mismatch": 6
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
-   "errors": 125,
-   "engine_tags": 1534,
-   "unsupported": 43,
+   "errors": 118,
+   "engine_tags": 1541,
+   "unsupported": 36,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1210,
+  "engine_approximated": 1217,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -4176,14 +4176,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Iron Thorns ex@TWM 77",
    "parse": {
     "items": [
      {
@@ -4229,7 +4231,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "no_ability_rulebox:while:active:except:future"
           }
          }
         ],
@@ -4237,14 +4239,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:no_ability_rulebox:while:active:except:future"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -4276,7 +4275,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "no_ability_rulebox:while:active:except:future"
         }
        }
       ],
@@ -4285,14 +4284,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "energy_move:1:from:active:to:bench"
+     "energy_move:1:from:active:to:bench",
+     "passive:no_ability_rulebox:while:active:except:future"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -29571,14 +29566,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Scovillain ex@SSP 37",
    "parse": {
     "items": [
      {
@@ -29626,7 +29623,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "dual_type:fire,grass"
           }
          }
         ],
@@ -29634,14 +29631,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:dual_type:fire,grass"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -29675,7 +29669,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "dual_type:fire,grass"
         }
        }
       ],
@@ -29684,14 +29678,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:70:per:own_active_counters"
+     "dmg_plus:70:per:own_active_counters",
+     "passive:dual_type:fire,grass"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -38448,14 +38438,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Ludicolo@JTG 37",
    "parse": {
     "items": [
      {
@@ -38473,7 +38465,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "team_hp_plus:40"
           }
          }
         ],
@@ -38481,14 +38473,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:team_hp_plus:40"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -38503,7 +38492,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "team_hp_plus:40"
         }
        }
       ],
@@ -38511,13 +38500,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:team_hp_plus:40"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -44444,9 +44430,7 @@
         "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：atk_minus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "atk_minus_next:20"
       ],
@@ -44469,9 +44453,7 @@
       "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：atk_minus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "atk_minus_next:20"
     ],
@@ -45453,9 +45435,7 @@
         "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 100 less damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：atk_minus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "atk_minus_next:100"
       ],
@@ -45573,9 +45553,7 @@
       "source_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：atk_minus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "atk_minus_next:100",
      "passive:bench_immune_dmg"
@@ -72437,9 +72415,7 @@
         "source_text": "During your next turn, this Pokémon’s Echoed Voice attack does 80 more damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：self_attack_plus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "self_attack_plus_next:80:name:echoed voice"
       ],
@@ -72514,9 +72490,7 @@
       "source_text": "If you go first, this Pokémon can use attacks during your first turn."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：self_attack_plus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "self_attack_plus_next:80:name:echoed voice"
     ],
@@ -101615,9 +101589,7 @@
         "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：atk_minus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "atk_minus_next:20"
       ],
@@ -101640,9 +101612,7 @@
       "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：atk_minus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "atk_minus_next:20"
     ],
@@ -107328,14 +107298,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Rotom ex@PFL 29",
    "parse": {
     "items": [
      {
@@ -107382,7 +107354,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "tool_limit:2:name:rotom"
           }
          }
         ],
@@ -107390,14 +107362,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:tool_limit:2:name:rotom"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -107430,7 +107399,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "tool_limit:2:name:rotom"
         }
        }
       ],
@@ -107439,14 +107408,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:all"
+     "discard_energy:all",
+     "passive:tool_limit:2:name:rotom"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -107768,9 +107733,7 @@
         "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：atk_minus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "atk_minus_next:30"
       ],
@@ -107793,9 +107756,7 @@
       "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：atk_minus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "atk_minus_next:30"
     ],
@@ -113725,14 +113686,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Psyduck@ASC 39",
    "parse": {
     "items": [
      {
@@ -113750,7 +113713,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "no_ability_selfko"
           }
          }
         ],
@@ -113758,14 +113721,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:no_ability_selfko"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -113780,7 +113740,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "no_ability_selfko"
         }
        }
       ],
@@ -113788,13 +113748,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
+    "engine_tags": [
+     "passive:no_ability_selfko"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -113848,14 +113805,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Golduck@ASC 40",
    "parse": {
     "items": [
      {
@@ -113903,7 +113862,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "no_ability_selfko"
           }
          }
         ],
@@ -113911,14 +113870,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:no_ability_selfko"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -113952,7 +113908,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "no_ability_selfko"
         }
        }
       ],
@@ -113961,14 +113917,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:20:per:own_active_energy_water"
+     "dmg_plus:20:per:own_active_energy_water",
+     "passive:no_ability_selfko"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -119216,9 +119168,7 @@
         "source_text": "During your next turn, this Pokémon’s Mochi Rush attack does 50 more damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：self_attack_plus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "self_attack_plus_next:50:name:mochi rush"
       ],
@@ -119290,9 +119240,7 @@
       "source_text": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, search your deck for a card and put it into your hand. Then, shuffle your deck."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：self_attack_plus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "self_attack_plus_next:50:name:mochi rush",
      "search_any:1"
@@ -121759,9 +121707,7 @@
         "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
        }
       ],
-      "errors": [
-       "[0] action.type 非法：atk_minus_next"
-      ],
+      "errors": [],
       "engine_tags": [
        "atk_minus_next:20"
       ],
@@ -121784,9 +121730,7 @@
       "source_text": "During your opponent’s next turn, attacks used by the Defending Pokémon do 20 less damage (before applying Weakness and Resistance)."
      }
     ],
-    "errors": [
-     "[0] action.type 非法：atk_minus_next"
-    ],
+    "errors": [],
     "engine_tags": [
      "atk_minus_next:20"
     ],
@@ -128601,14 +128545,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Carbink@ASC 117",
    "parse": {
     "items": [
      {
@@ -128655,7 +128601,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "static_passive": "dual_type:fighting,psychic"
           }
          }
         ],
@@ -128663,14 +128609,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "passive:dual_type:fighting,psychic"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -128703,7 +128646,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "static_passive": "dual_type:fighting,psychic"
         }
        }
       ],
@@ -128712,14 +128655,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_plus:100:if:opp_prizes_at_most:2"
+     "dmg_plus:100:if:opp_prizes_at_most:2",
+     "passive:dual_type:fighting,psychic"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

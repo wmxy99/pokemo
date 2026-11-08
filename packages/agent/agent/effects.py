@@ -81,7 +81,14 @@ ACTION_TYPES = ("damage", "draw", "attach", "heal", "discard", "switch",
                 # 第四十五批的 `shuffle_both_coin_draw` 一直漏登记 → 池内
                 # Harlequin 的解析数据带着「action.type 非法」的**假错误**
                 # （引擎照常执行，只是数据看起来像没建模）。S5 顺手补上。
-                "shuffle_both_coin_draw")
+                "shuffle_both_coin_draw",
+                # D4（2026-11-08）：**下回合攻/守方招式伤害修正**（弱抗之前）。
+                # 引擎里 `atk_minus_next` / `self_atk_plus_next` 早就执行
+                # （`_attack_mods` 读字段），但枚举一直没登记 → 解析数据带着
+                # 「action.type 非法」的**假错误**，Sylveon ex / Meloetta ex 因此
+                # 整卡不进池（第三次撞同一类问题：counters / attach_spread /
+                # retreat_lock 之后又两处）。
+                "atk_minus_next", "self_attack_plus_next")
 TARGETS = ("active_opponent", "self", "bench", "active_opponent_bench",
            "deck", "hand", "discard", "opponent_hand", "any",
            # S5：**双方**（`draw_both` / `shuffle_both_*` 这类训练家效果）。
@@ -3755,6 +3762,61 @@ def _detect_devolve(text: str, kind: str) -> list:
     return []
 
 
+# D4（2026-11-08）**静态被动族**：卡面「As long as … / All of your … get +N HP」
+# 这类**常驻**效果，此前一律落进「静态/未建模（英文）」兜底 → 整卡不进池。
+# 每个正则都是**整句**匹配，且引擎侧有唯一消费点（见 battle 里的五处）。
+_STATIC_PASSIVES = (
+    # 「All of your Pokémon in play get +40 HP.」
+    (re.compile(r"^all of your pok[eé]mon in play get \+(?P<n>\d+) hp", re.I),
+     lambda m: f"team_hp_plus:{int(m.group('n'))}"),
+    # 「As long as this Pokémon is in play, it is {F} and {P} type.」
+    (re.compile(r"^as long as this pok[eé]mon is in play, it is "
+                r"\{(?P<a>[a-z])\} and \{(?P<b>[a-z])\} type", re.I),
+     # ⚠ 用**属性符号表**而不是 `_ENERGY_TYPE_ALIASES`：后者故意不收 f / d
+     # （单字母在散文里有歧义），于是 `{F}` 会被解析成空串、双属性只剩一个
+     # —— 弱点永远翻不了倍，而且不报错（实测 Carbink 就是这样）。
+     lambda m: "dual_type:" + ",".join(
+         sorted({_EN_ENERGY_LETTER.get(m.group("a").upper(), ""),
+                 _EN_ENERGY_LETTER.get(m.group("b").upper(), "")} - {""}))),
+    # 「Pokémon in play (both yours and your opponent's) lose any Ability that
+    #  requires the Pokémon using it to Knock Out itself.」
+    (re.compile(r"^pok[eé]mon in play \(both yours and your opponent'?s\) lose "
+                r"any ability that requires the pok[eé]mon using it to knock out "
+                r"itself", re.I), lambda m: "no_ability_selfko"),
+    # 「As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in
+    #  play (both yours and your opponent's) have no Abilities[, except for
+    #  Future Pokémon].」
+    (re.compile(r"^as long as this pok[eé]mon is in the active spot, pok[eé]mon "
+                r"with a rule box in play.*have no abilities", re.I),
+     lambda m: "no_ability_rulebox:while:active:except:future"),
+    # 「Each of your Pokémon that has "Rotom" in its name may have up to 2
+    #  Pokémon Tool cards attached.」
+    (re.compile(r"^each of your pok[eé]mon that has \"(?P<k>[^\"]+)\" in its "
+                r"name may have up to (?P<n>\d+) pok[eé]mon tool", re.I),
+     lambda m: f"tool_limit:{int(m.group('n'))}:name:{m.group('k').lower()}"),
+)
+
+
+def _detect_static_passives(text: str, kind: str) -> list:
+    """静态被动族（D4）→ ``rule`` 动作（tag 在 `to_engine_tags` 里拼 `passive:`）
+
+    ⚠ 只认**整句**；条件/时限制形态（「during your next turn」等）一律不认，
+    留给兜底如实登记 —— 把时限制当常驻 = 静默加强，是这类卡最贵的错法。
+    """
+    if kind != "ability":
+        return []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    for rx, build in _STATIC_PASSIVES:
+        m = rx.match(t)
+        if not m:
+            continue
+        val = build(m)
+        if not val:
+            continue
+        return [act("rule", None, "any", {"static_passive": val})]
+    return []
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -5350,6 +5412,9 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             actions.append(act("rule", None, "any", {
                 "note": "受击/受击历史从句（is|was damaged by an attack）需引擎 "
                         "on_damaged 或回合级历史（B4）"}))
+
+    if not actions:
+        actions.extend(_detect_static_passives(t, kind))
 
     if not actions:
         actions.append(act("rule", None, "any", {"note": "静态/未建模（英文）"}))
@@ -10848,6 +10913,9 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("nullify_if"):
                     # 招式失败门：条件成立则整招不结算
                     tags.append(f"nullify_if:{extra['nullify_if']}")
+                elif extra.get("static_passive"):
+                    # D4：静态被动 → `passive:<...>`（引擎按前缀消费）
+                    tags.append("passive:" + str(extra["static_passive"]))
                 elif extra.get("devolve"):
                     # D3：`devolve:<scope>:<n|any>[:type:<t>][:active_only]`
                     _dv = str(extra["devolve"])

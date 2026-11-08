@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 20:35:44",
+  "reparsed_at": "2026-11-08 22:04:37",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1232,
+  "engine_ready": 1245,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,23 +118,23 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1232,
-   "engine_approximated": 1217,
-   "engine_unmatched": 35,
-   "engine_namekey_mismatch": 6
+   "zh_backfill": 1245,
+   "engine_approximated": 1230,
+   "engine_unmatched": 22,
+   "engine_namekey_mismatch": 3
   },
   "parse": {
    "cards_parsed": 1119,
    "items": 1481,
    "specs": 1481,
    "errors": 118,
-   "engine_tags": 1541,
-   "unsupported": 36,
+   "engine_tags": 1559,
+   "unsupported": 22,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1217,
+  "engine_approximated": 1230,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -3106,12 +3106,20 @@
         "conditions": [],
         "actions": [
          {
+          "type": "rule",
+          "amount": null,
+          "target": "any",
+          "extra": {
+           "pre_direct": "mill:1:both"
+          }
+         },
+         {
           "type": "damage_mod",
           "amount": 140,
           "target": "active_opponent",
           "extra": {
            "mode": "plus_per",
-           "per": "own_discarded_energy_this_turn",
+           "per": "discarded_energy_this_attack",
            "phrase": "Energy card discarded in this way"
           }
          }
@@ -3121,7 +3129,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_plus:140:per:own_discarded_energy_this_turn"
+       "pre:mill:1:both",
+       "dmg_plus:140:per:discarded_energy_this_attack"
       ],
       "unsupported": []
      },
@@ -3181,12 +3190,20 @@
       "conditions": [],
       "actions": [
        {
+        "type": "rule",
+        "amount": null,
+        "target": "any",
+        "extra": {
+         "pre_direct": "mill:1:both"
+        }
+       },
+       {
         "type": "damage_mod",
         "amount": 140,
         "target": "active_opponent",
         "extra": {
          "mode": "plus_per",
-         "per": "own_discarded_energy_this_turn",
+         "per": "discarded_energy_this_attack",
          "phrase": "Energy card discarded in this way"
         }
        }
@@ -3214,7 +3231,8 @@
     "errors": [],
     "engine_tags": [
      "burn",
-     "dmg_plus:140:per:own_discarded_energy_this_turn",
+     "pre:mill:1:both",
+     "dmg_plus:140:per:discarded_energy_this_attack",
      "passive:bench_immune_dmg"
     ],
     "unsupported": [],
@@ -3816,14 +3834,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Walking Wake@TWM 63",
    "parse": {
     "items": [
      {
@@ -3869,9 +3889,19 @@
          {
           "type": "rule",
           "amount": null,
+          "target": "self",
+          "extra": {
+           "b4": "self_counters:9"
+          }
+         },
+         {
+          "type": "damage_mod",
+          "amount": 20,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（damage counter you placed in t）"
+           "mode": "set_per",
+           "per": "chosen_this_attack",
+           "phrase": "damage counter you placed in this way"
           }
          }
         ],
@@ -3879,13 +3909,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（damage counter you placed in t）"
-       }
-      ]
+      "engine_tags": [
+       "pre:b4:self_counters:9",
+       "dmg_set:20:per:chosen_this_attack"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -3917,9 +3945,19 @@
        {
         "type": "rule",
         "amount": null,
+        "target": "self",
+        "extra": {
+         "b4": "self_counters:9"
+        }
+       },
+       {
+        "type": "damage_mod",
+        "amount": 20,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（damage counter you placed in t）"
+         "mode": "set_per",
+         "per": "chosen_this_attack",
+         "phrase": "damage counter you placed in this way"
         }
        }
       ],
@@ -3928,14 +3966,11 @@
     ],
     "errors": [],
     "engine_tags": [
-     "heal:20"
+     "heal:20",
+     "pre:b4:self_counters:9",
+     "dmg_set:20:per:chosen_this_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（damage counter you placed in t）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -6557,7 +6592,7 @@
           "extra": {
            "snipe_scope": "opp",
            "snipe_count": 1,
-           "snipe_per": "own_discarded_energy_this_turn",
+           "snipe_per": "discarded_energy_this_attack",
            "snipe_target": null,
            "snipe_ex": false,
            "snipe_if": null
@@ -6570,7 +6605,7 @@
       "errors": [],
       "engine_tags": [
        "discard_hand_energy:3",
-       "snipe:opp:60:1:per:own_discarded_energy_this_turn"
+       "snipe:opp:60:1:per:discarded_energy_this_attack"
       ],
       "unsupported": []
      },
@@ -6655,7 +6690,7 @@
         "extra": {
          "snipe_scope": "opp",
          "snipe_count": 1,
-         "snipe_per": "own_discarded_energy_this_turn",
+         "snipe_per": "discarded_energy_this_attack",
          "snipe_target": null,
          "snipe_ex": false,
          "snipe_if": null
@@ -6702,7 +6737,7 @@
     "errors": [],
     "engine_tags": [
      "discard_hand_energy:3",
-     "snipe:opp:60:1:per:own_discarded_energy_this_turn",
+     "snipe:opp:60:1:per:discarded_energy_this_attack",
      "retreat_lock:opp:turn",
      "passive:bench_immune_dmg"
     ],
@@ -8186,7 +8221,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -8196,7 +8231,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:70:per:own_discarded_this_turn"
+       "dmg_set:70:per:chosen_this_attack"
       ],
       "unsupported": []
      }
@@ -8237,7 +8272,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -8248,7 +8283,7 @@
     "errors": [],
     "engine_tags": [
      "research:6",
-     "dmg_set:70:per:own_discarded_this_turn"
+     "dmg_set:70:per:chosen_this_attack"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -9011,14 +9046,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Shiftry@TEF 5",
    "parse": {
     "items": [
      {
@@ -9036,7 +9073,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "alloc": "shuffle_opp_bench:3:keep"
           }
          }
         ],
@@ -9044,13 +9081,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:shuffle_opp_bench:3:keep"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -9094,7 +9128,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "alloc": "shuffle_opp_bench:3:keep"
         }
        }
       ],
@@ -9121,14 +9155,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "choose:alloc:shuffle_opp_bench:3:keep",
      "bounce:energy:self:1"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -11161,7 +11191,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -11171,7 +11201,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:120:per:own_discarded_this_turn"
+       "dmg_set:120:per:chosen_this_attack"
       ],
       "unsupported": []
      }
@@ -11211,7 +11241,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -11222,7 +11252,7 @@
     "errors": [],
     "engine_tags": [
      "shield:reduce:50",
-     "dmg_set:120:per:own_discarded_this_turn"
+     "dmg_set:120:per:chosen_this_attack"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -12604,7 +12634,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -12614,7 +12644,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:70:per:own_discarded_this_turn"
+       "dmg_set:70:per:chosen_this_attack"
       ],
       "unsupported": []
      }
@@ -12656,7 +12686,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -12667,7 +12697,7 @@
     "errors": [],
     "engine_tags": [
      "choose:counters_any:4:opp_any",
-     "dmg_set:70:per:own_discarded_this_turn"
+     "dmg_set:70:per:chosen_this_attack"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -16358,7 +16388,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -16368,7 +16398,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:50:per:own_discarded_this_turn"
+       "dmg_set:50:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -16421,7 +16451,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -16449,7 +16479,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:50:per:own_discarded_this_turn",
+     "dmg_set:50:per:chosen_this_attack",
      "on_damaged:status:burn"
     ],
     "unsupported": [],
@@ -25563,14 +25593,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Zarude@SSP 11",
    "parse": {
     "items": [
      {
@@ -25611,9 +25643,19 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "b4": "all_energy:to_hand"
+          }
+         },
+         {
+          "type": "damage_mod",
+          "amount": 80,
+          "target": "active_opponent",
+          "extra": {
+           "mode": "plus_per",
+           "per": "chosen_this_attack",
+           "phrase": "this way"
           }
          }
         ],
@@ -25621,13 +25663,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "pre:b4:all_energy:to_hand",
+       "dmg_plus:80:per:chosen_this_attack"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -25654,9 +25694,19 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "b4": "all_energy:to_hand"
+        }
+       },
+       {
+        "type": "damage_mod",
+        "amount": 80,
+        "target": "active_opponent",
+        "extra": {
+         "mode": "plus_per",
+         "per": "chosen_this_attack",
+         "phrase": "this way"
         }
        }
       ],
@@ -25665,14 +25715,11 @@
     ],
     "errors": [],
     "engine_tags": [
-     "heal:20"
+     "heal:20",
+     "pre:b4:all_energy:to_hand",
+     "dmg_plus:80:per:chosen_this_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -27777,14 +27824,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Alolan Exeggutor ex@SSP 133",
    "parse": {
     "items": [
      {
@@ -27802,7 +27851,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "alloc": "attach_hand:basic"
           }
          }
         ],
@@ -27810,13 +27859,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:attach_hand:basic"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -27902,7 +27948,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "alloc": "attach_hand:basic"
         }
        }
       ],
@@ -27957,16 +28003,12 @@
     ],
     "errors": [],
     "engine_tags": [
+     "choose:alloc:attach_hand:basic",
      "coin:heads:knockout:opp_active:basic",
      "coin:tails:knockout:opp_bench:basic",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -35749,7 +35791,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "plus_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -35760,7 +35802,7 @@
       "errors": [],
       "engine_tags": [
        "discard_energy:2",
-       "dmg_plus:90:per:own_discarded_this_turn"
+       "dmg_plus:90:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -35847,7 +35889,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "plus_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -35895,7 +35937,7 @@
     ],
     "engine_tags": [
      "discard_energy:2",
-     "dmg_plus:90:per:own_discarded_this_turn",
+     "dmg_plus:90:per:chosen_this_attack",
      "attack_lock:all:turn",
      "passive:bench_immune_dmg"
     ],
@@ -35958,14 +36000,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Alakazam@TWM 82",
    "parse": {
     "items": [
      {
@@ -35991,7 +36035,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "alloc": "move_counters"
           }
          }
         ],
@@ -36000,14 +36044,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "confuse"
+       "confuse",
+       "choose:alloc:move_counters"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -36060,7 +36100,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "alloc": "move_counters"
         }
        }
       ],
@@ -36089,14 +36129,10 @@
     "errors": [],
     "engine_tags": [
      "confuse",
+     "choose:alloc:move_counters",
      "dmg_plus:50:per:opp_active_energy"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -45406,14 +45442,16 @@
    ],
    "abilities": [],
    "other_text": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent’s).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "只要此宝可梦位于后备，就防止双方招式对此宝可梦造成的所有伤害。",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Sylveon ex@SSP 86",
    "parse": {
     "items": [
      {
@@ -45456,7 +45494,15 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "alloc": "shuffle_opp_bench:2"
+          }
+         },
+         {
+          "type": "rule",
+          "amount": null,
+          "target": "any",
+          "extra": {
+           "use_not": "used_attack_last_turn:angelite"
           }
          }
         ],
@@ -45464,13 +45510,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:shuffle_opp_bench:2",
+       "use_not:used_attack_last_turn:angelite"
+      ],
+      "unsupported": []
      },
      {
       "target": "card",
@@ -45529,7 +45573,15 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "alloc": "shuffle_opp_bench:2"
+        }
+       },
+       {
+        "type": "rule",
+        "amount": null,
+        "target": "any",
+        "extra": {
+         "use_not": "used_attack_last_turn:angelite"
         }
        }
       ],
@@ -45556,14 +45608,11 @@
     "errors": [],
     "engine_tags": [
      "atk_minus_next:100",
+     "choose:alloc:shuffle_opp_bench:2",
+     "use_not:used_attack_last_turn:angelite",
      "passive:bench_immune_dmg"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -50160,7 +50209,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -50170,7 +50219,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:70:per:own_discarded_this_turn"
+       "dmg_set:70:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -50224,7 +50273,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -50253,7 +50302,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:70:per:own_discarded_this_turn",
+     "dmg_set:70:per:chosen_this_attack",
      "fx:retreat_free:self:if:no_energy"
     ],
     "unsupported": [],
@@ -58132,14 +58181,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Gorebyss@DRI 56",
    "parse": {
     "items": [
      {
@@ -58160,9 +58211,9 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "pre_direct": "attach_all_basic:self:type:water"
           }
          },
          {
@@ -58181,14 +58232,10 @@
       ],
       "errors": [],
       "engine_tags": [
+       "pre:attach_all_basic:self:type:water",
        "dmg_set:30:per:own_active_energy_water"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -58206,9 +58253,9 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "pre_direct": "attach_all_basic:self:type:water"
         }
        },
        {
@@ -58227,14 +58274,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "pre:attach_all_basic:self:type:water",
      "dmg_set:30:per:own_active_energy_water"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -60026,7 +60069,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "plus_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -60037,7 +60080,7 @@
       "errors": [],
       "engine_tags": [
        "discard_energy:2",
-       "dmg_plus:60:per:own_discarded_this_turn"
+       "dmg_plus:60:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -60094,7 +60137,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "plus_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -60124,7 +60167,7 @@
     "errors": [],
     "engine_tags": [
      "discard_energy:2",
-     "dmg_plus:60:per:own_discarded_this_turn",
+     "dmg_plus:60:per:chosen_this_attack",
      "passive:attack_block_unless:own_field_name_at_least:teamrocket:4"
     ],
     "unsupported": [],
@@ -64568,14 +64611,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Forretress@DRI 140",
    "parse": {
     "items": [
      {
@@ -64593,7 +64638,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "alloc": "move_energy:metal"
           }
          }
         ],
@@ -64601,13 +64646,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "engine_tags": [
+       "choose:alloc:move_energy:metal"
+      ],
+      "unsupported": []
      },
      {
       "target": "attack",
@@ -64659,7 +64701,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "alloc": "move_energy:metal"
         }
        }
       ],
@@ -64694,14 +64736,10 @@
     ],
     "errors": [],
     "engine_tags": [
+     "choose:alloc:move_energy:metal",
      "coin_each:4:heads:dmg_set:80"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -72383,14 +72421,16 @@
     }
    ],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Meloetta ex@BLK 44",
    "parse": {
     "items": [
      {
@@ -72436,7 +72476,7 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "use_any": "first_turn"
           }
          }
         ],
@@ -72444,14 +72484,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "use_any:first_turn"
+      ],
       "cost": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -72483,7 +72520,7 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "use_any": "first_turn"
         }
        }
       ],
@@ -72492,14 +72529,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "self_attack_plus_next:80:name:echoed voice"
+     "self_attack_plus_next:80:name:echoed voice",
+     "use_any:first_turn"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -80209,7 +80242,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -80219,7 +80252,7 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:50:per:own_discarded_this_turn"
+       "dmg_set:50:per:chosen_this_attack"
       ],
       "unsupported": []
      }
@@ -80242,7 +80275,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -80252,7 +80285,7 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:50:per:own_discarded_this_turn"
+     "dmg_set:50:per:chosen_this_attack"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -93710,14 +93743,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Dialga@MEG 95",
    "parse": {
     "items": [
      {
@@ -93733,9 +93768,19 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
+           "b4": "all_energy:to_deck"
+          }
+         },
+         {
+          "type": "damage_mod",
+          "amount": 80,
+          "target": "active_opponent",
+          "extra": {
+           "mode": "plus_per",
+           "per": "chosen_this_attack",
+           "phrase": "this way"
           }
          }
         ],
@@ -93743,13 +93788,11 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
-       }
-      ]
+      "engine_tags": [
+       "pre:b4:all_energy:to_deck",
+       "dmg_plus:80:per:chosen_this_attack"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -93762,9 +93805,19 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
+         "b4": "all_energy:to_deck"
+        }
+       },
+       {
+        "type": "damage_mod",
+        "amount": 80,
+        "target": "active_opponent",
+        "extra": {
+         "mode": "plus_per",
+         "per": "chosen_this_attack",
+         "phrase": "this way"
         }
        }
       ],
@@ -93772,13 +93825,11 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「You may shuffle all Energy … and have this attack do N more damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"
-     }
+    "engine_tags": [
+     "pre:b4:all_energy:to_deck",
+     "dmg_plus:80:per:chosen_this_attack"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -102473,7 +102524,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -102484,7 +102535,7 @@
       "errors": [],
       "engine_tags": [
        "discard_energy:2",
-       "dmg_set:120:per:own_discarded_this_turn"
+       "dmg_set:120:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -102544,7 +102595,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -102572,7 +102623,7 @@
     "errors": [],
     "engine_tags": [
      "discard_energy:2",
-     "dmg_set:120:per:own_discarded_this_turn",
+     "dmg_set:120:per:chosen_this_attack",
      "passive:dmg_reduce:30"
     ],
     "unsupported": [],
@@ -105276,14 +105327,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "超级进化宝可梦 ex",
+   "engine_match": "set:number",
+   "engine_uid": "Mega Charizard X ex@PFL 13",
    "parse": {
     "items": [
      {
@@ -105302,12 +105355,20 @@
           "target": "active_opponent"
          },
          {
+          "type": "rule",
+          "amount": null,
+          "target": "self",
+          "extra": {
+           "b4": "discard_energy:fire:scope:own"
+          }
+         },
+         {
           "type": "damage_mod",
           "amount": 90,
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -105317,14 +105378,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:90:per:own_discarded_this_turn"
+       "pre:b4:discard_energy:fire:scope:own",
+       "dmg_set:90:per:chosen_this_attack"
       ],
-      "unsupported": [
-       {
-        "type": "cost",
-        "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -105340,12 +105397,20 @@
         "target": "active_opponent"
        },
        {
+        "type": "rule",
+        "amount": null,
+        "target": "self",
+        "extra": {
+         "b4": "discard_energy:fire:scope:own"
+        }
+       },
+       {
         "type": "damage_mod",
         "amount": 90,
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -105355,14 +105420,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:90:per:own_discarded_this_turn"
+     "pre:b4:discard_energy:fire:scope:own",
+     "dmg_set:90:per:chosen_this_attack"
     ],
-    "unsupported": [
-     {
-      "type": "cost",
-      "reason": "能量代价子句未被映射（可选/任意数量代价，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -118255,14 +118316,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Team Rocket's Honchkrow@ASC 127",
    "parse": {
     "items": [
      {
@@ -118283,9 +118346,9 @@
          {
           "type": "rule",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+           "b4": "discard_hand:supporter:teamrocket"
           }
          },
          {
@@ -118294,7 +118357,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -118304,14 +118367,10 @@
       ],
       "errors": [],
       "engine_tags": [
-       "dmg_set:60:per:own_discarded_this_turn"
+       "pre:b4:discard_hand:supporter:teamrocket",
+       "dmg_set:60:per:chosen_this_attack"
       ],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -118329,9 +118388,9 @@
        {
         "type": "rule",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
+         "b4": "discard_hand:supporter:teamrocket"
         }
        },
        {
@@ -118340,7 +118399,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -118350,14 +118409,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "dmg_set:60:per:own_discarded_this_turn"
+     "pre:b4:discard_hand:supporter:teamrocket",
+     "dmg_set:60:per:chosen_this_attack"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -137060,7 +137115,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "plus_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -137071,7 +137126,7 @@
       "errors": [],
       "engine_tags": [
        "discard_hand_energy:4",
-       "dmg_plus:40:per:own_discarded_this_turn"
+       "dmg_plus:40:per:chosen_this_attack"
       ],
       "unsupported": []
      },
@@ -137128,7 +137183,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "plus_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -137158,7 +137213,7 @@
     "errors": [],
     "engine_tags": [
      "discard_hand_energy:4",
-     "dmg_plus:40:per:own_discarded_this_turn",
+     "dmg_plus:40:per:chosen_this_attack",
      "fx:effect_immune:ability:self"
     ],
     "unsupported": [],
@@ -137248,7 +137303,7 @@
           "target": "active_opponent",
           "extra": {
            "mode": "set_per",
-           "per": "own_discarded_this_turn",
+           "per": "chosen_this_attack",
            "phrase": "card you discarded in this way"
           }
          }
@@ -137259,7 +137314,7 @@
       "errors": [],
       "engine_tags": [
        "discard_hand_energy:2",
-       "dmg_set:60:per:own_discarded_this_turn"
+       "dmg_set:60:per:chosen_this_attack"
       ],
       "unsupported": []
      }
@@ -137290,7 +137345,7 @@
         "target": "active_opponent",
         "extra": {
          "mode": "set_per",
-         "per": "own_discarded_this_turn",
+         "per": "chosen_this_attack",
          "phrase": "card you discarded in this way"
         }
        }
@@ -137301,7 +137356,7 @@
     "errors": [],
     "engine_tags": [
      "discard_hand_energy:2",
-     "dmg_set:60:per:own_discarded_this_turn"
+     "dmg_set:60:per:chosen_this_attack"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -140559,14 +140614,16 @@
    ],
    "abilities": [],
    "other_text": null,
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Doublade@POR 57",
    "parse": {
     "items": [
      {
@@ -140580,24 +140637,13 @@
         "conditions": [],
         "actions": [
          {
-          "type": "damage",
+          "type": "damage_mod",
           "amount": 60,
-          "target": "active_opponent"
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
           "target": "active_opponent",
           "extra": {
-           "note": "条件伤害缩放：计数源未识别（card you revealed in this way）"
+           "mode": "set_per",
+           "per": "own_hand_named_any:honedge+doublade+aegislash",
+           "phrase": "revealed in this way"
           }
          }
         ],
@@ -140605,17 +140651,10 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-       },
-       {
-        "type": "rule",
-        "reason": "条件伤害缩放：计数源未识别（card you revealed in this way）"
-       }
-      ]
+      "engine_tags": [
+       "dmg_set:60:per:own_hand_named_any:honedge+doublade+aegislash"
+      ],
+      "unsupported": []
      }
     ],
     "specs": [
@@ -140626,24 +140665,13 @@
       "conditions": [],
       "actions": [
        {
-        "type": "damage",
+        "type": "damage_mod",
         "amount": 60,
-        "target": "active_opponent"
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
         "target": "active_opponent",
         "extra": {
-         "note": "条件伤害缩放：计数源未识别（card you revealed in this way）"
+         "mode": "set_per",
+         "per": "own_hand_named_any:honedge+doublade+aegislash",
+         "phrase": "revealed in this way"
         }
        }
       ],
@@ -140651,17 +140679,10 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "「any number of」自由数量（弃牌/附着/指示物移动，需交互层，B4）"
-     },
-     {
-      "type": "rule",
-      "reason": "条件伤害缩放：计数源未识别（card you revealed in this way）"
-     }
+    "engine_tags": [
+     "dmg_set:60:per:own_hand_named_any:honedge+doublade+aegislash"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

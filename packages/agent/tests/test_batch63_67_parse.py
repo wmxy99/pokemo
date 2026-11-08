@@ -157,11 +157,17 @@ class TestEnergyMoveZoneAliases(unittest.TestCase):
         self.assertNotIn("energy_move:1:from:active:to:bench", r["tags"])
 
     def test_any_amount_not_folded_to_one(self):
-        """「any amount」压成 1 张是静默缩小范围 → 必须仍如实未建模"""
+        """「any amount」**不是**压成 1 张，而是逐点让玩家搬（`choose:alloc`）
+
+        ⚠ B4-b（2026-11-08）改判：以前断言「必须未建模」（当时没有分配层）。
+        现在 `choose:alloc:move_energy:<type>` 承载 —— 选项 = 「把某只的 1 点
+        某色能量搬到另一只」，玩家逐次选、`stop` 结束。
+        本条真正要钉住的错法没变：不得出现 `energy_move:1:…`（压成 1 张）。
+        """
         r = _tags("You may move any amount of {M} Energy from your Pokémon "
                   "to your other Pokémon in any way you like.")
         self.assertNotIn("energy_move:1:from:any:to:any", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("choose:alloc:move_energy:metal", r["tags"])
 
     def test_conditional_hp_still_unmodeled(self):
         """条件式 +HP（Okidogi）按 C5 保持未建模，不能被本轮误收"""

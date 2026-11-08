@@ -327,6 +327,11 @@ ATTACK_TAG_PREFIXES = (
 
 # 引擎支持的被动/field 特性 tag 前缀（与 battle 派发对齐）
 ABILITY_TAG_PREFIXES = (
+    # B4（2026-11-08）：**宝可梦级先手授权**（Meloetta ex「Debut Performance」：
+    # 「If you go first, this Pokémon can use attacks during your first turn.」）。
+    # 它是静态许可、不是可发动特性（`_ability_legals` 会跳过 `use_any:`），
+    # 但必须能**进池** —— 否则这只宝可梦在开局回合仍然一招都打不出。
+    "use_any:",
     # D3（2026-11-08）：退化特性（Archeops「devolve:opp:1:active_only」）
     "devolve:",
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",

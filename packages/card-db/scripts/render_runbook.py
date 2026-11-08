@@ -140,7 +140,7 @@ def render(data: dict, m: dict) -> str:
       f"| `sum(1 for c in cards if c.get(\"engine_ready\"))` |")
     A(f"| 未建模卡 | **{m['unready']}** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 {m['unsupported']}） |")
     A(f"| 引擎池 | **{m['pool']}** | `cards_pool_ext.json` 的 `cards` 长度 |")
-    A("| 对账类目 | **51 类全绿** | `scripts/audit_pool_alignment.py` |")
+    A("| 对账类目 | **53 类全绿** | `scripts/audit_pool_alignment.py` |")
     A("| 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |")
     A("| CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |")
     # K1 是**实测值**，每次改动引擎后必须重跑；本行只记最近一次的双盲结果
@@ -209,7 +209,7 @@ def render(data: dict, m: dict) -> str:
     A("   → gen_engine_pool.py")
     A("   → import_challenge_dataset.py --reparse-only")
     A("   → coverage_backlog.py --registry")
-    A("   → audit_pool_alignment.py        # 必须 51 类全绿")
+    A("   → audit_pool_alignment.py        # 必须 53 类全绿")
     A("   ```")
     A("")
     A("**每批 DoD（全部满足才算完成）**：")

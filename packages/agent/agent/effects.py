@@ -3044,6 +3044,17 @@ def _draw_extra_of(text: str, m) -> Optional[dict]:
     return {}
 
 
+def _first_sentence(text: str) -> str:
+    """取**第一句**（到第一个句号为止）
+
+    用于「范围限定词只在本句内有效」的场合（见回复范围判定）。不用
+    `split(". ")`：卡面里可能出现 `N's` / `{ex}.` 这类紧邻标点。
+    """
+    t = str(text or "").strip()
+    m = re.match(r"[^.]*\.", t)
+    return m.group(0) if m else t
+
+
 def _heal_scope_of(clause: str) -> tuple:
     """回复的**范围与属性限定** → ``(scope, ptype)``；不可精确表达返回 ``(None, None)``
 
@@ -3817,6 +3828,237 @@ def _detect_static_passives(text: str, kind: str) -> list:
     return []
 
 
+# ---------------- B4：伤害前「任意数量」决策（2026-11-08） ----------------
+#
+# 这一族的共同点：**数量是玩家的决定**，而且数量会改变本次招式的伤害，
+# 所以只能在**算伤害之前**问（引擎侧落到 `pre:b4:` + 挂起/续跑）。
+#
+# 每个正则都是**整句**锚定；认领之后必须把该句从后续扫描里抹掉 ——
+# 否则同一句会被 `counters:` / `dmg_plus:` 等检测器再读一遍，变成
+# 「一卡两条互斥语义」（实测 Walking Wake 会同时得到 `counters:9:self`）。
+
+# 「Put up to 9 damage counters on this Pokémon.」（Walking Wake）
+_B4_SELF_COUNTERS_RE = re.compile(
+    r"put up to (\d+) damage counters on this pok[eé]mon\b", re.I)
+
+# 「Discard the top card of **each player's** deck. … for each Energy card
+#  discarded in this way.」（Magcargo ex「Ground Burn」）
+# ⚠ 必须落成 `pre:mill`：这半句在**伤害之前**，而伤害按「这次磨掉的能量数」
+#   缩放；放到 `_apply_attack_effects`（伤害之后）就白磨了（静默少做）。
+_B4_PRE_MILL_BOTH_RE = re.compile(
+    r"discard the top (\d+ )?cards? of each player['\u2019]s deck", re.I)
+
+# 「Discard any amount of {R} Energy from among your Pokémon, and this attack
+#  does 90 damage for each card you discarded in this way.」（Mega Charizard X ex）
+_B4_DISCARD_ENERGY_RE = re.compile(
+    r"discard any amount of \{(?P<t>[a-z])\} energy from among your "
+    r"pok[eé]mon", re.I)
+
+# 「You may discard any number of Supporter cards that have "Team Rocket" in
+#  their name from your hand …」（Team Rocket's Honchkrow）
+_B4_DISCARD_HAND_RE = re.compile(
+    r"you may discard any number of (?P<kind>supporter) cards that have "
+    r'["\u201c](?P<sub>[^"\u201d]+)["\u201d] in their name from your hand', re.I)
+
+# 「You may put all Energy attached to this Pokémon into your hand to have this
+#  attack do 80 more damage.」（Zarude）
+_B4_ALL_ENERGY_HAND_RE = re.compile(
+    r"you may put all energy attached to this pok[eé]mon into your hand to "
+    r"have this attack do (\d+) more damage", re.I)
+# 「You may shuffle all Energy attached to this Pokémon into your deck and have
+#  this attack do 80 more damage.」（Dialga）
+_B4_ALL_ENERGY_DECK_RE = re.compile(
+    r"you may shuffle all energy attached to this pok[eé]mon into your deck "
+    r"(?:and|to) have this attack do (\d+) more damage", re.I)
+
+# 「Before doing damage, you may attach any number of Basic {W} Energy cards
+#  from your hand to this Pokémon.」（Gorebyss）
+_B4_ATTACH_ALL_RE = re.compile(
+    r"before doing damage, you may attach any number of basic \{(?P<t>[a-z])\} "
+    r"energy cards? from your hand to this pok[eé]mon", re.I)
+
+# ---- B4-b：**分配 / 多目标**（目标不唯一，必须由玩家指哪只） ----
+# 「You may move any number of damage counters on your opponent's Pokémon to
+#  their other Pokémon in any way you like.」（Alakazam「Strange Hacking」）
+_B4B_MOVE_COUNTERS_RE = re.compile(
+    r"you may move any number of damage counters on your opponent['\u2019]s "
+    r"pok[eé]mon to their other pok[eé]mon in any way you like", re.I)
+# 「You may move any amount of {M} Energy from your Pokémon to your other
+#  Pokémon in any way you like.」（Forretress「Iron Shake-Up」）
+_B4B_MOVE_ENERGY_RE = re.compile(
+    r"you may move any amount of \{(?P<t>[a-z])\} energy from your "
+    r"pok[eé]mon to your other pok[eé]mon in any way you like", re.I)
+# 「You may attach any number of Basic Energy cards from your hand to your
+#  Pokémon in any way you like.」（Alolan Exeggutor ex「Tropical Frenzy」）
+_B4B_ATTACH_ANY_RE = re.compile(
+    r"you may attach any number of basic energy cards from your hand to your "
+    r"pok[eé]mon in any way you like", re.I)
+# 「Choose 2 of your opponent's Benched Pokémon. Shuffle those Pokémon and all
+#  attached cards into your opponent's deck.」（Sylveon ex「Angelite」）
+_B4B_SHUFFLE_PICKED_RE = re.compile(
+    r"choose (\d+) of your opponent['\u2019]s benched pok[eé]mon\. shuffle "
+    r"those pok[eé]mon and all attached cards into your opponent['\u2019]s deck",
+    re.I)
+# 「Choose 3 of your opponent's Benched Pokémon. If you do, shuffle all of your
+#  opponent's Benched Pokémon that you didn't choose … into their deck.」
+# （Shiftry「Expelling Tornado」）
+_B4B_SHUFFLE_KEPT_RE = re.compile(
+    r"choose (\d+) of your opponent['\u2019]s benched pok[eé]mon\. if you do, "
+    r"shuffle all of your opponent['\u2019]s benched pok[eé]mon that you "
+    r"didn['\u2019]t choose[^.]*\.(?:[^.]*\.)?", re.I)
+# 「If 1 of your Pokémon used <X> during your last turn, this attack can't be
+#  used.」（Sylveon ex「Angelite」）——引擎侧是**单招**条件
+# `use_not:used_attack_last_turn:<key>`（`used_attack_last_turn` 判的是
+# **玩家级**历史 `last_turn_attacks`，与「1 of your Pokémon」的口径一致）。
+# ⚠ 丢了这一句 = 这招可以每回合连续放（卡面明确禁止）——纯静默加强。
+_B4B_SELF_LOCK_RE = re.compile(
+    r"if (?:1|one) of your pok[eé]mon used ([a-z][a-z' ]{2,24}?) during your "
+    r"last turn, this attack can['\u2019]t be used", re.I)
+
+# 「If you go first, this Pokémon can use attacks during your first turn.」
+# （Meloetta ex「Debut Performance」）——**宝可梦级**授权：改的是这只宝可梦的
+# 全部招式，不是某一招。与招式级的「you can use this attack」是两句话。
+_ABL_FIRST_TURN_RE = re.compile(
+    r"if you go first, this pok[eé]mon can use attacks during your first turn",
+    re.I)
+
+# 「Reveal any number of Honedge, Doublade, and Aegislash from your hand, and
+#  this attack does 60 damage for each card you revealed in this way.」（Doublade）
+_B4_REVEAL_NAMED_RE = re.compile(
+    r"reveal any number of (?P<names>.+?) from your hand, and this attack does "
+    r"(?P<n>\d+) damage for each card you revealed in this way", re.I)
+
+
+def _detect_b4(text: str, kind: str):
+    """识别「伤害前决策」整句 → ``(actions, spans)``
+
+    ``spans`` 是**已认领**的文本区间（由调用方等长抹掉），防止同一句被别的
+    检测器二次认领。只有认领成功才返回 span。
+
+    ⚠ 三条纪律：
+      1. **只认整句**：句式差一个词就可能是别的规则（「you may」= 可选，
+         「all Energy」= 全量，「any amount」= 数量自由）；
+      2. **数量语义不可糊**：`self_counters` 是「最多 N」（含 0）、
+         `discard_*` 是「任意张」、`all_energy` 是「全部」—— 三者互不能替代，
+         写错都不报错（一个往严里削、一个往松里放）；
+      3. **`in this way` 才是口径**：伤害按「这次效果里放/弃了几张」缩放，
+         不是按本回合累计（`own_discarded_this_turn`）。
+    """
+    if kind not in ("attack", "ability", "item", "supporter"):
+        return [], []
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if not t:
+        return [], []
+    acts: list = []
+    spans: list = []
+
+    m = _B4_SELF_COUNTERS_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "self", {"b4": f"self_counters:{int(m.group(1))}"}))
+        spans.append(m.span())
+
+    m = _B4_PRE_MILL_BOTH_RE.search(t)
+    if m:
+        n = int((m.group(1) or "1").strip())
+        acts.append(act("rule", None, "any", {"pre_direct": f"mill:{n}:both"}))
+        spans.append(m.span())
+
+    m = _B4_DISCARD_ENERGY_RE.search(t)
+    if m:
+        col = _EN_ENERGY_LETTER.get(m.group("t").upper(), "")
+        if col:
+            acts.append(act("rule", None, "self",
+                            {"b4": f"discard_energy:{col}:scope:own"}))
+            spans.append(m.span())
+
+    m = _B4_DISCARD_HAND_RE.search(t)
+    if m:
+        sub = re.sub(r"[^a-z0-9]", "", m.group("sub").lower())
+        acts.append(act("rule", None, "self",
+                        {"b4": f"discard_hand:{m.group('kind').lower()}:{sub}"}))
+        spans.append(m.span())
+
+    m = _B4_ALL_ENERGY_HAND_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "self", {"b4": "all_energy:to_hand"}))
+        acts.append(act("damage_mod", int(m.group(1)), "active_opponent",
+                        {"mode": "plus_per", "per": "chosen_this_attack",
+                         "phrase": "this way"}))
+        spans.append(m.span())
+
+    m = _B4_ALL_ENERGY_DECK_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "self", {"b4": "all_energy:to_deck"}))
+        acts.append(act("damage_mod", int(m.group(1)), "active_opponent",
+                        {"mode": "plus_per", "per": "chosen_this_attack",
+                         "phrase": "this way"}))
+        spans.append(m.span())
+
+    m = _B4_ATTACH_ALL_RE.search(t)
+    if m:
+        col = _EN_ENERGY_LETTER.get(m.group("t").upper(), "")
+        if col:
+            # ⚠ 这一条**不是决策**（目标唯一 + 附着单调优势），所以走普通
+            # `pre:` 直落，而不是 `pre:b4:`（后者会挂起一次没有意义的选择）。
+            acts.append(act("rule", None, "self",
+                            {"pre_direct": f"attach_all_basic:self:type:{col}"}))
+            spans.append(m.span())
+
+    # ---- B4-b：分配 / 多目标 ----
+    m = _B4B_MOVE_COUNTERS_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "any", {"alloc": "move_counters"}))
+        spans.append(m.span())
+    m = _B4B_MOVE_ENERGY_RE.search(t)
+    if m:
+        col = _EN_ENERGY_LETTER.get(m.group("t").upper(), "")
+        if col:
+            acts.append(act("rule", None, "any",
+                            {"alloc": f"move_energy:{col}"}))
+            spans.append(m.span())
+    m = _B4B_ATTACH_ANY_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "any", {"alloc": "attach_hand:basic"}))
+        spans.append(m.span())
+    m = _B4B_SHUFFLE_KEPT_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "any",
+                        {"alloc": f"shuffle_opp_bench:{int(m.group(1))}:keep"}))
+        spans.append(m.span())
+    m = _B4B_SHUFFLE_PICKED_RE.search(t)
+    if m:
+        acts.append(act("rule", None, "any",
+                        {"alloc": f"shuffle_opp_bench:{int(m.group(1))}"}))
+        spans.append(m.span())
+    m = _B4B_SELF_LOCK_RE.search(t)
+    if m:
+        key = re.sub(r"[^a-z0-9]", "", m.group(1).lower())
+        if key:
+            acts.append(act("rule", None, "any",
+                            {"use_not": f"used_attack_last_turn:{key}"}))
+            spans.append(m.span())
+    # 宝可梦级先手授权（Meloetta ex）：只在**特性**上认领。招式上的同义句由
+    # `_TURN1_PERMISSION` 的剥句路径处理，这里不重复。
+    if kind == "ability":
+        m = _ABL_FIRST_TURN_RE.search(t)
+        if m:
+            acts.append(act("rule", None, "any", {"use_any": "first_turn"}))
+            spans.append(m.span())
+
+    m = _B4_REVEAL_NAMED_RE.search(t)
+    if m:
+        raw = re.split(r",\s*and\s+|,\s*|\s+and\s+", m.group("names"))
+        keys = [_tag_name_key(x) for x in raw if x.strip()]
+        keys = [k for k in keys if k]
+        if len(keys) >= 2:
+            acts.append(act("damage_mod", int(m.group("n")), "active_opponent",
+                            {"mode": "set_per",
+                             "per": "own_hand_named_any:" + "+".join(keys),
+                             "phrase": "revealed in this way"}))
+            spans.append(m.span())
+    return acts, spans
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -4016,7 +4258,8 @@ def _detect_prize_bonus(text: str, kind: str) -> list:
                 {"prize_bonus": int(m.group(2)), "scope": scope})]
 
 
-def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
+def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
+                   b4_spans=None) -> dict:
     """规则后端（英文卡面）：抽取 spec（伤害/指示物/抽弃/检索/回复/附能/状态/
     互换/击倒/静态规则 + 触发时机）"""
     t_raw = str(text or "")
@@ -4024,6 +4267,18 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
     # 屏蔽后正文扫描既不会把反应效果读成主动效果，也不会改变其余从句的相对位置。
     _re_spans = _reactive_damage_spans(t_raw)
     t = _mask_spans(t_raw, _re_spans)
+    # B4（2026-11-08）：伤害前决策（「任意数量」且**数量影响伤害**）已由
+    # `parse_rule` 认领，这里把那些句子**等长抹掉**再扫描。三个都必须：
+    #   · 不抹：`counters:` 会再读一遍 → 一张卡两条互斥语义
+    #     （Walking Wake 会同时得到 `counters:9:self`，等于「无视选择恒放 9 枚」）；
+    #   · 不抹：`_heal_scope_of` 因句中的「in this way」判定为「依赖前序动作」，
+    #     把**本来可精确表达**的 `heal:20` 登记成未建模（Walking Wake 实测）；
+    #   · 不抹：`any number of` 兜底会把**已建模**的卡重新标成未建模
+    #     （TR Honchkrow / Gorebyss / Doublade 实测）。
+    # ⚠ 抹的是 `t`（扫描用），`source_text` 仍用原文 —— 否则回放/对账看到的
+    #   卡面会缺一整句，而缺句子正是最难发现的那类静默丢失。
+    if b4_spans:
+        t = _mask_spans(t, list(b4_spans))
     actions: list = []
     # D3 退化：整句认领（放在最前 —— 后面「Once during your turn, if …」这类
     # 从句会被别的检测器分段吃掉，退化句一旦被拆散就再也拼不回来）
@@ -4309,12 +4564,10 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
             r"shuffle all energy attached to this pok[eé]mon into your deck, "
             r"and this attack does", t, re.I):
         actions.append(act("rule", None, "any", {"energy_self_to_deck": True}))
-    elif kind == "attack" and re.search(
-            r"you may shuffle all energy attached to this pok[eé]mon into your "
-            r"deck[^.]*?more damage", t, re.I):
-        actions.append(act("rule", None, "any", {
-            "note": "「You may shuffle all Energy … and have this attack do N more "
-                    "damage」是**可选代价 + 加伤**（Dialga MEG 95），需交互层（B4）"}))
+    # Dialga MEG 95「You may shuffle all Energy … and have this attack do 80 more
+    # damage」/ Zarude「You may put all Energy … into your hand to have this attack
+    # do 80 more damage」：**B4 已建模**（`pre:b4:all_energy:*` + 挂起选择），
+    # 不再登记未建模 —— 但也不在这里产出 tag，统一由 `_detect_b4` 认领。
     # 「Flip a coin. If heads, choose 1 of your opponent's [Benched] Pokémon.
     # Shuffle that Pokémon and all attached cards into their deck.」
     # （2026-11-03 第四十二批 · Sylveon / Shiftry）——把对手的宝可梦**连同附着卡**
@@ -4519,7 +4772,13 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
                 actions.append(act("heal", int(m.group(1)), "self",
                                    {"heal_scope": "choose", "discard_one": True}))
             else:
-                scope, ptype = _heal_scope_of(tail_txt)
+                # ⚠ 只把**回复自己的那一句**交给范围判定：`tail_txt` 故意跨句
+                # （Super Potion 的后半段依赖下一句），但范围限定词只在本句内
+                # 才有效。整段传进去会被**下一句**里的「in this way」判成
+                # 「依赖前序动作」→ 把可精确表达的 `heal:N` 登记成未建模
+                # （Walking Wake 实测：下一句是「damage counter you placed in
+                # this way」，属于指示物语义，与回复无关）。
+                scope, ptype = _heal_scope_of(_first_sentence(tail_txt))
                 if scope is None:
                     actions.append(act("rule", None, "self",
                                        {"note": "回复范围/限定不可精确表达（B4）"}))
@@ -5601,7 +5860,11 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     text, _pcost = _split_play_cost(text, kind)
     # 特性发动代价（2026-11-04 第四十九批）：同样**先剥离**再解析（理由同上）。
     text, _acost = _split_ability_cost(text, kind)
-    spec = (_parse_rule_en(text, kind=kind, name=name)
+    # B4（2026-11-08）：伤害前决策**只在这里认领一次**，把已认领的句区间
+    # 传给 `_parse_rule_en` 抹掉（避免 counters/heal-范围/any-number 兜底
+    # 二次认领），并把动作排在修正器之前。
+    _b4_acts, _b4_spans = _detect_b4(text, kind)
+    spec = (_parse_rule_en(text, kind=kind, name=name, b4_spans=_b4_spans)
             if text and not _CJK_RE.search(str(text))
             else _parse_rule_zh(text, kind=kind, name=name))
     if _perm_kind:
@@ -5668,7 +5931,12 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
         # 通用分支再解析成 spread/其他动作，产出多余 tag 而破坏"道具只认 tool:"
         # 的准入约束（或更糟：把触发式效果当成无条件效果）。
         actions = list(tools)
-    mods = _detect_modifiers(str(text or ""), kind, name)
+    # B4 的整句已在函数开头认领并抹掉（见 `_b4_acts` / `_b4_spans`），
+    # 这里只需把它的动作排在修正器**之前**（决策必须先于伤害缩放）。
+    mods = _detect_modifiers(_mask_spans(text, _b4_spans) if _b4_spans else text,
+                             kind, name)
+    if _b4_acts:
+        mods = list(_b4_acts) + list(mods)
     # ⚠ 这里**不能**再 `actions + tools`：上面已经整体替换成 tools，再加一次会让
     # 每条道具效果在 `specs.actions` 里出现两遍（tag 侧靠去重看不出来，但
     # `_amounts` / 黄金集比对会把它当成多重集 → 假失败）。
@@ -6337,6 +6605,31 @@ def _counter_from_phrase(phrase: str) -> Optional[str]:
     raw = _norm_apostrophe(phrase)
     low = raw.lower()
     side = _phrase_side(low)
+
+    # B4（2026-11-08）：「… **in this way**」= 本次效果里由玩家决定的那个数量。
+    # 这是唯一正确的口径：
+    #   · 不能用 `own_discarded_this_turn`（本回合累计）—— 会把本回合早些时候
+    #     弃掉的牌也算进去，多算伤害且**只在先弃过别的牌时才显现**；
+    #   · 「revealed in this way」（Doublade）**不**走这里：亮牌不弃牌，计数源是
+    #     「手牌里这些名字的卡数」（`own_hand_named_any:…`），由整句检测器直接给出。
+    #   · 「Energy card (you) discarded in this way」→ **本次攻击**弃掉的能量数
+    #     （`discarded_energy_this_attack`）。⚠ 不能落到
+    #     `own_discarded_energy_this_turn`（本回合累计）—— 那是**多算**，而且
+    #     只在「本回合先弃过能量」时显现（Magcargo ex / Wugtrio ex）。
+    if re.search(r"energy cards? (?:you )?discarded in this way", low):
+        return "discarded_energy_this_attack"
+    #   ⚠ **只认无限定词的光杆形态**：「card you discarded in this way」是本次
+    #     效果的总数；而「Pokémon card you discarded in this way」「Energy card
+    #     you discarded in this way」是**子集**（只数其中一类），映射到总数会系统性
+    #     多算（Wugtrio / mill 系实测）。这两种必须继续返回 None → 如实未建模。
+    _bare = re.sub(r"\s+", " ", low).strip().rstrip(".")
+    if _bare in ("card you discarded in this way",
+                 "cards you discarded in this way",
+                 "damage counter you placed in this way",
+                 "damage counters you placed in this way",
+                 "damage counter you put in this way",
+                 "damage counters you put in this way"):
+        return "chosen_this_attack"
 
     # 第七批（2026-10-28）----
     # 「for each Prize card your opponent took **during their last turn**」（Okidogi）
@@ -10707,6 +11000,22 @@ def to_engine_tags(specs: list) -> dict:
                 if _tg:
                     tags.append(_tg)
             elif t == "rule":
+                # B4（2026-11-08）：伤害前决策 → `pre:b4:<spec>`。
+                # 为什么不是普通 tag：这一类必须由引擎在**算伤害之前**挂起选择，
+                # `pre:` 前缀正是「伤害前阶段」的唯一入口（`_apply_pre_attack_effect`
+                # 之外由 `_b4_spec` 单独处理，因为那一段要挂起而不是就地执行）。
+                if extra.get("b4"):
+                    tags.append("pre:b4:" + str(extra["b4"]))
+                    continue
+                if extra.get("alloc"):
+                    # B4-b：分配 / 多目标 → `choose:alloc:<spec>`
+                    tags.append("choose:alloc:" + str(extra["alloc"]))
+                    continue
+                if extra.get("pre_direct"):
+                    # 普通**伤害前**效果（不挂起）：`pre:<spec>`，由
+                    # `_apply_pre_attack_effect` 就地执行。
+                    tags.append("pre:" + str(extra["pre_direct"]))
+                    continue
                 # ---- S2（2026-11-08，延迟队列 / 事件订阅）----
                 if extra.get("draw_then_queue_discard") is not None:
                     _dn, _lim = extra["draw_then_queue_discard"]
@@ -11646,6 +11955,10 @@ def to_engine_tags(specs: list) -> dict:
                 if not any(x.startswith(("discard_energy", "discard_hand_energy",
                                          "energy_to_deck", "energy_self_to_deck",
                                          "self:",
+                                         # B4（2026-11-08）：`pre:b4:discard_energy:…`
+                                         # 是**真的会弃能量**（挂起选择后由
+                                         # `_attack_resume` 续跑），不是未映射。
+                                         "pre:b4:",
                                          # 第一百三十五批（S1b）：可选代价已落成
                                          # 决策分解 tag（`choose:optional_energy_cost:`）
                                          # —— 它**真的会弃能量**，不算未映射。

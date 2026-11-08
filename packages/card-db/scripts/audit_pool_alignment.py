@@ -1452,9 +1452,15 @@ def audit_energy_cost(card_name: str, item_name: str, desc: str,
     if _ENERGY_COST_CLAUSE.search(d):
         # 第一百三十五批（S1b）：`choose:optional_energy_cost:` 也是**真的付账**
         # （引擎挂起 confirm，选中 yes 才弃能量）→ 与其它代价 tag 同等看待。
+        # B4（2026-11-08）：`pre:b4:discard_energy` / `pre:b4:all_energy` 是
+        # **真的付账**（挂起选择 → 玩家选定 → 续跑），与其它代价 tag 同等看待；
+        # `pre:b4:discard_hand` 是弃手牌的代价。不加这条会让已建模的卡
+        # 被对账判成「白拿附加效果」而永远报错（实测 Mega Charizard X ex）。
         cost_tags = [t for t in tags if t.startswith(
             ("discard_energy", "discard_hand_energy", "energy_to_deck",
-             "energy_self_to_deck", "self:", "choose:optional_energy_cost:"))]
+             "energy_self_to_deck", "self:", "choose:optional_energy_cost:",
+             "pre:b4:discard_energy", "pre:b4:discard_hand",
+             "pre:b4:all_energy"))]
         if not cost_tags:
             errs.append(f"{card_name} · {item_name}：卡面有能量代价子句（and 绑定），"
                         f"却没有任何代价 tag —— 招式会白拿附加效果")
@@ -4050,6 +4056,83 @@ def _S5_CAT_KEY(raw: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+_B4_PATTERNS = (
+    # (卡面正则, 必须具备的 tag 前缀, 人话说明)
+    (re.compile(r"discard any amount of \{[a-z]\} energy from among your "
+                r"pok[eé]mon", re.I),
+     ("pre:b4:discard_energy:",), "「弃任意数量能量」的伤害前决策"),
+    (re.compile(r"put up to \d+ damage counters on this pok[eé]mon", re.I),
+     ("pre:b4:self_counters:",), "「最多 N 枚指示物」的伤害前决策"),
+    (re.compile(r"you may discard any number of supporter cards", re.I),
+     ("pre:b4:discard_hand:",), "「弃任意数量支援者」的伤害前决策"),
+    (re.compile(r"you may (?:put|shuffle) all energy attached to this "
+                r"pok[eé]mon", re.I),
+     ("pre:b4:all_energy:",), "「移开全部能量换加伤」的伤害前决策"),
+    (re.compile(r"before doing damage, you may attach any number of basic "
+                r"\{[a-z]\} energy", re.I),
+     ("pre:attach_all_basic:",), "「伤害前全贴基本能量」"),
+    (re.compile(r"move any number of damage counters on your opponent", re.I),
+     ("choose:alloc:move_counters",), "「任意搬指示物」分配层"),
+    (re.compile(r"move any amount of \{[a-z]\} energy from your pok[eé]mon "
+                r"to your other pok[eé]mon", re.I),
+     ("choose:alloc:move_energy:",), "「任意搬能量」分配层"),
+    (re.compile(r"attach any number of basic energy cards from your hand to "
+                r"your pok[eé]mon", re.I),
+     ("choose:alloc:attach_hand:",), "「从手牌任意贴」分配层"),
+    (re.compile(r"choose \d+ of your opponent['\u2019]s benched pok[eé]mon\. "
+                r"shuffle those", re.I),
+     ("choose:alloc:shuffle_opp_bench:",), "「选 N 只洗回」多目标层"),
+    (re.compile(r"shuffle all of your opponent['\u2019]s benched pok[eé]mon "
+                r"that you didn", re.I),
+     ("choose:alloc:shuffle_opp_bench:",), "「选 N 只、洗其余」多目标层"),
+    (re.compile(r"this pok[eé]mon can use attacks during your first turn",
+                re.I),
+     ("use_any:first_turn",), "宝可梦级先手授权"),
+)
+
+
+def audit_b4_interaction(card_name: str, item_name: str, desc: str,
+                         effects: list) -> list:
+    """B4 对账：**「任意数量」交互层**
+
+    为什么单列一类：这一族的错法**全部不报错**，而且方向相反 ——
+
+      · 把「任意数量」压成固定 1（静默缩小范围：玩家想让 5 张只出 1 张）；
+      · 把「任意数量」当成「全部」（静默放大：不该弃的也弃了）；
+      · 用**本回合累计**计数源（`own_discarded_this_turn`）代替 `chosen_this_attack`
+        —— 本回合早些时候弃的牌被算进伤害，只在「先弃过别的牌」时才显现；
+      · 把「可选代价」落成固定代价 —— 玩家没得选，`+N` 永远拿不到（或永远被收）；
+      · 把「you may」的可选层丢掉 —— 引擎替玩家做了三个决定。
+
+    判据分两段：
+      ① **形态 → 必须有对应 tag**：卡面出现某句式，就必须有承载它的 tag；
+      ② **反向**：卡面写「in this way」且带伤害缩放时，计数源必须是
+         `chosen_this_attack`，**不得**是 `own_discarded_this_turn` /
+         `own_discarded_energy_this_turn`（那是本回合累计口径）。
+    """
+    errs: list = []
+    d = _norm(desc or "").replace("\u2019", "'")
+    joined = "|".join(str(e) for e in _expand_compound(effects))
+    for rx, need, what in _B4_PATTERNS:
+        if not rx.search(d):
+            continue
+        if not any(prefix in joined for prefix in need):
+            errs.append(f"{card_name} · {item_name}：卡面是{what}，但 tag 里没有 "
+                        f"{need[0]}（实际 {effects}）")
+    # ② 「in this way」的口径
+    if re.search(r"\bin this way\b", d, re.I) \
+            and re.search(r"does \d+ (?:more )?damage for each", d, re.I) \
+            and "chosen_this_attack" not in joined:
+        # 只有「本次效果里玩家决定的量」才是对的；用本回合累计会多算
+        bad = [t for t in (str(x) for x in _expand_compound(effects))
+               if "own_discarded_this_turn" in t
+               or "own_discarded_energy_this_turn" in t]
+        if bad:
+            errs.append(f"{card_name} · {item_name}：卡面「in this way」应按**本次**"
+                        f"计数（`chosen_this_attack`），实际用了本回合累计 {bad}")
+    return errs
+
+
 def audit_devolve(card_name: str, item_name: str, desc: str,
                   effects: list) -> list:
     """D3 对账：退化 devolve
@@ -4282,6 +4365,7 @@ def main() -> int:
                 errs += audit_s5_borrow(c["name"], it.get("name"), desc, eff)
                 errs += audit_s6_first_turn(c["name"], it.get("name"), desc, eff)
                 errs += audit_devolve(c["name"], it.get("name"), desc, eff)
+                errs += audit_b4_interaction(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4326,6 +4410,8 @@ def main() -> int:
                                         [_ctag] if _ctag else [])
             errs += audit_devolve(c["name"], c["name"], _cdesc,
                                   [_ctag] if _ctag else [])
+            errs += audit_b4_interaction(c["name"], c["name"], _cdesc,
+                                         [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4384,8 +4470,9 @@ def main() -> int:
           "效果免疫（团队范围/训练家来源） · "
           "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 · "
           "先手首回合例外许可（招式/训练家） · "
-          "退化 devolve（方向/阶数/属性/战斗位） "
-          "五十二类对账全部一致")
+          "退化 devolve（方向/阶数/属性/战斗位） · "
+          "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） "
+          "五十三类对账全部一致")
     return 0
 
 

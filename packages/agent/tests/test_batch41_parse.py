@@ -106,16 +106,23 @@ class TestEnergySelfToDeck(unittest.TestCase):
         self.assertIn("discard_energy:all", r["tags"])
         self.assertNotIn("energy_self_to_deck:all", r["tags"])
 
-    def test_optional_cost_with_more_damage_still_unmodeled(self):
-        """Dialga MEG 95：**You may** 洗回能量 → +80 伤害，属可选代价 + 加伤
+    def test_optional_cost_with_more_damage_modeled(self):
+        """Dialga MEG 95：**You may** 洗回能量 → +80 伤害
 
-        落成固定代价会静默削掉 +80（卡仍可打但更弱），故必须如实未建模。
+        ⚠ B4（2026-11-08）改判：原先断言「如实未建模」（当时没有「可选代价 +
+        加伤」的交互层）。现在由 `pre:b4:all_energy:to_deck` + 挂起选择承载：
+        玩家选「付」→ 能量进牌库、`chosen_this_attack=1` → `dmg_plus:80:per:`。
+
+        **仍然**不得落成 `energy_self_to_deck:all`（那是**强制**代价，会静默
+        削掉 +80 的可选性）—— 这条断言保留。
         """
         t = ("You may shuffle all Energy attached to this Pokémon into your deck "
              "and have this attack do 80 more damage.")
         r = _m(t)
         self.assertNotIn("energy_self_to_deck:all", r["tags"])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("pre:b4:all_energy:to_deck", r["tags"])
+        self.assertIn("dmg_plus:80:per:chosen_this_attack", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
 
 if __name__ == "__main__":       # pragma: no cover

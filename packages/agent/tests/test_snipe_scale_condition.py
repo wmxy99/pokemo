@@ -89,7 +89,11 @@ class TestSnipeScaleParse(unittest.TestCase):
 
     def test_wugtrio_discarded_energy(self):
         r = _tags(WUGTRIO)
-        self.assertIn("snipe:opp:60:1:per:own_discarded_energy_this_turn",
+        # ⚠ B4（2026-11-08）改口径：卡面是「Energy card **discarded in this way**」
+        # → 只能数**本招式**弃掉的能量（`discarded_energy_this_attack`）。
+        # 原来落的 `own_discarded_energy_this_turn` 是**本回合累计**，会把本回合
+        # 早些时候弃的能量也算进每次狙击的伤害（多算，且只在先弃过能量时显现）。
+        self.assertIn("snipe:opp:60:1:per:discarded_energy_this_attack",
                       r["tags"])
         self.assertEqual(r["unsupported"], [])
 

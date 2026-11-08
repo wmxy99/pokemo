@@ -168,6 +168,11 @@ class Battle:
         # 「先手第一回合不能攻击 / 不能打 Supporter」只对**走过 setup 的对局**成立
         # （没有 setup 的合成对局不存在「开局回合」，见 `GameConfig` 的注释）。
         self.setup_done: bool = False
+        # B4（2026-11-08）：伤害前决策 —— `_b4_count` 是本次攻击「按这个数量
+        # 缩放」的计数（计数源名 `chosen_this_attack`），`_b4_ctx` 是挂起后续跑
+        # 所需的全部现场（攻击者/守方/招式/action）。每次**声明招式**时清零。
+        self._b4_count: int = 0
+        self._b4_ctx: Optional[dict] = None
         # S6b：挂起「取哪张奖赏卡」期间**不能再处理下一只被击倒的宝可梦**
         # （多只同时被击倒：先排队，等选择闭合后按序补做）。
         # 不入队就会在 `_open_choice` 处撞「不允许嵌套挂起」。
@@ -497,7 +502,7 @@ class Battle:
                     if not _attack_usable(self, atk):
                         continue
                     # 先手第一回合：只有带 `use_any:first_turn` 的招式可以出手
-                    if _first_turn_banned and not _first_turn_attack_ok(atk):
+                    if _first_turn_banned and not _first_turn_attack_ok(p.active, atk):
                         continue
                     _scope = _borrow_scope(atk)
                     _opts = self._borrow_options(p, opp, p.active, atk)
@@ -596,7 +601,12 @@ class Battle:
                                       "on_ko:", "ko_prize_plus:",
                                       # 第五十批：被击倒时的奖赏减少也是**被动**钩子
                                       # （在 `_resolve_ko` 里读），不可主动发动。
-                                      "ko_prize_minus:")):
+                                      "ko_prize_minus:",
+                                      # S6a/B4：`use_any:first_turn`（Meloetta ex
+                                      # 「Debut Performance」）是**静态许可**，
+                                      # 不是可发动的特性 —— 进了合法动作表就会
+                                      # 让 AI 反复尝试一个必然抛错的「发动」。
+                                      "use_any:")):
                     continue
                 # 效果族纯静态钩子（无 act 一次性动作，如 ability_blocked）→ 被动，
                 # 不进合法动作表（封锁由结算路径在 ability_blocked 自动施加）
@@ -2554,6 +2564,97 @@ class Battle:
     def _apply_choice_result(self, ch) -> None:
         """把选择结果落到状态上（每种 kind 一个分支，未知即抛错）"""
         p = self.players[ch.owner]
+        if ch.kind == "alloc":
+            # B4-b：分配 / 多目标选择已闭合 → 落状态
+            self._alloc_apply(ch)
+            return
+        if ch.kind == "b4_pre":
+            # B4：伤害前决策已闭合 → 应用到状态上，记下「按这个数量缩放」，
+            # 然后**从伤害段续跑**本次攻击。
+            spec = str(ch.ctx.get("spec") or "")
+            head = spec.split(":")[0]
+            ctx = getattr(self, "_b4_ctx", None) or {}
+            attacker = ctx.get("attacker")
+            n = 0
+            if head == "self_counters":
+                opt = ch.chosen()[0] if ch.chosen() else {"count": 0}
+                n = int(opt.get("count") or 0)
+                # 指示物不吃弱点/抗性（官方），直接加 damage（10/枚）
+                for _ in range(n):
+                    attacker.damage += 10
+                self._log("self_counters", {"player": ch.owner,
+                                            "target": attacker.name, "n": n})
+            elif head == "discard_energy":
+                parts = spec.split(":")
+                scope = "own"
+                for i, x in enumerate(parts):
+                    if x == "scope" and i + 1 < len(parts):
+                        scope = parts[i + 1]
+                side = self.current if scope == "own" else 1 - self.current
+                tgt = self.players[side]
+                for opt in ch.chosen():
+                    fp = _field_at(tgt, int(opt.get("pos", 0)))
+                    if fp is None:
+                        raise ValueError("弃能目标已不在场上（内部状态异常）")
+                    if opt.get("unit") == "special":
+                        ref = opt.get("sref")
+                        if any(r is ref for r in fp.senergy):
+                            fp.senergy.remove(ref)
+                            self._to_discard(tgt, ref)
+                            n += 1
+                        continue
+                    et = str(opt.get("etype") or "")
+                    if fp.energy.get(et, 0) > 0:
+                        fp.energy[et] -= 1
+                        if fp.energy[et] <= 0:
+                            fp.energy.pop(et, None)
+                        self._to_discard(tgt, EnergyRef(EnergyDef(et)))
+                        n += 1
+                self._log("b4_discard_energy", {"player": side, "n": n,
+                                                "scope": scope})
+            elif head == "discard_hand":
+                for opt in ch.chosen():
+                    ref = opt.get("ref")
+                    idx = next((i for i, c in enumerate(p.hand) if c is ref), None)
+                    if idx is None:
+                        raise ValueError("选择的手牌已不在手中（内部状态异常）")
+                    self._to_discard(p, p.hand.pop(idx))
+                    n += 1
+                self._log("b4_discard_hand", {"player": ch.owner, "n": n})
+            elif head == "all_energy":
+                opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+                to = spec.split(":")[1] if ":" in spec else "to_hand"
+                if opt.get("yes") and attacker is not None:
+                    moved = 0
+                    for et in sorted(attacker.energy):
+                        c = int(attacker.energy.get(et, 0))
+                        if c <= 0:
+                            continue
+                        attacker.energy.pop(et, None)
+                        for _ in range(c):
+                            if to == "to_deck":
+                                p.deck.append(EnergyRef(EnergyDef(et)))
+                            else:
+                                p.hand.append(EnergyRef(EnergyDef(et)))
+                            moved += 1
+                    for ref in list(attacker.senergy):
+                        attacker.senergy.remove(ref)
+                        (p.deck if to == "to_deck" else p.hand).append(ref)
+                        moved += 1
+                    if to == "to_deck":
+                        self.rng.shuffle(p.deck)
+                    n = 1
+                    self._log("b4_all_energy", {"player": ch.owner,
+                                                "target": attacker.name,
+                                                "n": moved, "to": to})
+                else:
+                    self._log("optional_declined", {"player": ch.owner,
+                                                    "tag": spec})
+            else:
+                raise ValueError(f"未知伤害前决策：{spec}")
+            self._b4_count = int(n)
+            self._attack_resume()
+            return
         if ch.kind == "pick_devolve_count":
             # D3：「any number of Evolution cards」—— 数量由玩家选，引擎不代选
             opt = ch.chosen()[0]
@@ -4328,6 +4429,60 @@ class Battle:
             # 复用普通弃道具实现（`discard_tool:<n>:<scope>`），并记账
             self._pre_tools_discarded += self._apply_discard_tool(spec)
             return
+        if head == "mill":
+            # 「Discard the top card of **each player's** deck.」（Magcargo ex
+            # 「Ground Burn」）——必须在**伤害之前**磨，因为伤害按「这次磨掉的
+            # 能量数」缩放（`discarded_energy_this_attack`）。
+            # ⚠ 只支持 `both`：单边磨牌走普通 `mill:` tag 即可，两处都实现会分叉。
+            # 形态：`mill:<n>:both`（n 在前、scope 在后，与普通 `mill:N:opp`
+            # 同序）。第一版把 `parts[1]` 当成 scope 判，`mill:1:both` 直接
+            # 走进「未知形态」——卡在对局里打不出，而且是**运行时**才炸。
+            if len(parts) < 3 or parts[2] != "both" \
+                    or not (parts[1] == "all" or parts[1].isdigit()):
+                raise ValueError(f"未知伤害前效果：pre:{spec}")
+            n = 999 if parts[1] == "all" else int(parts[1])
+            moved = 0
+            for pi in (0, 1):
+                vp = self.players[pi]
+                for _ in range(n):
+                    if not vp.deck:
+                        break
+                    self._to_discard(vp, vp.deck.pop())
+                    moved += 1
+            self._log("mill", {"player": "both", "n": moved, "by": "pre"})
+            return
+        if head == "attach_all_basic":
+            # 「Before doing damage, you may attach **any number** of Basic {W}
+            # Energy cards from your hand **to this Pokémon**.」（Gorebyss）
+            # ⚠ 为什么可以「一次全附」而不算替玩家决定：目标只有**一只**
+            #   （this Pokémon），且附着是**单调优势**（手牌能量 → 场上能量，
+            #   本引擎没有任何「能量多反而吃亏」的规则），所以「全附」= 卡面
+            #   允许的最大值，不存在被放弃的更优选择。**分布**类（附着到
+            #   「your Pokémon」任选）不适用这条，那需要交互层，别照抄。
+            if len(parts) < 2 or parts[1] != "self":
+                raise ValueError(f"未知伤害前效果：pre:{spec}")
+            etype = (parts[3].lower()
+                     if len(parts) > 3 and parts[2] == "type" else None)
+            _pp = self.players[self.current]
+            _fp = _pp.active
+            if _fp is None:
+                return
+            moved = 0
+            for i in range(len(_pp.hand) - 1, -1, -1):
+                ref = _pp.hand[i]
+                edef = getattr(ref, "edef", None)
+                if edef is None or getattr(edef, "is_special", False):
+                    continue
+                et = str(getattr(edef, "type", "") or "")
+                if etype and et != etype:
+                    continue
+                _pp.hand.pop(i)
+                _fp.add_energy(et, 1)
+                moved += 1
+            self._log("pre_attach_energy", {"player": self.current,
+                                            "target": _fp.name, "n": moved,
+                                            "etype": etype})
+            return
         if head == "discard_energy":
             if len(parts) < 4 or parts[2] != "opp" or parts[3] != "special":
                 raise ValueError(f"未知伤害前效果：pre:{spec}")
@@ -4703,6 +4858,170 @@ class Battle:
         self._log("discard_opp_random", {"player": 1 - self.current, "n": done})
         return done
 
+    def _alloc_open(self, spec: str, tag: str) -> None:
+        """打开「分配 / 多目标」选择（B4-b）
+
+        选项一律是**「动作单元」**（搬 1 点能量 / 搬 1 枚指示物 / 贴 1 张能量 /
+        洗 1 只宝可梦），玩家逐次选、`stop` 结束 —— 与 `pick_energy` 同一手法。
+        数量上限由「有多少个可用单元」自然给出，不需要另外的 count 选择。
+        """
+        parts = str(spec).split(":")
+        mode = parts[0]
+        p = self.players[self.current]
+        opp = self.players[1 - self.current]
+        opts: list = []
+        if mode == "move_counters":
+            for si, src in enumerate(opp.all_field()):
+                if int(src.damage) < 10:
+                    continue
+                for di, dst in enumerate(opp.all_field()):
+                    if di == si:
+                        continue
+                    opts.append({"display": f"把 1 枚指示物从 {src.name} 移到 {dst.name}",
+                                 "src": si, "dst": di})
+            if not opts:
+                self._log("no_effect", {"tag": tag,
+                                        "reason": "对手没有可移动的伤害指示物"})
+                return
+            self._open_choice("alloc", opts, min_pick=0, max_pick=-1,
+                              tag=tag, ctx={"mode": mode})
+            return
+        if mode == "move_energy":
+            etype = parts[1] if len(parts) > 1 else "any"
+            for si, src in enumerate(p.all_field()):
+                for et in sorted(src.energy):
+                    if src.energy.get(et, 0) <= 0:
+                        continue
+                    if etype != "any" and et != etype:
+                        continue
+                    for di, dst in enumerate(p.all_field()):
+                        if di == si:
+                            continue
+                        opts.append({"display": f"把 {src.name} 的 1 点 {et} 能量移到 {dst.name}",
+                                     "src": si, "dst": di, "etype": et})
+                if etype == "any":
+                    for ref in list(src.senergy):
+                        for di, dst in enumerate(p.all_field()):
+                            if di == si:
+                                continue
+                            opts.append({"display": f"把 {src.name} 的特殊能量移到 {dst.name}",
+                                         "src": si, "dst": di, "sref": ref})
+            if not opts:
+                self._log("no_effect", {"tag": tag, "reason": "没有可移动的能量"})
+                return
+            self._open_choice("alloc", opts, min_pick=0, max_pick=-1,
+                              tag=tag, ctx={"mode": mode})
+            return
+        if mode == "attach_hand":
+            etype = (parts[2].lower()
+                     if len(parts) > 2 and parts[1] == "basic" else None)
+            for hi, ref in enumerate(p.hand):
+                edef = getattr(ref, "edef", None)
+                if edef is None or getattr(edef, "is_special", False):
+                    continue
+                et = str(getattr(edef, "type", "") or "")
+                if etype and et != etype:
+                    continue
+                for di, dst in enumerate(p.all_field()):
+                    opts.append({"display": f"把手牌的 1 张 {et} 能量贴到 {dst.name}",
+                                 "hand": hi, "ref": ref, "dst": di, "etype": et})
+            if not opts:
+                self._log("no_effect", {"tag": tag, "reason": "手牌没有可贴的基本能量"})
+                return
+            self._open_choice("alloc", opts, min_pick=0, max_pick=-1,
+                              tag=tag, ctx={"mode": mode})
+            return
+        if mode == "shuffle_opp_bench":
+            n = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 1
+            keep = "keep" in parts
+            for bi in range(len(opp.bench)):
+                opts.append({"display": opp.bench[bi].name, "pos": bi})
+            # 「choose 2」写死数量：不足则按实际数量（官方：不够就选全部）
+            n = min(n, len(opts))
+            if n <= 0:
+                self._log("no_effect", {"tag": tag, "reason": "对手后备为空"})
+                return
+            self._open_choice("alloc", opts, min_pick=n, max_pick=n, tag=tag,
+                              ctx={"mode": mode, "keep": keep})
+            return
+        raise ValueError(f"未知分配形态：choose:alloc:{spec}")
+
+    def _alloc_apply(self, ch) -> None:
+        """把「分配」选择的结果落到状态上（未知 mode 抛错）"""
+        mode = str(ch.ctx.get("mode") or "")
+        p = self.players[ch.owner]
+        opp = self.players[1 - ch.owner]
+        if mode == "move_counters":
+            moved = 0
+            for opt in ch.chosen():
+                src = _field_at(opp, int(opt["src"]))
+                dst = _field_at(opp, int(opt["dst"]))
+                if src is None or dst is None or int(src.damage) < 10:
+                    continue
+                src.damage -= 10
+                dst.damage += 10
+                moved += 1
+            self._log("move_counters", {"player": ch.owner, "n": moved})
+            # 搬指示物**可以把宝可梦击倒**（官方）：逐个结算，先记录再移出
+            for fp in list(opp.all_field()):
+                if fp.is_ko:
+                    self._resolve_ko(1 - ch.owner, fp)
+                    if self.finished:
+                        return
+            return
+        if mode == "move_energy":
+            moved = 0
+            for opt in ch.chosen():
+                src = _field_at(p, int(opt["src"]))
+                dst = _field_at(p, int(opt["dst"]))
+                if src is None or dst is None:
+                    continue
+                if opt.get("sref") is not None:
+                    ref = opt["sref"]
+                    if any(r is ref for r in src.senergy):
+                        src.senergy.remove(ref)
+                        dst.senergy.append(ref)
+                        moved += 1
+                    continue
+                et = str(opt.get("etype") or "")
+                if src.energy.get(et, 0) > 0:
+                    src.energy[et] -= 1
+                    if src.energy[et] <= 0:
+                        src.energy.pop(et, None)
+                    dst.add_energy(et, 1)
+                    moved += 1
+            self._log("move_energy", {"player": ch.owner, "n": moved,
+                                      "by": "alloc"})
+            return
+        if mode == "attach_hand":
+            moved = 0
+            for opt in ch.chosen():
+                ref = opt.get("ref")
+                idx = next((i for i, c in enumerate(p.hand) if c is ref), None)
+                dst = _field_at(p, int(opt.get("dst", 0)))
+                if idx is None or dst is None:
+                    continue
+                p.hand.pop(idx)
+                dst.add_energy(str(opt.get("etype") or ""), 1)
+                moved += 1
+            self._log("attach_energy", {"player": ch.owner, "n": moved,
+                                        "from": "hand", "by": "alloc"})
+            return
+        if mode == "shuffle_opp_bench":
+            keep = bool(ch.ctx.get("keep"))
+            picked = {int(o["pos"]) for o in ch.chosen()}
+            # keep=True → 洗「没被选中」的那些（Shiftry）；否则洗选中的（Sylveon）
+            targets = [fp for i, fp in enumerate(list(opp.bench))
+                       if (i not in picked) == bool(keep)]
+            moved = 0
+            for fp in targets:
+                moved += self._shuffle_opp_fp(fp)
+            self._log("alloc_shuffle_bench", {"player": ch.owner,
+                                              "n_pokemon": len(targets),
+                                              "cards": moved, "keep": keep})
+            return
+        raise ValueError(f"未知分配形态：{mode}")
+
     def _shuffle_opp_pokemon(self, scope: str) -> int:
         """把对手 1 只宝可梦**连同附着卡**洗回其牌库 → 移动的卡数（0 = 无目标）
 
@@ -4729,6 +5048,16 @@ class Battle:
             self._log("no_effect", {"tag": f"shuffle_opp_pokemon:{scope}",
                                     "reason": "对手无合法目标"})
             return 0
+        return self._shuffle_opp_fp(fp)
+
+    def _shuffle_opp_fp(self, fp) -> int:
+        """把**指定的**一只对手宝可梦连同附着卡洗回其牌库 → 移动的卡数
+
+        从 `_shuffle_opp_pokemon` 抽出（B4-b）：多目标的
+        `choose:alloc:shuffle_opp_bench` 也要走同一段实现 —— 两处各写一份必然
+        分叉（一个搬了道具、一个忘了能量），而对局里完全看不出来。
+        """
+        opp = self.players[1 - self.current]
         was_active = fp is opp.active
         moved = 0
         # 宝可梦卡本体（化石卡本体是训练家卡，必须放回 TrainerRef）
@@ -6442,7 +6771,8 @@ class Battle:
             # first turn.」）不受限；其余整只拦下（官方）。
             _ai0 = _attack_index_from_action(p.active.pdef.attacks, action)
             if _ai0 is None or _ai0 >= len(p.active.pdef.attacks) \
-                    or not _first_turn_attack_ok(p.active.pdef.attacks[_ai0]):
+                    or not _first_turn_attack_ok(p.active,
+                                                 p.active.pdef.attacks[_ai0]):
                 raise ValueError("先手第一回合不可攻击")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
@@ -6506,6 +6836,7 @@ class Battle:
         # 否则复制的招式看牌库时会看到「已经洗过」的另一副牌。
         _base_scope = _borrow_scope(p.active.pdef.attacks[ai])
         _deck_top_n = _borrow_deck_top_n(_base_scope)
+        _ropp = None
         if _deck_top_n:
             _ropp = self.players[1 - self.current]
             _rtop = list(reversed(list(_ropp.deck[-_deck_top_n:])))
@@ -6556,9 +6887,191 @@ class Battle:
         # 若放到 `_apply_attack_effects`（伤害之后）就白弃了，属静默少做。
         # 同时记录本次真的弃掉几张道具（`:if_pre_tool` 条件要用）。
         self._pre_tools_discarded = 0
+        self._b4_count = 0          # 本次攻击的「按数量缩放」计数，先归零
+        # B4：`discarded_energy_this_attack` 的基准 —— 用**差分**得到「本招式
+        # 弃掉了几张能量」，而不是本回合累计。
+        self._atk_energy_disc0 = p.discarded_energy_this_turn
+        _b4 = _b4_spec(atk.effects)
         for _tag in atk.effects or ():
-            if str(_tag).startswith("pre:"):
+            if str(_tag).startswith("pre:") and not str(_tag).startswith(B4_PREFIX):
                 self._apply_pre_attack_effect(str(_tag)[4:])
+        if _b4 is not None:
+            # 卡面「Discard any amount … and this attack does N damage for each
+            # card you discarded **in this way**」——数量是玩家的决定，必须在
+            # **算伤害之前**问。这里挂起并中断本次结算，闭合后由
+            # `_attack_resume` 从伤害段续跑（费用已付、攻击已记账，不能重跑）。
+            self._b4_open(p, attacker, defender, atk, ai, action,
+                          _deck_top_n, _ropp, _b4)
+            return {"ok": True, "event": None, "suspended": True}
+        # B4（2026-11-08）：伤害与效果段在独立方法里 —— 卡面要求「先定数量再算
+        # 伤害」时可以只挂起这一段，闭合后从**这一段**续跑（不重付费用、不重复
+        # 记攻击次数）。见 `_attack_resolve` / `_attack_resume` 的说明。
+        return self._attack_resolve(p, attacker, defender, atk, ai, action,
+                                    _deck_top_n, _ropp)
+
+
+    def _b4_open(self, p: PlayerState, attacker: FieldPokemon,
+                 defender: FieldPokemon, atk, ai: int, action: dict,
+                 deck_top_n: int, ropp, spec: str) -> None:
+        """挂起「伤害前决策」（B4）：把**可选项**摊开给牌手
+
+        支持的 spec（每个都对应真实卡面，见 `docs/RULE_CONFORMANCE.md`）：
+
+          · ``self_counters:<nmax>`` —— 「Put **up to N** damage counters on
+            this Pokémon. This attack does M damage for each counter you placed
+            **in this way**.」（Walking Wake）→ 选项 k = 0…nmax
+          · ``discard_energy:<type|any>:scope:<own|opp>`` —— 「Discard **any
+            amount** of {R} Energy from among your Pokémon …」（Mega Charizard X
+            ex）→ 逐个能量单位可选
+          · ``discard_hand:<kind>:<substr>`` —— 「Discard **any number** of
+            Supporter cards that have "Team Rocket" in their name …」（TR
+            Honchkrow）→ 逐张手牌可选
+          · ``all_energy:<to_hand|to_deck>`` —— 「You **may** put **all** Energy
+            attached to this Pokémon into your hand to have this attack do 80
+            more damage.」（Zarude / Dialga）→ 是/否
+        """
+        parts = str(spec).split(":")
+        head = parts[0]
+        self._b4_ctx = {"owner": self.current, "attacker": attacker,
+                        "defender": defender, "atk": atk, "ai": int(ai),
+                        "action": dict(action), "deck_top_n": deck_top_n,
+                        "ropp": ropp, "spec": str(spec)}
+        if head == "self_counters":
+            if len(parts) < 2 or not parts[1].isdigit():
+                raise ValueError(f"未知伤害前决策：{spec}")
+            nmax = int(parts[1])
+            opts = [{"display": (f"放 {k} 个伤害指示物在这只宝可梦上"
+                                 if k else "不放伤害指示物"),
+                     "count": k} for k in range(nmax + 1)]
+            self._open_choice("b4_pre", opts, min_pick=1, max_pick=1,
+                              tag=B4_PREFIX + spec, ctx={"spec": str(spec)})
+            return
+        if head == "discard_energy":
+            etype = parts[1] if len(parts) > 1 else "any"
+            scope = "own"
+            for i, x in enumerate(parts):
+                if x == "scope" and i + 1 < len(parts):
+                    scope = parts[i + 1]
+            side = self.current if scope == "own" else 1 - self.current
+            tgt = self.players[side]
+            opts = []
+            for pos, fp in enumerate(tgt.all_field()):
+                for et in sorted(fp.energy):
+                    if fp.energy.get(et, 0) <= 0:
+                        continue
+                    if etype != "any" and et != etype:
+                        continue
+                    opts.append({"display": f"弃 {fp.name} 的 1 点 {et} 能量",
+                                 "pos": pos, "etype": et,
+                                 "unit": "basic"})
+                for ref in list(fp.senergy):
+                    if etype != "any":
+                        continue          # 指定属性时只认基本能量的属性
+                    opts.append({"display": f"弃 {fp.name} 的特殊能量",
+                                 "pos": pos, "sref": ref, "unit": "special"})
+            if not opts:
+                # 没有可弃的 → 数量只能是 0，直接按 0 续跑（不挂空选择：
+                # 空选择会让 AI 看到一堆「结束选择」，等于噪声动作）
+                self._log("b4_no_option", {"player": self.current,
+                                           "spec": str(spec),
+                                           "reason": "没有可弃的能量"})
+                self._b4_count = 0
+                self._attack_resume()
+                return
+            # ⚠ `allow_repeat=True`：引擎里「能量」是**按点数计数**的，
+            #   一个 (宝可梦, 属性) 只对应**一个**选项。不允许重复选的话，
+            #   「弃任意数量」实际只能弃 1 点（静默削到 1/N）。
+            #   重复选到没能量时 `_apply_choice_result` 会跳过并如实计数。
+            self._open_choice("b4_pre", opts, min_pick=0, max_pick=-1,
+                              allow_repeat=True,
+                              tag=B4_PREFIX + spec, ctx={"spec": str(spec)})
+            return
+        if head == "discard_hand":
+            kind = parts[1] if len(parts) > 1 else "any"
+            sub = parts[2] if len(parts) > 2 else ""
+            opts = []
+            for i, ref in enumerate(p.hand):
+                td = getattr(ref, "tdef", None)
+                if td is None:
+                    continue
+                if kind != "any" and str(getattr(td, "kind", "")) != kind:
+                    continue
+                name = str(getattr(td, "name", "") or "")
+                # 两侧都归一（只留字母数字）再比：解析侧把
+                # `"Team Rocket"` 归一成 `teamrocket`，而卡名是
+                # `Team Rocket's Ariana`（带空格与撇号）——按字面子串比会**永远
+                # 匹配不到**，于是「任意数量弃牌」退化成「没有可选卡」，
+                # 玩家只能放弃（静默削弱，而且日志里看着像「本来就没得选」）。
+                if sub and ''.join(ch for ch in sub.lower() if ch.isalnum()) \
+                        not in ''.join(ch for ch in name.lower() if ch.isalnum()):
+                    continue
+                opts.append({"display": f"弃 {name}", "ref": ref})
+            if not opts:
+                self._log("b4_no_option", {"player": self.current,
+                                           "spec": str(spec),
+                                           "reason": "手牌没有符合的卡"})
+                self._b4_count = 0
+                self._attack_resume()
+                return
+            self._open_choice("b4_pre", opts, min_pick=0, max_pick=-1,
+                              tag=B4_PREFIX + spec, ctx={"spec": str(spec)})
+            return
+        if head == "all_energy":
+            if attacker.total_energy() <= 0:
+                # 卡面「You may …」—— 没有能量可付时无从选择，按「不付」处理
+                self._log("b4_no_option", {"player": self.current,
+                                           "spec": str(spec),
+                                           "reason": "没有能量可支付"})
+                self._b4_count = 0
+                self._attack_resume()
+                return
+            self._open_choice(
+                "b4_pre",
+                [{"display": "把全部能量移开，本招 +80 伤害", "yes": True},
+                 {"display": "不支付（本招按原伤害结算）", "yes": False}],
+                min_pick=1, max_pick=1, tag=B4_PREFIX + spec,
+                ctx={"spec": str(spec)})
+            return
+        raise ValueError(f"未知伤害前决策：{spec}")
+
+    def _attack_resume(self) -> None:
+        """从 `_b4_ctx` 续跑招式结算的**伤害段**（B4 挂起之后）"""
+        ctx = getattr(self, "_b4_ctx", None)
+        self._b4_ctx = None
+        if not ctx:
+            return
+        owner = int(ctx["owner"])
+        p = self.players[owner]
+        attacker = ctx["attacker"]
+        defender = ctx["defender"]
+        if attacker is None or not any(fp is attacker for fp in p.all_field()):
+            # 挂起期间攻击者离场（理论上不会发生：挂起即冻结）—— 如实记录
+            self._log("no_effect", {"player": owner, "tag": "b4",
+                                    "reason": "攻击者已不在场上"})
+            return
+        opp = self.players[1 - owner]
+        if defender is None or opp.active is not defender or defender.is_ko:
+            self._log("no_effect", {"player": owner, "tag": "b4",
+                                    "reason": "守方已改变"})
+            return
+        self._attack_resolve(p, attacker, defender, ctx["atk"], int(ctx["ai"]),
+                             ctx["action"], ctx["deck_top_n"], ctx["ropp"])
+
+    def _attack_resolve(self, p: PlayerState, attacker: FieldPokemon,
+                        defender: FieldPokemon, atk, ai: int, action: dict,
+                        deck_top_n: int, ropp) -> dict:
+        """招式结算的**伤害与效果段**（B4 从 `_do_attack` 抽出）
+
+        为什么拆开：卡面「Discard any amount of {R} Energy from among your
+        Pokémon, and this attack does 90 damage for each card you discarded
+        **in this way**」要求**先**定数量、**再**算伤害。数量是玩家的决定，
+        只能挂起选择；挂起意味着本次结算要**中断**，闭合后从这一段**续跑**。
+
+        ⚠ 不能「从头重入 `_do_attack`」：费用已付、`attacks_this_turn` 已记、
+        `attack` 事件已发 —— 重跑会重复扣费、重复计数、日志出现两条 attack。
+        """
+        _deck_top_n = deck_top_n
+        _ropp = ropp
         # v1.4 伤害修正层：抛币（coin:）与条件/计数缩放（dmg_plus:）必须先于伤害结算，
         # 因为它们会改写基础伤害；`dmg_zero` 则直接把本次伤害归零。
         # 让「额外能量」条件能取到**本次招式**的费用（Electivire ex /
@@ -6677,7 +7190,6 @@ class Battle:
             return {"ok": True, "event": None}
         self._end_turn()
         return {"ok": True, "event": None}
-
     # ---------- S3 场地（Stadium，2026-10-27） ----------
     def _attack_allowance(self, fp) -> int:
         """本回合该宝可梦允许攻击几次（Festival Lead，第六十一批）
@@ -9079,6 +9591,25 @@ class Battle:
                 self._open_choice("counters_any_opp", _opts,
                                   min_pick=_n, max_pick=_n,
                                   allow_repeat=True, tag=tag)
+            elif tag.startswith("choose:alloc:"):
+                # B4-b（2026-11-08）：**任意分配 / 多目标选择**交互层。
+                # 卡面原型：
+                #   · Alakazam「You may move **any number** of damage counters on
+                #     your opponent's Pokémon to their other Pokémon **in any way
+                #     you like**」→ `move_counters`
+                #   · Forretress「You may move **any amount** of {M} Energy from
+                #     your Pokémon to your other Pokémon in any way you like」
+                #     → `move_energy`
+                #   · Alolan Exeggutor ex「You may attach **any number** of Basic
+                #     Energy cards from your hand to your Pokémon in any way you
+                #     like」→ `attach_hand`
+                #   · Sylveon ex「Choose 2 of your opponent's Benched Pokémon.
+                #     Shuffle **those** …」→ `shuffle_opp_bench:2`
+                #   · Shiftry「Choose 3 … shuffle all … that you **didn't**
+                #     choose」→ `shuffle_opp_bench:3:keep`
+                # ⚠ 这一族**不能**退化成「全量确定性执行」：目标不唯一时，
+                #   分到哪只直接改变后续几个回合，「全都放战斗位」是替玩家决定。
+                self._alloc_open(tag[len("choose:alloc:"):], tag)
             elif tag.startswith("choose:optional_energy_cost:"):
                 # 「You may discard N {T} Energy from this Pokémon and <后续>」
                 # （Mega Eelektross ex「Disaster Shock」）
@@ -11325,7 +11856,7 @@ def _card_first_turn_ok(card) -> bool:
                for seg in str(getattr(tdef, "tag", "") or "").split("|"))
 
 
-def _first_turn_attack_ok(atk) -> bool:
+def _first_turn_attack_ok(fp, atk) -> bool:
     """该招式是否**无视「先手第一回合不能攻击」**（S6a）
 
     卡面原型（Volbeat「Quick Sign」/ Exeggcute「Precocious Evolution」/
@@ -11336,8 +11867,18 @@ def _first_turn_attack_ok(atk) -> bool:
     解析侧若漏产 `use_any:first_turn`，同样安静无声。故解析、引擎、白名单、
     对账四处都要有（对账第 51 类专门盯这一句）。
     """
-    return any(str(t) == "use_any:first_turn"
-               for t in (getattr(atk, "effects", None) or ()))
+    # ① 招式自带（「If you go first, you can use **this attack** during your
+    #    first turn.」Volbeat / Exeggcute / Delibird / Tapu Koko）
+    if any(str(t) == "use_any:first_turn"
+           for t in (getattr(atk, "effects", None) or ())):
+        return True
+    # ② **宝可梦级授权**（「If you go first, **this Pokémon** can use attacks
+    #    during your first turn.」Meloetta ex「Debut Performance」）——
+    #    这句话落在**特性**上，改的是「这只宝可梦的全部招式」，不是某一招。
+    #    ⚠ 只查招式的话，Meloetta 在开局回合仍然一招都用不出（静默削弱），
+    #      而且它的招式和特性各自都「已建模」，任何覆盖率报表都看不出来。
+    return any(str(getattr(ab, "tag", "")) == "use_any:first_turn"
+               for ab in (getattr(fp.pdef, "abilities", None) or ()))
 
 
 def _is_acespec(card) -> bool:
@@ -12155,6 +12696,22 @@ def _take_energy_from_deck(p: PlayerState, n: int,
 _BORROW_COIN_GATE_PREFIX = "coin:heads:borrow_attack:"
 
 
+B4_PREFIX = "pre:b4:"
+
+
+def _b4_spec(effects) -> Optional[str]:
+    """招式的**伤害前决策**规格（`pre:b4:<spec>`）；没有则 None
+
+    ⚠ 一次招式只允许**一个** b4 决策：两个的话「先问哪个」变成隐式顺序，
+      而顺序会改变结果（先弃能量还是先放指示物）。真遇到就抛错。
+    """
+    found = [str(t)[len(B4_PREFIX):] for t in (effects or ())
+             if str(t).startswith(B4_PREFIX)]
+    if len(found) > 1:
+        raise ValueError(f"一次招式只能有一个伤害前决策：{found}")
+    return found[0] if found else None
+
+
 def _borrow_scope(atk) -> Optional[str]:
     """招式的借用来源（`borrow_attack:<scope>`）；普通招式返回 None
 
@@ -12792,6 +13349,18 @@ _COUNTERS = {
     "own_discarded_this_turn": lambda b, p, o: p.discarded_this_turn,
     "own_discarded_energy_this_turn":
         lambda b, p, o: p.discarded_energy_this_turn,
+    # B4（2026-11-08）：**本次攻击**由玩家决定的「数量」（「… in this way」）。
+    # 为什么必须是独立计数源而不是 `own_discarded_this_turn`：后者是本回合累计，
+    # 会把本回合早些时候弃掉的牌也算进去 —— 卡面写的是「discarded **in this way**」，
+    # 多算就是静默加强（且只在「本回合先弃过别的牌」时才显现，极难发现）。
+    "chosen_this_attack": lambda b, p, o: int(getattr(b, "_b4_count", 0)),
+    # 「for each Energy card discarded **in this way**」（Magcargo ex / Wugtrio ex）
+    # ——本次**招式**里弃掉的能量数。用差分（`_atk_energy_disc0`）而不是
+    # `own_discarded_energy_this_turn`：后者是本回合累计，会把本回合早些时候
+    # 弃的能量也算进伤害（只在「先弃过能量」时显现，极难复现）。
+    "discarded_energy_this_attack":
+        lambda b, p, o: max(0, p.discarded_energy_this_turn
+                            - int(getattr(b, "_atk_energy_disc0", 0))),
 }
 # 能量计数源：``<zone>_energy[_<color>]`` —— 支持「附在此宝可梦上的水能量」这类
 # **带颜色筛选**的精确计数（笼统按总能量数会系统性多算伤害）
@@ -12992,6 +13561,9 @@ _DYNAMIC_COUNTER_RE = re.compile(
     r"|opp_discard_named:[a-z0-9]+"
     r"|own_discard_named_supporter:[a-z0-9]+"
     r"|both_field_named_any:[a-z0-9]+(?:\+[a-z0-9]+)*"
+    # B4（2026-11-08）：「Reveal any number of Honedge, Doublade, and Aegislash
+    # from your hand …」（Doublade）——**手牌**里这些名字的卡数。
+    r"|own_hand_named_any:[a-z0-9]+(?:\+[a-z0-9]+)*"
     r"|opp_hand_kind:(?:pokemon|trainer|energy)"
     r"|opp_prizes_taken_last_turn"
     # 第二十六批（2026-10-29）：按**属性/具名**限定的后备指示物数，以及
@@ -13057,6 +13629,17 @@ def _eval_counter(battle, counter: str) -> int:
         keys = m.group(1).split("+")
         return sum(1 for fp in p.all_field() + o.all_field()
                    if any(k and k in _name_key(fp.pdef.name) for k in keys))
+    # 「Reveal any number of Honedge, Doublade, and Aegislash from your hand, and
+    #  this attack does 60 damage for each card you revealed in this way.」
+    #  （Doublade）——**手牌**里这些名字的卡数。
+    # 为什么不需要交互层：reveal **不弃牌、不改变任何状态**，所以「全部亮出」
+    # 是支配解（多亮一张只会更多伤害）。这与「discard any number」不同 ——
+    # 后者有代价，必须让玩家选。
+    m = re.match(r"^own_hand_named_any:([a-z0-9]+(?:\+[a-z0-9]+)*)$", counter)
+    if m:
+        keys = m.group(1).split("+")
+        return sum(1 for c in p.hand
+                   if any(k and k in _name_key(_card_label(c)) for k in keys))
     # 「for each Pokémon in your discard pile that has the United Wings attack」
     m = re.match(r"^own_discard_has_attack:([a-z0-9]+)$", counter)
     if m:

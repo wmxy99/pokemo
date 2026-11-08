@@ -125,9 +125,15 @@ class TestEnergyCostGuard(unittest.TestCase):
         self.assertIn("energy_self_to_deck:all", r["tags"])
         self.assertIn("snipe:opp:220:1", r["tags"])
 
-    def test_charizard_x_rejected(self):
-        """「any amount」需交互层 → 必须报 unsupported"""
-        self.assertTrue(self._has_cost_gap(CHARIZARD_X))
+    def test_charizard_x_modeled(self):
+        """「Discard **any amount** of {R} Energy from among your Pokémon」+ 按数量
+        缩放伤害 —— B4（2026-11-08）起由 `pre:b4:discard_energy` 承载，不再报缺口
+
+        改判理由：以前没有「先定数量再算伤害」的交互层，只能如实拒绝。现在
+        引擎有「伤害前挂起 → 应用 → 续跑」，代价**真的会弃能量**，
+        且计数源是 `chosen_this_attack`（本次弃了几张），不是本回合累计。
+        """
+        self.assertFalse(self._has_cost_gap(CHARIZARD_X))
 
     def test_mapped_cost_is_not_flagged(self):
         """代价已被表达的三张不得误报（否则会白丢可用卡）"""

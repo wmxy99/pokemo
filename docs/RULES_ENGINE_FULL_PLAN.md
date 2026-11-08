@@ -6,7 +6,7 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1232/1267 = 97.2%**，池 **1217**，
+> 现状基线（2026-11-08 实测）：`engine_ready` **1245/1267 = 98.3%**，池 **1230**，
 > 未 ready **45**（批内如实拒收 41 + 结构性 4），测试 **2718**，CI 8/8。
 > 进度：**S1 全 / S2 全 / S3 / S4 已落地**（见 §10 的落地记录与偏差登记）。
 
@@ -878,3 +878,101 @@ S6 体量太大，拆成 S6a（**规则开关层**，本批）→ S6b（奖赏�
 | `docs/RULE_CONFORMANCE.md`（待建） | **规则矩阵**（完整规则的判据） |
 | `.workbuddy/memory/REFERENCE_rules_modeling.md` | 建模纪律 24 条 —— S1–S6 全部继续适用（尤其「负向自测必须真能变红」） |
 | `README.md` | 对外承诺：S6 完成后删除「简化子集」表述 |
+
+---
+
+## B4 · 「任意数量」交互层（2026-11-08）
+
+GAP_REPORT 里最大的结构性缺口（原估 12 张卡）一次收掉，顺带修好 5 张「计数源口径 /
+解析归错项」的卡。**进池 18 张**：`engine_ready` 1232 → **1245 / 1267 = 98.3%**，
+池 1217 → **1230**，未进池 35 → **22**。
+
+### 结构：把「伤害前决策」做成可挂起的层
+
+卡面原型（Mega Charizard X ex「Inferno X」）：
+
+> Discard **any amount** of {R} Energy from among your Pokémon, and this attack
+> does 90 damage for each card you discarded **in this way**.
+
+数量是玩家的决定，**而且数量改变伤害** —— 所以只能在**算伤害之前**问。原有的
+`_do_attack` 是直筒函数（付费用 → 算伤害 → 结算效果 → 结束回合），中途挂起
+没有任何落点。本批把它拆成两段：
+
+| 段 | 内容 |
+|---|---|
+| `_do_attack`（声明段） | 校验 / 付款 / 记 `attack` 事件 / 混乱判定 / **伤害前决策**（需要时挂起并中断） |
+| `_attack_resolve`（伤害段） | `_attack_mods` → 伤害流水线 → 效果 → 击倒 → 攻击结束事件 → 结束回合 |
+
+挂起时把现场存进 `_b4_ctx`，选择闭合后由 `_attack_resume` **只重跑伤害段**：
+
+* 不能「从头重入 `_do_attack`」—— 费用已付、`attacks_this_turn` 已记、`attack`
+  事件已发，重跑会重复扣费/计数、日志出现两条 `attack`；
+* 挂起即冻结（既有不变量），所以现场里的 attacker/defender 在闭合时仍然有效，
+  但仍按 `is` 校验一遍（失效就如实记 `no_effect`）。
+
+### 各形态
+
+| tag | 卡面 | 语义要点 |
+|---|---|---|
+| `pre:b4:self_counters:<n>` | 「Put **up to N** damage counters on this Pokémon … 20 damage for each counter you placed **in this way**」 | 选项 k=0…N；0 合法（不是「至少 1」） |
+| `pre:b4:discard_energy:<type>:scope:own` | 「Discard **any amount** of {R} Energy from among your Pokémon」 | 逐点选；**允许重复选同一项**（引擎里能量按点数计数，一个 (位置,属性) 只有一个选项） |
+| `pre:b4:discard_hand:supporter:<substr>` | 「discard **any number** of Supporter cards that have "Team Rocket" in their name」 | 只列**符合**的手牌；卡名两侧归一再比 |
+| `pre:b4:all_energy:<to_hand / to_deck>` | 「You **may** put/shuffle **all** Energy attached to this Pokémon … to have this attack do 80 more damage」 | 是/否；不付就不加伤（两种默认都会实质改结果） |
+| `pre:attach_all_basic:self:type:<c>` | 「Before doing damage, you may attach **any number** of Basic {W} Energy … to **this Pokémon**」 | **不是决策**：目标唯一 + 附着单调 → 全附即最大值 |
+| `choose:alloc:move_counters` / `move_energy:<t>` / `attach_hand:basic` / `shuffle_opp_bench:<n>[:keep]` | 「… **in any way you like**」/「Choose N of your opponent's Benched Pokémon」 | 目标不唯一 → 玩家逐次指；`keep` = 洗「没被选中」的那些（Shiftry） |
+| `use_any:first_turn`（**特性**级） | 「If you go first, **this Pokémon** can use attacks during your first turn.」 | 改的是**这只宝可梦的全部招式**；`_ability_legals` 必须跳过它（静态许可不是可发动特性） |
+
+伤害缩放统一用新计数源 `chosen_this_attack`（= 本次攻击里玩家决定的量）。
+**不能**复用 `own_discarded_this_turn`（本回合累计）—— 那会把本回合早些时候弃的
+牌也算进伤害，而且**只在「先弃过别的牌」时**才显现。
+
+### 顺带修掉的三处口径错
+
+1. **`in this way` 用了本回合累计**：Magcargo ex「Ground Burn」/ Wugtrio ex
+   「Tricolor Pump」的 `own_discarded_energy_this_turn` 改成
+   `discarded_energy_this_attack`（差分：`discarded_energy_this_turn` 减「攻击开始
+   时的快照」）。
+2. **Magcargo ex 根本没磨牌**：卡面「Discard the top card of **each player's** deck」
+   完全没建模（只有伤害缩放 tag）→ 新增 `pre:mill:<n>:both`，且必须在伤害**之前**
+   （否则缩放读不到这次磨出的能量）。
+3. **Sylveon ex「Angelite」的单招自锁被丢**：「If 1 of your Pokémon used Angelite
+   during your last turn, this attack can't be used.」→
+   `use_not:used_attack_last_turn:angelite`。丢了这句 = 这招可以每回合连放。
+
+### 对账（第 53 类）
+
+新增 `audit_b4_interaction`：11 条「句式 → 必须有对应 tag」+ 1 条**反向**口径校验
+（卡面写 `in this way` 且带缩放时，计数源必须是 `chosen_this_attack`，不得是本回合
+累计）。**这一类第一次跑就抓到 Magcargo ex 的真 bug**（磨牌缺失 + 计数源错）——
+这正是「矩阵/对账必须能被推翻」的价值。
+
+### 踩到的坑
+
+1. **★ 「任意数量」不是「全部」也不是「1」**：三种语义（固定 N / 全部 / 玩家选）
+   各有明确写法，混用都不报错。Gorebyss 的「to **this** Pokémon」是唯一可以合法
+   取满的形态；Alolan Exeggutor ex 的「to **your** Pokémon in any way you like」
+   换一个词就变成分配问题，必须走 `choose:alloc:`。
+2. **★ 能量是「计数」不是「卡」**：`discard_energy` 的一个选项对应一个
+   (宝可梦, 属性)，不开 `allow_repeat` 时「任意数量」实际只能选 1 点（削到 1/N）。
+3. **★ 卡名子串必须两侧归一**：解析侧把 `"Team Rocket"` 归一成 `teamrocket`，
+   卡名是 `Team Rocket's Ariana` —— 按字面比**永远匹配不到**，于是「任意数量弃牌」
+   退化成「没有可选卡」，玩家只能放弃，日志看着像「本来就没得选」。
+4. **★ 抹句是必须的**：认领后不把句子从扫描文本里抹掉，「any number of」兜底会把
+   已建模的卡重新标成未建模（整卡不进池，卡面/日志全正常）。
+5. **★ 假守卫两例**（注入自测抓出来的）：
+   · 「`counters:` 不得二次认领」—— 那条 `counters:` 只认「on your opponent's」，
+     Walking Wake 的写法本来就不命中，断言两个方向都绿；
+   · 「静态许可不进合法动作表」的第一版**注入只删了注释**（skip 列表还在），
+     所以没变红。教训：注入要改**代码**不是改注释；断言要指向**真会变**的量。
+
+**数字**：`engine_ready` **1245 / 1267 = 98.3%** · 池 **1230** · 未进池 **22**
+（18 如实拒收 + 4 结构性）· 测试 **2795**（engine 1564 / agent 1077 / api 142 / gym 12）
+· 对账 **53 类** · 矩阵 **39 行**（38 ✅ / 1 ⚠️）· 注入 **18/18 全红** · CI 8/8。
+
+**剩余 22 张**（逐张见 `docs/GAP_REPORT.md`）：计数源 4（Misty's Gyarados /
+Mega Abomasnow ex / Gengar / Milotic）· 工具静态 3（Hop's Choice Band / Core Memory /
+Megaton Blower）· 能力抑制/规则改写 4（Klinklang / Espeon ex / Eevee ex / Revavroom ex）·
+单卡机制 7（Lillie's Clefairy ex / Lillie's Ribombee / Mandibuzz / Cinderace / Meganium /
+Kieran / Wellspring Mask Ogerpon ex）· 近邻形态 4（Okidogi / Team Rocket's Moltres ex /
+Smeargle / Dedenne —— 都是「来源/方向换了个词」）。
+

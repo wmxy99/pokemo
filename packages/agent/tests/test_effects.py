@@ -446,15 +446,23 @@ class TestV14Modifiers(unittest.TestCase):
                          "应为 `all` + 卡名筛选，不得产出固定数量")
         self.assertEqual(r["unsupported"], [], "该形态已完整建模")
 
-        # 附着 / 移动 / 弃牌：任意数量子句不得被静默丢弃
+        # 附着 / 移动 / 弃牌：**尚未**建模的「任意数量」不得被静默丢弃
+        #
+        # ⚠ 2026-11-08（B4）改判：下面三条原先是这一组的正例，现在**都已建模** ——
+        #   · Gorebyss「attach any number of Basic {W} … to **this Pokémon**」→
+        #     `pre:attach_all_basic`（目标唯一 + 附着单调，全附即最大值）；
+        #   · TR Honchkrow「discard any number of Supporter … 」→
+        #     `pre:b4:discard_hand` + `dmg_set:…:per:chosen_this_attack`；
+        #   · Alakazam（搬指示物）/ Alolan Exeggutor ex（从手牌贴能量）→
+        #     `choose:alloc:move_counters` / `choose:alloc:attach_hand:basic`。
+        #   · 因此这一组改用**仍未建模**的两条：**方向/来源**没覆盖的形态
+        #     （搬到对手那边 / 从**弃牌堆**贴）。这类「换个方向」的写法最容易被
+        #     前缀正则顺手吃掉，吃掉就是实质错算（把自己的东西给别人）。
         for text in (
-            "Before doing damage, you may attach any number of Basic {W} "
-            "Energy cards from your hand to this Pok\u00e9mon.",
-            "You may move any number of damage counters on your opponent\u2019s "
-            "Pok\u00e9mon to their other Pok\u00e9mon in any way you like.",
-            "You may discard any number of Supporter cards that have "
-            "\u201cTeam Rocket\u201d in their name from your hand, and this "
-            "attack does 60 damage for each card you discarded in this way.",
+            "You may move any number of damage counters from your Pok\u00e9mon to "
+            "your opponent\u2019s Pok\u00e9mon in any way you like.",
+            "You may attach any number of Energy cards from your discard pile to "
+            "your Pok\u00e9mon in any way you like.",
         ):
             r = self._tags(text)
             self.assertTrue(r["unsupported"],
@@ -899,11 +907,17 @@ class TestV14Modifiers(unittest.TestCase):
         """计数源无法识别 → 如实报 unsupported，不得猜一个计数源出来
 
         ⚠ 第四十三批：原来的例子是「Ancient card in your discard pile」，
-        现已被 **`own_discard_category:ancient`** 精确建模（Roaring Moon），
-        故改用仍无法识别的「you placed in this way」（Walking Wake，可选数量）。
+        现已被 **`own_discard_category:ancient`** 精确建模（Roaring Moon）。
+        ⚠ B4（2026-11-08）：「damage counter you placed in this way」也已被
+        **`chosen_this_attack`** 精确建模（Walking Wake 的伤害前数量决策），
+        故改用**子集限定**的形态 —— 它数的是其中一类，映射成总数会系统性多算，
+        仍必须如实未建模（Wugtrio 家族）。
+        ⚠ 也不能用「Energy card you discarded in this way」：那一条另有精确口径
+        （`own_discarded_energy_this_turn`，只数能量，本来就等价）。因此改用
+        「Pokémon Tool card …」—— 引擎没有「本回合弃掉的道具数」这个计数源。
         """
-        r = self._tags("This attack does 20 more damage for each damage counter "
-                       "you placed in this way.")
+        r = self._tags("This attack does 30 more damage for each Pokémon Tool "
+                       "card you discarded in this way.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(any("缩放" in u["reason"] or "未识别" in u["reason"]
                             for u in r["unsupported"]), r["unsupported"])
@@ -2458,11 +2472,33 @@ class TestEnergyMoveParsing(unittest.TestCase):
                        "your Active Pok\u00e9mon.", kind="supporter")
         self.assertEqual(r["tags"], ["energy_move:2:from:bench:to:active"])
 
-    def test_any_amount_rejected(self):
-        """「any amount … in any way you like」= 玩家自由数量 → 必须拒绝"""
+    def test_any_amount_modeled_as_alloc(self):
+        """「any amount … in any way you like」= 玩家自由数量 + **自由分配**
+
+        ⚠ B4-b（2026-11-08）改判：以前断言「必须拒绝」（当时没有分配层）。
+        现在由 `choose:alloc:move_energy:<type>` 承载 —— 选项是「把某只的 1 点
+        某色能量搬到另一只」，玩家逐次选、`stop` 结束。
+
+        本条真正要钉住的错法没变：**不得**出现 `energy_move:1:…`（把「任意
+        数量」压成固定 1 张 = 静默缩小范围）。
+        """
         r = self._tags("You may move any amount of {M} Energy from your "
                        "Pok\u00e9mon to your other Pok\u00e9mon in any way you "
                        "like.")
+        self.assertIn("choose:alloc:move_energy:metal", r["tags"])
+        self.assertFalse([t for t in r["tags"] if t.startswith("energy_move:")],
+                         r["tags"])
+        self.assertEqual(r["unsupported"], [])
+
+    def test_any_amount_to_opponent_still_unmodeled(self):
+        """搬到**对手**那边的方向没建模 → 仍必须如实拒绝
+
+        留着这条是因为「同一个句式换个方向」很容易被正则前缀顺手吃掉，而
+        「把自己的能量搬给对手」是实质错算（不是少做，是做反）。
+        """
+        r = self._tags("You may move any amount of {M} Energy from your "
+                       "Pok\u00e9mon to your opponent\u2019s Pok\u00e9mon in any "
+                       "way you like.")
         self.assertEqual(r["tags"], [])
         self.assertTrue(r["unsupported"])
 

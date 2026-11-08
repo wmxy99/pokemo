@@ -358,10 +358,17 @@ class TestSystemPromptInjection(unittest.TestCase):
         ⚠ 这**不是**「加功能顺便放宽预算」：枚举表由 `ACTION_TYPES` / `TARGETS`
         单一来源注入，漏登记的直接后果是**模型永远学不到这几种形态**（提示词里
         没有 → 解析退化成兜底 → 整卡拒收）。
+
+        ── 2026-11-08 上调至 9700（同样是**引擎能力驱动**，正文未改）──
+        B4 新增计数源 `chosen_this_attack`（「… in this way」= 本次攻击里玩家
+        决定的那个数量）。计数源列表由 `dmg_vocab()` 从引擎 `_COUNTERS` **动态
+        注入**，加一个名字就 +10 字符；不注入则模型不知道可以填它，
+        `dmg_set:…:per:chosen_this_attack` 永远写不出来。
+        实测：**9610** 字符（上一版 9600）。
         """
         sp = self.E.render_system_prompt()
         self.assertLessEqual(
-            len(sp), 9600,
+            len(sp), 9700,
             f"提示词已 {len(sp)} 字符，超过 9500 预算；"
             f"加内容前必须先在云端实测净收益（已进入波动带）")
 

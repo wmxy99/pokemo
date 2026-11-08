@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1222（96.4%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **45** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 46） |
-| 引擎池 | **1207** | `cards_pool_ext.json` 的 `cards` 长度 |
-| 对账类目 | **51 类全绿** | `scripts/audit_pool_alignment.py` |
+| `engine_ready` | **1245（98.3%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **22** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 22） |
+| 引擎池 | **1230** | `cards_pool_ext.json` 的 `cards` 长度 |
+| 对账类目 | **53 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.770**（200 局双盲 = 100 先手 + 100 后手，`artifacts/k1_rich.pt`；单侧对照 0.815、先手基线 0.640）· ⚠ S6a 打开官方先手规则后由 0.795 → 0.770（差值 0.025 < CI ±0.058，仍 ≥0.70 判据；权重是在旧规则下训练的，重训可回收） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **45** = 批内如实拒收 **41** + 结构性边界 **4** + 待新能力 **0** = **45** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **22** = 批内如实拒收 **21** + 结构性边界 **4** + 待新能力 **0** = **25** ❌ 需修 JSON。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 39 · 整批受阻 5），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1222 / 1267 = 96.4%**（44 批全部处理完毕）。剩余 41 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 0 张待新能力卡需引擎重构（退化 devolve · 多条件组合门槛（gate）· 任意数量交互层 · 官方规则对齐 S6）才可能归零。
+**终局**：`engine_ready` **1245 / 1267 = 98.3%**（44 批全部处理完毕）。剩余 21 张已逐批**如实拒收**（原因见各批说明），另 4 张结构性边界与 0 张待新能力卡需引擎重构（退化 devolve · 多条件组合门槛（gate）· 任意数量交互层 · 官方规则对齐 S6）才可能归零。
 
 ---
 
@@ -53,7 +53,7 @@
    → gen_engine_pool.py
    → import_challenge_dataset.py --reparse-only
    → coverage_backlog.py --registry
-   → audit_pool_alignment.py        # 必须 51 类全绿
+   → audit_pool_alignment.py        # 必须 53 类全绿
    ```
 
 **每批 DoD（全部满足才算完成）**：
@@ -117,7 +117,7 @@
 | Team Rocket's Kangaskhan ex | ASC | 162 | done（已完成） |  |
 | Galvantula ex | SCR | 51 | done（已完成） |  |
 | Pangoro | ASC | 140 | done（已完成） |  |
-| Walking Wake | TWM | 63 | B（有具体缺口·可归族） |  |
+| Walking Wake | TWM | 63 | done（已完成） |  |
 
 **实际结果**：进池 **3** 张，如实拒收 **1** 张。
 
@@ -131,7 +131,7 @@
 | Misty's Gyarados | DRI | 49 | B（有具体缺口·可归族） |  |
 | Mega Abomasnow ex | MEG | 36 | B（有具体缺口·可归族） |  |
 | Bronzong | PFL | 72 | done（已完成） |  |
-| Doublade | POR | 57 | B（有具体缺口·可归族） | 跨批 → 96 |
+| Doublade | POR | 57 | done（已完成） | 跨批 → 96 |
 
 **实际结果**：进池 **2** 张，如实拒收 **3** 张。
 
@@ -156,15 +156,15 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Alolan Exeggutor ex | SSP | 133 | B（有具体缺口·可归族） |  |
-| Alakazam | TWM | 82 | B（有具体缺口·可归族） |  |
+| Alolan Exeggutor ex | SSP | 133 | done（已完成） |  |
+| Alakazam | TWM | 82 | done（已完成） |  |
 | Lillie’s Ribombee | JTG | 67 | B（有具体缺口·可归族） |  |
-| Gorebyss | DRI | 56 | B（有具体缺口·可归族） |  |
-| Team Rocket's Honchkrow | ASC | 127 | B（有具体缺口·可归族） |  |
+| Gorebyss | DRI | 56 | done（已完成） |  |
+| Team Rocket's Honchkrow | ASC | 127 | done（已完成） |  |
 | Accompanying Flute | TWM | 142 | done（已完成） |  |
-| Strange Timepiece | MEG | 128 | B（有具体缺口·可归族） |  |
+| Strange Timepiece | MEG | 128 | done（已完成） |  |
 | Naveen | POR | 79 | done（已完成） |  |
-| Doublade | POR | 57 | B（有具体缺口·可归族） | 跨批 → 94 |
+| Doublade | POR | 57 | done（已完成） | 跨批 → 94 |
 
 **实际结果**：进池 **1** 张，如实拒收 **8** 张。
 
@@ -247,7 +247,7 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Archeops | WHT | 51 | B（有具体缺口·可归族） |  |
+| Archeops | WHT | 51 | done（已完成） |  |
 | Noctowl | SCR | 115 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **1** 张。
@@ -258,9 +258,9 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Mega Charizard X ex | PFL | 13 | B（有具体缺口·可归族） |  |
+| Mega Charizard X ex | PFL | 13 | done（已完成） |  |
 | Mega Eelektross ex | ASC | 61 | done（已完成） |  |
-| Dialga | MEG | 95 | B（有具体缺口·可归族） |  |
+| Dialga | MEG | 95 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **2** 张。
 
@@ -371,7 +371,7 @@
 |---|---|---|---|---|
 | Kyurem | SFA | 47 | done（已完成） |  |
 | Klinklang | SCR | 101 | D（兜底·复合句） |  |
-| Rotom ex | PFL | 29 | D（兜底·复合句） |  |
+| Rotom ex | PFL | 29 | done（已完成） |  |
 | Slaking ex | SSP | 147 | done（已完成） |  |
 | Core Memory | POR | 70 | D（兜底·复合句） |  |
 
@@ -394,7 +394,7 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Zarude | SSP | 11 | D（兜底·复合句） |  |
+| Zarude | SSP | 11 | done（已完成） |  |
 | Conkeldurr | TWM | 105 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **1** 张。
@@ -405,13 +405,13 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Scovillain ex | SSP | 37 | D（兜底·复合句） |  |
+| Scovillain ex | SSP | 37 | done（已完成） |  |
 | Lycanroc | JTG | 85 | done（已完成） |  |
-| Golduck | ASC | 40 | D（兜底·复合句） |  |
+| Golduck | ASC | 40 | done（已完成） |  |
 | Gengar | POR | 50 | D（兜底·复合句） |  |
 | Mega Mawile ex | MEG | 94 | done（已完成） |  |
 | Team Rocket's Articuno | DRI | 51 | done（已完成） |  |
-| Carbink | ASC | 117 | D（兜底·复合句） |  |
+| Carbink | ASC | 117 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **6** 张。
 
@@ -421,7 +421,7 @@
 
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
-| Sylveon ex | SSP | 86 | D（兜底·复合句） |  |
+| Sylveon ex | SSP | 86 | done（已完成） |  |
 | Team Rocket's Moltres ex | DRI | 31 | D（兜底·复合句） |  |
 | Ethan's Sudowoodo | DRI | 93 | done（已完成） |  |
 | Walrein | SSP | 45 | done（已完成） |  |
@@ -449,7 +449,7 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Cinderace | MEG | 28 | D（兜底·复合句） |  |
-| Forretress | DRI | 140 | D（兜底·复合句） |  |
+| Forretress | DRI | 140 | done（已完成） |  |
 | Dedenne | POR | 29 | D（兜底·复合句） |  |
 
 **实际结果**：进池 **0** 张，如实拒收 **3** 张。
@@ -462,7 +462,7 @@
 |---|---|---|---|---|
 | Fraxure | SFA | 45 | done（已完成） |  |
 | Watchog | WHT | 73 | done（已完成） |  |
-| Meloetta ex | BLK | 44 | D（兜底·复合句） |  |
+| Meloetta ex | BLK | 44 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **2** 张。
 
@@ -477,8 +477,8 @@
 | Virizion | WHT | 10 | done（已完成） |  |
 | Tyrantrum | POR | 45 | done（已完成） |  |
 | Decidueye ex | POR | 12 | done（已完成） |  |
-| Shiftry | TEF | 5 | D（兜底·复合句） |  |
-| Iron Thorns ex | TWM | 77 | D（兜底·复合句） |  |
+| Shiftry | TEF | 5 | done（已完成） |  |
+| Iron Thorns ex | TWM | 77 | done（已完成） |  |
 | Antique Sail Fossil | POR | 69 | done（已完成） |  |
 
 **实际结果**：进池 **4** 张，如实拒收 **4** 张。
@@ -741,11 +741,11 @@
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 95 张 |
-| 批次内待做 | 41 | 全部未 ready |
+| 批次唯一卡 | 136 | 其中已完成 115 张 |
+| 批次内待做 | 21 | 全部未 ready |
 | 结构性边界 | 4 | 不承载 tag，仅建档 |
 | 待新能力 | 0 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **45** | 应等于基线 45 |
+| **合计（= 未 ready 卡数）** | **25** | 应等于基线 22 |
 
 ---
 

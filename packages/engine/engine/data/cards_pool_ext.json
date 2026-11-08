@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1217,
+      "kept": 1230,
       "by_Energy": 20,
-      "by_Pokemon": 1017,
+      "by_Pokemon": 1030,
       "by_Trainer": 180,
       "skipped": {
-        "存在未建模项（整卡不收）": 35,
-        "人工卡池已有同一印刷（人工优先）": 15
+        "人工卡池已有同一印刷（人工优先）": 15,
+        "存在未建模项（整卡不收）": 22
       }
     }
   },
@@ -875,7 +875,8 @@
           },
           "damage": 140,
           "effects": [
-            "dmg_plus:140:per:own_discarded_energy_this_turn"
+            "pre:mill:1:both",
+            "dmg_plus:140:per:discarded_energy_this_attack"
           ],
           "desc": "Discard the top card of each player’s deck. This attack does 140 more damage for each Energy card discarded in this way.",
           "name_zh": "大地灼烧",
@@ -1098,6 +1099,63 @@
       "source_card_id": 34,
       "name_key": "frogadier",
       "uid": "Frogadier@TWM 57"
+    },
+    {
+      "name": "Walking Wake",
+      "name_zh": "波荡水",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 130,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Ancient",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Aurora Gain",
+          "cost": {
+            "water": 1
+          },
+          "damage": 20,
+          "effects": [
+            "heal:20"
+          ],
+          "desc": "Heal 20 damage from this Pokémon.",
+          "name_zh": "极光回复",
+          "desc_zh": "回复此宝可梦的 20 点伤害。"
+        },
+        {
+          "name": "Undulating Slice",
+          "cost": {
+            "water": 2,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "pre:b4:self_counters:9",
+            "dmg_set:20:per:chosen_this_attack"
+          ],
+          "desc": "Put up to 9 damage counters on this Pokémon. This attack does 20 damage for each damage counter you placed in this way.",
+          "name_zh": "波动斩",
+          "desc_zh": "在此宝可梦上放置至多 9 个伤害指示物。以此方式放置的每个伤害指示物使此招式造成 20 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "63"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 35,
+      "name_key": "walkingwake",
+      "uid": "Walking Wake@TWM 63"
     },
     {
       "name": "Morpeko",
@@ -1901,7 +1959,7 @@
           "damage": 0,
           "effects": [
             "discard_hand_energy:3",
-            "snipe:opp:60:1:per:own_discarded_energy_this_turn"
+            "snipe:opp:60:1:per:discarded_energy_this_attack"
           ],
           "desc": "Discard up to 3 Energy cards from your hand. This attack does 60 damage to 1 of your opponent’s Pokémon for each Energy card you discarded in this way. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
           "name_zh": "三色喷射",
@@ -2484,7 +2542,7 @@
           },
           "damage": 70,
           "effects": [
-            "dmg_set:70:per:own_discarded_this_turn"
+            "dmg_set:70:per:chosen_this_attack"
           ],
           "desc": "You may discard any amount of Basic Energy from your Pokémon. This attack does 70 damage for each card you discarded in this way.",
           "name_zh": "轰鸣雷霆",
@@ -2689,6 +2747,61 @@
       "source_card_id": 69,
       "name_key": "nuzleaf",
       "uid": "Nuzleaf@TEF 4"
+    },
+    {
+      "name": "Shiftry",
+      "name_zh": "狡猾天狗",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 150,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Nuzleaf",
+      "attacks": [
+        {
+          "name": "Expelling Tornado",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 0,
+          "effects": [
+            "choose:alloc:shuffle_opp_bench:3:keep"
+          ],
+          "desc": "Choose 3 of your opponent’s Benched Pokémon. If you do, shuffle all of your opponent’s Benched Pokémon that you didn’t choose, and all cards attached to those Pokémon, into their deck.",
+          "name_zh": "驱逐龙卷",
+          "desc_zh": "选择对手的 3 只后备宝可梦。若如此做，将对手所有未被你选择的后备宝可梦及其附着卡洗回其牌库。"
+        },
+        {
+          "name": "Energy Loop",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 140,
+          "effects": [
+            "bounce:energy:self:1"
+          ],
+          "desc": "Put an Energy attached to this Pokémon into your hand.",
+          "name_zh": "能量循环",
+          "desc_zh": "将此宝可梦身上附着的 1 个能量加入手牌。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TEF",
+        "number": "5"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 70,
+      "name_key": "shiftry",
+      "uid": "Shiftry@TEF 5"
     },
     {
       "name": "Deerling",
@@ -3382,7 +3495,7 @@
           },
           "damage": 120,
           "effects": [
-            "dmg_set:120:per:own_discarded_this_turn"
+            "dmg_set:120:per:chosen_this_attack"
           ],
           "desc": "Discard up to 2 {M} Energy from this Pokémon. This attack does 120 damage for each card you discarded in this way.",
           "name_zh": "交叉破坏",
@@ -3903,7 +4016,7 @@
           },
           "damage": 70,
           "effects": [
-            "dmg_set:70:per:own_discarded_this_turn"
+            "dmg_set:70:per:chosen_this_attack"
           ],
           "desc": "Discard up to 3 {G} Energy cards from your Pokémon. This attack does 70 damage for each card you discarded in this way.",
           "name_zh": "泼茶",
@@ -4914,7 +5027,7 @@
           },
           "damage": 50,
           "effects": [
-            "dmg_set:50:per:own_discarded_this_turn"
+            "dmg_set:50:per:chosen_this_attack"
           ],
           "desc": "Discard all {M} Energy from this Pokémon. This attack does 50 damage for each card you discarded in this way.",
           "name_zh": "钢爆",
@@ -7674,6 +7787,63 @@
       "uid": "Exeggcute@SSP 1"
     },
     {
+      "name": "Zarude",
+      "name_zh": "萨戮德",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 120,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Leaf Drain",
+          "cost": {
+            "grass": 1
+          },
+          "damage": 20,
+          "effects": [
+            "heal:20"
+          ],
+          "desc": "Heal 20 damage from this Pokémon.",
+          "name_zh": "叶片汲取",
+          "desc_zh": "回复此宝可梦的 20 点伤害。"
+        },
+        {
+          "name": "Jungle Whip",
+          "cost": {
+            "grass": 2,
+            "colorless": 1
+          },
+          "damage": 80,
+          "effects": [
+            "pre:b4:all_energy:to_hand",
+            "dmg_plus:80:per:chosen_this_attack"
+          ],
+          "desc": "You may put all Energy attached to this Pokémon into your hand to have this attack do 80 more damage.",
+          "name_zh": "丛林之鞭",
+          "desc_zh": "你可以将此宝可梦身上的所有能量放入手牌，使此招式的伤害 +80。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "11"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 178,
+      "name_key": "zarude",
+      "uid": "Zarude@SSP 11"
+    },
+    {
       "name": "Black Kyurem ex",
       "name_zh": "暗黑酋雷姆 ex",
       "supertype": "Pokemon",
@@ -8389,6 +8559,65 @@
       "source_card_id": 192,
       "name_key": "ironcrown",
       "uid": "Iron Crown@SSP 132"
+    },
+    {
+      "name": "Alolan Exeggutor ex",
+      "name_zh": "阿罗拉椰蛋树 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 300,
+      "types": [
+        "dragon"
+      ],
+      "weakness": null,
+      "resistance": null,
+      "retreat": 3,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": "Exeggcute",
+      "attacks": [
+        {
+          "name": "Tropical Frenzy",
+          "cost": {
+            "grass": 1,
+            "water": 1
+          },
+          "damage": 150,
+          "effects": [
+            "choose:alloc:attach_hand:basic"
+          ],
+          "desc": "You may attach any number of Basic Energy cards from your hand to your Pokémon in any way you like.",
+          "name_zh": "热带狂热",
+          "desc_zh": "你可以从手牌中以任意方式把任意数量的基本能量卡附着于自己的宝可梦。"
+        },
+        {
+          "name": "Swinging Sphene",
+          "cost": {
+            "grass": 1,
+            "water": 1,
+            "fighting": 1
+          },
+          "damage": 0,
+          "effects": [
+            "coin:heads:knockout:opp_active:basic",
+            "coin:tails:knockout:opp_bench:basic"
+          ],
+          "desc": "Flip a coin. If heads, Knock Out your opponent’s Active Basic Pokémon. If tails, Knock Out 1 of your opponent’s Benched Basic Pokémon.",
+          "name_zh": "摇摆榍石",
+          "desc_zh": "抛硬币。若为正面，击倒对手的战斗基础宝可梦。若为反面，击倒对手的 1 只后备基础宝可梦。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "133"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 193,
+      "name_key": "alolanexeggutorex",
+      "uid": "Alolan Exeggutor ex@SSP 133"
     },
     {
       "name": "Altaria",
@@ -11023,7 +11252,7 @@
           "damage": 60,
           "effects": [
             "discard_energy:2",
-            "dmg_plus:90:per:own_discarded_this_turn"
+            "dmg_plus:90:per:chosen_this_attack"
           ],
           "desc": "You may discard up to 2 Basic Energy from your Benched Pokémon. This attack does 90 more damage for each card you discarded in this way.",
           "name_zh": "闪光之矛",
@@ -11055,6 +11284,62 @@
       "source_card_id": 244,
       "name_key": "jolteonex",
       "uid": "Jolteon ex@PRE 30"
+    },
+    {
+      "name": "Alakazam",
+      "name_zh": "胡地",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 140,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Kadabra",
+      "attacks": [
+        {
+          "name": "Strange Hacking",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "confuse",
+            "choose:alloc:move_counters"
+          ],
+          "desc": "Your opponent’s Active Pokémon is now Confused. You may move any number of damage counters on your opponent’s Pokémon to their other Pokémon in any way you like.",
+          "name_zh": "奇异骇入",
+          "desc_zh": "对手的战斗宝可梦现在处于混乱状态。你可以将对手宝可梦身上的任意数量伤害指示物，以你喜欢的方式移动到对手的其他宝可梦身上。"
+        },
+        {
+          "name": "Psychic",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 10,
+          "effects": [
+            "dmg_plus:50:per:opp_active_energy"
+          ],
+          "desc": "This attack does 50 more damage for each Energy attached to your opponent’s Active Pokémon.",
+          "name_zh": "精神强念",
+          "desc_zh": "对手的战斗宝可梦身上附着的能量每有 1 个，此招式的伤害 +50。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "82"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 245,
+      "name_key": "alakazam",
+      "uid": "Alakazam@TWM 82"
     },
     {
       "name": "Swirlix",
@@ -14334,6 +14619,65 @@
       "uid": "Azumarill@SSP 74"
     },
     {
+      "name": "Sylveon ex",
+      "name_zh": "仙子伊布 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 270,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": "Eevee",
+      "attacks": [
+        {
+          "name": "Magical Charm",
+          "cost": {
+            "psychic": 1,
+            "colorless": 2
+          },
+          "damage": 160,
+          "effects": [
+            "atk_minus_next:100"
+          ],
+          "desc": "During your opponent’s next turn, attacks used by the Defending Pokémon do 100 less damage (before applying Weakness and Resistance).",
+          "name_zh": "魔法魅惑",
+          "desc_zh": "在对手的下个回合中，防守方宝可梦使用的招式造成的伤害减少 100 点（计算弱点与抗性前）。"
+        },
+        {
+          "name": "Angelite",
+          "cost": {
+            "water": 1,
+            "lightning": 1,
+            "psychic": 1
+          },
+          "damage": 0,
+          "effects": [
+            "choose:alloc:shuffle_opp_bench:2",
+            "use_not:used_attack_last_turn:angelite"
+          ],
+          "desc": "Choose 2 of your opponent’s Benched Pokémon. Shuffle those Pokémon and all attached cards into your opponent’s deck. If 1 of your Pokémon used Angelite during your last turn, this attack can’t be used.",
+          "name_zh": "天使石",
+          "desc_zh": "选择对手的 2 只后备宝可梦。将那些宝可梦和其身上附着的所有卡洗回对手的牌库。若你的 1 只宝可梦在上个回合使用了天使石，此招式无法使用。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SSP",
+        "number": "86"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 316,
+      "name_key": "sylveonex",
+      "uid": "Sylveon ex@SSP 86"
+    },
+    {
       "name": "Eevee",
       "name_zh": "伊布",
       "supertype": "Pokemon",
@@ -16229,7 +16573,7 @@
           },
           "damage": 70,
           "effects": [
-            "dmg_set:70:per:own_discarded_this_turn"
+            "dmg_set:70:per:chosen_this_attack"
           ],
           "desc": "Discard up to 5 {R} Energy from this Pokémon. This attack does 70 damage for each card you discarded in this way.",
           "name_zh": "熔岩爆发",
@@ -19140,6 +19484,49 @@
       "uid": "Huntail@DRI 55"
     },
     {
+      "name": "Gorebyss",
+      "name_zh": "樱花鱼",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 90,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Clamperl",
+      "attacks": [
+        {
+          "name": "Crescendo Wave",
+          "cost": {
+            "water": 1
+          },
+          "damage": 30,
+          "effects": [
+            "pre:attach_all_basic:self:type:water",
+            "dmg_set:30:per:own_active_energy_water"
+          ],
+          "desc": "This attack does 30 damage for each {W} Energy attached to this Pokémon. Before doing damage, you may attach any number of Basic {W} Energy cards from your hand to this Pokémon.",
+          "name_zh": "渐强波浪",
+          "desc_zh": "此宝可梦身上附着的 {W} 能量每有 1 个，此招式造成 30 点伤害。在造成伤害前，你可以从手牌中把任意数量的基本 {W} 能量卡附着于此宝可梦。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "56"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 417,
+      "name_key": "gorebyss",
+      "uid": "Gorebyss@DRI 56"
+    },
+    {
       "name": "Snover",
       "name_zh": "雪笠怪",
       "supertype": "Pokemon",
@@ -19828,7 +20215,7 @@
           "damage": 160,
           "effects": [
             "discard_energy:2",
-            "dmg_plus:60:per:own_discarded_this_turn"
+            "dmg_plus:60:per:chosen_this_attack"
           ],
           "desc": "You may discard up to 2 Energy from your Benched Pokémon. This attack does 60 more damage for each card you discarded in this way.",
           "name_zh": "消除球",
@@ -21483,6 +21870,62 @@
       "source_card_id": 464,
       "name_key": "teamrocketssneasel",
       "uid": "Team Rocket's Sneasel@DRI 128"
+    },
+    {
+      "name": "Forretress",
+      "name_zh": "佛烈托斯",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 130,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Pineco",
+      "attacks": [
+        {
+          "name": "Iron Shake-Up",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "choose:alloc:move_energy:metal"
+          ],
+          "desc": "You may move any amount of {M} Energy from your Pokémon to your other Pokémon in any way you like.",
+          "name_zh": "钢铁搅拌",
+          "desc_zh": "你可以按自己的意愿，把任意数量的 {M} 能量从你的宝可梦身上移动到你的其他宝可梦身上。"
+        },
+        {
+          "name": "Hurricane of Needles",
+          "cost": {
+            "metal": 1,
+            "colorless": 3
+          },
+          "damage": 80,
+          "effects": [
+            "coin_each:4:heads:dmg_set:80"
+          ],
+          "desc": "Flip 4 coins. This attack does 80 damage for each heads.",
+          "name_zh": "尖刺飓风",
+          "desc_zh": "抛 4 次硬币。每出现 1 次正面，此招式造成 80 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "DRI",
+        "number": "140"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 465,
+      "name_key": "forretress",
+      "uid": "Forretress@DRI 140"
     },
     {
       "name": "Skarmory",
@@ -24410,6 +24853,58 @@
       "source_card_id": 524,
       "name_key": "golurk",
       "uid": "Golurk@BLK 43"
+    },
+    {
+      "name": "Meloetta ex",
+      "name_zh": "美洛耶塔 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 200,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Echoed Voice",
+          "cost": {
+            "psychic": 1
+          },
+          "damage": 30,
+          "effects": [
+            "self_attack_plus_next:80:name:echoed voice"
+          ],
+          "desc": "During your next turn, this Pokémon’s Echoed Voice attack does 80 more damage (before applying Weakness and Resistance).",
+          "name_zh": "回声",
+          "desc_zh": "在你的下个回合中，此宝可梦的回声招式的伤害 +80（在适用弱点和抗性之前）。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Debut Performance",
+          "name_zh": "初次演出",
+          "tag": "use_any:first_turn",
+          "location": "field",
+          "desc": "If you go first, this Pokémon can use attacks during your first turn.",
+          "desc_zh": "若你为先攻，此宝可梦可以在你的第一个回合使用招式。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "BLK",
+        "number": "44"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 525,
+      "name_key": "meloettaex",
+      "uid": "Meloetta ex@BLK 44"
     },
     {
       "name": "Drilbur",
@@ -27413,7 +27908,7 @@
           },
           "damage": 50,
           "effects": [
-            "dmg_set:50:per:own_discarded_this_turn"
+            "dmg_set:50:per:chosen_this_attack"
           ],
           "desc": "Discard all {L} Energy from this Pokémon. This attack does 50 damage for each card you discarded in this way.",
           "name_zh": "放电",
@@ -32724,6 +33219,61 @@
       "uid": "Mega Mawile ex@MEG 94"
     },
     {
+      "name": "Dialga",
+      "name_zh": "帝牙卢卡",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 140,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Beam",
+          "cost": {
+            "metal": 1
+          },
+          "damage": 30,
+          "effects": [],
+          "desc": "",
+          "name_zh": "光束",
+          "desc_zh": ""
+        },
+        {
+          "name": "Chrono Burst",
+          "cost": {
+            "metal": 2,
+            "colorless": 1
+          },
+          "damage": 80,
+          "effects": [
+            "pre:b4:all_energy:to_deck",
+            "dmg_plus:80:per:chosen_this_attack"
+          ],
+          "desc": "You may shuffle all Energy attached to this Pokémon into your deck and have this attack do 80 more damage.",
+          "name_zh": "时空爆发",
+          "desc_zh": "你可以将此宝可梦身上附着的所有能量洗入你的牌库，使此招式的伤害 +80。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "MEG",
+        "number": "95"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 696,
+      "name_key": "dialga",
+      "uid": "Dialga@MEG 95"
+    },
+    {
       "name": "Tinkatink",
       "name_zh": "小锻匠",
       "supertype": "Pokemon",
@@ -36029,7 +36579,7 @@
           "damage": 120,
           "effects": [
             "discard_energy:2",
-            "dmg_set:120:per:own_discarded_this_turn"
+            "dmg_set:120:per:chosen_this_attack"
           ],
           "desc": "Discard up to 2 Energy cards from this Pokémon, and this attack does 120 damage for each card you discarded in this way.",
           "name_zh": "花环射线",
@@ -37139,6 +37689,49 @@
       "source_card_id": 789,
       "name_key": "charmeleon",
       "uid": "Charmeleon@PFL 12"
+    },
+    {
+      "name": "Mega Charizard X ex",
+      "name_zh": "超级喷火龙X ex",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 360,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": true,
+      "is_mega": true,
+      "category": "",
+      "evolves_from": "Charmeleon",
+      "attacks": [
+        {
+          "name": "Inferno X",
+          "cost": {
+            "fire": 2
+          },
+          "damage": 90,
+          "effects": [
+            "pre:b4:discard_energy:fire:scope:own",
+            "dmg_set:90:per:chosen_this_attack"
+          ],
+          "desc": "Discard any amount of {R} Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way.",
+          "name_zh": "炼狱X",
+          "desc_zh": "从你的宝可梦身上弃置任意数量的 {R} 能量，以此方式每弃置 1 张卡，此招式造成 90 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PFL",
+        "number": "13"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 790,
+      "name_key": "megacharizardxex",
+      "uid": "Mega Charizard X ex@PFL 13"
     },
     {
       "name": "Moltres",
@@ -41971,6 +42564,61 @@
       "source_card_id": 890,
       "name_key": "okidogi",
       "uid": "Okidogi@ASC 122"
+    },
+    {
+      "name": "Team Rocket's Honchkrow",
+      "name_zh": "火箭队的乌鸦头头",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 130,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "lightning",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Team Rocket)",
+      "evolves_from": "Team Rocket's Murkrow",
+      "attacks": [
+        {
+          "name": "Rocket Feathers",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 60,
+          "effects": [
+            "pre:b4:discard_hand:supporter:teamrocket",
+            "dmg_set:60:per:chosen_this_attack"
+          ],
+          "desc": "You may discard any number of Supporter cards that have “Team Rocket” in their name from your hand, and this attack does 60 damage for each card you discarded in this way.",
+          "name_zh": "火箭之羽",
+          "desc_zh": "你可以从手牌中弃置任意数量名称中含有「火箭队」的支援者卡，以此方式每弃置 1 张卡，此招式造成 60 点伤害。"
+        },
+        {
+          "name": "Hammer In",
+          "cost": {
+            "darkness": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "锤击而入",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "ASC",
+        "number": "127"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 891,
+      "name_key": "teamrocketshonchkrow",
+      "uid": "Team Rocket's Honchkrow@ASC 127"
     },
     {
       "name": "Galarian Zigzagoon",
@@ -49200,7 +49848,7 @@
           "damage": 120,
           "effects": [
             "discard_hand_energy:4",
-            "dmg_plus:40:per:own_discarded_this_turn"
+            "dmg_plus:40:per:chosen_this_attack"
           ],
           "desc": "You may discard up to 4 Energy cards from your hand, and this attack does 40 more damage for each card you discarded in this way.",
           "name_zh": "射击月亮",
@@ -49254,7 +49902,7 @@
           "damage": 60,
           "effects": [
             "discard_hand_energy:2",
-            "dmg_set:60:per:own_discarded_this_turn"
+            "dmg_set:60:per:chosen_this_attack"
           ],
           "desc": "Discard up to 2 Energy cards from your hand, and this attack does 60 damage for each card you discarded in this way.",
           "name_zh": "双重吞噬",
@@ -50418,6 +51066,48 @@
       "source_card_id": 1065,
       "name_key": "honedge",
       "uid": "Honedge@POR 56"
+    },
+    {
+      "name": "Doublade",
+      "name_zh": "双剑鞘",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 100,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Honedge",
+      "attacks": [
+        {
+          "name": "Weaponized Swords",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 60,
+          "effects": [
+            "dmg_set:60:per:own_hand_named_any:honedge+doublade+aegislash"
+          ],
+          "desc": "Reveal any number of Honedge, Doublade, and Aegislash from your hand, and this attack does 60 damage for each card you revealed in this way.",
+          "name_zh": "武器化之剑",
+          "desc_zh": "从手牌中展示任意数量的独剑鞘、双剑鞘和坚盾剑怪，你以此方式每展示 1 张卡，此招式造成 60 点伤害。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "POR",
+        "number": "57"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1066,
+      "name_key": "doublade",
+      "uid": "Doublade@POR 57"
     },
     {
       "name": "Aegislash",

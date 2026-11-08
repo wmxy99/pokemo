@@ -121,11 +121,18 @@ class TestEnergyToHandParse(unittest.TestCase):
         self.assertEqual(r["tags"], ["coin:heads:bounce:energy:opp_active:1"])
         self.assertEqual(r["unsupported"], [])
 
-    def test_optional_cost_still_unmodeled(self):
-        """「You may … to have this attack do N more」是可选代价，不是白赚回手"""
+    def test_optional_cost_modeled_as_choice(self):
+        """「You may … to have this attack do N more」= **可选**代价 + 加伤
+
+        ⚠ B4（2026-11-08）改判：原先断言「如实未建模」。现在由
+        `pre:b4:all_energy:to_hand` + 挂起选择承载（付 → 能量回手 → +N）。
+        关键仍是「**可选**」：绝不能落成无条件 `bounce:energy`（那是白赚回手）。
+        """
         r = _tags(self.OPTIONAL)
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertIn("pre:b4:all_energy:to_hand", r["tags"])
+        self.assertIn("dmg_plus:80:per:chosen_this_attack", r["tags"])
+        self.assertNotIn("bounce:energy:self:all", r["tags"])
+        self.assertEqual(r["unsupported"], [])
 
 
 class TestSpecialEnergyDiscardParse(unittest.TestCase):

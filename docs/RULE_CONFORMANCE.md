@@ -24,7 +24,7 @@
 | mulligan 补偿：对手每有 1 次 mulligan 可抽 1 张 | `packages/engine/engine/battle.py::_setup_openings` | `packages/engine/tests/test_flow.py::TestFlow.test_opening_always_has_active` | — | — | ⚠️ 自动抽（官方为可选，见差异 D1） |
 | 先手第 1 回合**不能攻击** | `packages/engine/engine/battle.py::_opening_turn` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnNoAttack.test_legal_actions_have_no_attack` | — | — | ✅ |
 | 先手第 1 回合**不能使用 Supporter** | `packages/engine/engine/battle.py::_card_first_turn_ok` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnNoSupporter.test_legal_actions_hide_supporter` | — | — | ✅ |
-| 例外许可：卡面「If you go first, you can use this attack / may use this card during your first turn」 | `packages/engine/engine/battle.py::_first_turn_attack_ok` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnBypass.test_bypass_attack_is_legal_on_opening_turn` | `use_any:first_turn` | 4 | ✅ |
+| 例外许可：卡面「If you go first, you can use this attack / may use this card during your first turn」 | `packages/engine/engine/battle.py::_first_turn_attack_ok` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnBypass.test_bypass_attack_is_legal_on_opening_turn` | `use_any:first_turn` | 5 | ✅ |
 | setup 上场的宝可梦当回合不能进化 | `packages/engine/engine/battle.py::_setup_openings` | `packages/engine/tests/test_s6a_rules.py::TestSetupPokemonCannotEvolve.test_first_player_cannot_evolve_on_turn_one` | — | — | ✅ |
 | 无手牌上限 | `packages/engine/engine/battle.py::_safe_draw` | `packages/engine/tests/test_s6a_rules.py::TestNoHandLimit.test_no_limit_by_default` | — | — | ✅ |
 | 每回合只能从手牌附着 1 张能量 | `packages/engine/engine/battle.py::_do_attach` | `packages/engine/tests/test_s6d_turn_limits.py::TestTurnLimits.test_one_energy_attach_per_turn` | — | — | ✅ |
@@ -56,6 +56,8 @@
 | 退化 devolve：把最高阶进化卡退回手牌、本体降级、当回合不能再进化 | `packages/engine/engine/cards.py::devolve`、`packages/engine/engine/battle.py::_apply_devolve` | `packages/engine/tests/test_s6d_devolve.py::TestDevolveBasics.test_one_step_returns_highest_card_to_hand` | `devolve:` | 2 | ✅ |
 | 打出前置条件（含**多个**具名卡同时在场） | `packages/engine/engine/battle.py::_play_gate_ok`、`packages/engine/engine/battle.py::_gate_name_norm` | `packages/engine/tests/test_s6d_gate.py::TestAllInPlayGate.test_gate_blocks_when_one_missing` | — | — | ✅ |
 | 静态被动族：队伍 +HP / 双属性 / 能力封锁（Rule Box · 自身击倒代价）/ 工具上限 | `packages/engine/engine/battle.py::_global_ability_blocked`、`packages/engine/engine/battle.py::_refresh_stadium_hp`、`packages/engine/engine/rules.py::attacker_types` | `packages/engine/tests/test_d4_static_passives.py::TestTeamHpPlus.test_team_hp_applies_to_all_and_does_not_stack` | — | — | ✅ |
+| 「任意数量」伤害前决策：数量由玩家定、**定完才**算伤害（挂起 → 续跑） | `packages/engine/engine/battle.py::_b4_open`、`packages/engine/engine/battle.py::_attack_resume`、`packages/engine/engine/battle.py::_b4_spec` | `packages/engine/tests/test_b4_interaction.py::TestSelfCounters.test_choice_count_drives_damage` | `pre:b4:` | 5 | ✅ |
+| 「任意数量」分配 / 多目标：目标不唯一时由玩家指（搬指示物 / 搬能量 / 贴能量 / 选 N 只洗回） | `packages/engine/engine/battle.py::_alloc_open`、`packages/engine/engine/battle.py::_alloc_apply` | `packages/engine/tests/test_b4_interaction.py::TestAlloc.test_shuffle_opp_bench_kept` | `choose:alloc:` | 5 | ✅ |
 | 池内每张卡的每个训练家 tag 都必须有可执行落点（池内死卡守卫） | `packages/engine/tests/test_legals_coverage.py::_tag_prefixes` | `packages/engine/tests/test_legals_coverage.py::TestPoolTrainersArePlayable` | — | — | ✅ |
 
 ## 已知差异（`⚠️` 行的展开）

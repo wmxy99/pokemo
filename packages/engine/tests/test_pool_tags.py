@@ -305,6 +305,38 @@ class TestPoolTagVocabulary(unittest.TestCase):
                 if len(parts) != 5 or parts[3] != "opp" or parts[4] != "special" \
                         or not (parts[2] == "all" or parts[2].isdigit()):
                     bad.append(f"{name} · {item}：{tag}（伤害前弃能形态非法）")
+            elif head == "mill":
+                # B4（2026-11-08）：「Discard the top card of **each player's**
+                # deck.」（Magcargo ex「Ground Burn」）必须在**伤害之前**磨
+                # ——伤害按「这次磨掉几张能量」缩放。
+                if len(parts) != 4 or parts[3] != "both" \
+                        or not (parts[2] == "all" or parts[2].isdigit()):
+                    bad.append(f"{name} · {item}: {tag}（伤害前磨牌形态非法）")
+            elif head == "attach_all_basic":
+                # B4（2026-11-08）：Gorebyss「Before doing damage, you may attach
+                # any number of Basic {W} Energy cards from your hand to **this
+                # Pokémon**」——目标唯一 + 附着单调 → 全附即最大值，不需要选择。
+                if parts[2:3] != ["self"] or len(parts) != 5 \
+                        or parts[3] != "type":
+                    bad.append(f"{name} · {item}：{tag}（伤害前附着形态非法）")
+            elif head == "b4":
+                # B4（2026-11-08）：伤害前**决策**（挂起 → 选择 → 续跑）。
+                # 四种形态各自校验参数，避免「写了个拼错的 spec」被静默放过
+                # （那种情况下 `_b4_open` 会抛错，卡在对局里直接打不出）。
+                spec = ":".join(parts[2:])
+                sp = spec.split(":")
+                if sp[0] == "self_counters" and len(sp) == 2 and sp[1].isdigit():
+                    pass
+                elif sp[0] == "discard_energy" and len(sp) == 4 \
+                        and sp[2] == "scope" and sp[3] in ("own", "opp"):
+                    pass
+                elif sp[0] == "discard_hand" and len(sp) == 3:
+                    pass
+                elif sp[0] == "all_energy" and len(sp) == 2 \
+                        and sp[1] in ("to_hand", "to_deck"):
+                    pass
+                else:
+                    bad.append(f"{name} · {item}：{tag}（伤害前决策形态非法）")
             else:
                 bad.append(f"{name} · {item}：{tag}（引擎未实现的伤害前效果）")
         self.assertEqual(bad, [], "pre: tag 形态非法：\n" + "\n".join(bad))

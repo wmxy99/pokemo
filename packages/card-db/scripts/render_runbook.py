@@ -140,13 +140,15 @@ def render(data: dict, m: dict) -> str:
       f"| `sum(1 for c in cards if c.get(\"engine_ready\"))` |")
     A(f"| 未建模卡 | **{m['unready']}** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 {m['unsupported']}） |")
     A(f"| 引擎池 | **{m['pool']}** | `cards_pool_ext.json` 的 `cards` 长度 |")
-    A("| 对账类目 | **50 类全绿** | `scripts/audit_pool_alignment.py` |")
+    A("| 对账类目 | **51 类全绿** | `scripts/audit_pool_alignment.py` |")
     A("| 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |")
     A("| CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |")
     # K1 是**实测值**，每次改动引擎后必须重跑；本行只记最近一次的双盲结果
     # （单侧口径 0.825 不能用于判定 —— 引擎先手优势约 14pp 会被算进战绩）。
-    A("| K1 双盲 | **0.795**（200 局双盲 = 100 先手 + 100 后手，"
-      "`artifacts/k1_rich.pt`；单侧对照 0.825、先手基线 0.640） | "
+    A("| K1 双盲 | **0.770**（200 局双盲 = 100 先手 + 100 后手，"
+      "`artifacts/k1_rich.pt`；单侧对照 0.815、先手基线 0.640）· "
+      "⚠ S6a 打开官方先手规则后由 0.795 → 0.770（差值 0.025 < CI ±0.058，"
+      "仍 ≥0.70 判据；权重是在旧规则下训练的，重训可回收） | "
       "`examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |")
     A("")
     # 「批内待做」与「批内已判拒收」必须分开说：全部批次处理完之后，剩下的卡
@@ -207,7 +209,7 @@ def render(data: dict, m: dict) -> str:
     A("   → gen_engine_pool.py")
     A("   → import_challenge_dataset.py --reparse-only")
     A("   → coverage_backlog.py --registry")
-    A("   → audit_pool_alignment.py        # 必须 50 类全绿")
+    A("   → audit_pool_alignment.py        # 必须 51 类全绿")
     A("   ```")
     A("")
     A("**每批 DoD（全部满足才算完成）**：")

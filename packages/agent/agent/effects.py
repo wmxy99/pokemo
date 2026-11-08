@@ -5418,6 +5418,21 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     # 首回合许可句：训练家与招式都剥（两者写法不同，见 `_TURN1_PERMISSION`）。
     # 招式侧也要剥的理由：剥掉后主效果才回到**句首**，能被整句认领式正则
     # （`_TC_RESEARCH` 等 `^…$`）命中；否则会退化成多条散动作。
+    #
+    # S6a（2026-11-08）：**这句不是废话，必须留下痕迹**。S6 之前引擎不限制
+    # 先手首回合的攻击/支援者，所以「剥掉即可」；S6 之后这两条限制生效，
+    # 而这句正是**唯一的例外许可**：
+    #   · 「you **can** use this **attack** …」→ 招式级 `use_any:first_turn`
+    #     （Volbeat / Exeggcute / Delibird / Tapu Koko，共 4 张）；
+    #   · 「you **may** use this **card** …」→ 卡级 `use_any:first_turn`
+    #     （Carmine / Team Rocket's Proton，都是 Supporter，共 2 张）。
+    # 不产出这个 tag = 这 6 张卡在开局回合各少一个可用动作（静默削弱），
+    # 而且因为**后半句照常解析**，未建模列表里完全看不出来（实测如此）。
+    _perm = _TURN1_PERMISSION.match(_t)
+    _perm_kind = None
+    if _perm:
+        _perm_kind = ("attack" if "attack" in _perm.group(0).lower()
+                      else "card")
     _t = _TURN1_PERMISSION.sub("", _t).strip()
     # 打出**前置条件**（2026-11-04 第五十九批）：「You can use this card only if …」
     # 必须先于 `_split_play_cost` 剥 —— 两者句式几乎相同（都是 only if），
@@ -5430,6 +5445,18 @@ def parse_rule(text: str, kind: str = "attack", name: str = "",
     spec = (_parse_rule_en(text, kind=kind, name=name)
             if text and not _CJK_RE.search(str(text))
             else _parse_rule_zh(text, kind=kind, name=name))
+    if _perm_kind:
+        # 例外许可：招式侧 → 招式级 tag；训练家侧 → 卡级 tag（只用于**合法性**，
+        # `_do_trainer` 对它是 no-op，见引擎侧注释）。
+        _acts = list(spec.get("actions") or [])
+        _acts.append({"type": "rule",
+                      "target": ("any" if _perm_kind == "attack" else "self"),
+                      "amount": None,
+                      "extra": {"use_any": "first_turn"},
+                      "source_text": "If you go first, you may use this card / "
+                                     "can use this attack during your first "
+                                     "turn."})
+        spec["actions"] = _acts
     if _pcost:
         spec["play_cost"] = _pcost
     if _pgate:
@@ -10727,6 +10754,10 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("nullify_if"):
                     # 招式失败门：条件成立则整招不结算
                     tags.append(f"nullify_if:{extra['nullify_if']}")
+                elif extra.get("use_any"):
+                    # S6a：先手禁攻的例外（「If you go first, you can use this
+                    # attack during your first turn.」）
+                    tags.append(f"use_any:{extra['use_any']}")
                 elif extra.get("borrow"):
                     # 借用招式（"use it as this attack"）：来源由 scope 限定
                     _bt = f"borrow_attack:{extra['borrow']}"

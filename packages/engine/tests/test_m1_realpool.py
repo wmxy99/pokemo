@@ -20,6 +20,7 @@ from engine import reallib
 from engine.battle import Battle
 from engine.cards import EnergyDef, EnergyRef, PokeRef, TrainerRef
 from engine.agents import BaselineAI
+from engine.state import GameConfig
 
 
 def _play(da, db, seed=1, max_steps=900):
@@ -32,11 +33,21 @@ def _play(da, db, seed=1, max_steps=900):
     return b, steps
 
 
+# 本文件的用例验的是**训练家/招式结算本身**，不是先手规则；
+# 起手（第 1 回合）默认禁止攻击与 Supporter（官方，S6a），会让这些断言
+# 变成「规则挡住了」而不是「结算错了」→ 夹具显式关掉两条先手规则。
+# 先手规则的验收在 `tests/test_s6a_rules.py`（真实对局，逐条正反向）。
+_FIXTURE_CFG = GameConfig(first_turn_no_attack=False,
+                          first_turn_no_supporter=False)
+
+
 def _find_hand_card(deck_name: str, tag_prefix: str, need_hand: int = 1,
                     seeds=range(1, 120)):
     """扫描种子，找到起手含指定 tag 训练家的局面（避免用例依赖运气）"""
     for s in seeds:
-        b = Battle(dl.make_deck(deck_name), dl.make_deck(deck_name), seed=s)
+        b = Battle(dl.make_deck(deck_name), dl.make_deck(deck_name), seed=s,
+                   cfg=GameConfig(first_turn_no_attack=False,
+                                  first_turn_no_supporter=False))
         p = b.players[b.current]
         if len(p.hand) < need_hand:
             continue
@@ -112,7 +123,8 @@ class TestRealCardMechanics(unittest.TestCase):
 
     def test_research_trainer_discards_hand_then_draws(self):
         """Professor's Research：弃全部手牌 → 抽 n"""
-        b = Battle(dl.make_deck("A1"), dl.make_deck("A1"), seed=5)
+        b = Battle(dl.make_deck("A1"), dl.make_deck("A1"), seed=5,
+                   cfg=_FIXTURE_CFG)
         # 造一个可控局面：手牌 = research + 3 张其他
         p = b.players[b.current]
         deck0 = len(p.deck)

@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 15:58:56",
+  "reparsed_at": "2026-11-08 17:03:01",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -128,7 +128,7 @@
    "items": 1481,
    "specs": 1481,
    "errors": 125,
-   "engine_tags": 1526,
+   "engine_tags": 1532,
    "unsupported": 46,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -11719,6 +11719,15 @@
           "extra": {
            "what": "pokemon"
           }
+         },
+         {
+          "type": "rule",
+          "target": "any",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
          }
         ],
         "source_text": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
@@ -11726,7 +11735,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "search_bench:2:basic"
+       "search_bench:2:basic",
+       "use_any:first_turn"
       ],
       "unsupported": []
      },
@@ -11774,6 +11784,15 @@
         "extra": {
          "what": "pokemon"
         }
+       },
+       {
+        "type": "rule",
+        "target": "any",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
        }
       ],
       "source_text": "Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck."
@@ -11800,6 +11819,7 @@
     "errors": [],
     "engine_tags": [
      "search_bench:2:basic",
+     "use_any:first_turn",
      "dmg_plus:60:if:own_bench_name:illumise"
     ],
     "unsupported": [],
@@ -25413,6 +25433,15 @@
           "target": "self"
          },
          {
+          "type": "rule",
+          "target": "any",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
+         },
+         {
           "type": "evolve",
           "amount": null,
           "target": "self",
@@ -25426,7 +25455,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "evolve_from_deck"
+       "evolve_from_deck",
+       "use_any:first_turn"
       ],
       "unsupported": []
      }
@@ -25452,6 +25482,15 @@
         "target": "self"
        },
        {
+        "type": "rule",
+        "target": "any",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
+       },
+       {
         "type": "evolve",
         "amount": null,
         "target": "self",
@@ -25465,7 +25504,8 @@
     ],
     "errors": [],
     "engine_tags": [
-     "evolve_from_deck"
+     "evolve_from_deck",
+     "use_any:first_turn"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -101438,6 +101478,15 @@
           "extra": {
            "what": "any"
           }
+         },
+         {
+          "type": "rule",
+          "target": "any",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
          }
         ],
         "source_text": "Search your deck for a card and put it into your hand. Then, shuffle your deck."
@@ -101445,7 +101494,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "search_any:1"
+       "search_any:1",
+       "use_any:first_turn"
       ],
       "unsupported": []
      }
@@ -101464,6 +101514,15 @@
         "extra": {
          "what": "any"
         }
+       },
+       {
+        "type": "rule",
+        "target": "any",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
        }
       ],
       "source_text": "Search your deck for a card and put it into your hand. Then, shuffle your deck."
@@ -101471,7 +101530,8 @@
     ],
     "errors": [],
     "engine_tags": [
-     "search_any:1"
+     "search_any:1",
+     "use_any:first_turn"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -115660,6 +115720,15 @@
           "extra": {
            "discard_all": true
           }
+         },
+         {
+          "type": "rule",
+          "target": "any",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
          }
         ],
         "source_text": "Discard your hand and draw 5 cards.",
@@ -115668,7 +115737,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "research:5"
+       "research:5",
+       "use_any:first_turn"
       ],
       "unsupported": []
      },
@@ -115715,6 +115785,15 @@
         "extra": {
          "discard_all": true
         }
+       },
+       {
+        "type": "rule",
+        "target": "any",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
        }
       ],
       "source_text": "Discard your hand and draw 5 cards.",
@@ -115741,6 +115820,7 @@
     "errors": [],
     "engine_tags": [
      "research:5",
+     "use_any:first_turn",
      "discard_energy:2"
     ],
     "unsupported": [],
@@ -153578,6 +153658,15 @@
           "extra": {
            "discard_all": true
           }
+         },
+         {
+          "type": "rule",
+          "target": "self",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
          }
         ],
         "source_text": "Discard your hand and draw 5 cards.",
@@ -153586,7 +153675,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "research:5"
+       "research:5",
+       "use_any:first_turn"
       ],
       "play_cost": "",
       "play_gate": "",
@@ -153607,6 +153697,15 @@
         "extra": {
          "discard_all": true
         }
+       },
+       {
+        "type": "rule",
+        "target": "self",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
        }
       ],
       "source_text": "Discard your hand and draw 5 cards.",
@@ -153615,7 +153714,8 @@
     ],
     "errors": [],
     "engine_tags": [
-     "research:5"
+     "research:5",
+     "use_any:first_turn"
     ],
     "unsupported": [],
     "generated_by": "rule",
@@ -156350,6 +156450,15 @@
           "extra": {
            "what": "pokemon"
           }
+         },
+         {
+          "type": "rule",
+          "target": "self",
+          "amount": null,
+          "extra": {
+           "use_any": "first_turn"
+          },
+          "source_text": "If you go first, you may use this card / can use this attack during your first turn."
          }
         ],
         "source_text": "Search your deck for up to 3 Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
@@ -156357,7 +156466,8 @@
       ],
       "errors": [],
       "engine_tags": [
-       "search_pokemon:3"
+       "search_pokemon:3",
+       "use_any:first_turn"
       ],
       "play_cost": "",
       "play_gate": "",
@@ -156378,6 +156488,15 @@
         "extra": {
          "what": "pokemon"
         }
+       },
+       {
+        "type": "rule",
+        "target": "self",
+        "amount": null,
+        "extra": {
+         "use_any": "first_turn"
+        },
+        "source_text": "If you go first, you may use this card / can use this attack during your first turn."
        }
       ],
       "source_text": "Search your deck for up to 3 Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
@@ -156385,7 +156504,8 @@
     ],
     "errors": [],
     "engine_tags": [
-     "search_pokemon:3"
+     "search_pokemon:3",
+     "use_any:first_turn"
     ],
     "unsupported": [],
     "generated_by": "rule",

@@ -161,6 +161,11 @@ export const TRAINER_TAG_DESC = {
   },
   shuffle_draw_split: (a) => ({ zh: `双方各自将手牌洗回牌库，然后各抽 ${argOf(a)} 张牌。`, en: `Each player shuffles their hand into their deck and draws ${argOf(a)} card(s).` }),
   shuffle_both_coin_draw: (a) => ({ zh: `双方将手牌洗回牌库，然后抛硬币决定各自抽牌数（你抽 ${argOf(a)} 张）。`, en: `Both players shuffle their hands into their decks, then flip a coin to set the draws (you draw ${argOf(a)}).` }),
+  // S6a（2026-11-08）：**先手首回合的例外许可**（不是效果，是合法性标记）。
+  // 卡面：「If you go first, you may use this card / can use this attack during
+  // your first turn.」—— 复合 tag 的第二段会走到这里，必须有人话说明，
+  // 否则 UI 上显示「（效果说明未收录）」把许可句藏起来（C5 差异透明不允许）。
+  use_any: { zh: '若你先手，这一招／这张卡在你第一个回合也能使用。', en: 'If you go first, you can use this during your first turn.' },
   // S5（2026-11-08）：手牌放**牌库底**（不洗牌）+ 每人**各**抛一枚币分抽。
   // 与上一条只差「放底 vs 洗回」和「一枚 vs 每人一枚」，文案必须点明这两点 ——
   // 写成同一条会让玩家以为双方抽牌数必然相关（实际各自独立抛币）。

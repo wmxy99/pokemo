@@ -4031,6 +4031,41 @@ def _S5_CAT_KEY(raw: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+def audit_s6_first_turn(card_name: str, item_name: str, desc: str,
+                        effects: list) -> list:
+    """S6 对账：先手第一回合的**例外许可**
+
+    卡面两句（写法不同、都是「例外」，不是效果）：
+      · 招式 —— 「If you go first, you can use this **attack** during your first
+        turn.」（Volbeat / Exeggcute / Delibird / Tapu Koko，4 张）
+      · 训练家 —— 「If you go first, you may use this **card** during your first
+        turn.」（Carmine / Team Rocket's Proton，都是 Supporter，2 张）
+
+    S6a 把「先手 T1 禁攻 / 禁 Supporter」打开后，这两句就是**唯一的放行口**：
+    漏产 `use_any:first_turn` = 这 6 张在开局回合各少一个可用动作（静默削弱），
+    而且因为后半句照常解析，`unsupported` 为空、**任何别的守卫都看不出来**。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    joined = "|".join(str(e) for e in _expand_compound(effects))
+    if _S6_T1_ATTACK.search(d) and "use_any:first_turn" not in joined:
+        errs.append(f"{card_name} · {item_name}：卡面「If you go first, you can use "
+                    f"this attack during your first turn」应产 "
+                    f"`use_any:first_turn`，实际 {effects}")
+    if _S6_T1_CARD.search(d) and "use_any:first_turn" not in joined:
+        errs.append(f"{card_name} · {item_name}：卡面「If you go first, you may use "
+                    f"this card during your first turn」应产 "
+                    f"`use_any:first_turn`（卡级 tag 的一段），实际 {effects}")
+    return errs
+
+
+# S6 的两条独立正则（刻意不复用解析包的 `_TURN1_PERMISSION`）
+_S6_T1_ATTACK = re.compile(
+    r"if you go first, you can use this attack during your first turn", re.I)
+_S6_T1_CARD = re.compile(
+    r"if you go first, you may use this card during your first turn", re.I)
+
+
 def audit_s2_events(card_name: str, item_name: str, desc: str,
                     effects: list) -> list:
     """S2 对账：延迟生效 / 换位订阅
@@ -4176,6 +4211,7 @@ def main() -> int:
                 errs += audit_s2e_events(c["name"], it.get("name"), desc, eff)
                 errs += audit_s4_immune(c["name"], it.get("name"), desc, eff)
                 errs += audit_s5_borrow(c["name"], it.get("name"), desc, eff)
+                errs += audit_s6_first_turn(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4216,6 +4252,8 @@ def main() -> int:
                                      [_ctag] if _ctag else [])
             errs += audit_s5_borrow(c["name"], c["name"], _cdesc,
                                     [_ctag] if _ctag else [])
+            errs += audit_s6_first_turn(c["name"], c["name"], _cdesc,
+                                        [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4272,8 +4310,9 @@ def main() -> int:
           "限时订阅/撤退费+战斗位搬能量/具名能量附着 · "
           "可选触发/原地替换/只能由效果上场 · "
           "效果免疫（团队范围/训练家来源） · "
-          "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 "
-          "五十类对账全部一致")
+          "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 · "
+          "先手首回合例外许可（招式/训练家） "
+          "五十一类对账全部一致")
     return 0
 
 

@@ -3530,7 +3530,8 @@
           },
           "damage": 0,
           "effects": [
-            "search_bench:2:basic"
+            "search_bench:2:basic",
+            "use_any:first_turn"
           ],
           "desc": "If you go first, you can use this attack during your first turn. Search your deck for up to 2 Basic Pokémon and put them onto your Bench. Then, shuffle your deck.",
           "name_zh": "快速信号",
@@ -7600,7 +7601,8 @@
           },
           "damage": 0,
           "effects": [
-            "evolve_from_deck"
+            "evolve_from_deck",
+            "use_any:first_turn"
           ],
           "desc": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.",
           "name_zh": "早熟进化",
@@ -35351,7 +35353,8 @@
           },
           "damage": 0,
           "effects": [
-            "search_any:1"
+            "search_any:1",
+            "use_any:first_turn"
           ],
           "desc": "If you go first, you can use this attack during your first turn. Search your deck for a card and put it into your hand. Then, shuffle your deck.",
           "name_zh": "快速礼物",
@@ -40694,7 +40697,8 @@
           },
           "damage": 0,
           "effects": [
-            "research:5"
+            "research:5",
+            "use_any:first_turn"
           ],
           "desc": "If you go first, you can use this attack during your first turn. Discard your hand and draw 5 cards.",
           "name_zh": "高速飞行",
@@ -52359,7 +52363,7 @@
       "name_zh": "丹瑜",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "research:5",
+      "tag": "research:5|use_any:first_turn",
       "desc": "If you go first, you may use this card during your first turn.\n\nDiscard your hand and draw 5 cards.",
       "desc_zh": "若你先攻，你可以在你的第一个回合中使用此卡。\n\n弃置你的手牌并抽 5 张牌。",
       "real": {
@@ -52822,7 +52826,7 @@
       "name_zh": "火箭队的兰斯",
       "supertype": "Trainer",
       "kind": "supporter",
-      "tag": "search_pokemon:3",
+      "tag": "search_pokemon:3|use_any:first_turn",
       "desc": "If you go first, you may use this card during your first turn.\n\nSearch your deck for up to 3 Basic Team Rocket’s Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
       "desc_zh": "若你先攻，你可以在你的第一个回合中使用此卡。\n\n从牌库中检索最多 3 只基础火箭队的宝可梦，展示它们并加入手牌。然后洗牌。",
       "real": {

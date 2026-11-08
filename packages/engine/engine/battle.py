@@ -163,12 +163,25 @@ class Battle:
         # 结算上下文：当前这次击倒是否由「招式」造成（中毒/烧伤检查与混乱自伤不算）
         self._ko_from_attack: bool = False
         self._legacy_used: bool = False
+        # S6a：**开局回合**标记 —— 由 `_setup_openings` 在真的发完起手/铺完场后置位。
+        # 「先手第一回合不能攻击 / 不能打 Supporter」只对**走过 setup 的对局**成立
+        # （没有 setup 的合成对局不存在「开局回合」，见 `GameConfig` 的注释）。
+        self.setup_done: bool = False
         self._setup_openings()
         # 先手：硬币
         self.current = 0 if self.rng.random() < 0.5 else 1
         self._log("setup", {"first": self.current, "seed": seed,
                             "mulligan": [p.mulligan_count for p in self.players]})
         self._begin_turn()
+        # S6a（2026-11-08）：**setup 上场的宝可梦当回合不能进化**（官方
+        # Battle Academy 2024：「Neither player can evolve any of the Pokémon
+        # that they played during setup」）。
+        # 复用既有 `just_played` 语义、在 `_begin_turn` **之后**置位：
+        #   · 先手 T1 → 仍带标记 → 不能进化（官方口径，不置位就是静默加强）；
+        #   · 后手 T2 → 其 `_begin_turn` 已清零 → 可以进化（与实战一致）。
+        for _pi in (0, 1):
+            for _fp in self.players[_pi].all_field():
+                _fp.just_played = True
 
     # ---------- 开局 ----------
     def _draw_with_mulligan(self, pi: int) -> None:
@@ -208,6 +221,10 @@ class Battle:
         if self.cfg.real_prizes:
             for _pi in (0, 1):
                 zones.deal_prizes(self, _pi, self.cfg.prizes)
+        self.setup_done = True
+        # ⚠ 「setup 上场的宝可梦当回合不能进化」的标记**不能**在这里置
+        # （见 `__init__` 里 `_begin_turn()` 之后那段）：`_begin_turn` 会把
+        # 当前玩家场上的 `just_played` 清零，在这里置位等于白置。
 
     # ---------- 抽卡与通用 ----------
     @staticmethod
@@ -249,7 +266,9 @@ class Battle:
             return 0
         got = p.draw(n)
         self._log("draw", {"player": pi, "n": got, "source": source})
-        if len(p.hand) > self.cfg.max_hand:
+        # 官方**无手牌上限** → `max_hand = 0` 表示不设限（默认）；
+        # 历史防御式上限（>0）仍保留用于对拍/压力测试。
+        if self.cfg.max_hand > 0 and len(p.hand) > self.cfg.max_hand:
             over = p.hand[self.cfg.max_hand:]
             for c in over:
                 self._to_discard(p, c)
@@ -443,6 +462,13 @@ class Battle:
             # **能不能出招**的条件，不是某一招的附加效果，故在动作生成处整只拦下。
             if _passive_attack_blocked(self, p.active):
                 blocked = True
+            # S6a（官方）：先手第一回合不能攻击。**必须在这里也拦** —— 只拦
+            # `_do_attack` 会让 AI 反复提出一个必然被拒的动作（对局噪声 +
+            # 训练信号被污染），正是「门禁必须两处同挡」的既有纪律。
+            # ⚠ 例外卡（`use_any:first_turn`）是**按招式**放行的，所以不能把整只
+            #   `blocked`（那会连例外招式一起拦掉）—— 见下面枚举处的逐招判断。
+            _first_turn_banned = (self.cfg.first_turn_no_attack
+                                  and self._opening_turn())
             turn_count = self.turn_counts[pi]
             # 按附着能量数全队禁攻（第一百三十四批，Walrein「Frigid Fangs」）：
             # 卡面「Pokémon that have 2 or less Energy attached can't use attacks」
@@ -464,6 +490,9 @@ class Battle:
                     #   your first turn」）
                     # 不在合法动作表里剔除，AI 就会在首回合打出规则上不可用的招式。
                     if not _attack_usable(self, atk):
+                        continue
+                    # 先手第一回合：只有带 `use_any:first_turn` 的招式可以出手
+                    if _first_turn_banned and not _first_turn_attack_ok(atk):
                         continue
                     _scope = _borrow_scope(atk)
                     _opts = self._borrow_options(p, opp, p.active, atk)
@@ -762,6 +791,18 @@ class Battle:
                                         "target": tpos})
         return out
 
+    def _opening_turn(self) -> bool:
+        """当前是否处于**先手玩家的开局回合**（S6a）
+
+        判据两条**同时**成立：
+          · `setup_done` —— 这局真的走过开局（起手/铺场/发奖赏）。合成对局
+            （单元测试直接摆场）没有「开局回合」这个概念，规则不适用；
+          · `turn_number == 1` —— 全剧第 1 回合，只可能是先手玩家的第一个回合。
+        ⚠ 不能用 `turn_counts[current] == 1`：后手玩家的第一个回合是**第 2 回合**，
+        官方允许其攻击与打支援者（旧实现这么写，旗标打开后会误锁后手）。
+        """
+        return bool(getattr(self, "setup_done", False)) and self.turn_number == 1
+
     def _trainer_legals(self, p: PlayerState, opp: PlayerState) -> list:
         out = []
         for i, c in enumerate(p.hand):
@@ -781,6 +822,11 @@ class Battle:
                     and p.item_lock_until > self.turn_counts[self.current]:
                 continue
             if kind == "supporter" and p.supporter_used:
+                continue
+            # S6a：先手第一回合不能打 Supporter —— 合法动作表同步拦
+            # （只拦派发侧会让 AI 反复尝试 / 人类看到不可用的选项）
+            if kind == "supporter" and self.cfg.first_turn_no_supporter \
+                    and self._opening_turn() and not _card_first_turn_ok(c):
                 continue
             # 跨回合手牌禁打（第一百零七批）
             _tc = self.turn_counts[self.current]
@@ -3448,6 +3494,10 @@ class Battle:
             # 各一枚（卡面「each player flips a coin … **that player** draws」）
             # —— 拿单币版顶替会让双方抽牌数完全相关，概率分布不同。
             placed = self._trainer_shuffle_both_bottom_coin_draw(p, tag, c)
+        elif tag.startswith("use_any:"):
+            # S6a：**合法性例外**标记，不是效果 —— 复合 tag 逐段派发时会走到它，
+            # 必须显式 no-op（否则抛「未知训练家 tag」：卡打得出但 step 报错）。
+            placed = ""
         elif tag.startswith("coin_search:"):
             # S5（2026-11-08）：抛币分岔检索（Team Rocket's Great Ball）——
             # 正面找进化、反面找基础，类别由 `category:` 限定。
@@ -3659,6 +3709,11 @@ class Battle:
         if kind == "supporter":
             if p.supporter_used:
                 raise ValueError("本回合已使用支援者")
+            # S6a（官方 2020-02 起）：**先手第一回合不能打 Supporter**
+            # （卡面自带「may use this card during your first turn」的除外）
+            if self.cfg.first_turn_no_supporter and self._opening_turn() \
+                    and not _card_first_turn_ok(c):
+                raise ValueError("先手第一回合不能使用支援者")
         opp = self.players[1 - self.current]
         # 打出代价（2026-11-02 第三十六批）：**先付账、后效果**。
         #
@@ -6123,8 +6178,13 @@ class Battle:
     def _do_attack(self, p: PlayerState, action: dict) -> dict:
         if p.active is None:
             raise ValueError("无 active")
-        if self.cfg.first_turn_no_attack and self.turn_counts[self.current] == 1:
-            raise ValueError("先手第一回合不可攻击")
+        if self.cfg.first_turn_no_attack and self._opening_turn():
+            # 例外卡（「If you go first, you can use this attack during your
+            # first turn.」）不受限；其余整只拦下（官方）。
+            _ai0 = _attack_index_from_action(p.active.pdef.attacks, action)
+            if _ai0 is None or _ai0 >= len(p.active.pdef.attacks) \
+                    or not _first_turn_attack_ok(p.active.pdef.attacks[_ai0]):
+                raise ValueError("先手第一回合不可攻击")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
         # 攻击次数额度（第六十一批）：Festival Lead 让这一招能在一回合里用两次，
@@ -10822,6 +10882,34 @@ def _attack_usable(battle, atk) -> bool:
             if _eval_condition(battle, t[len("use_not:"):]):
                 return False
     return True
+
+
+def _card_first_turn_ok(card) -> bool:
+    """该**训练家卡**是否带「先手第一回合也能用」的例外许可（S6a）
+
+    卡面：「If you go first, you may use this card during your first turn.」
+    （Carmine / Team Rocket's Proton —— 都是 Supporter，而先手 T1 禁止打 Supporter）。
+    解析侧把它并成复合 tag（`research:5|use_any:first_turn`），这里按**分段**
+    匹配：只用前缀判断会漏（那是第一段的事）。
+    """
+    tdef = getattr(card, "tdef", None)
+    return any(str(seg) == "use_any:first_turn"
+               for seg in str(getattr(tdef, "tag", "") or "").split("|"))
+
+
+def _first_turn_attack_ok(atk) -> bool:
+    """该招式是否**无视「先手第一回合不能攻击」**（S6a）
+
+    卡面原型（Volbeat「Quick Sign」/ Exeggcute「Precocious Evolution」/
+    Delibird「Quick Gift」/ Tapu Koko「Fast Flight」）：
+    「**If you go first**, you can use this attack during your first turn.」
+
+    ⚠ 不建模这一句 = 这 4 张卡在开局回合**少一个可用动作**（静默削弱）；
+    解析侧若漏产 `use_any:first_turn`，同样安静无声。故解析、引擎、白名单、
+    对账四处都要有（对账第 51 类专门盯这一句）。
+    """
+    return any(str(t) == "use_any:first_turn"
+               for t in (getattr(atk, "effects", None) or ()))
 
 
 def _is_acespec(card) -> bool:

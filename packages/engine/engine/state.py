@@ -8,23 +8,40 @@ from .cards import CardRef, FieldPokemon
 
 @dataclass
 class GameConfig:
-    """规则配置（简化子集的开关，便于未来与 oracle 校准差异）"""
+    """规则配置（默认按**官方规则**；开关仅用于回滚对拍与 oracle 校准）"""
     prizes: int = 6                # 奖赏卡总数
     ex_prizes: int = 2             # ex 被击倒对手拿取数
     mega_prizes: int = 3           # Mega ex 被击倒对手拿取数（2026-11-02）
     max_bench: int = 5
     opening_hand: int = 7
-    # ⚠ 两条先手规则的**事实核对**（2026-11-08，官方 Q&A + Battle Academy 2024）：
-    #   · 先手第一回合**不能攻击**（2013 起）→ 官方口径，本默认 False = 允许攻击，
-    #     属**简化偏差**，S6 要改为 True；
-    #   · 先手第一回合**要抽牌**（官方 Q&A 明确「always draw a card at the
-    #     beginning of your turn」）→ 本默认 False 已符合官方，**不是**偏差。
-    #   （原注释把两条写反了：把「不抽牌」当成官方规则，会误导后续开工。）
-    first_turn_no_attack: bool = False   # False = 简化（官方应为 True）
-    first_turn_no_draw: bool = False     # False = 符合官方（每回合都抽，含先手 T1）
+    # ⚠ 三条先手规则的**事实核对**（2026-11-08，官方 Q&A + Battle Academy 2024）：
+    #   · 先手第一回合**不能攻击**（2013 起）→ 官方口径，S6 起默认 **True**
+    #     （此前默认 False = 允许攻击，属简化偏差）；
+    #   · 先手第一回合**不能打 Supporter**（2020-02 现行规则；其它训练家可以）
+    #     → S6 新增，默认 **True**；
+    #   · 先手第一回合**要抽牌**（官方 Q&A：「always draw a card at the beginning
+    #     of your turn」）→ 默认 False 已符合官方，**不是**偏差。保留该字段只为
+    #     与历史对拍，**不得**改为 True（那是伪需求）。
+    #
+    # 「先手第一回合」的判据 = **对局真的走过 setup**（`Battle.setup_done`）且
+    # `turn_number == 1`。⚠ 不能用 `turn_counts[pi] == 1`：那会把**后手**玩家的
+    # 第一个回合（第 2 回合）也一起锁住，而后手第一回合是可以攻击/打支援者的。
+    # 合成对局（单元测试直接 `object.__new__` 摆场、没有 setup）不存在「开局回合」，
+    # 因此规则不适用 —— 这是语义，不是绕过：没有 setup 就没有「先手第一回合」。
+    first_turn_no_attack: bool = True    # 官方：先手 T1 不能攻击（Meloetta 类除外卡待建模）
+    first_turn_no_supporter: bool = True  # 官方：先手 T1 不能打 Supporter（2020-02 起）
+    first_turn_no_draw: bool = False     # 恒 False（官方每回合都抽，含先手 T1）
     mulligan_compensation: bool = True   # 对手因我方 mulligan 补抽 1
     max_turns: int = 300                 # 超限判平（防死循环）
-    max_hand: int = 30                   # 手牌上限防御（超出丢弃，简易保护）
+    # 手牌上限：**官方无上限**（官方 Q&A 明确）。0 = 不设限（默认）。
+    # >0 仅用于历史对拍/压力测试的防御式上限（超出丢弃并写 `hand_overflow` 日志）。
+    max_hand: int = 0
+    # S3（2026-11-08）：奖赏卡**真发牌**（官方 setup 第 7 步：从牌库顶取 6 张面朝下）
+    #   True  → `PlayerState.prizes` 是 `list[PrizeSlot]`，牌库开局少 6 张
+    #           （`deck_count` 上限 47），击倒时取的是**真卡**（进手牌）。
+    #   False → 历史「只计数」口径（`prizes_left` 从 6 递减、牌库不减少）。
+    # ⚠ 关闭时行为与 S3 之前**逐字节一致**，用于回滚对拍；默认已按官方规则打开。
+    real_prizes: bool = True
     # S3（2026-11-08）：奖赏卡**真发牌**（官方 setup 第 7 步：从牌库顶取 6 张面朝下）
     #   True  → `PlayerState.prizes` 是 `list[PrizeSlot]`，牌库开局少 6 张
     #           （`deck_count` 上限 47），击倒时取的是**真卡**（进手牌）。

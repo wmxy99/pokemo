@@ -4,8 +4,8 @@
 > （LLM/RAG 解析）+ 强化学习 Agent + 可交互 Web 平台。宝可梦为**第一验证域** ——
 > 沉淀的「规则引擎 + 自对弈 RL + 卡牌理解」能力可迁移其它卡牌游戏。
 
-**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1452** 项）· 全仓 **2648** 项测试全绿
-（engine 1452 · agent 1042 · api 142 · gym 12）
+**状态**：alpha · 引擎 **v1.4**（结算与机制测试 **1475** 项）· 全仓 **2676** 项测试全绿
+（engine 1475 · agent 1047 · api 142 · gym 12）
 <!-- 上面这行由 scripts/check_doc_counts.py 在 CI 中核对（计数类文档必须实证） -->
 
 | | |
@@ -19,7 +19,7 @@
 
 ```bash
 # ① 引擎：无需三方依赖，装好 Python 3.12 即可
-cd packages/engine && python -m unittest discover -s tests      # 1452 项
+cd packages/engine && python -m unittest discover -s tests      # 1475 项
 
 # ② 平台（后端 = FastAPI，同时托管前端构建产物到 /app）
 pip install -r apps/api/requirements.txt

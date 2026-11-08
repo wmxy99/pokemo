@@ -14,6 +14,7 @@ sys.path.insert(0, str(_ENGINE))
 
 from engine import decklib
 from engine.battle import Battle
+from engine.state import GameConfig
 from engine.cards import PokemonDef, AttackDef, PokeRef, make_pokemon
 
 from agent.state_encoder import STATE_DIM, ACTION_DIM
@@ -42,7 +43,10 @@ class TestPolicyAgent(unittest.TestCase):
 
     def test_spread_plan_applied(self):
         # 构造 Draco ex（spread_free 攻击）场景验证 targets 生成
-        b = Battle(decklib.deck_draco_demo(), decklib.deck_fire_demo(), seed=9)
+        # 本用例验 spread 的 targets 生成，与先手规则无关 →
+        # 关掉先手禁攻（否则第 1 回合黑名单里没有攻击动作）
+        b = Battle(decklib.deck_draco_demo(), decklib.deck_fire_demo(), seed=9,
+                   cfg=GameConfig(first_turn_no_attack=False))
         me = b.players[b.current]
         me.active = make_pokemon(decklib.DRACO_EX)
         me.active.add_energy("fire", 1)

@@ -36,12 +36,18 @@ class TestTrainerCompound(unittest.TestCase):
         self.assertIn("confuse", _m(LASER, kind="item")["tags"][0])
 
     def test_research(self):
-        self.assertEqual(_m(CARMINE)["tags"], ["research:5"])
+        # S6a（2026-11-08）：「If you go first, you may use this card during your
+        # first turn.」不再只是「剥掉」—— 它是**先手 T1 禁 Supporter** 的例外
+        # 许可，必须落成第二个 tag `use_any:first_turn`（建池时并进卡级 tag）。
+        # 不产它的后果是这 2 张 Supporter 在开局回合打不出（静默削弱）。
+        self.assertEqual(_m(CARMINE)["tags"],
+                         ["research:5", "use_any:first_turn"])
 
     def test_permission_clause_stripped(self):
-        """「If you go first …」是**许可**不是条件 —— 剥掉，且不进 unsupported"""
+        """许可句不参与**效果**判定：主效果仍是一条整句 tag，且不进 unsupported"""
         r = _m(CARMINE)
         self.assertEqual(r["unsupported"], [])
+        self.assertIn("research:5", r["tags"])
 
     def test_switch_draw(self):
         self.assertEqual(_m(SURFER)["tags"], ["switch_draw_to:5"])
@@ -50,9 +56,15 @@ class TestTrainerCompound(unittest.TestCase):
         self.assertEqual(_m(LISIA)["tags"], ["gust_confuse"])
 
     def test_single_tag_only(self):
-        """四条都必须只产出一个卡级 tag（多 tag = 整卡不收）"""
+        """四条都必须只产出一个**可执行**卡级 tag（多 tag = 整卡不收）
+
+        S6a 起允许附加**合法性标记** `use_any:first_turn`（不是效果）——
+        `gen_engine_pool.build_trainer` 会把它并进卡级 tag（`a|b`）并排除在
+        「多 tag 拒收」之外，所以这里按「可执行 tag」计数。
+        """
         for t in (LASER, CARMINE, SURFER, LISIA):
-            self.assertEqual(len(_m(t)["tags"]), 1, t)
+            main = [x for x in _m(t)["tags"] if x != "use_any:first_turn"]
+            self.assertEqual(len(main), 1, (t, _m(t)["tags"]))
 
     def test_unrelated_two_effect_text_not_claimed(self):
         """没覆盖的两动作句仍如实未建模（不得硬凑成一条复合 tag）"""

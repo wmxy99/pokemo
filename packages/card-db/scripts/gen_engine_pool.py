@@ -288,6 +288,9 @@ ATTACK_TAG_PREFIXES = (
     # 第四十五批（2026-11-03）：逐目标各抛一枚（Mega Zygarde ex）
     # 与抛币选状态（Cradily）——两者都是招式侧 tag
     "coin_per_target:", "status_choose:",
+    # S6a（2026-11-08）：先手禁攻的**例外**（「If you go first, you can use this
+    # attack during your first turn.」）。漏写 → 4 张例外卡在开局回合被静默锁死。
+    "use_any:",
     # 第十七批（2026-10-29）：**补白** —— 第七批就落地了 `nullify_if:<cond>`
     # （「If …, this attack does nothing.」失败门），但准入白名单一直漏了它：
     # 池内 `nullify_if:` tag 数量为 **0**，等于该机制从未真正可用（诚实但不达标）。
@@ -562,6 +565,13 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
                 if any(str(t).startswith(p) for p in TRAINER_TAGS)), None)
     if not tag:
         return None
+    # S6a（2026-11-08）：「If you go first, you may use this card during your first
+    # turn.」是**合法性例外**（Carmine / Team Rocket's Proton 都是 Supporter，
+    # 而先手第一回合禁止打 Supporter）。它是第二个 tag → 这里必须**并进**卡级
+    # tag（复合 `a|b`），否则 `next(...)` 只取第一个，例外被静默丢掉，
+    # 这 2 张卡在开局回合直接打不出（= 静默削弱）。
+    if "use_any:first_turn" in tags and "use_any:first_turn" not in str(tag):
+        tag = f"{tag}|use_any:first_turn"
     is_fossil = str(tag).startswith("fossil:")
     fossil = None
     if is_fossil:
@@ -603,9 +613,13 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     # 只收第一条会**静默少做**后半段效果 → 整卡不收（宁可未建模）。
     # 需要多动作的卡必须在解析侧合并成**一条** tag（如 Wally's Compassion
     # 的 `heal:all:mega:energy`）。
-    supported_tags = [t for t in tags
+    # S6a：「首回合许可」是**合法性标记**、不是第二个效果 → 不计入「多 tag 拒收」，
+    # 否则 Carmine / Team Rocket's Proton 会被判成「两条可执行 tag」而整卡丢掉
+    # （实测：池 1207 → 1205）。
+    _main_tags = [t for t in tags if str(t) != "use_any:first_turn"]
+    supported_tags = [t for t in _main_tags
                       if any(str(t).startswith(p) for p in TRAINER_TAGS)]
-    if len(supported_tags) != len(tags):
+    if len(supported_tags) != len(_main_tags):
         return None
     if len(supported_tags) > 1:
         return None

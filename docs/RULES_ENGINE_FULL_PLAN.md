@@ -276,13 +276,13 @@ def _apply_effect(self, kind, source, target, tag, ctx):
 
 | 简化开关（`state.py::GameConfig`） | 现状 | 官方规则（已核对，见 §5.1） | 影响 |
 |---|---|---|---|
-| `first_turn_no_attack` | **False**（先手首回合可攻击） | 先手第一回合**不能**攻击（2013 起） | 改变开局胜率与 K1 基线；Meloetta ex「Debut Performance」正是**例外**卡，改完才有意义 |
+| `first_turn_no_attack` | **True**（S6a 已按官方打开） | 先手第一回合**不能**攻击（2013 起） | 已改；例外卡靠 `use_any:first_turn`（见 S6a） |
 | ~~`first_turn_no_draw`~~ | False（每回合都抽 1） | **官方就是要抽**（先手首回合也抽）—— 该开关是**伪需求**，应删除或恒 False | 无（现默认已符合官方） |
-| **（缺失）先手首回合禁支援者** | 无此判定 | 先手第一回合**不能打 Supporter**（2020-02 现行规则） | 需在 `_trainer_legals` 与 `_do_trainer` 两处同时加（否则 AI 会反复尝试非法动作） |
-| `max_hand` | 30（超了弃牌，简易保护） | **无手牌上限**（官方 Q&A 明确） | 移除后需防死循环 |
+| **先手首回合禁 Supporter** | 无此判定 → **S6a 已加**（`first_turn_no_supporter`） | 先手第一回合**不能打 Supporter**（2020-02 现行规则） | 两处同挡（legals + 派发）；例外卡 2 张（Carmine / TR Proton）靠卡级 `use_any:first_turn` |
+| `max_hand` | **0 = 无上限**（S6a 已改；>0 仅供对拍） | **无手牌上限**（官方 Q&A 明确） | 已改：两处（抽牌 / 取奖赏）都判 `>0` 才裁 |
 | `mulligan_compensation` | 重抽直到有基础宝可梦（隐式），对手**自动**补抽 | 无基础宝可梦**必须**重抽（非可选）；对手**可**（may）每 mulligan 抽 1 | 需 choice 协议（S1）让对手自己决定抽不抽 |
 | 奖赏卡 | **不实际发牌**（只计数） | 开局从牌库取 6 张，面朝下 | S3 |
-| 进化时机 | setup 上场的宝可梦 `just_played` **未置位**（只有手牌上场/进化时才置位） | setup 上场的宝可梦**当回合也不能进化** | 需在 `_setup_openings` 置位；否则首回合就能进化（静默加强） |
+| 进化时机 | **S6a 已置位**（`__init__` 里 `_begin_turn()` 之后统一置 `just_played`） | setup 上场的宝可梦**当回合也不能进化** | 已改；后手 T2 因 `_begin_turn` 清零而可进化，与实战一致 |
 
 除开关外，完整规则还要求（逐条进一致性矩阵）：
 
@@ -711,6 +711,49 @@ S2c 3 张 / S2d 4 张 / S2e 3 张，含连带卡）。下一步按计划进入 *
 **数字**：`engine_ready` **1222 / 1267 = 96.4%** · 池 **1207** · 未 ready **45**
 （41 如实拒收 + 4 结构性）· 测试 **2648**（engine 1452 / agent 1042 / api 142 / gym 12）·
 对账 **50 类** · CI 8/8 · K1 双盲 200 局 **0.795**（单侧对照 0.825，无回归）。
+
+---
+
+### S6a · 开局回合 / 手牌上限 / setup 进化（2026-11-08 完成）
+
+S6 体量太大，拆成 S6a（**规则开关层**，本批）→ S6b（奖赏卡「取哪张」的选择）
+→ S6c（伤害流水线收敛 + 特殊状态全套 + KO 时机）→ S6d（一致性矩阵
+`docs/RULE_CONFORMANCE.md`）。
+
+| 项 | 落点 |
+|---|---|
+| 先手 T1 禁攻 | `GameConfig.first_turn_no_attack` 默认 **True**；判据 `_opening_turn()` = `setup_done and turn_number == 1`。**两处同挡**：合法动作表逐招跳过 + `_do_attack` 拒绝 |
+| 先手 T1 禁 Supporter | 新增 `first_turn_no_supporter`（默认 True），同样两处同挡（`_trainer_legals` + `_do_play`） |
+| 例外许可 | `use_any:first_turn`：招式级（4 张：Volbeat / Exeggcute / Delibird / Tapu Koko）+ 卡级（2 张 Supporter：Carmine / TR Proton，建池时并成 `a|use_any:first_turn`）。`_do_trainer` 对该段显式 no-op |
+| 手牌无上限 | `max_hand` 默认 **0 = 不设限**（官方）；两处裁剪点都改判 `>0`。>0 仍可用（对拍/压力测试） |
+| setup 不能进化 | `__init__` 在 `_begin_turn()` **之后**给双方场上置 `just_played`（放在之前会被 `_begin_turn` 清零 = 白置）；后手 T2 自动解锁 |
+| `first_turn_no_draw` | 保持 False（官方每回合都抽）；**伪需求**，测试钉住「不得改回 True」 |
+| 顺带修掉两处既有缺陷 | ① 旧判据 `turn_counts[current] == 1` 会**误锁后手的第一回合**（第 2 回合）；② 指令清单在「同名不同目标」时下发**同名 label**，点它必然 422（`command_catalog` 去歧义 + `_pos_of_action` 修并列判断） |
+| 对账 | 新增第 51 类「先手首回合例外许可」 |
+
+**踩到的坑**
+
+1. **★ 例外的 6 张卡是「看不见的削弱」**：这 6 张的例外句在 S6 之前就被
+   `_TURN1_PERMISSION` **剥掉**（当时引擎不限制，剥掉无害）；规则一开，它们
+   在开局回合就少一个可用动作，而**后半句照常解析 → `unsupported` 为空**，
+   覆盖率、对账、池大小全都看不出来。判据只有一条：卡面有这句 → 必须有
+   `use_any:first_turn`（对账第 51 类）。
+2. **★ 判据写成 `turn_counts` 会误锁后手**：后手的第一回合是**第 2 回合**，
+   官方允许攻击与打支援者。用 `turn_number == 1` 才对（有专项回归用例）。
+3. **★ 合成对局没有「开局回合」**：规则挂在 `setup_done` 上（`_setup_openings`
+   末尾置位）。这不是给测试开后门——没有 setup 就没有「先手第一回合」这个阶段；
+   正因为如此，423 个既有招式用例不需要改，而规则的验收改用**真实对局**。
+4. **置位时机**：`just_played` 必须在 `_begin_turn()` **之后**置，否则被它清零
+   （第一版写错，靠「先手 T1 不能进化」用例抓住）。
+5. **卡级例外不能当第二个效果**：`build_trainer` 有一条「多 tag = 整卡不收」，
+   直接把 `use_any:first_turn` 算进去会让 Carmine / Proton **整卡消失**
+   （实测池 1207 → 1205）。必须先把它排除在「可执行 tag」计数之外。
+
+**数字**：`engine_ready` **1222 / 1267 = 96.4%** · 池 **1207** · 未 ready **45**
+（41 如实拒收 + 4 结构性）· 测试 **2676**（engine 1475 / agent 1047 / api 142 / gym 12）·
+对账 **51 类** · CI 8/8 · **K1 双盲 200 局 0.770**（S6a 前 0.795；差值 0.025 < CI
+±0.058，仍 ≥0.70 判据。权重是在旧规则下训练的，重训可回收 —— 按纪律**不**降指标，
+先如实记录）。
 
 ---
 

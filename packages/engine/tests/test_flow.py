@@ -76,7 +76,10 @@ class TestBaselineBehaviour(unittest.TestCase):
     def test_baseline_attacks_when_ready(self):
         # 构造 view：active 能量已足、手无能量
         from engine import decklib as dl
-        b = Battle(dl.deck_lightning_demo(), dl.deck_lightning_demo(), seed=5)
+        # 本用例验 BaselineAI 的「能量够了就出招」，与先手规则无关
+        # → 关掉先手禁攻（否则第 1 回合只能 pass，测不到目标行为）
+        b = Battle(dl.deck_lightning_demo(), dl.deck_lightning_demo(), seed=5,
+                   cfg=GameConfig(first_turn_no_attack=False))
         # 跳过复杂准备：直接给当前方 active 挂够能量
         cur = b.players[b.current]
         cur.active.add_energy("colorless", 3)

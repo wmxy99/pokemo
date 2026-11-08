@@ -109,7 +109,9 @@ class TestSpreadFree(unittest.TestCase):
         # Draco ex Phantom Rush（F+P）携带 targets 的端到端
         from engine import decklib as dl
         from engine.cards import PokeRef, make_pokemon as mk
-        b = Battle(dl.deck_draco_demo(), dl.deck_fire_demo(), seed=7)
+        # 本用例验 Draco ex 的 spread 端到端，与先手规则无关 → 关掉先手禁攻
+        b = Battle(dl.deck_draco_demo(), dl.deck_fire_demo(), seed=7,
+                   cfg=GameConfig(first_turn_no_attack=False))
         me = b.players[b.current]
         me.active = mk(dl.DRACO_EX)
         me.active.add_energy("fire", 1)

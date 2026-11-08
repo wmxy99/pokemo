@@ -142,6 +142,22 @@ def _hand_slot_from_text(text: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+def _pos_of_action(action: dict) -> Optional[int]:
+    """动作的**位置编号**（与 `_slot_name` 同一口径：0=战斗位，n=后备n）
+
+    ⚠ 不能用 `int(a.get("target", a.get("bench", -1)))` 或
+    `bench + 1 == ts` 这类**并列**写法：evolve 只带 `target`、retreat 只带
+    `bench`，并列判断会让「后备1」（ts=1）与「不带 bench 的动作」误命中
+    （`-1 + 1 == 0` 还会让 ts=0 命中**所有**动作）—— 实测两只同名宝可梦可进化时，
+    选「战斗位」会被判成仍然歧义。
+    """
+    if action.get("target") is not None:
+        return int(action["target"])
+    if action.get("bench") is not None:
+        return int(action["bench"]) + 1      # 撤退/换位：bench 0 → 后备1
+    return None
+
+
 def _starts_with_verb(text: str, verb: str) -> bool:
     q = norm(text)
     return any(q.startswith(norm(a)) for a in VERB_ALIASES.get(verb, ()))
@@ -184,6 +200,12 @@ def find_action(legal: list, text: str, verb: Optional[str] = None) -> dict:
     #    （保证「把 label 原样作为 command 提交」永远可用；同名同义副本直取首个，
     #      语义不同的同名动作仍按歧义处理，绝不静默改目标）
     label_hits = [a for a in legal if norm(command_label(a)) == q]
+    if not label_hits:
+        # 清单在「同名不同目标」时会给 label 追加位置后缀（`label_with_slot`）
+        # → 把**尾部**括号剥掉再比，保证清单里的 label 仍然能原样回投。
+        _base = norm(re.sub(r"（[^）]*）$", "", str(text or "")))
+        if _base and _base != q:
+            label_hits = [a for a in legal if norm(command_label(a)) == _base]
     if label_hits:
         seen, choices = set(), []
         for a in label_hits:
@@ -198,11 +220,14 @@ def find_action(legal: list, text: str, verb: Optional[str] = None) -> dict:
         hs, ts = _hand_slot_from_text(text), _slot_from_text(text)
         narrow = [a for a in choices
                   if (hs is None or int(a.get("hand", a.get("index", -1))) == hs)
-                  and (ts is None or int(a.get("target", a.get("bench", -1))) == ts
-                       or int(a.get("bench", -1)) + 1 == ts)]
+                  and (ts is None or _pos_of_action(a) == ts)]
         if len(narrow) == 1:
+            _lab = command_label(narrow[0])
+            # 用户输入带位置后缀时，回显也带后缀（「提交什么就回显什么」）
+            if norm(_lab) != q:
+                _lab = label_with_slot(narrow[0])
             return {"ok": True, "action": dict(narrow[0]),
-                    "matched": command_label(narrow[0]), "candidates": []}
+                    "matched": _lab, "candidates": []}
         return {"ok": False, "action": None, "matched": command_label(choices[0]),
                 "ambiguous": True,
                 "candidates": [dict(a) for a in choices],
@@ -393,10 +418,41 @@ def command_label(action: dict) -> str:
     return f"{verb_zh}：{name}" if name else verb_zh
 
 
+def label_with_slot(action: dict) -> str:
+    """label 带**位置后缀**（同名不同目标时用）
+
+    例：两只同名宝可梦都能进化 → 「进化：梦幻 → 幻梦（后备1）」。
+    没有位置字段（如 pass / attack）时退化为普通 label。
+    """
+    pos = action.get("target")
+    if pos is None:
+        pos = action.get("bench")
+    if pos is None:
+        return command_label(action)
+    return f"{command_label(action)}（{_slot_name(int(pos))}）"
+
+
 def command_catalog(legal: list) -> list:
-    """当前可用指令清单（供 UI 自动补全 / API 自描述）"""
-    return [{"label": command_label(a), "verb": a.get("verb"),
+    """当前可用指令清单（供 UI 自动补全 / API 自描述）
+
+    ⚠ **同名不同目标必须去歧义**：两只同名宝可梦都能进化时，两条动作的
+    `command_label` 完全相同；若清单照原样下发，用户点第一条会被 422
+    （「有多个可选目标」）—— 那正是「清单里的 label 必须能原样回投」这条
+    不变量被打破（实测：先手回合禁止攻击后，清单第 1 条变成这种 label）。
+    去歧义只对**语义不同**的动作做：同名的多张手牌副本（`_choice_key` 相同）
+    可互换，加后缀反而是噪声。
+    """
+    rows = [{"label": command_label(a), "verb": a.get("verb"),
              "action": dict(a)} for a in (legal or [])]
+    groups: dict = {}
+    for r in rows:
+        groups.setdefault(norm(r["label"]), []).append(r)
+    for grp in groups.values():
+        if len({_choice_key(r["action"]) for r in grp}) < 2:
+            continue
+        for r in grp:
+            r["label"] = label_with_slot(r["action"])
+    return rows
 
 
 # ---------------- 组合指令（序列批量提交） ----------------

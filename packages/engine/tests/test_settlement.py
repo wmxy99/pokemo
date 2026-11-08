@@ -368,11 +368,23 @@ class TestActions(unittest.TestCase):
         self.assertEqual(len(a.b.players[0].bench), 1)
 
     def test_first_turn_no_attack_flag(self):
+        """先手第一回合禁攻（官方，S6a 起默认开启）
+
+        ⚠ `Arena` 是**合成对局**（跳过 setup 直接摆场）→ `setup_done` 缺省为 False，
+        不存在「开局回合」，规则不适用。要测这条规则必须显式标记该局走过 setup。
+        """
         a = Arena(GameConfig(first_turn_no_attack=True))
         addE(a.b.players[0].active, 1)
+        self.assertFalse(a.b._opening_turn())
         res = a.attack()
-        self.assertFalse(res["ok"])
-        self.assertIn("先手第一回合", res["error"])
+        self.assertTrue(res["ok"], "合成对局没有开局回合，规则不应生效")
+        # 标记为「走过 setup 的真实对局」→ 第 1 回合禁止攻击
+        a2 = Arena(GameConfig(first_turn_no_attack=True))
+        a2.b.setup_done = True
+        addE(a2.b.players[0].active, 1)
+        res2 = a2.attack()
+        self.assertFalse(res2["ok"])
+        self.assertIn("先手第一回合", res2["error"])
 
 
 class TestAttackEffects(unittest.TestCase):

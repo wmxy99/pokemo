@@ -127,8 +127,8 @@ def take_prizes(battle, taker: int, n: int) -> int:
         "player": taker, "n": len(got), "left": p.prizes_left,
         "faces_up": sum(1 for s in got if s.face_up),
         "cards": [_label(s.ref) for s in got]})
-    # 手牌上限是引擎的**防御性**简化（官方无上限，S6 处理）；这里与抽牌同口径
-    if len(p.hand) > battle.cfg.max_hand:
+    # 手牌上限：官方**无上限**（`max_hand = 0` 为默认）；>0 仅用于历史对拍
+    if battle.cfg.max_hand > 0 and len(p.hand) > battle.cfg.max_hand:
         over = p.hand[battle.cfg.max_hand:]
         for c in over:
             battle._to_discard(p, c)

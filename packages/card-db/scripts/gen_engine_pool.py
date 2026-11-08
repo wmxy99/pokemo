@@ -169,7 +169,11 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 # 第一百三十五批（S1a）：**决策分解**族 —— 「弃任意数量手牌」
                 # （Naveen）。引擎挂起 `phase="choice"`，由牌手逐张选；
                 # 白名单漏写 = 卡在池外凭空消失。
-                "choose:")
+                "choose:",
+                # S3（2026-11-08）：**区域对象化**族 —— 奖赏卡重发（Redeemable
+                # Ticket）/ 翻面对手奖赏卡（Bother-Bot）/ 亮出对手牌库顶后
+                # 任意数量基础宝可梦上对手后备（Accompanying Flute）。
+                "prize:", "flute:")
 
 # 引擎支持的招式效果 tag 前缀（与 battle._apply_attack_effects 对齐）
 ATTACK_TAG_PREFIXES = (
@@ -353,6 +357,10 @@ ABILITY_TAG_PREFIXES = (
     "switch_choose:",
     # 第一百三十五批（S1c）：决策分解 —— 手牌与牌库顶互换（Gumshoos）。
     "choose:",
+    # S3（2026-11-08）：弃牌库**底** N 张（Misty's Psyduck「Flustered Leap」第一段）。
+    # 复合形态 `deck_bottom_discard:1|self_to_deck_top` 由本前缀一并覆盖；
+    # 漏写 → 特性在池外静默消失（引擎派发写在 `_apply_attack_effects`）。
+    "deck_bottom_discard:",
 )
 
 # 特性侧**精确匹配**的 tag（不带冒号，用前缀匹配会误收 `poison_extra` 一类）

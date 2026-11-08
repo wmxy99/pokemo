@@ -108,7 +108,12 @@ def _extra_features(view: dict, name: str) -> list:
         turn = float(view.get("turn", 0))
         return [min(1.0, turn / 100.0),
                 mp / max(1.0, mp + op),
-                min(1.0, me.get("deck_count", 0) / 60.0),
+                # S3（2026-11-08）：奖赏卡**真发牌**后，开局牌库是 60-7-6=47 张，
+                # 归一化分母必须跟着从 60 改到 47 —— 否则这个特征永远到不了 1.0
+                # （实测 47/60=0.78），网络看到的「牌库充足」区间被整体压缩。
+                # ⚠ 该口径与「只计数」模式（real_prizes=False，分母仍是 60）不同；
+                #   权重若在旧口径上训练，切换会有一次性的分布偏移（见 README）。
+                min(1.0, me.get("deck_count", 0) / 47.0),
                 min(1.0, me.get("discard_count", 0) / 60.0)]
     raise ValueError(f"未知特征域 {name}（可选 hand/meta）")
 

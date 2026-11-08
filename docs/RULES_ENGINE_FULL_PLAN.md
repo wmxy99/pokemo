@@ -6,8 +6,9 @@
 > 本文件是**方案**，不是实施记录。批准后按 §9 的「第一刀」开工；每阶段落地后回填
 > `docs/RULES_RUNBOOK_B90_PLUS.md` 与 `docs/RULE_CONFORMANCE.md`。
 >
-> 现状基线（2026-11-08 实测）：`engine_ready` **1189/1267 = 93.8%**，池 **1174**，
-> 未 ready **78**（批内如实拒收 72 + 结构性 4 + 待新能力 2），测试 2500，CI 8/8。
+> 现状基线（2026-11-08 实测）：`engine_ready` **1198/1267 = 94.6%**，池 **1183**，
+> 未 ready **69**（批内如实拒收 63 + 结构性 4 + 待新能力 2），测试 **2551**，CI 8/8。
+> 进度：**S1a / S1b / S1c / S3 已落地**（见 §10 的落地记录与偏差登记）。
 
 ---
 
@@ -430,8 +431,62 @@ S6 放最后，因为它会改 K1 基线与观测量，必须等其它结构件�
 
 ---
 
-## 附：与现有文档的关系
+## 10. 落地记录与偏差登记
 
+### S3 · 奖赏卡与牌库底对象化（2026-11-08 完成）
+
+**做了什么**
+
+| 项 | 落点 |
+|---|---|
+| 奖赏卡槽 | `engine/zones.py::PrizeSlot{ref, face_up}`；`PlayerState.prizes` + **显式** `prizes_real` 模式旗标 |
+| 真发 6 张 | `Battle._setup_openings` → `zones.deal_prizes`（`GameConfig.real_prizes=True` 默认开，可关回只计数模式做逐字节对拍） |
+| 取奖赏 | `_resolve_ko` → `zones.take_prizes`：**真卡进手牌**（不再是「计数器 −N」） |
+| 牌库底原语 | `deck_bottom_take / deck_bottom_put / put_on_top`（`deck[0]` = 底、`deck[-1]` = 顶，写成具名函数防「反序」） |
+| 只读检视 | `peek_top / peek_bottom / peek_prizes` |
+| 新 tag | `prize:redeal`（Redeemable Ticket）· `prize:flip_opp`（Bother-Bot，翻面选择 + 随机看手牌 + **交换确认选择**）· `flute:N`（Accompanying Flute，任意数量上对手后备）· `info:peek_prize:opp:1`（Blipbug，完美信息等价 + 记日志）· `deck_bottom_discard:1|self_to_deck_top`（Misty's Psyduck，复合 tag） |
+| 编码口径 | `meta` 域的 `deck_count` 归一化 **/60 → /47**（真发牌后上限就是 47） |
+| 进池 | **5 张**：Redeemable Ticket · Team Rocket's Bother-Bot · Team Rocket's Blipbug · Misty's Psyduck · Accompanying Flute（`engine_ready` 1193→**1198**，池 1178→**1183**） |
+| 对账 | 新增第 45 类：奖赏重发 / 翻面 / 亮出对手牌库顶 / 查看奖赏卡 / 弃牌库底收自身（含**半句漏认领**的负向守卫） |
+
+**与计划的差异（如实登记，不是「已完成」的掩饰）**
+
+1. **60 张恒等式无法全量成立**。计划 §5 S3 守卫 ① 要求「牌库+手牌+奖赏+弃牌+场上 = 60」。
+   实测做不到：基本能量附着后引擎只存属性计数（`fp.energy[type]`，**不保留卡对象**），
+   宝可梦被击倒时其附着卡也没有逐张进 `discard_refs`。因此恒等式会随对局**单调下降**
+   （实测一局 60 → 34），它不是「有 bug」而是「能量未对象化」。
+   → 改为**定向守恒**：`test_zones_s3.py` 里对「奖赏重发 / 牌库底写入 / 亮出后洗回」
+   逐项断言张数不变，并对**每一局**断言 `len(prizes) == prizes_left`（12 个 seed 跑满全程）。
+   能量对象化留待需要时再做（`zones.card_total()` 的 docstring 已写明口径限制）。
+2. **取奖赏的「选哪一张」不做选择**。面朝下时对牌手**不可区分**（官方规则也不许查看），
+   因此不构成决策；引擎按「先面朝下、后面朝上」固定顺序并**写日志**。
+   存在面朝上奖赏卡时的真实选择留 S6（需要把 choice 协议嵌进 `_resolve_ko` 的中途）。
+3. **Bother-Bot 的「该奖赏位保持正面朝上」**按「**位置**保持正面朝上」实现
+   （换进去的手牌可见、原奖赏卡进手牌）。卡面原文 "That Prize card remains face up"
+   指代的是被翻开的**那个奖赏位**；若按「卡对象」读，这句话在卡离开奖赏区后无意义。
+   已在代码注释里写明这条解释性选择。
+
+**顺带修的既有缺陷（不属于 S3 范围，但被 S3 的守卫撞出来）**
+
+- **13 张池内死卡**：`_do_trainer` 有派发、白名单放行、卡片在池内，但 `_trainer_legals`
+  **从来没有分支** → `legal_actions()` 永不给出 = AI 选不到、人类手里是死卡。
+  命中：Dusk Ball · Ruffian · Enhanced Hammer · Hand Trimmer · Secret Box ·
+  Deduction Kit · Hop's Bag · Precious Trolley · Iron Defender ·
+  Ciphermaniac's Codebreaking · Salvatore · Briar · Larry's Skill ·
+  Team Rocket's Ariana。另加 **Lillie's Pearl**（`kind=tool` 但 tag 不是 `tool:` 前缀，
+  派发缺失 → 打出去直接抛错，比死卡更糟）。
+- 新增守卫 `tests/test_legals_coverage.py`：用 AST 把**池内每条训练家 tag** 与
+  `_trainer_legals` 的字面前缀逐一比对，缺一条就红。历史纪律 #19 的「四处同查」
+  列的是白名单 + `reallib` + `_apply_attack_effects` + `_do_trainer` —— **漏了这第五处**。
+
+**数字**：`engine_ready` **1198 / 1267 = 94.6%** · 池 **1183** · 未 ready **69**
+（63 如实拒收 + 4 结构性 + 2 待新能力）· 测试 **2551**（engine 1368 / agent 1029 /
+api 142 / gym 12）· 对账 **45 类**全绿 · CI **8/8** · K1 双盲 200 局 **0.795**
+（真发牌 + 编码口径变化后复测，判据 ≥0.70，与历史最好值持平）。
+
+---
+
+## 附：与现有文档的关系
 | 文档 | 角色 |
 |---|---|
 | `docs/RULES_RUNBOOK_B90_PLUS.md` | **批次台账**（90–134 批的逐批进池/拒收记录）—— 本方案落地后，拒收项要逐条**回流**到新批次 |

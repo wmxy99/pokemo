@@ -25,6 +25,12 @@ class GameConfig:
     mulligan_compensation: bool = True   # 对手因我方 mulligan 补抽 1
     max_turns: int = 300                 # 超限判平（防死循环）
     max_hand: int = 30                   # 手牌上限防御（超出丢弃，简易保护）
+    # S3（2026-11-08）：奖赏卡**真发牌**（官方 setup 第 7 步：从牌库顶取 6 张面朝下）
+    #   True  → `PlayerState.prizes` 是 `list[PrizeSlot]`，牌库开局少 6 张
+    #           （`deck_count` 上限 47），击倒时取的是**真卡**（进手牌）。
+    #   False → 历史「只计数」口径（`prizes_left` 从 6 递减、牌库不减少）。
+    # ⚠ 关闭时行为与 S3 之前**逐字节一致**，用于回滚对拍；默认已按官方规则打开。
+    real_prizes: bool = True
 
 
 @dataclass
@@ -41,6 +47,15 @@ class PlayerState:
     active: Optional[FieldPokemon] = None
     bench: list = field(default_factory=list)         # list[FieldPokemon]
     prizes_left: int = 0                              # 剩余奖赏数（0 → 胜）
+    # S3（2026-11-08）：奖赏卡**对象层**——每张是真卡（`PrizeSlot.ref`），
+    # 可翻面（`face_up`，翻到正面后保持到对局结束）。空 list = 「只计数」兼容
+    # 模式（历史夹具直接装配 `prizes_left`），此时 `prizes_left` 仍是唯一真相，
+    # 两者的一致性由 `engine/zones.py::_sync` 与 `test_zones_s3.py` 守护。
+    prizes: list = field(default_factory=list)        # list[PrizeSlot]
+    # 是否「奖赏卡已对象化」的**显式旗标**（`zones.deal_prizes` 置位）。
+    # ⚠ 不能用 `bool(prizes)` 代替：最后一张被取走时列表会变空，模式判断会翻转，
+    #   导致 `prizes_left` 停在上一次的值（实测整局错位）。
+    prizes_real: bool = False
     mulligan_count: int = 0
     # 回合内一次性资源
     attached_energy_this_turn: int = 0

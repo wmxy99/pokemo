@@ -3666,6 +3666,81 @@ def audit_batch93_94(card_name: str, item_name: str, desc: str,
     return errs
 
 
+# ---------------- S3（2026-11-08）：奖赏卡 / 牌库底 / 对手牌库 ----------------
+# 独立实现（不 import 解析包）：对账的意义是「用另一套写法重算一遍」。
+_S3_REDEAL = re.compile(
+    r"count your prize cards.{0,30}?put them on the bottom of your deck", re.I)
+_S3_FLIP = re.compile(
+    r"turn 1 of your opponent[’']?s face-down prize cards? face up", re.I)
+_S3_SWITCH = re.compile(
+    r"you may have your opponent switch those cards", re.I)
+_S3_FLUTE = re.compile(
+    r"reveal the top (\d+) cards of your opponent[’']?s deck", re.I)
+_S3_FLUTE_BENCH = re.compile(
+    r"any number of basic pok[eé]mon.{0,60}?onto their bench", re.I)
+_S3_PEEK = re.compile(
+    r"look at 1 of your opponent[’']?s face-down prize cards?", re.I)
+_S3_BOTTOM_SELF = re.compile(
+    r"discard the bottom card of your deck", re.I)
+_S3_SELF_TOP = re.compile(
+    r"discard all cards from this pok[eé]mon and put this pok[eé]mon on top of "
+    r"your deck", re.I)
+
+
+def audit_s3_zones(card_name: str, item_name: str, desc: str,
+                   effects: list) -> list:
+    """S3 对账：奖赏卡对象化 / 牌库底 / 对手牌库
+
+    这一族最容易出的错是**半句认领**：卡面有「弃牌库底」，但后半句
+    「并把本只放回牌库顶」被漏掉 —— 那样卡片会把牌弃掉却留在场上（净亏一张，
+    对局里看不出来）。所以这里要求两半**同时**出现在 tag 里。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    tags = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(tags)
+    if _S3_REDEAL.search(d) and not any(t.startswith("prize:redeal")
+                                       for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面「奖赏卡洗回牌库底后重发」"
+                    f"应产 `prize:redeal`，实际 {tags}")
+    if _S3_FLIP.search(d):
+        if not any(t.startswith("prize:flip_opp") for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「翻面对手奖赏卡」"
+                        f"应产 `prize:flip_opp`，实际 {tags}")
+        # 「You may have your opponent switch those cards.」是可选项，
+        # 落成第二个 confirm 选择；漏掉它 = 少一个效果分支。
+        if _S3_SWITCH.search(d) and not any(
+                t.startswith("prize:flip_opp") for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「可交换这两张」"
+                        f"必须并入 `prize:flip_opp`（引擎内置确认选择），"
+                        f"实际 {tags}")
+    m = _S3_FLUTE.search(d)
+    if m and _S3_FLUTE_BENCH.search(d):
+        want = f"flute:{int(m.group(1))}"
+        if not any(t.startswith("flute:") for t in tags):
+            errs.append(f"{card_name} · {item_name}：卡面「亮出对手牌库顶 "
+                        f"{m.group(1)} 张，任意数量基础宝可梦上其后备」应产 "
+                        f"`{want}`，实际 {tags}")
+        elif want not in tags:
+            # 张数错了等于看了不同数量的牌（信息量与可选范围都变）
+            errs.append(f"{card_name} · {item_name}：`flute:` 张数与卡面不符"
+                        f"（应 {want}），实际 {tags}")
+    if _S3_PEEK.search(d) and not any("info:peek_prize" in t for t in tags):
+        errs.append(f"{card_name} · {item_name}：卡面「查看对手 1 张背面奖赏卡」"
+                    f"应产 `info:peek_prize:opp:1`（完美信息等价，需有日志），"
+                    f"实际 {tags}")
+    if _S3_BOTTOM_SELF.search(d):
+        # 两半必须同一条复合 tag 里都出现
+        if "deck_bottom_discard" not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「弃牌库底 1 张」应产 "
+                        f"`deck_bottom_discard:1`，实际 {tags}")
+        if _S3_SELF_TOP.search(d) and "self_to_deck_top" not in joined:
+            errs.append(f"{card_name} · {item_name}：卡面「弃掉本只所有卡并放回"
+                        f"牌库顶」应产 `self_to_deck_top`（与前半句同一条复合 tag），"
+                        f"实际 {tags}")
+    return errs
+
+
 def main() -> int:
     if not POOL.exists():
         print(f"[error] 找不到卡池：{POOL}", file=sys.stderr)
@@ -3728,6 +3803,7 @@ def main() -> int:
                 errs += audit_batch80_84(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch85(c["name"], it.get("name"), desc, eff)
                 errs += audit_batch93_94(c["name"], it.get("name"), desc, eff)
+                errs += audit_s3_zones(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -3758,6 +3834,8 @@ def main() -> int:
                                      [_ctag] if _ctag else [])
             errs += audit_batch79(c["name"], c["name"], _cdesc,
                                   [_ctag] if _ctag else [])
+            errs += audit_s3_zones(c["name"], c["name"], _cdesc,
+                                   [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -3807,8 +3885,9 @@ def main() -> int:
           "自身跨回合禁攻/对手自选洗回/无视弱抗两档/Kofu 减费计数源/能量移动区域 · "
           "双方洗抽/道具+HP/训练家能量洗回/指示物Defending/指示物this · "
           "搜索族（牌库顶筛支援者/四类别各取1/任意数量铺后备/检索放回牌库顶） · "
-          "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 "
-          "四十四类对账全部一致")
+          "满HP免击倒/清除自身状态/宝可梦洗回/检索弃置/按剩余HP放指示物 · "
+          "奖赏卡重发/翻面对手奖赏卡/亮出对手牌库顶/查看对手奖赏卡/弃牌库底收自身 "
+          "四十五类对账全部一致")
     return 0
 
 

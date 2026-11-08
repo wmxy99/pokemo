@@ -118,8 +118,8 @@ cd packages/card-db && python scripts/seed_archetypes.py          # 写入 cards
 | **场地静态规则(S3)** | `stadium:hp_plus` / `dmg_reduce[:type·:faction]` · **`attack_plus:N:faction:<k>`** · **`no_retreat:faction:<k>`** · **`no_tool_effect`**（道具失效）· **`status_immune:require:energy`** · **`evolve_same_turn:type:<c>`** · **`dmg_immune:box:none:from:rulebox`** · **`bench_limit:8:require:tera[:trim:N]`**（Area Zero；失去 Tera 后裁回且不取奖赏）· **`no_bench_counters`**（Battle Cage：后备指示物拦截）· `stadium:use:*`（每回合一次；`evolve_from_deck[:chain:1]` = Grand Tree 链式进化） |
 | **计数源/条件(B4)** | 计数源 22 个 + 条件 6 个（**只取公开信息**）；未知计数源**抛错**而非静默按 0。**`own_active_extra_energy_at_least:<n>`**（第十九批：战斗位总能量 − **本次招式费用** ≥ n）。第二十六批新增**限定后**的指示物计数源：**`own_bench_counters_type:<color>`**（后备中该属性宝可梦的指示物总数，Gigalith）· **`own_bench_counters_named:<key>`**（具名阵营后备，Cynthia's Spiritomb）· **`own_field_named_with_damage:<key>`**（具名且带指示物的**只数**，Paldean Tauros）——属性拼错直接抛错，绝不静默 0。第四十三批新增**`own_discard_category:<类别>`**（弃牌堆中**卡牌子类**为该类的卡数：Ancient 是 `category`，按卡名找恒 0、按总数又多算，Roaring Moon）· **`own_field_named_energy:<key>:<color>`**（具名阵营全队的该色能量数，三者缺一会多算，Iono's Voltorb）|
 | 特殊状态 | 中毒(−10/回合) · 烧伤(−20/回合) · 睡眠(抛币醒) · 麻痹(检查阶段恢复) · 混乱(攻击抛币，反面自伤 30 攻击失败；正面攻击后解除)；睡/麻禁攻禁撤 |
-| 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负）；**被招式击倒**的标记按方计数，供下回合条件加伤使用 |
-| 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库；超 `max_turns` 判平 |
+| 击倒→奖赏 | 普 1 张 / ex 2 张；active 被击倒强制替补（无后备 → 判负）；**被招式击倒**的标记按方计数，供下回合条件加伤使用。**S3（2026-11-08）：奖赏卡已对象化** —— 开局从牌库顶真取 6 张（`PlayerState.prizes` = `list[PrizeSlot]`），取奖赏时**真卡进手牌**；`zones.py` 提供 `deck_bottom_take/put`、`put_on_top`、`peek_top/bottom/prizes`。⚠ 取哪一张：面朝下时对牌手不可区分（不构成决策）→ 引擎按「先面朝下、后面朝上」固定顺序并写日志；存在面朝上奖赏卡时的**选择**留 S6 |
+| 胜负三路径 | 奖赏拿完 · 对方无宝可梦 · 对方抽卡空牌库（官方：该抽而抽不到即判负）；超 `max_turns` 判平 |
 | 招式效果 tag | 状态 5 种 · `spread_free:N`(任意分配) · `spread:N:per`(随机散布) · `heal:N` · `self:N`(反伤) · `draw:N` · `discard/…` · `switch_self` · `gust` · `attach:N[:type]` · `move_damage:N` · 以及上列 B4 各家族 |
 | 确定性 | `random.Random(seed)` 全驱动：同 seed → 同事件序列（有单测） |
 | 事件日志 | 结构化 dict 序列 → `matches.events_log` JSONL 可直接落库 |

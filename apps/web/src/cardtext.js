@@ -186,6 +186,17 @@ export const TRAINER_TAG_DESC = {
   choose: () => ({ zh: '打出后由你选择要弃掉哪些手牌（可随时结束选择），然后抽牌到指定张数。', en: 'Choose any number of cards to discard from your hand (you may stop at any time), then draw up to the stated number.' }),
   recon_bottom: (a) => ({ zh: `查看牌库底 ${argOf(a)} 张，可取其中 1 张宝可梦加入手牌，其余洗回牌库。`, en: `Look at the bottom ${argOf(a)} cards, take a Pokémon into your hand, then shuffle the rest back.` }),
   discard_tool_senergy: () => ({ zh: '弃掉对手 1 只宝可梦身上的 1 张道具与 1 张特殊能量。', en: 'Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.' }),
+  // S3（2026-11-08）区域对象化族：奖赏卡重发 / 翻面对手奖赏卡 / 亮出对手牌库顶
+  prize: (a, _x, parts) => {
+    if ((parts || []).includes('redeal')) {
+      return { zh: '数出你的奖赏卡，洗匀后放到牌库底；再从牌库顶取同样张数背面朝下作为新的奖赏卡。', en: 'Count your Prize cards, shuffle them onto the bottom of your deck, then take that many from the top as new face-down Prize cards.' }
+    }
+    if ((parts || []).includes('flip_opp')) {
+      return { zh: '将对手 1 张背面朝上的奖赏卡翻到正面，并随机查看对手 1 张手牌；你可以让对手交换这两张卡（该奖赏位保持正面朝上）。', en: 'Turn 1 of your opponent’s face-down Prize cards face up and reveal a random card from their hand; you may have them switch those cards (that Prize slot stays face up).' }
+    }
+    return { zh: `奖赏卡操作（${a || '未知'}）。`, en: `Prize-card operation (${a || 'unknown'}).` }
+  },
+  flute: (a) => ({ zh: `亮出对手牌库顶 ${argOf(a)} 张，可将其中任意数量的基础宝可梦放到对手的后备；其余洗回对手牌库。`, en: `Reveal the top ${argOf(a)} cards of your opponent’s deck; put any number of Basic Pokémon found there onto their Bench, then shuffle the rest back.` }),
   search_bench: (a) => ({ zh: `从牌库检索至多 ${argOf(a)} 张基础宝可梦放到后备。`, en: `Search your deck for up to ${argOf(a)} Basic Pokémon and put them on the Bench.` }),
   attach: (a, _x, parts) => {
     const tv = (parts || []).find((x) => TY[x] && x !== 'any')
@@ -270,6 +281,12 @@ export function abilityDesc(tag) {
       return { zh: `被动：己方宝可梦被击倒时，抽 ${n} 张牌。`, en: `Passive: when your Pokémon is KO'd, draw ${n} cards.` }
     case 'weak_change':
       return { zh: `被动：在场时改写对手的弱点${extra ? `（限定 ${typeLabel(arg)} / ${extra}）` : ''}。`, en: `Passive: while in play, alters the opponent's Weakness.` }
+    case 'deck_bottom_discard':
+      // S3（2026-11-08）：Misty's Psyduck「Flustered Leap」——两段式复合 tag
+      return { zh: `每回合 1 次（仅限后备）：弃掉牌库底 1 张卡，然后弃掉本只身上的所有卡并把它放到牌库顶。`, en: `Once per turn (Bench only): discard the bottom card of your deck, then discard all cards from this Pokémon and put it on top of your deck.` }
+    case 'choose':
+      // S1c：手牌与牌库顶互换（Gumshoos「Evidence Gathering」）
+      return { zh: `每回合 1 次：将手牌中的 1 张卡与牌库顶的卡交换（由你选择哪一张）。`, en: `Once per turn: switch a card from your hand with the top card of your deck (you choose which).` }
     case 'unsupported':
       return { zh: '该特性尚未在引擎中建模。', en: 'Ability not yet modeled by the engine.' }
     default:
@@ -293,6 +310,11 @@ export const EFFECT_TAG_LABEL = {
   discard: { zh: '弃牌', en: 'Discard' },
   snipe: { zh: '狙击后备', en: 'Snipe' },
   bench_damage: { zh: '打后备', en: 'Bench dmg' },
+  // S3（2026-11-08）：完美信息等价类（查看对手奖赏卡 / 展示手牌）
+  info: { zh: '查看信息', en: 'Info' },
+  prize: { zh: '奖赏卡', en: 'Prize' },
+  flute: { zh: '对手牌库', en: 'Opp deck' },
+  deck_bottom_discard: { zh: '弃牌库底', en: 'Deck bottom' },
 }
 export const effectTagLabel = (tag) => cc(EFFECT_TAG_LABEL[String(tag).split(':')[0]]
   || { zh: tag, en: tag })

@@ -17,6 +17,8 @@ from .cards import (PokeRef, EnergyRef, EnergyDef, TrainerRef, FieldPokemon,
                     make_pokemon, _tool_value, COLORLESS, TYPES)
 from .state import GameConfig, PlayerState
 from .choice import PendingChoice
+# S3（2026-11-08）区域对象化：奖赏卡槽 / 牌库底 / 只读检视
+from . import zones
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
                     distribute_damage, apply_shield, STATUSES)
 # 特殊能量子系统（2026-10-28）：提供量/附着限制/静态效果集中在一处
@@ -193,6 +195,12 @@ class Battle:
         if self.cfg.mulligan_compensation:
             self._safe_draw(1, self.players[0].mulligan_count, source="mulligan_comp")
             self._safe_draw(0, self.players[1].mulligan_count, source="mulligan_comp")
+        # S3（2026-11-08）：奖赏卡**真发牌**。官方 setup：从牌库取 6 张面朝下
+        # 作为奖赏卡 —— 此前引擎「凭空计数」，牌库根本没少（那 6 张还能被抽到）。
+        # 顺序放在放完战斗位/后备之后，与官方步骤一致，且不影响起手评估。
+        if self.cfg.real_prizes:
+            for _pi in (0, 1):
+                zones.deal_prizes(self, _pi, self.cfg.prizes)
 
     # ---------- 抽卡与通用 ----------
     @staticmethod
@@ -526,6 +534,12 @@ class Battle:
                     continue
                 if ab.tag.startswith("recon:") and not p.deck:
                     continue
+                # S3：Misty's Psyduck「Flustered Leap」——「if this Pokémon is on
+                # your Bench」是**发动条件**（战斗位不能发），且牌库为空时
+                # 「if you do」根本不会成立 → 两者都必须从合法动作表里摘掉。
+                if ab.tag.startswith("deck_bottom_discard:"):
+                    if not p.deck or tpos == 0:
+                        continue
                 # 全牌库检索（`search_pokemon:N` / `search_trainer:N` /
                 # `search_any:N` / `search_energy:N`）—— 牌库无对应类别则不可发动
                 if ab.tag.startswith("search_"):
@@ -867,6 +881,18 @@ class Battle:
                 targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
                 for tpos in targets:
                     out.append(dict(base, target=tpos))
+            elif tag.startswith("ko_prize_minus:"):
+                # 第八十五批的 Lillie's Pearl：**kind 是 tool、tag 却不是 `tool:`**
+                # （引擎按 `fp.tool.startswith("ko_prize_minus:")` 读被动奖赏修正）。
+                # 2026-11-08 S3 发现：`_do_trainer` 只认 `tool:` 前缀 → 这张卡
+                # 打出去会抛「未知训练家 tag」，合法动作表也不列它 = **彻底死卡**
+                # （在池内、可被抽到、却无法使用）。
+                targets = []
+                if p.active is not None and not p.active.tool:
+                    targets.append(0)
+                targets += [i + 1 for i, fp in enumerate(p.bench) if not fp.tool]
+                for tpos in targets:
+                    out.append(dict(base, target=tpos))
             # ---- B3（2026-10-28）：训练家侧抽牌 / 回复 / 附能 / 弃牌 / 磨牌 ----
             # 这些 tag 的**派发**早已存在（见 `_do_trainer`），但合法动作表一直
             # 没有对应分支 → AI 永远选不到这些卡（对局里表现为「摆设」）。
@@ -1105,6 +1131,95 @@ class Battle:
                     out.append(dict(base))
             elif tag.startswith("mill:"):
                 out.append(dict(base))
+            elif tag.startswith("prize:redeal"):
+                # S3：有奖赏卡才能重发（对象化模式；只计数模式下必然抛错 → 不许进表）
+                if zones.has_real_prizes(p) and p.prizes and p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("prize:flip_opp"):
+                # S3：对手必须有背面朝上的奖赏卡 + 至少 1 张手牌（随机看一张）
+                if any(not s.face_up for s in opp.prizes) and opp.hand:
+                    out.append(dict(base))
+            elif tag.startswith("flute:"):
+                # S3：对手牌库非空且后备有空位（否则亮牌后无处可放 = 空转）
+                if opp.deck and len(opp.bench) < self.cfg.max_bench:
+                    out.append(dict(base))
+            elif tag.startswith("recon_bottom:"):
+                # ⚠ 第一百三十四批的漏网之鱼（2026-11-08 S3 发现）：Dusk Ball
+                # 在 `_do_trainer` 里有派发、也能进池，但 `_trainer_legals`
+                # **从未**为它列过动作 → 卡在池内却永远打不出（AI 看不到、只有
+                # 手工构造动作才能用）。纪律 #19 的「四处同查」漏了这第五处。
+                if p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("discard_tool_senergy:"):
+                # 同上（Ruffian）：必须有一只**同时**带道具与特殊能量。
+                if any(fp.tool and fp.senergy for fp in opp.all_field()):
+                    out.append(dict(base))
+            # ---- 2026-11-08（S3 顺带修）：一批**池内卡永远打不出**的漏网族 ----
+            # 这些 tag 在 `_do_trainer` 里都有派发、也都被白名单放行、卡片在池内，
+            # 但 `_trainer_legals` 从来没有为它们列过动作 —— `legal_actions()`
+            # 不会给出它们，AI 一辈子选不到，人类玩家手里的卡是**死的**。
+            # 实测 12 张（Enhanced Hammer / Hand Trimmer / Secret Box /
+            # Deduction Kit / Hop's Bag / Precious Trolley / Iron Defender /
+            # Ciphermaniac's Codebreaking / Salvatore / Briar / Larry's Skill /
+            # Team Rocket's Ariana）。守卫见 `tests/test_legals_coverage.py`
+            # （静态比对 `_do_trainer` 与 `_trainer_legals` 的 tag 前缀）。
+            elif tag.startswith("discard_energy:"):
+                # 「Discard a Special Energy from 1 of your opponent's Pokémon」
+                _dp = tag.split(":")
+                _scope = _dp[2] if len(_dp) > 2 else "opp_active"
+                _pool = ([opp.active] if _scope == "opp_active"
+                         and opp.active is not None else opp.all_field())
+                _need_special = "special" in _dp[3:]
+                if any((any(getattr(r.edef, "is_special", False)
+                            for r in fp.senergy) if _need_special
+                        else fp.total_energy() > 0) for fp in _pool):
+                    out.append(dict(base))
+            elif tag.startswith("discard_to_both:"):
+                # 双方各弃到剩 N：两边都已 ≤N 时打出去只会空转
+                _n51 = int(tag.split(":")[1])
+                if len(p.hand) - 1 > _n51 or len(opp.hand) > _n51:
+                    out.append(dict(base))
+            elif tag.startswith("shuffle_top:"):
+                # 看牌库顶 N 张后重排：牌库为空则无事可做
+                if p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("search_top:"):
+                # 检索后放回牌库顶：牌库为空则无从检索
+                if p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("search_multi:"):
+                # 逐类别各取 1 张（Secret Box / Larry's Skill）：牌库非空即可
+                if p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("discard_search_multi:"):
+                if p.deck:
+                    out.append(dict(base))
+            elif tag.startswith("search_bench:"):
+                # 检索**铺场**：牌库要有宝可梦，且后备有空位
+                if p.deck and len(p.bench) < self.cfg.max_bench \
+                        and any(isinstance(c, PokeRef) for c in p.deck):
+                    out.append(dict(base))
+            elif tag.startswith("evolve_from_deck"):
+                # 从牌库检索进化卡**当场进化**：牌库必须有能接在场上的进化卡
+                _names = {fp.pdef.name for fp in p.all_field() if fp is not None}
+                if any(isinstance(c, PokeRef) and c.pdef.evolves_from in _names
+                       and c.pdef.stage > 0 for c in p.deck):
+                    out.append(dict(base))
+            elif tag.startswith("team_shield:"):
+                # 全队限时减伤：场上没有宝可梦就没有作用对象
+                if p.has_pokemon:
+                    out.append(dict(base))
+            elif tag.startswith("prize_bonus:"):
+                # 本回合多拿奖赏（Briar）：需要场上有宝可梦才可能击倒对手
+                if p.has_pokemon:
+                    out.append(dict(base))
+            elif tag.startswith("draw_to_branch:"):
+                # 「抽到 5 张；若条件成立则改为抽到 8 张」——手牌已 ≥8 且目标
+                # 牌库空时是空转，其余情况都有实际效果。
+                _db = tag.split(":")
+                _alt = int(_db[2]) if len(_db) > 2 and _db[2].isdigit() else 0
+                if p.deck and len(p.hand) - 1 < max(_alt, 1):
+                    out.append(dict(base))
         # S3 场地「每回合一次」——与手牌无关，单独列动作
         #（switch_typed 这类要选目标 → 每个合法替补一行）
         base_su = {"verb": "stadium_use",
@@ -2075,7 +2190,8 @@ class Battle:
 
     def _open_choice(self, kind: str, options: list, *, min_pick: int = 0,
                      max_pick: int = -1, tag: str = "", then: str = "",
-                     allow_repeat: bool = False) -> None:
+                     allow_repeat: bool = False,
+                     ctx: Optional[dict] = None) -> None:
         """挂起一次选择（把 phase 切到 choice）
 
         ⚠ 不允许多项挂起：本引擎的效果是**串行**的，两层待决会让「谁的选优先」
@@ -2087,7 +2203,7 @@ class Battle:
         self._pending = PendingChoice(
             kind=str(kind), owner=self.current, options=list(options),
             min=int(min_pick), max=int(max_pick), tag=str(tag), then=str(then),
-            allow_repeat=bool(allow_repeat))
+            allow_repeat=bool(allow_repeat), ctx=dict(ctx or {}))
         self.phase = "choice"
         self._log("choice_open", {"player": self.current, "kind": kind,
                                   "n_options": len(self._pending.options),
@@ -2215,6 +2331,78 @@ class Battle:
                 tgt.damage += 10
                 self._log("counters_choice", {"player": ch.owner,
                                               "target": tgt.name, "n": 1})
+        elif ch.kind == "prize_flip_opp":
+            # S3：Team Rocket's Bother-Bot 第一段 —— 把对手 1 张背面朝上的奖赏卡
+            # 翻到正面（**哪一张由牌手选**，不是引擎挑），然后随机看对手 1 张手牌，
+            # 再挂起「要不要交换」的确认选择。
+            opt = ch.chosen()[0]
+            opp = self.players[1 - ch.owner]
+            si = int(opt["slot"])
+            if not (0 <= si < len(opp.prizes)):
+                raise ValueError("奖赏卡位已失效（内部状态异常）")
+            opp.prizes[si].face_up = True
+            self._log("prize_flip", {"player": 1 - ch.owner, "slot": si,
+                                     "card": _card_label(opp.prizes[si].ref)})
+            if not opp.hand:
+                self._log("prize_swap", {"player": ch.owner,
+                                         "skipped": "对手手牌为空"})
+                return
+            hi = self.rng.randrange(len(opp.hand))     # 官方：**随机**一张
+            self._log("hand_reveal", {"player": 1 - ch.owner, "index": hi,
+                                      "card": _card_label(opp.hand[hi])})
+            self._open_choice(
+                "prize_swap_confirm",
+                [{"display": "交换这两张卡", "yes": True},
+                 {"display": "不交换", "yes": False}],
+                min_pick=1, max_pick=1, tag=ch.tag,
+                ctx={"slot": si, "hand_index": hi})
+        elif ch.kind == "prize_swap_confirm":
+            opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+            opp = self.players[1 - ch.owner]
+            si = int(ch.ctx.get("slot", -1))
+            hi = int(ch.ctx.get("hand_index", -1))
+            if not opt.get("yes"):
+                self._log("prize_swap", {"player": ch.owner, "swapped": False})
+                return
+            if not (0 <= si < len(opp.prizes)) or not (0 <= hi < len(opp.hand)):
+                raise ValueError("交换目标已失效（内部状态异常）")
+            slot = opp.prizes[si]
+            hand_card = opp.hand[hi]
+            # 奖赏卡与手牌互换。**该奖赏位保持正面朝上**（卡面
+            # 「That Prize card remains face up for the rest of the game.」——
+            # 已翻开的奖赏位不会因为换了卡而重新盖上），因此换进去的卡可见。
+            opp.prizes[si] = zones.PrizeSlot(hand_card, face_up=True)
+            opp.hand[hi] = slot.ref
+            self._log("prize_swap", {"player": ch.owner, "swapped": True,
+                                     "prize_now": _card_label(hand_card),
+                                     "hand_now": _card_label(slot.ref)})
+        elif ch.kind == "opp_bench_from_deck":
+            # S3：Accompanying Flute —— 从对手牌库顶亮出的 N 张里**任意数量**
+            # 基础宝可梦放到对手后备；余牌洗回对手牌库。
+            opp = self.players[1 - ch.owner]
+            revealed = list(ch.ctx.get("revealed") or ())
+            chosen_ids = {id(o["ref"]) for o in ch.chosen()}
+            rest = []
+            placed = 0
+            for ref in revealed:
+                if id(ref) in chosen_ids:
+                    if len(opp.bench) >= self.cfg.max_bench:
+                        # 后备满了 → 该牌回到余牌（绝不静默丢牌）
+                        rest.append(ref)
+                        continue
+                    fnew = make_pokemon(ref.pdef)
+                    fnew.just_played = True
+                    opp.bench.append(fnew)
+                    placed += 1
+                    self._log("bench_from_deck", {"player": 1 - ch.owner,
+                                                  "card": fnew.name})
+                else:
+                    rest.append(ref)
+            if rest:
+                opp.deck.extend(rest)          # 先整叠放回，再洗 → 位置不可预测
+                self.rng.shuffle(opp.deck)
+            self._log("flute_done", {"player": ch.owner, "placed": placed,
+                                     "shuffled": len(rest)})
         else:
             raise ValueError(f"未实现的 choice kind：{ch.kind}")
 
@@ -2497,6 +2685,18 @@ class Battle:
             # 决策分解（S1a）：「you may discard any number of cards from your
             # hand」类。挂起选择，选完由 `_close_choice` 落盘并跑 `then`。
             placed = self._trainer_choose(p, tag, hi)
+        elif tag.startswith("prize:flip_opp"):
+            # S3：翻面对手奖赏卡 + 随机看手牌 + 可选交换（Bother-Bot）
+            placed = self._trainer_prize_flip(p, opp)
+        elif tag.startswith("prize:redeal"):
+            # S3：奖赏卡洗回牌库底后重发（Redeemable Ticket）
+            placed = self._trainer_prize_redeal(p)
+        elif tag.startswith("prize:"):
+            raise ValueError(f"未知 prize 操作：{tag}")
+        elif tag.startswith("flute:"):
+            # S3：亮出对手牌库顶 N 张，任意数量基础宝可梦上对手后备
+            # （Accompanying Flute）
+            placed = self._trainer_flute(p, opp, tag)
         elif tag.startswith("recon_bottom:"):
             # 「Look at the bottom N cards of your deck. You may reveal a
             #  Pokémon you find there and put it into your hand. Shuffle the
@@ -2536,6 +2736,11 @@ class Battle:
             _sraw = tag.split(":", 1)[1] if ":" in tag else "1"
             placed = f"search discard {_search_discard(self, p, _sraw)}"
         elif tag.startswith("tool:"):
+            placed = self._trainer_attach_tool(p, c, tag,
+                                               int(action.get("target", 0)))
+        elif tag.startswith("ko_prize_minus:"):
+            # Lillie's Pearl：kind=tool 但 tag 走被动奖赏修正前缀（见 legals 注释）。
+            # 不接这一支，这张卡打出去就是「未知训练家 tag」。
             placed = self._trainer_attach_tool(p, c, tag,
                                                int(action.get("target", 0)))
         elif tag.startswith("stadium:"):
@@ -3673,6 +3878,83 @@ class Battle:
         self._log("recon_bottom", {"player": self.current, "look": n,
                                    "got": _card_label(pick)})
         return f"bottom{n} got 1"
+
+    # ---------- S3（2026-11-08）：奖赏卡 / 牌库底 / 对手区域 ----------
+
+    def _trainer_prize_redeal(self, p: PlayerState) -> str:
+        """数出奖赏卡 → 洗匀放牌库**底** → 从**顶**取同样张数作新奖赏卡
+
+        原型：Redeemable Ticket「Count your Prize cards, shuffle them, and put
+        them on the bottom of your deck. Then, take that many cards from the top
+        of your deck and put them face down as your Prize cards.」
+
+        ⚠ 只有在奖赏卡**对象化**之后才有意义：只计数模式下「奖赏卡」不是具体
+          的牌，无从洗回牌库 —— 这时必须抛错，绝不能退化成「什么都不发生」。
+        """
+        if not zones.has_real_prizes(p):
+            raise ValueError("奖赏卡未对象化（real_prizes=False），无法重发奖赏")
+        n = len(p.prizes)
+        if n <= 0:
+            raise ValueError("没有奖赏卡可重发")
+        refs = [s.ref for s in p.prizes]
+        p.prizes = []
+        self.rng.shuffle(refs)
+        zones.deck_bottom_put(p, refs)
+        self._log("prize_redeal_bottom", {"player": self.current, "n": n})
+        got = zones.deal_prizes(self, self.current, n)
+        return f"redeal {got}"
+
+    def _trainer_prize_flip(self, p: PlayerState, opp: PlayerState) -> str:
+        """把对手 1 张**背面朝上**的奖赏卡翻到正面，再看 1 张随机手牌
+
+        原型：Team Rocket's Bother-Bot。两段都是「谁来做」的问题：
+          · 翻**哪一张**奖赏卡 —— 由打出这张卡的牌手选（决策分解）；
+          · 看**哪一张**手牌 —— 卡面写死「random」，因此由 `rng` 决定；
+          · 要不要**交换** —— 「You may」，由牌手选（第二个 confirm 选择）。
+        面朝下时「翻哪张」看起来无所谓，但对手可能有已翻面的奖赏卡，
+        候选集必须只含背面朝上的那些（卡面限定 face-down）。
+        """
+        slots = [i for i, s in enumerate(opp.prizes) if not s.face_up]
+        if not slots:
+            raise ValueError("对手没有背面朝上的奖赏卡")
+        if not opp.hand:
+            raise ValueError("对手手牌为空")
+        self._open_choice(
+            "prize_flip_opp",
+            [{"slot": i, "display": f"对手奖赏卡 #{i + 1}"} for i in slots],
+            min_pick=1, max_pick=1, tag="prize:flip_opp")
+        return "choice:prize_flip_opp"
+
+    def _trainer_flute(self, p: PlayerState, opp: PlayerState, tag: str) -> str:
+        """亮出对手牌库顶 N 张 → 任意数量**基础**宝可梦放到对手后备 → 余牌洗回
+
+        原型：Accompanying Flute。「任意数量」必须真由牌手选（min=0），
+        上限还要受对手后备空位限制 —— 引擎绝不替玩家挑。
+        """
+        n = int(tag.split(":")[1]) if tag.split(":")[1].isdigit() else 5
+        if not opp.deck:
+            raise ValueError("对手牌库为空")
+        room = self.cfg.max_bench - len(opp.bench)
+        k = min(n, len(opp.deck))
+        revealed = [opp.deck.pop() for _ in range(k)]     # top[0] = 牌库顶
+        self._log("flute_reveal", {"player": 1 - self.current, "n": k,
+                                   "cards": [_card_label(c) for c in revealed]})
+        basics = [c for c in revealed
+                  if isinstance(c, PokeRef) and c.pdef.stage == 0]
+        if not basics or room <= 0:
+            # 没有基础宝可梦（或对手后备没有空位）→ 亮出的牌原样洗回。
+            # ⚠ 不能「什么都不做」把牌揣在手里：那就是静默吞牌。
+            opp.deck.extend(revealed)
+            self.rng.shuffle(opp.deck)
+            self._log("flute_done", {"player": self.current, "placed": 0,
+                                     "shuffled": k})
+            return f"flute{k} none"
+        self._open_choice(
+            "opp_bench_from_deck",
+            [{"ref": c, "display": _card_label(c)} for c in basics],
+            min_pick=0, max_pick=min(len(basics), room), tag=tag,
+            ctx={"revealed": revealed})
+        return f"choice:flute{len(basics)}/{k}"
 
     def _trainer_discard_tool_senergy(self, opp: PlayerState) -> str:
         """弃对手**同一只**身上的 1 张道具 + 1 张特殊能量（Ruffian）
@@ -7251,6 +7533,67 @@ class Battle:
                 attacker.clear_status()
                 self._log("cure", {"player": self.current,
                                    "target": attacker.name, "cleared": had})
+            elif tag.startswith("deck_bottom_discard:"):
+                # S3：弃置牌库**底** N 张（Misty's Psyduck「Flustered Leap」第一段）
+                # 「if you do」的条件由合法性保证（牌库非空才可发动），这里再兜一次：
+                # 一张都没弃到就**不能**继续执行后续 tag（复合 tag 的 `|if_prev`）。
+                _n = int(tag.split(":")[1]) if tag.split(":")[1].isdigit() else 1
+                _got = zones.deck_bottom_take(p, _n)
+                for _c in _got:
+                    self._to_discard(p, _c)
+                self._log("deck_bottom_discard", {
+                    "player": self.current, "n": len(_got),
+                    "cards": [_card_label(c) for c in _got]})
+            elif tag == "self_to_deck_top":
+                # S3：把**本只**宝可梦（含其附着卡）收回牌库顶
+                # 「discard all cards from this Pokémon and put this Pokémon on
+                #   top of your deck.」（Misty's Psyduck）
+                # ⚠ 只允许后备：卡面限定「if this Pokémon is on your Bench」，
+                #   战斗位离场要走「换位 + 补位」而不是直接抽走（否则对手白拿奖赏）。
+                if attacker is None or p.active is attacker:
+                    raise ValueError("self_to_deck_top 只能作用于后备宝可梦")
+                _dropped = sum(attacker.energy.values()) + len(attacker.senergy)
+                for _et, _cnt in list(attacker.energy.items()):
+                    for _ in range(_cnt):
+                        # 基本能量在引擎里只是**计数**（无卡对象），因此只进
+                        # 文本层弃牌堆 —— 与击倒结算的口径一致（见 zones 文档）。
+                        p.discard.append(f"{_et} energy")
+                for _sref in list(attacker.senergy):
+                    self._to_discard(p, _sref)
+                if attacker.tool:
+                    if attacker.tool_ref is not None:
+                        self._to_discard(p, attacker.tool_ref)
+                    else:
+                        p.discard.append(attacker.tool)
+                attacker.energy.clear()
+                attacker.senergy.clear()
+                _drop_tool(attacker)
+                if attacker in p.bench:
+                    p.bench.remove(attacker)
+                zones.put_on_top(p, [PokeRef(attacker.pdef)])
+                self._log("self_to_deck_top", {"player": self.current,
+                                               "card": attacker.name,
+                                               "dropped": _dropped})
+            elif tag.startswith("info:peek_prize:"):
+                # S3：查看对手 1 张**背面朝上**的奖赏卡（Blipbug「Searching Eyes」）
+                # 本引擎是完美信息的，「查看」不改变任何状态 —— 与 `info:reveal_hand`
+                # 同一条口径：**显式建模的等价**（有派发 + 有日志，且日志里记下
+                # 看的是哪张、是什么），而不是「未建模当无事发生」。
+                _v = tag.split(":")
+                _side = (1 - self.current) if len(_v) > 2 and _v[2] == "opp" \
+                    else self.current
+                _tp = self.players[_side]
+                _i = next((i for i, s in enumerate(_tp.prizes)
+                           if not s.face_up), None)
+                if _i is None:
+                    self._log("info", {"player": self.current,
+                                       "what": "peek_prize",
+                                       "target": "none_face_down"})
+                else:
+                    self._log("info", {"player": self.current,
+                                       "what": "peek_prize",
+                                       "owner": _side, "slot": _i,
+                                       "card": _card_label(_tp.prizes[_i].ref)})
             elif tag.startswith("info:"):
                 # 纯信息类效果（第一百三十四批）：
                 # 「Your opponent reveals their hand.」（Hoothoot / Espurr / Pidove）
@@ -8561,9 +8904,11 @@ class Battle:
         # 第八十九批：本回合训练家奖赏加成（Briar「Tera」）
         give = max(0, give + self._trainer_prize_bonus(owner, _attacker,
                                                        _was_active))
-        opp.prizes_left = max(0, opp.prizes_left - give)
-        opp.prizes_taken_this_turn += give     # 「上回合取走几张」记账
-        self._log("prize", {"player": 1 - owner, "take": give,
+        # S3（2026-11-08）：取奖赏走**真实卡对象**（进手牌），不再是「计数器 -N」。
+        # `zones.take_prizes` 在「只计数」兼容模式下与旧实现逐字节一致。
+        _taken = zones.take_prizes(self, 1 - owner, give)
+        opp.prizes_taken_this_turn += _taken   # 「上回合取走几张」记账
+        self._log("prize", {"player": 1 - owner, "take": _taken,
                             "left": opp.prizes_left})
         # v1.3：击倒触发型特性（ko_draw:N，如 Fezandipiti ex「逆转局势」）
         # 在被击倒方的**剩余场上**扫描；先结算抽牌再判定胜负/补位

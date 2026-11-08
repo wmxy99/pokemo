@@ -44,6 +44,10 @@ class PendingChoice:
     max: int = -1
     tag: str = ""
     then: str = ""
+    # 选择期间需要**留在手里的中间态**（例：Accompanying Flute 先把对手牌库顶
+    # 5 张拿出来给牌手看，选完才把余牌洗回）。挂在选项外而不是塞进 option 里，
+    # 是因为它是「这次选择」的上下文，不是可选项的属性。
+    ctx: dict = field(default_factory=dict)
     # 「任意分配指示物」这类允许**对同一目标重复选**（两枚都放战斗位）；
     # 「逐张弃手牌」则不允许同一张被弃两次。默认 False = 不重复。
     allow_repeat: bool = False

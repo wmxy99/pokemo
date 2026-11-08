@@ -3346,6 +3346,81 @@ def _detect_b135(text: str, kind: str) -> list:
     return []
 
 
+# ---------------- S3（2026-11-08）：奖赏卡 / 牌库底 / 对手牌库 ----------------
+# 这一组卡此前全部因为「奖赏卡只是一个计数器、牌库底只能读、对手区域不可寻址」
+# 被拒收。区域对象化（`engine/zones.py`）之后它们都是**可精确求值的整句规则**，
+# 因此照旧用**整句精确匹配**（`^…$`）：任何附加从句都不认领。
+
+# 「Count your Prize cards, shuffle them, and put them on the bottom of your
+#  deck. Then, take that many cards from the top of your deck and put them face
+#  down as your Prize cards.」（Redeemable Ticket）
+_PRIZE_REDEAL_RE = re.compile(
+    r"^count your prize cards,? shuffle them,? and put them on the bottom of "
+    r"your deck\.\s*then,? take that many cards from the top of your deck and "
+    r"put them face down as your prize cards\.?$", re.I)
+
+# 「Turn 1 of your opponent's face-down Prize cards face up and choose a random
+#  card from your opponent's hand. Your opponent reveals that card. You may have
+#  your opponent switch those cards. (That Prize card remains face up for the
+#  rest of the game.)」（Team Rocket's Bother-Bot）
+_PRIZE_FLIP_RE = re.compile(
+    r"^turn 1 of your opponent'?s face-down prize cards? face up and choose a "
+    r"random card from your opponent'?s hand\.\s*your opponent reveals that "
+    r"card\.\s*you may have your opponent switch those cards\.\s*\(that prize "
+    r"card remains face up for the rest of the game\.?\)$", re.I)
+
+# 「Reveal the top 5 cards of your opponent's deck. You may choose any number of
+#  Basic Pokémon you find there and put those Pokémon onto their Bench. Your
+#  opponent shuffles the other cards back into their deck.」（Accompanying Flute）
+_FLUTE_RE = re.compile(
+    r"^reveal the top (\d+) cards of your opponent'?s deck\.\s*you may choose "
+    r"any number of basic pok[eé]mon you find there and put those pok[eé]mon "
+    r"onto their bench\.\s*your opponent shuffles the other cards back into "
+    r"their deck\.?$", re.I)
+
+# 「Look at 1 of your opponent's face-down Prize cards.」（Blipbug「Searching Eyes」）
+# 完美信息引擎里「查看」不改变状态 —— 与 `info:reveal_hand` 同一条口径：
+# **显式建模的等价**（引擎有派发 + 日志里记下看的是哪张、是什么）。
+_PEEK_PRIZE_RE = re.compile(
+    r"^look at 1 of your opponent'?s face-down prize cards?\.?$", re.I)
+
+# 「Once during your turn, if this Pokémon is on your Bench, you may discard the
+#  bottom card of your deck. If you do, discard all cards from this Pokémon and
+#  put this Pokémon on top of your deck.」（Misty's Psyduck「Flustered Leap」）
+# 两段必须合成**一条**复合 tag：拆开会让「if you do」的依赖关系丢失
+# （第一段没弃到牌时第二段仍然执行 = 凭空把自己收回牌库顶）。
+_PSYDUCK_RE = re.compile(
+    r"^once during your turn,? if this pok[eé]mon is on your bench,? you may "
+    r"discard the bottom card of your deck\.\s*if you do,? discard all cards "
+    r"from this pok[eé]mon and put this pok[eé]mon on top of your deck\.?$",
+    re.I)
+
+
+def _detect_s3(text: str, kind: str) -> list:
+    """S3：奖赏卡对象化 / 牌库底 / 对手牌库（整句精确匹配，否则不产出）"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    if kind == "attack":
+        if _PEEK_PRIZE_RE.match(t):
+            return [act("rule", None, "any", {"info_peek_prize": "opp"})]
+        return []
+    if kind == "ability":
+        if _PSYDUCK_RE.match(t):
+            # 复合 tag：先弃牌库底 1 张，再把本只（含附着卡）收回牌库顶
+            return [act("rule", None, "self", {"multi": [
+                "deck_bottom_discard:1", "self_to_deck_top"]})]
+        return []
+    if kind not in ("item", "supporter"):
+        return []
+    if _PRIZE_REDEAL_RE.match(t):
+        return [act("rule", None, "self", {"prize_redeal": True})]
+    if _PRIZE_FLIP_RE.match(t):
+        return [act("rule", None, "opp", {"prize_flip_opp": True})]
+    m = _FLUTE_RE.match(t)
+    if m:
+        return [act("rule", None, "opp", {"flute": int(m.group(1))})]
+    return []
+
+
 def _detect_static_rules(text: str, kind: str) -> list:
     """招式侧的「下回合限制 / 无视效果」（2026-10-28）
 
@@ -3591,6 +3666,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "") -> dict:
         return {"kind": kind, "name": name, "trigger": "on_use",
                 "conditions": conditions, "actions": _b135,
                 "play_gate": _pg,
+                "source_text": str(text or ""), "citations": []}
+    # S3（2026-11-08）：奖赏卡 / 牌库底 / 对手牌库四类整句规则。
+    # 位置在 `_detect_value_rules` 之前：这些文本里的 "shuffle"、"prize"、
+    # "deck" 会被后面的宽口径族误读（典型：「put them on the bottom of your
+    # deck」会被 generic 洗牌/检索分支吃掉）。
+    _s3 = _detect_s3(t_raw, kind)
+    if _s3:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _s3,
                 "source_text": str(text or ""), "citations": []}
     _vr = _detect_value_rules(t_raw, kind)
     if _vr:
@@ -10036,6 +10120,20 @@ def to_engine_tags(specs: list) -> dict:
                 if _tg:
                     tags.append(_tg)
             elif t == "rule":
+                # ---- S3（2026-11-08，区域对象化）----
+                if extra.get("prize_redeal"):
+                    tags.append("prize:redeal")
+                    continue
+                if extra.get("prize_flip_opp"):
+                    tags.append("prize:flip_opp")
+                    continue
+                if extra.get("flute") is not None:
+                    tags.append(f"flute:{int(extra['flute'])}")
+                    continue
+                if extra.get("info_peek_prize"):
+                    tags.append(f"info:peek_prize:"
+                                f"{extra['info_peek_prize']}:1")
+                    continue
                 # ---- 第一百三十四批（整句规则，先于其它 extra 判定）----
                 if extra.get("info_reveal_hand"):
                     # 完美信息等价（不改变状态）：仍需产出 tag，否则

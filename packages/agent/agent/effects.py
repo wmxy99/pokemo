@@ -3444,6 +3444,49 @@ def _title(name: str) -> str:
     return " ".join(w.capitalize() for w in re.sub(r"\s+", " ", name).split())
 
 
+# F5（2026-11-08）· **静态属性改写** 两张整句
+#
+# 共同点：改的是「属性 / 弱点 / 能量点数」这类**规则属性**，不是某一招的数值。
+# 宽口径检测器一定会读错（「The Weakness … is now {P}」会被读成施加状态，
+# 「provides {G}{G}」会被读成检索能量），故整句精确匹配。
+_F5_WEAK_CHANGE_RE = re.compile(
+    r"^the weakness of each of your opponent'?s \{(?P<who>[a-z])\} pok[eé]mon "
+    r"in play is now \{(?P<new>[a-z])\}\s*\.?\s*"
+    r"(?:\(apply weakness as .{1,3}2\.\))?$", re.I)
+_F5_ENERGY_DOUBLE_RE = re.compile(
+    r"^each basic \{(?P<type>[a-z])\} energy attached to all of your pok[eé]mon "
+    r"provides \{\1\}\{\1\} energy\.?\s*"
+    r"(?:the effect of [a-z' ]+ doesn'?t stack\.?)?$", re.I)
+
+
+def _detect_f5(text: str, kind: str) -> list:
+    """F5：静态属性改写（Lillie's Clefairy ex / Meganium）"""
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    low = t.lower()
+    if kind != "ability":
+        return []
+    m = _F5_WEAK_CHANGE_RE.match(low)
+    if m:
+        newt = _EN_SYMBOL_COLOR.get(str(m.group("new")).upper())
+        who = _EN_SYMBOL_COLOR.get(str(m.group("who")).upper())
+        if not newt or not who:
+            return []
+        # 过滤词是**守方**的属性（「对手的 {N} 宝可梦」），不是新弱点
+        # ⚠ 引擎读的是**不带** `passive:` 前缀的 `weak_change:<new>:<filter>`
+        # （`battle._weakness_override` 用 `startswith("weak_change:")`）——
+        # 套进 `static_passive` 会加前缀，读不到 → 弱点没被改写（静默无效）。
+        return [act("rule", None, "opp",
+                    {"weak_change": newt, "filter": who})]
+    m = _F5_ENERGY_DOUBLE_RE.match(low)
+    if m:
+        etype = _EN_SYMBOL_COLOR.get(str(m.group("type")).upper())
+        if not etype:
+            return []
+        return [act("rule", None, "self",
+                    {"static_passive": f"energy_double:{etype}"})]
+    return []
+
+
 def _detect_f8(text: str, kind: str) -> list:
     """F8（2026-11-08）：**规则改写 / 自身离场 / 反转退化** 五张整句
 
@@ -4503,6 +4546,12 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
     # 等词会被后面的宽口径规则族误读成「静态伤害增减」或「费用改写」。
     # S2（2026-11-08）：延迟队列 / 换位订阅 —— 必须在通用「放置指示物 / 状态 / 抽牌」
     # 分支之前整句认领，否则「that Pokémon」「at the end of this turn」会被丢弃。
+    # F5（2026-11-08）：静态属性改写（改弱点 / 能量增值）—— 整句精确匹配。
+    _f5 = _detect_f5(t_raw, kind)
+    if _f5:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _f5,
+                "source_text": str(text or ""), "citations": []}
     # F8（2026-11-08）：规则改写 / 自身离场 / 全体退化 —— 整句精确匹配。
     # 必须排在 `_detect_s2` 与所有宽口径族之前：「put it into your hand」
     # 「discard this Pokémon」被通用分支命中后，语义会完全反过来。

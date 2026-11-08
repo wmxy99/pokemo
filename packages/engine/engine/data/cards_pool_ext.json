@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1245,
+      "kept": 1247,
       "by_Energy": 20,
-      "by_Pokemon": 1042,
+      "by_Pokemon": 1044,
       "by_Trainer": 183,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 7
+        "存在未建模项（整卡不收）": 5
       }
     }
   },
@@ -12741,6 +12741,59 @@
       "source_card_id": 271,
       "name_key": "ionoskilowattrel",
       "uid": "Iono’s Kilowattrel@JTG 55"
+    },
+    {
+      "name": "Lillie’s Clefairy ex",
+      "name_zh": "莉莉艾的皮皮 ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 190,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "metal",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Trainer's Pokémon(Lillie)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Full Moon Rondo",
+          "cost": {
+            "psychic": 1,
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:20:per:both_bench"
+          ],
+          "desc": "This attack does 20 more damage for each Benched Pokémon (both yours and your opponent’s).",
+          "name_zh": "满月轮舞",
+          "desc_zh": "自己与对手的后备宝可梦每有 1 只，此招式就造成 +20 伤害。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Fairy Zone",
+          "name_zh": "妖精区",
+          "tag": "weak_change:psychic:dragon",
+          "location": "field",
+          "desc": "The Weakness of each of your opponent’s {N} Pokémon in play is now {P}. (Apply Weakness as ×2.)",
+          "desc_zh": "对手场上每只 {N} 宝可梦的弱点现在变为 {P}。（弱点按 ×2 计算。）",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "JTG",
+        "number": "56"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 272,
+      "name_key": "lilliesclefairyex",
+      "uid": "Lillie’s Clefairy ex@JTG 56"
     },
     {
       "name": "Banette",
@@ -34313,6 +34366,57 @@
       "source_card_id": 709,
       "name_key": "bayleef",
       "uid": "Bayleef@MEG 9"
+    },
+    {
+      "name": "Meganium",
+      "name_zh": "大竺葵",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 160,
+      "types": [
+        "grass"
+      ],
+      "weakness": "fire",
+      "resistance": null,
+      "retreat": 2,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Bayleef",
+      "attacks": [
+        {
+          "name": "Solar Beam",
+          "cost": {
+            "grass": 2,
+            "colorless": 2
+          },
+          "damage": 140,
+          "effects": [],
+          "desc": "",
+          "name_zh": "日光束",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Wild Growth",
+          "name_zh": "野性成长",
+          "tag": "passive:energy_double:grass",
+          "location": "field",
+          "desc": "Each Basic {G} Energy attached to all of your Pokémon provides {G}{G} Energy. The effect of Wild Growth doesn’t stack.",
+          "desc_zh": "附着于你所有宝可梦的每张基本 {G} 能量都提供 {G}{G} 能量。「野性成长」的效果不会叠加。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "10"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 710,
+      "name_key": "meganium",
+      "uid": "Meganium@MEG 10"
     },
     {
       "name": "Shuckle",

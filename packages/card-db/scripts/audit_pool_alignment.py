@@ -4247,6 +4247,56 @@ _SYMBOL_TO_TYPE = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
                    "M": "metal", "C": "colorless", "N": "dragon"}
 
 
+def audit_f5_statics(card_name: str, item_name: str, desc: str,
+                     effects: list) -> list:
+    """F5 对账：**静态属性改写**（2026-11-08）
+
+    两张卡的错法都是「两个属性写反了」，而且不会报错：
+
+      · `weak_change:<新弱点>:<过滤属性>` —— 过滤属性是**守方**的属性
+        （「your opponent's {N} Pokémon」），新弱点是 `now {P}`。写反的结果是
+        「对手全队弱点被改写」，只在特定对局里才看得出来；
+      · `passive:energy_double:<type>` —— 属性写错就是「草能量增值」变成
+        「别的能量增值」，支付池静默变宽/变窄。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    low = d.lower()
+    segs = [str(e) for e in _expand_compound(effects)]
+    m = re.search(r"^the weakness of each of your opponent'?s \{([a-z])\} "
+                  r"pok[eé]mon in play is now \{([a-z])\}", low)
+    if m:
+        who = _SYMBOL_TO_TYPE.get(m.group(1).upper())
+        newt = _SYMBOL_TO_TYPE.get(m.group(2).upper())
+        wc = next((x for x in segs if x.startswith("weak_change:")), "")
+        if not wc:
+            errs.append(f"{card_name} · {item_name}：卡面改写弱点，缺 "
+                        f"`weak_change:`（实际 {effects}）")
+        else:
+            parts = wc.split(":")
+            got_new = parts[1] if len(parts) > 1 else ""
+            got_filt = parts[2] if len(parts) > 2 else "all"
+            if newt and got_new != newt:
+                errs.append(f"{card_name} · {item_name}：新弱点应为 {newt!r}，"
+                            f"tag 写成 {got_new!r}（{wc}）")
+            if who and got_filt != who:
+                errs.append(f"{card_name} · {item_name}：过滤属性应为守方的 "
+                            f"{who!r}（卡面「your opponent's {{{m.group(1).upper()}}}」），"
+                            f"tag 写成 {got_filt!r}（{wc}）")
+    m2 = re.search(r"each basic \{([a-z])\} energy attached to all of your "
+                   r"pok[eé]mon provides \{\1\}\{\1\}", low)
+    if m2:
+        want = _SYMBOL_TO_TYPE.get(m2.group(1).upper())
+        ed = next((x for x in segs if x.startswith("passive:energy_double:")), "")
+        if not ed:
+            errs.append(f"{card_name} · {item_name}：卡面「每张基本能量提供 2 点」，"
+                        f"缺 `passive:energy_double:`（实际 {effects}）")
+        elif want and not ed.endswith(":" + want):
+            errs.append(f"{card_name} · {item_name}：增值属性应为 {want!r}，"
+                        f"tag 写成 {ed!r}")
+    return errs
+
+
 def audit_f8_rules(card_name: str, item_name: str, desc: str,
                    effects: list) -> list:
     """F8 对账：**规则改写 / 去向改写**（2026-11-08）
@@ -4592,6 +4642,7 @@ def main() -> int:
                 errs += audit_devolve(c["name"], it.get("name"), desc, eff)
                 errs += audit_b4_interaction(c["name"], it.get("name"), desc, eff)
                 errs += audit_f8_rules(c["name"], it.get("name"), desc, eff)
+                errs += audit_f5_statics(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4702,7 +4753,8 @@ def main() -> int:
           "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） · "
           "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） · "
           "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场/"
-          "对手手牌铺场/双段条件静态） 五十五类对账全部一致")
+          "对手手牌铺场/双段条件静态） · "
+          "静态属性改写（改弱点方向/能量增值属性） 五十六类对账全部一致")
     return 0
 
 

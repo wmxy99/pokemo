@@ -273,6 +273,15 @@ class FieldPokemon:
     # battle 上下文；条件式加 HP（「若有 {D} 能量则 +100」）因此**故意不支持**
     # （宁可未建模，也不做一个忽大忽小的血量上限）。条件式请走 `dmg_reduce`。
     bonus_hp: int = 0
+    # ---- 队伍级**能量增值**（F5 · 2026-11-08，Meganium「Wild Growth」）----
+    # ``{属性: 每张卡额外提供的点数}``。卡面「Each Basic {G} Energy attached to
+    # all of your Pokémon provides {G}{G}」——1 张草能量当 2 点用。
+    # 放在**实例**上（而不是每次现算）的理由与 `bonus_hp` 相同：支付路径
+    # （`can_pay` / `remove_any` / 撤退）拿不到 battle 上下文；由
+    # `Battle._refresh_team_statics()` 在每次动作后统一重算。
+    # ⚠ 只影响**支付**（`pay_pool`），不影响「附着了几张能量」的计数
+    #   （`energy_counts`）—— 卡面说「provides」，不是「counts as」。
+    energy_boost: dict = field(default_factory=dict)
     # ---- S2 道具（Pokémon Tool，2026-10-26）----
     # 附着在**本只**宝可梦上的道具 tag（`tool:<kind>[:N]`）。每只最多 1 张。
     # 存 tag 而不是卡对象：引擎只需要"它能提供什么修正"，不需要卡面文本。
@@ -430,6 +439,23 @@ class FieldPokemon:
     def total_energy(self) -> int:
         return sum(self.energy_counts().values())
 
+    def pay_pool(self) -> dict:
+        """**支付用**能量池：在 `energy_counts()` 上叠加能量增值（F5）
+
+        Meganium「Wild Growth」：「Each Basic {G} Energy … provides {G}{G}」——
+        一张卡提供 2 点，因此支付池里 grass 翻倍；但「附着了几张」仍是 1 张
+        （`energy_counts()` 不变）。两者混用会让「for each Energy attached」
+        类计数凭空翻倍。
+        """
+        m = self.energy_counts()
+        for t, extra in (self.energy_boost or {}).items():
+            if m.get(t):
+                m[t] = m[t] * (1 + int(extra))
+        return m
+
+    def pay_total(self) -> int:
+        return sum(self.pay_pool().values())
+
     def energy_of(self, t: str) -> int:
         return self.energy_counts().get(t, 0)
 
@@ -456,7 +482,8 @@ class FieldPokemon:
         规则：**彩色需求须同色满足**（可用「双色任选 / 任意属性」能量补足）；
         **无色需求可由任意能量支付**。
         """
-        pool = self.energy_counts()
+        # F5：支付池按**增值后**的点数算（Meganium「Wild Growth」）
+        pool = self.pay_pool()
         need: dict = {}
         colorless = 0
         for t, n in cost:
@@ -496,27 +523,35 @@ class FieldPokemon:
         返回是否支付成功；特殊能量卡被移除时不会回到弃牌堆 —— 与既有的
         「基本能量卡不落弃牌堆」口径一致（引擎的能量是计数而非卡）。
         """
-        if self.total_energy() < n:
+        # F5：充足性按**增值后**的点数判（1 张草能量在 Wild Growth 下抵 2 点），
+        # 但**移除以卡为单位**：一张卡要么留着、要么整张弃掉（不能只花半张）。
+        if self.pay_total() < n:
             return False
+
+        def _per(t: str) -> int:
+            """该属性每张卡提供的点数（含增值）"""
+            return 1 + int((self.energy_boost or {}).get(t, 0))
+
         # 先无色（基本）
         c = self.energy.get(COLORLESS, 0)
-        take_c = min(c, n)
-        if take_c:
-            self.energy[COLORLESS] = c - take_c
-            n -= take_c
+        while n > 0 and self.energy.get(COLORLESS, 0) > 0:
+            self.energy[COLORLESS] -= 1
+            n -= _per(COLORLESS)
+            if self.energy[COLORLESS] == 0:
+                del self.energy[COLORLESS]
         # 其余基本能量按任意类型扣除
         for t in list(self.energy):
             if n <= 0:
                 break
             if t == COLORLESS:
                 continue
-            k = min(self.energy[t], n)
-            self.energy[t] -= k
-            n -= k
-            if self.energy[t] == 0:
-                del self.energy[t]
-        if self.energy.get(COLORLESS, 0) == 0:
-            self.energy.pop(COLORLESS, None)
+            per = _per(t)
+            while n > 0 and self.energy.get(t, 0) > 0:
+                self.energy[t] -= 1
+                n -= per
+                if self.energy[t] == 0:
+                    del self.energy[t]
+                    break
         # 最后消耗特殊能量卡（整张；后附先弃）
         while n > 0 and self.senergy:
             ref = self.senergy.pop()

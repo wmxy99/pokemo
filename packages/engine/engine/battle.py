@@ -326,6 +326,7 @@ class Battle:
         p.prizes_taken_last_turn = p.prizes_taken_this_turn
         p.prizes_taken_this_turn = 0
         self._refresh_stadium_hp()                # S3：场地对上限的修正在新回合重算
+        self._refresh_team_statics()              # F5：队伍级能量增值
         # 场地「每回合一次」按**回合归属方**重置（不是使用者）
         self._stadium_used_flags()[self.current] = 0
         for fp in p.all_field():          # E2/E3: 新回合解除"刚放置"并重置特性
@@ -529,7 +530,7 @@ class Battle:
                         acts.append(self._borrow_action(ai, atk, _o))
                 if not p.active.retreat_locked(turn_count) \
                         and not getattr(p.active, "fossil", False) \
-                        and p.active.total_energy() >= _retreat_cost(
+                        and p.active.pay_total() >= _retreat_cost(
                             p.active, self) and len(p.bench) > 0:
                     acts.append({"verb": "retreat", "bench": 0})
         # E2 进化：手牌 x → 场上同名 evolves_from 目标
@@ -1588,6 +1589,9 @@ class Battle:
         except ValueError as e:
             res = {"ok": False, "error": str(e)}
         events.emit_switch_diff(self)
+        # F5：队伍级静态（能量增值）在**每次动作后**重算 —— 进化出 Meganium、
+        # 或 Meganium 被击倒，都要立刻反映到支付池（否则差一回合）。
+        self._refresh_team_statics()
         return res
 
     def _step_main(self, p: PlayerState, verb, action: dict) -> dict:
@@ -7827,6 +7831,34 @@ class Battle:
         if m["stage"] is not None and fp.pdef.stage != m["stage"]:
             return 0
         return m["n"]
+
+    def _refresh_team_statics(self) -> None:
+        """重算**队伍级静态被动**（F5 · 2026-11-08）
+
+        目前只有一条：Meganium「Wild Growth」——
+        「Each Basic {G} Energy attached to all of your Pokémon provides
+        {G}{G} Energy. **The effect of Wild Growth doesn't stack.**」
+
+        为什么不现场算：支付路径（`can_pay` / `remove_any` / 撤退）拿不到 battle
+        上下文，只能读 `FieldPokemon` 自己的字段 —— 与 `bonus_hp` 同一套做法。
+        **不叠加**（卡面明文）：`max` 而不是求和。
+
+        调用点：开局、每次 `step` 之后、回合开始 —— 与 `_refresh_stadium_hp`
+        同位置。少一处就会「进化出 Meganium 后这一回合还是 1 点」。
+        """
+        for pl in self.players:
+            boost: dict = {}
+            for fp in pl.all_field():
+                for ab in fp.pdef.abilities:
+                    tag = str(getattr(ab, "tag", "") or "")
+                    if not tag.startswith("passive:energy_double:"):
+                        continue
+                    etype = tag.split(":")[2] if tag.count(":") >= 2 else ""
+                    if etype:
+                        boost[etype] = max(boost.get(etype, 0), 1)
+            for fp in pl.all_field():
+                if fp.energy_boost != boost:
+                    fp.energy_boost = dict(boost)
 
     def _refresh_stadium_hp(self) -> None:
         """把「特性静态 + 场地静态」的 +HP 一起重算到 `bonus_hp`

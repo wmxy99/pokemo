@@ -22,19 +22,19 @@
 | 指标 | 数值 | 取数方式 |
 |---|---|---|
 | 卡牌总数 | **1267** | `cards_challenge.json` 的 `cards` 长度 |
-| `engine_ready` | **1252（98.8%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
-| 未建模卡 | **15** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 15） |
-| 引擎池 | **1237** | `cards_pool_ext.json` 的 `cards` 长度 |
-| 对账类目 | **54 类全绿** | `scripts/audit_pool_alignment.py` |
+| `engine_ready` | **1257（99.2%）** | `sum(1 for c in cards if c.get("engine_ready"))` |
+| 未建模卡 | **10** | 上者取反（**口径 = 卡数**，≠ `unsupported` 条目 10） |
+| 引擎池 | **1242** | `cards_pool_ext.json` 的 `cards` 长度 |
+| 对账类目 | **55 类全绿** | `scripts/audit_pool_alignment.py` |
 | 测试总数 | 见 **README 第 7–8 行** | 由 `scripts/check_doc_counts.py` 在 CI 校验（本档案不重复记账，避免加测试即漂移） |
 | CI | **8/8 PASS** | `scripts/ci_local.py`（必须用 `/d/anconda/envs/pokemo/python.exe`） |
 | K1 双盲 | **0.770**（200 局双盲 = 100 先手 + 100 后手，`artifacts/k1_rich.pt`；单侧对照 0.815、先手基线 0.640）· ⚠ S6a 打开官方先手规则后由 0.795 → 0.770（差值 0.025 < CI ±0.058，仍 ≥0.70 判据；权重是在旧规则下训练的，重训可回收） | `examples/k1_accept.py artifacts/k1_rich.pt --games 200`（权重是位置参数） |
 
-**口径校验（本文件自洽的判据）**：未 ready **15** = 批内如实拒收 **14** + 结构性边界 **1** + 待新能力 **0** = **15** ✅。
+**口径校验（本文件自洽的判据）**：未 ready **10** = 批内如实拒收 **10** + 结构性边界 **0** + 待新能力 **0** = **10** ✅。
 
 **规划**：第 90–133 批共 **44 批**；已处理 **44** 批（完成 39 · 整批受阻 5），剩余**未开工** **0** 批。
 
-**终局**：`engine_ready` **1252 / 1267 = 98.8%**（44 批全部处理完毕）。剩余 14 张已逐批**如实拒收**（原因见各批说明），另 1 张结构性边界与 0 张待新能力卡需引擎重构（静态规则改写 · 道具与招式形态 · 逐卡机制）才可能归零。
+**终局**：`engine_ready` **1257 / 1267 = 99.2%**（44 批全部处理完毕）。剩余 10 张已逐批**如实拒收**（原因见各批说明），另 0 张结构性边界与 0 张待新能力卡需引擎重构（静态规则改写 · 道具与招式形态 · 逐卡机制）才可能归零。
 
 ---
 
@@ -370,7 +370,7 @@
 | 卡 | series | number | 分层 | 备注 |
 |---|---|---|---|---|
 | Kyurem | SFA | 47 | done（已完成） |  |
-| Klinklang | SCR | 101 | D（兜底·复合句） |  |
+| Klinklang | SCR | 101 | done（已完成） |  |
 | Rotom ex | PFL | 29 | done（已完成） |  |
 | Slaking ex | SSP | 147 | done（已完成） |  |
 | Core Memory | POR | 70 | done（已完成） |  |
@@ -408,7 +408,7 @@
 | Scovillain ex | SSP | 37 | done（已完成） |  |
 | Lycanroc | JTG | 85 | done（已完成） |  |
 | Golduck | ASC | 40 | done（已完成） |  |
-| Gengar | POR | 50 | D（兜底·复合句） |  |
+| Gengar | POR | 50 | done（已完成） |  |
 | Mega Mawile ex | MEG | 94 | done（已完成） |  |
 | Team Rocket's Articuno | DRI | 51 | done（已完成） |  |
 | Carbink | ASC | 117 | done（已完成） |  |
@@ -426,7 +426,7 @@
 | Ethan's Sudowoodo | DRI | 93 | done（已完成） |  |
 | Walrein | SSP | 45 | done（已完成） |  |
 | Palafin ex | TWM | 61 | done（已完成） |  |
-| Revavroom ex | SFA | 15 | D（兜底·复合句） |  |
+| Revavroom ex | SFA | 15 | done（已完成） |  |
 
 **实际结果**：进池 **1** 张，如实拒收 **5** 张。
 
@@ -438,7 +438,7 @@
 |---|---|---|---|---|
 | Eevee ex | PRE | 75 | D（兜底·复合句） |  |
 | Team Rocket's Persian ex | DRI | 150 | done（已完成） |  |
-| Espeon ex | PRE | 34 | D（兜底·复合句） |  |
+| Espeon ex | PRE | 34 | done（已完成） |  |
 
 **实际结果**：进池 **0** 张，如实拒收 **3** 张。
 
@@ -635,7 +635,6 @@
 
 | 卡 | series | number | 引擎限制 |
 |---|---|---|---|
-| Milotic | TWM | 50 | 需要全局规则层（对手区域流转禁止） |
 
 > 要真正做到 100%，需三项独立工程（各自立项，不属本档案）：
 > ① 拆分 `fp.damage` 为 `attack_damage` + `damage_counters`；② 统一 `max_hp` 重算入口；③ 新增全局规则层（特性禁用 / 区域流转）。
@@ -731,18 +730,18 @@
 | 132 | P5 | 结构性建档 · 全局规则层（Psyduck / Milotic） | 0 | 0 | 0 | ✅ 完成 |
 | 133 | P5 | 结构性建档 · gate 类（Anthea & Concordia）+ 边界收尾 | 0 | 0 | 0 | ✅ 完成 |
 
-> 台账的「计划张数」只计**卡槽**；第 130–133 批是结构性建档批（0 槽），涉及的 1 张统一列在 §7，不重复计入槽位。
+> 台账的「计划张数」只计**卡槽**；第 130–133 批是结构性建档批（0 槽），涉及的 0 张统一列在 §7，不重复计入槽位。
 
 **口径核对**：
 
 | 项 | 张数 | 说明 |
 |---|---|---|
 | 批次槽位合计 | 140 | 跨批卡在每批各记 1 次 |
-| 批次唯一卡 | 136 | 其中已完成 122 张 |
-| 批次内待做 | 14 | 全部未 ready |
-| 结构性边界 | 1 | 不承载 tag，仅建档 |
+| 批次唯一卡 | 136 | 其中已完成 126 张 |
+| 批次内待做 | 10 | 全部未 ready |
+| 结构性边界 | 0 | 不承载 tag，仅建档 |
 | 待新能力 | 0 | 需新增承载字段 |
-| **合计（= 未 ready 卡数）** | **15** | 应等于基线 15 |
+| **合计（= 未 ready 卡数）** | **10** | 应等于基线 10 |
 
 ---
 

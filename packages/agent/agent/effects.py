@@ -3444,6 +3444,59 @@ def _title(name: str) -> str:
     return " ".join(w.capitalize() for w in re.sub(r"\s+", " ", name).split())
 
 
+def _detect_f8(text: str, kind: str) -> list:
+    """F8（2026-11-08）：**规则改写 / 自身离场 / 反转退化** 五张整句
+
+    这些句子的共同点是「改的不是数值，而是规则或去向」，宽口径检测器一定会读错
+    （例如「discard this Pokémon」会被读成弃手牌、「put it into your hand」
+    会被读成检索入手），因此必须**整句精确匹配**并排在通用族之前。
+    """
+    t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
+    low = t.lower()
+    if kind == "attack":
+        # Revavroom ex「Shattering Speed」：弃自身与全部附加卡（**不是**击倒）
+        if _F8_DISCARD_SELF_RE.match(low):
+            return [act("rule", None, "self", {"discard_self": True})]
+        # Espeon ex「Amazez」：**全体**退化，退下来的进化卡洗回**牌库**
+        if _F8_DEVOLVE_EACH_RE.match(low):
+            return [act("rule", None, "opp",
+                        {"devolve": "opp:1:each:to:deck"})]
+        return []
+    if kind == "ability":
+        # Milotic「Mentally Calm」：对手的宝可梦与附加卡**不能**回手（静态禁令）
+        if _F8_NO_HAND_RETURN_RE.match(low):
+            return [act("rule", None, "opp",
+                        {"static_passive": "no_hand_return"})]
+        # Gengar「Infinite Shadow」：被招式击倒 → **进手牌**而不是弃牌堆
+        if _F8_KO_TO_HAND_RE.match(low):
+            return [act("rule", None, "self",
+                        {"static_passive": "ko_to_hand"})]
+        # Klinklang「Emergency Rotation」：在**手牌**里、对手有 2 阶 → 直接铺后备
+        if _F8_HAND_TO_BENCH_RE.match(low):
+            return [act("rule", None, "self", {"hand_to_bench": "opp_stage2"})]
+        return []
+    return []
+
+
+# 整句精确匹配（大小写不敏感；标点已在 `_norm_apostrophe` 里归一）
+_F8_DISCARD_SELF_RE = re.compile(
+    r"^discard this pok[eé]mon and all attached cards\.?$", re.I)
+_F8_DEVOLVE_EACH_RE = re.compile(
+    r"^devolve each of your opponent'?s evolved pok[eé]mon by shuffling the "
+    r"highest stage evolution card on it into your opponent'?s deck\.?$", re.I)
+_F8_NO_HAND_RETURN_RE = re.compile(
+    r"^your opponent'?s pok[eé]mon in play and all attached cards can'?t be put "
+    r"into your opponent'?s hand\.?$", re.I)
+_F8_KO_TO_HAND_RE = re.compile(
+    r"^if this pok[eé]mon is knocked out by damage from an attack from your "
+    r"opponent'?s pok[eé]mon,? put it into your hand instead of the discard "
+    r"pile\.?\s*(?:\(discard all attached cards\.?\))?$", re.I)
+_F8_HAND_TO_BENCH_RE = re.compile(
+    r"^once during your turn,? if this pok[eé]mon is in your hand and your "
+    r"opponent has any stage 2 pok[eé]mon in play,? you may put this pok[eé]mon "
+    r"onto your bench\.?$", re.I)
+
+
 def _detect_s2(text: str, kind: str) -> list:
     """S2：延迟效果 / 换位订阅（整句精确匹配，否则不产出）"""
     t = re.sub(r"\s+", " ", _norm_apostrophe(text or "")).strip()
@@ -4407,6 +4460,14 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
     # 等词会被后面的宽口径规则族误读成「静态伤害增减」或「费用改写」。
     # S2（2026-11-08）：延迟队列 / 换位订阅 —— 必须在通用「放置指示物 / 状态 / 抽牌」
     # 分支之前整句认领，否则「that Pokémon」「at the end of this turn」会被丢弃。
+    # F8（2026-11-08）：规则改写 / 自身离场 / 全体退化 —— 整句精确匹配。
+    # 必须排在 `_detect_s2` 与所有宽口径族之前：「put it into your hand」
+    # 「discard this Pokémon」被通用分支命中后，语义会完全反过来。
+    _f8 = _detect_f8(t_raw, kind)
+    if _f8:
+        return {"kind": kind, "name": name, "trigger": "on_use",
+                "conditions": conditions, "actions": _f8,
+                "source_text": str(text or ""), "citations": []}
     _s2 = _detect_s2(t_raw, kind)
     if _s2:
         return {"kind": kind, "name": name, "trigger": "on_use",
@@ -11352,6 +11413,12 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("static_passive"):
                     # D4：静态被动 → `passive:<...>`（引擎按前缀消费）
                     tags.append("passive:" + str(extra["static_passive"]))
+                elif extra.get("discard_self"):
+                    # F8（Revavroom ex）：弃自身与全部附加卡（**不是**击倒）
+                    tags.append("discard_self:all")
+                elif extra.get("hand_to_bench"):
+                    # F8（Klinklang）：在手牌里、对手有 2 阶 → 直接铺后备
+                    tags.append(f"hand_bench:{extra['hand_to_bench']}")
                 elif extra.get("devolve"):
                     # D3：`devolve:<scope>:<n|any>[:type:<t>][:active_only]`
                     _dv = str(extra["devolve"])

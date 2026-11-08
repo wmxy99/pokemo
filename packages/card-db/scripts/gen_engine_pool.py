@@ -202,6 +202,12 @@ ATTACK_TAG_PREFIXES = (
     # 第八十一批（2026-11-05）：清除出招者自身全部特殊状态（Arboliva ex）
     "cure:",
     "discard_energy:", "switch_self", "gust", "attach", "move_damage:",
+    # F8（2026-11-08）：**弃自身与全部附加卡**（Revavroom ex「Shattering
+    # Speed」）。⚠ 与 `discard_energy:` 不是一回事，也不走击倒结算（不取奖赏）。
+    "discard_self:",
+    # F8：**招式侧**退化（Espeon ex「Amazez」，「devolve **each** … into their
+    # deck」）。D3 只把它加进了特性白名单 → 招式侧被静默滤空、整卡拒收。
+    "devolve:",
     "recover:", "dmg_plus:", "dmg_set:", "dmg_minus:", "dmg_zero",
     # 第一百零一批（2026-11-06）：按「上回合受到的招式伤害量」加伤
     # （Mega Heracross ex「Juggernaut Horn」）。无冒号形态，故按整串匹配。
@@ -338,6 +344,9 @@ ABILITY_TAG_PREFIXES = (
     "use_any:",
     # D3（2026-11-08）：退化特性（Archeops「devolve:opp:1:active_only」）
     "devolve:",
+    # F8（2026-11-08）：在手牌里发动、直接铺后备（Klinklang「Emergency
+    # Rotation」）。⚠ 不是 `cursed:`（那个会**弃自身**）—— 卡是上场而不是被弃。
+    "hand_bench:",
     "recon:", "cursed:", "draw:", "move_damage:", "attach_energy:",
     # 第四十九批（2026-11-04）：**补白** —— 特性侧「draw cards until you have N」
     # （Quaquaval「Up-Tempo」/ Iono's Kilowattrel「Flashing Draw」）。引擎早在

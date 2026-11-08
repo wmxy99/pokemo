@@ -4234,6 +4234,85 @@ def audit_f7_tools(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_f8_rules(card_name: str, item_name: str, desc: str,
+                   effects: list) -> list:
+    """F8 对账：**规则改写 / 去向改写**（2026-11-08）
+
+    这一族的错法都是「结算了，但去了错的地方」：
+
+      · 「弃自身与全部附加卡」被当成**击倒** → 对手白拿奖赏（或多触发一次 ko 事件）；
+      · `devolve … :each` 退成「只退 1 只」，或 `:to:deck` 写成进手牌 ——
+        手牌能再用、牌库不能，强度差很远，且**任何日志都不报错**；
+      · `passive:no_hand_return` 只挡宝可梦本体、漏掉「all attached cards」；
+      · `passive:ko_to_hand` 不区分「被招式击倒」，自身效果击倒也回手（白赚一张）；
+      · `hand_bench` 少了「对手有 2 阶」或「后备没满」的判定 → 变成无条件铺场。
+    """
+    errs: list = []
+    d = _norm(desc or "").replace("\u2019", "'")
+    low = d.lower()
+    segs = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(segs)
+
+    def _need(prefix: str, what: str) -> None:
+        if not any(s.startswith(prefix) for s in segs):
+            errs.append(f"{card_name} · {item_name}：卡面是{what}，但 tag 里没有 "
+                        f"`{prefix}`（实际 {effects}）")
+
+    # ① 弃自身与全部附加卡（Revavroom ex）—— 必须**不是**击倒
+    if re.search(r"^discard this pok[eé]mon and all attached cards", low):
+        _need("discard_self:", "「弃自身与全部附加卡」")
+        if "knockout:" in joined:
+            errs.append(f"{card_name} · {item_name}：卡面是「discard」而不是"
+                        f"「Knock Out」，不得落 `knockout:`（对手会白拿奖赏）")
+    # ② 全体退化 + 去向（Espeon ex）
+    if re.search(r"devolve each of your opponent'?s evolved", low):
+        dv = next((s for s in segs if s.startswith("devolve:")), "")
+        if not dv:
+            errs.append(f"{card_name} · {item_name}：卡面「Devolve **each**」缺 "
+                        f"`devolve:`（实际 {effects}）")
+        else:
+            if ":each" not in dv:
+                errs.append(f"{card_name} · {item_name}：卡面「each」= 全退，"
+                            f"tag 缺 `:each`（{dv}）")
+            to_deck = "into your opponent's deck" in low \
+                or "into their deck" in low
+            if to_deck and ":to:deck" not in dv:
+                errs.append(f"{card_name} · {item_name}：卡面退到**牌库**，"
+                            f"tag 缺 `:to:deck`（{dv}）")
+            if not to_deck and ":to:deck" in dv:
+                errs.append(f"{card_name} · {item_name}：卡面没有「into deck」，"
+                            f"tag 却带 `:to:deck`（{dv}）")
+    # ③ 禁止回手（Milotic）
+    # ⚠ 被动 tag 是**精确匹配**（引擎 `_has_ability_tag` 用 `==`）：
+    #   写成 `passive:no_hand_return_x` 时代码路径完全不生效，前缀比对却会放行
+    #   → 必须精确相等，否则这条对账是假守卫（实测注入过）。
+    if re.search(r"can'?t be put into your opponent'?s hand", low):
+        if "passive:no_hand_return" not in segs:
+            errs.append(f"{card_name} · {item_name}：卡面是「不能回到对手手牌」的"
+                        f"静态禁令，但 tag 里没有**精确**的 "
+                        f"`passive:no_hand_return`（实际 {effects}）")
+    # ④ 击倒去向改写（Gengar）
+    if re.search(r"put it into your hand instead of the discard pile", low):
+        if "passive:ko_to_hand" not in segs:
+            errs.append(f"{card_name} · {item_name}：卡面是「击倒后进手牌」的去向"
+                        f"改写，但 tag 里没有**精确**的 `passive:ko_to_hand`"
+                        f"（实际 {effects}）")
+        if "被招式" not in item_name and "knocked out by damage from an attack" \
+                not in low:
+            errs.append(f"{card_name} · {item_name}：去向改写只对「被招式伤害"
+                        f"击倒」成立，卡面没写就不能按无条件处理")
+    # ⑤ 手牌上场（Klinklang）
+    if re.search(r"in your hand and your opponent has any stage 2", low):
+        hb = next((s for s in segs if s.startswith("hand_bench:")), "")
+        if not hb:
+            errs.append(f"{card_name} · {item_name}：卡面「从手牌铺后备」缺 "
+                        f"`hand_bench:`（实际 {effects}）")
+        elif "opp_stage2" not in hb:
+            errs.append(f"{card_name} · {item_name}：条件「对手有 2 阶」没写进 "
+                        f"tag（{hb}）→ 变成无条件铺场")
+    return errs
+
+
 def audit_devolve(card_name: str, item_name: str, desc: str,
                   effects: list) -> list:
     """D3 对账：退化 devolve
@@ -4467,6 +4546,7 @@ def main() -> int:
                 errs += audit_s6_first_turn(c["name"], it.get("name"), desc, eff)
                 errs += audit_devolve(c["name"], it.get("name"), desc, eff)
                 errs += audit_b4_interaction(c["name"], it.get("name"), desc, eff)
+                errs += audit_f8_rules(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4575,8 +4655,9 @@ def main() -> int:
           "先手首回合例外许可（招式/训练家） · "
           "退化 devolve（方向/阶数/属性/战斗位） · "
           "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） · "
-          "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） "
-          "五十四类对账全部一致")
+          "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） · "
+          "规则/去向改写（弃自身/全体退化去向/禁回手/击倒进手牌/手牌上场） "
+          "五十五类对账全部一致")
     return 0
 
 

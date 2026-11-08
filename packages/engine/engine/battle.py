@@ -811,6 +811,13 @@ class Battle:
                               if self._devolve_target(_side_i, i, _dtype)]
                     if not _valid:
                         continue
+                    if "each" in _dv:
+                        # 「Devolve **each** …」= 无目标可选（全退），列一条即可
+                        out.append({"verb": "ability", "name": ab.name,
+                                    "name_zh": ab.name_zh,
+                                    "display": ab.name_zh or ab.name,
+                                    "pos": tpos, "tag": ab.tag})
+                        continue
                     for _ti in _valid:
                         out.append({"verb": "ability", "name": ab.name,
                                     "name_zh": ab.name_zh,
@@ -834,7 +841,32 @@ class Battle:
                                         "display": ab.name_zh or ab.name,
                                         "hand": hi, "tag": ab.tag,
                                         "target": tpos})
+                    # F8（2026-11-08）：Klinklang「Emergency Rotation」——
+                    # **手牌里**发动、直接铺到后备。两个门槛都要在这里挡：
+                    # 对手场上真有 2 阶，且自己后备没满（否则会出现「合法但必然
+                    # 不生效」的假动作，AI 会反复尝试）。
+                    if ab.tag.startswith("hand_bench:"):
+                        if len(p.bench) >= self.cfg.max_bench:
+                            continue
+                        if not self._hand_bench_gate(p, ab.tag):
+                            continue
+                        out.append({"verb": "ability", "name": ab.name,
+                                    "name_zh": ab.name_zh,
+                                    "display": ab.name_zh or ab.name,
+                                    "hand": hi, "tag": ab.tag})
         return out
+
+    def _hand_bench_gate(self, p: PlayerState, tag: str) -> bool:
+        """``hand_bench:<cond>`` 的发动条件（legals 与派发**共用**）
+
+        ``opp_stage2``：对手场上（战斗位或后备）有 2 阶进化宝可梦。
+        """
+        cond = str(tag).split(":")[1] if ":" in str(tag) else ""
+        opp = self.players[1 - self.current]
+        if cond == "opp_stage2":
+            return any(int(getattr(fp.pdef, "stage", 0)) == 2
+                       for fp in opp.all_field())
+        return False
 
     def _opening_turn(self) -> bool:
         """当前是否处于**先手玩家的开局回合**（S6a）
@@ -1087,6 +1119,10 @@ class Battle:
                           if self._devolve_target(
                               self.current if _dside == 0 else 1 - self.current,
                               i, _dtype)]
+                if "each" in _dv:
+                    if _found:
+                        out.append(dict(base))     # 全退：无目标可选
+                    continue
                 for _ti in _found:
                     out.append({**base, "target": int(_ti)})
             elif tag.startswith("heal:"):
@@ -2432,6 +2468,22 @@ class Battle:
                        if x.name == name and x.location == "hand"), None)
             if ab is None:
                 raise ValueError(f"无 hand 特性 {name}")
+            if tag.startswith("hand_bench:"):
+                # F8（Klinklang）：手牌 → 后备。与 `cursed:`（弃自身）**不同**：
+                # 卡不是被弃掉，而是**上场**（进后备、占位、当回合不能进化）。
+                # 条件在这里**再判一次**（legals 已挡，但 AI 可能直接给动作）。
+                if len(p.bench) >= self.cfg.max_bench:
+                    raise ValueError("后备已满，无法铺场")
+                if not self._hand_bench_gate(p, tag):
+                    raise ValueError("手牌上场的条件不满足")
+                p.hand.pop(hi)
+                mon = make_pokemon(c.pdef)
+                mon.just_played = True
+                p.bench.append(mon)
+                self._log("hand_bench", {"player": self.current,
+                                         "name": c.pdef.name,
+                                         "bench": len(p.bench)})
+                return {"ok": True, "event": self.events[-1]}
             p.hand.pop(hi)
             self._to_discard(p, c)
             if tag.startswith("cursed:"):
@@ -2673,7 +2725,9 @@ class Battle:
             opt = ch.chosen()[0]
             side = int(ch.ctx.get("side", self.current))
             ti = int(ch.ctx.get("target", 0))
-            detail = self._do_devolve_now(side, ti, int(opt.get("count", 1)))
+            detail = self._do_devolve_now(
+                side, ti, int(opt.get("count", 1)),
+                to_deck=bool(ch.ctx.get("to_deck", False)))
             self._log("devolve_choice", {"player": side, "target": ti,
                                          "count": int(opt.get("count", 1)),
                                          "detail": detail})
@@ -4276,17 +4330,22 @@ class Battle:
         return f"draw_cond {want} (cond={'Y' if hit else 'N'})"
 
     def _apply_devolve(self, tag: str, action: dict, holder=None) -> str:
-        """退化（D3）：``devolve:<scope>:<n|any>[:type:<t>]``
+        """退化（D3）：``devolve:<scope>:<n|any>[:type:<t>][:each][:to:deck]``
 
-        卡面两种：
+        卡面三种：
           · 对手 —— 「devolve 1 of your opponent's evolved Pokémon by putting the
             **highest** Stage Evolution card on it into **their** hand」（Archeops）
           · 自己 —— 「Devolve 1 of your evolved {P} Pokémon by putting **any
             number** of Evolution cards on it into your hand」（Strange Timepiece）
+          · 对手**全体** —— 「Devolve **each** of your opponent's evolved Pokémon by
+            shuffling the highest Stage Evolution card on it into their **deck**」
+            （Espeon ex「Amazez」）→ ``:each`` + ``:to:deck``
 
         ``scope``：``opp`` / ``self``（self = 卡牌使用者一方）
         ``n``：数字 = 固定阶数；``any`` = **数量由玩家选**（挂起选择，不替玩家定）
         ``type``：目标宝可梦属性限定（``{P}`` 之类）
+        ``:each``：**所有**符合条件的宝可梦各退一次（无目标可选 —— 卡面写 each）
+        ``:to:deck``：退下来的进化卡洗回**牌库**（默认进手牌）
 
         目标由 action 的 ``target``（0=战斗位，n=后备n）给出 —— 与 `heal:` /
         `counters:` 同一口径：**合法动作表必须与这里的目标语义逐项对齐**，
@@ -4305,6 +4364,23 @@ class Battle:
                 and self.players[self.current].active is not holder:
             raise ValueError("该特性需在战斗位才能发动")
         side = self.current if scope == "self" else 1 - self.current
+        to_deck = "to" in parts and "deck" in parts
+        if "each" in parts:
+            # 「Devolve **each** …」= 全退，**没有目标决策** → 也不能挂选择
+            # （`any` 数量在 each 上无意义：卡面固定「the highest Stage card」1 张）
+            owner = self.players[side]
+            done = 0
+            for fp in list(owner.all_field()):
+                if self._devolve_target(side, _pos_of_fp(owner, fp),
+                                        want_type) is None:
+                    continue
+                self._do_devolve_now(side, _pos_of_fp(owner, fp),
+                                     len(fp.under) if amt == "any" else 1,
+                                     to_deck=to_deck)
+                done += 1
+                if self.finished:
+                    break
+            return f"devolve each x{done}"
         ti = int(action.get("target", 0) or 0)
         fp = self._devolve_target(side, ti, want_type)
         if fp is None:
@@ -4319,9 +4395,9 @@ class Battle:
             self._open_choice("pick_devolve_count", opts, min_pick=1, max_pick=1,
                               tag="devolve_any",
                               ctx={"side": int(side), "target": int(ti),
-                                   "type": want_type})
+                                   "type": want_type, "to_deck": to_deck})
             return "devolve pending"
-        return self._do_devolve_now(side, ti, int(amt))
+        return self._do_devolve_now(side, ti, int(amt), to_deck=to_deck)
 
     def _devolve_target(self, side: int, ti: int, want_type: str = ""):
         """退化目标（None = 不存在/不合法）—— 派发与合法动作表**共用**这一个判据"""
@@ -4334,8 +4410,14 @@ class Battle:
             return None
         return fp
 
-    def _do_devolve_now(self, side: int, ti: int, n: int) -> str:
-        """真正执行退化 + 判击倒（选择闭合后也走这里）"""
+    def _do_devolve_now(self, side: int, ti: int, n: int,
+                        to_deck: bool = False) -> str:
+        """真正执行退化 + 判击倒（选择闭合后也走这里）
+
+        ``to_deck``：退下来的进化卡进**牌库并洗牌**（Espeon ex「Amazina/Amazez」
+        的「shuffling … into their deck」）；默认进手牌。方向错是**静默差异** ——
+        手牌能被再利用、牌库不能，两者强度差很远。
+        """
         owner = self.players[side]
         fp = owner.active if ti == 0 else (
             owner.bench[ti - 1] if 0 < ti <= len(owner.bench) else None)
@@ -4346,15 +4428,63 @@ class Battle:
         if not popped:
             raise ValueError(f"{fp.name} 无法退化")
         fp.devolved_turn = self.turn_number
-        for d in popped:
-            owner.hand.append(PokeRef(d))
+        if to_deck:
+            owner.deck.extend(PokeRef(d) for d in popped)
+            self.rng.shuffle(owner.deck)
+        else:
+            for d in popped:
+                owner.hand.append(PokeRef(d))
         self._log("devolve", {"player": side, "target": old, "to": fp.name,
                               "cards": len(popped),
-                              "hand": [d.name for d in popped]})
+                              "dest": "deck" if to_deck else "hand",
+                              "names": [d.name for d in popped]})
         # 退化后血量上限可能变低 → 可能直接击倒（官方：剩 HP ≤0 即被击倒）
         if fp.is_ko:
             self._resolve_ko(side, fp)
         return f"devolve {old} -> {fp.name} ({len(popped)})"
+
+    def _discard_own_pokemon(self, fp: FieldPokemon) -> str:
+        """**弃掉自己场上的这只宝可梦与全部附加卡**（``discard_self:``，F8）
+
+        卡面原型：Revavroom ex「Shattering Speed」——
+        `Discard this Pokémon and all attached cards.`
+
+        ⚠ 这**不是**击倒，三条差异都必须成立（有一条做错就是静默多给/少给）：
+          · **不取奖赏**（对手不因这只进弃牌堆而取卡）；
+          · **不触发**「被击倒时」类特性/道具订阅（`ko` 事件不发）；
+          · 战斗位空出时后备**自动顶上**，与击倒一致（否则会凭空多一个空位）。
+
+        场上没有替补时弃掉战斗位 = 场上无宝可梦 → 判负（官方胜负条件），
+        而不是抛错（抛错会让 AI 的动作被回滚成「这一招不存在」）。
+        """
+        owner = self.current
+        p = self.players[owner]
+        was_active = p.active is fp
+        name = fp.name
+        if was_active and not p.bench:
+            p.active = None
+            self._to_discard(p, PokeRef(fp.pdef))
+            for t, n in list(fp.energy.items()):
+                for _ in range(n):
+                    self._to_discard(p, EnergyRef(EnergyDef(t)))
+            if fp.tool_ref is not None:
+                self._to_discard(p, fp.tool_ref)
+            _drop_tool(fp)
+            fp.energy.clear()
+            self._log("discard_self", {"player": owner, "target": name,
+                                       "attached": "all", "promote": None})
+            self._finish(1 - owner, "no_pokemon",
+                         {"loser": owner, "reason": "discard_self"})
+            return f"discard self {name} (no bench → lose)"
+        ref, extras = self._take_off_field(owner, fp)
+        self._to_discard(p, ref)
+        for x in extras:
+            self._to_discard(p, x)
+        self._log("discard_self", {"player": owner, "target": name,
+                                   "attached": len(extras),
+                                   "promote": p.active.name if was_active
+                                   and p.active is not None else None})
+        return f"discard self {name} (+{len(extras)} attached)"
 
     def _trainer_heal(self, p: PlayerState, tag: str, action: dict) -> str:
         """回复（``heal:N[:<scope>][:type:<c>]``），范围语义见 `_apply_heal`"""
@@ -4690,7 +4820,19 @@ class Battle:
 
     def _bounce_owner(self, owner: int, fp: FieldPokemon, dest: str,
                       discard_attached: bool = False) -> None:
-        """把场上宝可梦（含附加卡）移到手牌或牌库；牌库形态会洗牌"""
+        """把场上宝可梦（含附加卡）移到手牌或牌库；牌库形态会洗牌
+
+        F8（2026-11-08）：`passive:no_hand_return`（Milotic「Mentally Calm」）——
+        「Your opponent's Pokémon in play **and all attached cards** can't be put
+        into your opponent's hand.」判据是「**owner 的对手**场上有没有这条被动」，
+        因此放在这里（回手的唯一收口）而不是每个效果各判一次：漏一处就是
+        「同一张禁令在某些卡上生效、某些卡上不生效」，且完全看不出来。
+        """
+        if dest == "hand" and self._no_hand_return_blocked(owner):
+            self._log("blocked", {"player": owner, "target": fp.name,
+                                  "by": "no_hand_return",
+                                  "effect": "bounce_to_hand"})
+            return
         ref, extras = self._take_off_field(owner, fp)
         p = self.players[owner]
         if dest == "hand":
@@ -4706,6 +4848,17 @@ class Battle:
                 p.deck.append(x)
         if dest == "deck":
             self.rng.shuffle(p.deck)
+
+    def _no_hand_return_blocked(self, owner: int) -> bool:
+        """``owner`` 的宝可梦/附加卡是否**不能**进入 ``owner`` 的手牌（F8）
+
+        卡面：Milotic「Mentally Calm」——禁令由 **owner 的对手**在场提供。
+        """
+        opp = self.players[1 - owner]
+        for holder in opp.all_field():
+            if _has_ability_tag(holder, "passive:no_hand_return"):
+                return True
+        return False
 
     def _bounce_from_discard(self, tag: str) -> str:
         """弃牌堆宝可梦铺到后备（``bounce:discard_to_bench:N[:name:<key>][:hp:<n>]``）"""
@@ -10335,6 +10488,16 @@ class Battle:
                 # 已在 `_do_attack` 开头解析（见 `_resolve_borrow`），此处无动作。
                 # 显式写出分支，避免以后误当成"未知 tag 被静默忽略"。
                 pass
+            elif tag.startswith("devolve:"):
+                # F8（2026-11-08）：招式侧退化（Espeon ex「Amazez」）。此前
+                # `devolve:` 只在特性/训练家两侧派发，招式侧缺这一支 —— 卡能进池
+                # 但出招时报「未知招式 tag」（= 池内死卡）。
+                self._apply_devolve(tag, action)
+            elif tag.startswith("discard_self:"):
+                # F8（2026-11-08）：**弃自身与全部附加卡**（Revavroom ex
+                # 「Shattering Speed」）。注意这**不是**击倒：不取奖赏、不触发
+                # 「被击倒」类特性 —— 走 `_discard_own_pokemon` 而不是 `_resolve_ko`。
+                self._discard_own_pokemon(attacker)
 
     # ---------- 跨回合锁定（attack_lock / retreat_lock，2026-10-27） ----------
     def _lock_until(self, owner: int) -> int:
@@ -11039,11 +11202,24 @@ class Battle:
             p.active = None
         else:
             p.bench.remove(fp)
-        p.discard.append(fp.name)
-        # 供弃牌堆回收类效果重建：化石卡**本体是训练家卡**，必须放回 TrainerRef，
-        # 否则回收类效果会把它当成一张宝可梦卡（卡库里没有这张宝可梦）。
-        p.discard_refs.append(getattr(fp, "fossil_ref", None)
-                              or PokeRef(fp.pdef))
+        # F8（2026-11-08）：**击倒去向改写**（Gengar「Infinite Shadow」）——
+        # 「If this Pokémon is Knocked Out **by damage from an attack from your
+        # opponent's Pokémon**, put it into your hand instead of the discard
+        # pile. (Discard all attached cards.)」
+        # · 只有「被对手招式伤害击倒」才改写（自身效果/状态击倒照常进弃牌堆）；
+        # · 本体进**手牌**，附加卡照弃（卡面括号写死了，不能顺手也回手）；
+        # · 其余结算（奖赏、击倒事件、补位）全部不变 —— 它仍然是「被击倒」。
+        _to_hand = (bool(self._ko_from_attack)
+                    and _has_ability_tag(fp, "passive:ko_to_hand"))
+        if _to_hand:
+            p.hand.append(PokeRef(fp.pdef))
+            self._log("ko_to_hand", {"player": owner, "card": fp.name})
+        else:
+            p.discard.append(fp.name)
+            # 供弃牌堆回收类效果重建：化石卡**本体是训练家卡**，必须放回 TrainerRef，
+            # 否则回收类效果会把它当成一张宝可梦卡（卡库里没有这张宝可梦）。
+            p.discard_refs.append(getattr(fp, "fossil_ref", None)
+                                  or PokeRef(fp.pdef))
         self._log("knockout", {"player": 1 - owner, "victim_owner": owner,
                                "card": fp.name, "pos": pos})
         # v1.4：记录「本次击倒是否来自招式」——供条件加伤
@@ -13336,6 +13512,13 @@ def _energy_to_hand(battle, owner: int, fp: FieldPokemon, n: int,
         取特殊能量（特殊能量按卡回收，不拆分其提供量）。
     """
     p = battle.players[owner]
+    # F8：`passive:no_hand_return`（Milotic）连**附加卡**也不能回手 ——
+    # 只挡宝可梦本体是半个禁令（能量照回，等于效果照旧生效一半）。
+    if battle._no_hand_return_blocked(owner):
+        battle._log("blocked", {"player": owner, "target": fp.name,
+                                "by": "no_hand_return",
+                                "effect": "energy_to_hand"})
+        return 0
     got = 0
     while got < n:
         color = None
@@ -14898,3 +15081,29 @@ def _field_at(p: PlayerState, tpos: int) -> Optional[FieldPokemon]:
         return p.active
     bi = tpos - 1
     return p.bench[bi] if 0 <= bi < len(p.bench) else None
+
+
+def _pos_of_fp(p: PlayerState, fp) -> int:
+    """场上位置码（0 = 战斗位，i+1 = 后备 i；不在场上 → -1）
+
+    `devolve … :each` 这类「全退」要逐只回落成位置码再走 `_devolve_target` /
+    `_do_devolve_now` —— 直接按对象操作会绕开「目标是否合法」的唯一判据。
+    """
+    if fp is None:
+        return -1
+    for tpos, cur in _field_iter(p):
+        if cur is fp:
+            return tpos
+    return -1
+
+
+def _has_ability_tag(fp, tag: str) -> bool:
+    """该宝可梦的卡面特性里是否有**精确等于** ``tag`` 的一条
+
+    精确比对（不是 startswith）：`passive:no_hand_return` 与
+    `passive:no_hand_return_x` 这类前缀相近的形态必须互不误命中 —— 误命中
+    会让一张不相干的卡获得别人的规则改写能力，且只在特定对局里才显现。
+    """
+    if fp is None:
+        return False
+    return any(str(getattr(ab, "tag", "")) == tag for ab in fp.pdef.abilities)

@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1237,
+      "kept": 1242,
       "by_Energy": 20,
-      "by_Pokemon": 1034,
+      "by_Pokemon": 1039,
       "by_Trainer": 183,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 15
+        "存在未建模项（整卡不收）": 10
       }
     }
   },
@@ -4412,6 +4412,57 @@
       "uid": "Jynx@TWM 46"
     },
     {
+      "name": "Milotic",
+      "name_zh": "美纳斯",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 120,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Feebas",
+      "attacks": [
+        {
+          "name": "Hydro Splash",
+          "cost": {
+            "water": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [],
+          "desc": "",
+          "name_zh": "水之飞溅",
+          "desc_zh": ""
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Mentally Calm",
+          "name_zh": "心神平静",
+          "tag": "passive:no_hand_return",
+          "location": "field",
+          "desc": "Your opponent’s Pokémon in play and all attached cards can’t be put into your opponent’s hand.",
+          "desc_zh": "对手场上的宝可梦及所有附着卡不能被放入对手的手牌。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "TWM",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 102,
+      "name_key": "milotic",
+      "uid": "Milotic@TWM 50"
+    },
+    {
       "name": "Snorunt",
       "name_zh": "雪童子",
       "supertype": "Pokemon",
@@ -5478,6 +5529,61 @@
       "source_card_id": 129,
       "name_key": "decidueye",
       "uid": "Decidueye@SFA 5"
+    },
+    {
+      "name": "Revavroom ex",
+      "name_zh": "普隆隆姆 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 280,
+      "types": [
+        "lightning"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Lightning)",
+      "evolves_from": "Varoom",
+      "attacks": [
+        {
+          "name": "Accelerator Flash",
+          "cost": {
+            "metal": 1
+          },
+          "damage": 20,
+          "effects": [
+            "dmg_plus:120:if:moved_to_active"
+          ],
+          "desc": "If this Pokémon moved from your Bench to the Active Spot this turn, this attack does 120 more damage.",
+          "name_zh": "加速闪光",
+          "desc_zh": "若此宝可梦在本回合从后备移动到战斗区，则此招式造成 +120 伤害。"
+        },
+        {
+          "name": "Shattering Speed",
+          "cost": {
+            "metal": 3
+          },
+          "damage": 250,
+          "effects": [
+            "discard_self:all"
+          ],
+          "desc": "Discard this Pokémon and all attached cards.",
+          "name_zh": "破碎极速",
+          "desc_zh": "弃置此宝可梦及其身上的所有卡。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "SFA",
+        "number": "15"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 130,
+      "name_key": "revavroomex",
+      "uid": "Revavroom ex@SFA 15"
     },
     {
       "name": "Duskull",
@@ -7271,6 +7377,58 @@
       "source_card_id": 166,
       "name_key": "klang",
       "uid": "Klang@SCR 100"
+    },
+    {
+      "name": "Klinklang",
+      "name_zh": "齿轮怪",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 140,
+      "types": [
+        "metal"
+      ],
+      "weakness": "fire",
+      "resistance": "grass",
+      "retreat": 3,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Klang",
+      "attacks": [
+        {
+          "name": "Hyper Ray",
+          "cost": {
+            "colorless": 2
+          },
+          "damage": 130,
+          "effects": [
+            "discard_energy:all"
+          ],
+          "desc": "Discard all Energy from this Pokémon.",
+          "name_zh": "超能射线",
+          "desc_zh": "弃置此宝可梦身上的所有能量。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Emergency Rotation",
+          "name_zh": "紧急轮换",
+          "tag": "hand_bench:opp_stage2",
+          "location": "field",
+          "desc": "Once during your turn, if this Pokémon is in your hand and your opponent has any Stage 2 Pokémon in play, you may put this Pokémon onto your Bench.",
+          "desc_zh": "在你的回合中，若此宝可梦在你的手牌中且对手场上有 2 阶进化宝可梦，则你可以使用 1 次，将此宝可梦放置到后备。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "SCR",
+        "number": "101"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 167,
+      "name_key": "klinklang",
+      "uid": "Klinklang@SCR 101"
     },
     {
       "name": "Meltan",
@@ -11340,6 +11498,64 @@
       "source_card_id": 245,
       "name_key": "alakazam",
       "uid": "Alakazam@TWM 82"
+    },
+    {
+      "name": "Espeon ex",
+      "name_zh": "太阳伊布 ex",
+      "supertype": "Pokemon",
+      "stage": 1,
+      "hp": 270,
+      "types": [
+        "psychic"
+      ],
+      "weakness": "darkness",
+      "resistance": "fighting",
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Stellar)",
+      "evolves_from": "Eevee",
+      "attacks": [
+        {
+          "name": "Psych Out",
+          "cost": {
+            "psychic": 1,
+            "colorless": 2
+          },
+          "damage": 160,
+          "effects": [
+            "discard_opp_random:1"
+          ],
+          "desc": "Discard a random card from your opponent’s hand.",
+          "name_zh": "精神压制",
+          "desc_zh": "随机弃置对手手牌中的 1 张卡。"
+        },
+        {
+          "name": "Amazez",
+          "cost": {
+            "grass": 1,
+            "psychic": 1,
+            "darkness": 1
+          },
+          "damage": 0,
+          "effects": [
+            "devolve:opp:1:each:to:deck"
+          ],
+          "desc": "Devolve each of your opponent’s evolved Pokémon by shuffling the highest Stage Evolution card on it into your opponent’s deck.",
+          "name_zh": "天河石",
+          "desc_zh": "将对手的每只已进化宝可梦退化，方法是将其上最高阶段的进化卡洗回对手的牌库。"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "PRE",
+        "number": "34"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 246,
+      "name_key": "espeonex",
+      "uid": "Espeon ex@PRE 34"
     },
     {
       "name": "Swirlix",
@@ -50993,6 +51209,58 @@
       "source_card_id": 1058,
       "name_key": "haunter",
       "uid": "Haunter@POR 49"
+    },
+    {
+      "name": "Gengar",
+      "name_zh": "耿鬼",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 130,
+      "types": [
+        "darkness"
+      ],
+      "weakness": "fighting",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Haunter",
+      "attacks": [
+        {
+          "name": "Mind Jack",
+          "cost": {
+            "darkness": 1
+          },
+          "damage": 10,
+          "effects": [
+            "dmg_plus:30:per:opp_bench"
+          ],
+          "desc": "This attack does 30 more damage for each of your opponent’s Benched Pokémon.",
+          "name_zh": "精神劫持",
+          "desc_zh": "对手每有 1 只后备宝可梦，此招式的伤害 +30。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Infinite Shadow",
+          "name_zh": "无限之影",
+          "tag": "passive:ko_to_hand",
+          "location": "field",
+          "desc": "If this Pokémon is Knocked Out by damage from an attack from your opponent’s Pokémon, put it into your hand instead of the discard pile. (Discard all attached cards.)",
+          "desc_zh": "若此宝可梦被对手宝可梦的招式伤害击倒，则将其加入手牌而非弃牌堆。（弃置所有附着的卡牌。）",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "POR",
+        "number": "50"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1059,
+      "name_key": "gengar",
+      "uid": "Gengar@POR 50"
     },
     {
       "name": "Skorupi",

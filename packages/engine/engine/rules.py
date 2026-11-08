@@ -113,10 +113,21 @@ def status_checkup(field: FieldPokemon, rng, phase: str = "start", *,
         field.damage += dmg
         events.append({"type": "poison_damage", "target": field.name, "dmg": dmg})
     if "burn" in field.status:
+        # S6c（官方，日月起）：**先放 2 个伤害指示物（20），再抛币；正面则治愈**。
+        # ⚠ 与日月**之前**的规则方向相反（旧规则：抛币，**反面**才受伤）。
+        #   按旧规则写会让灼伤变成「一半回合白挂」，而且卡面/日志/对拍全看不出来；
+        #   旧实现更省事——恒定 -20 且永不治愈，等于把「灼伤」当成永久的毒。
         dmg = int((override or {}).get("burn") or 20) \
             + int((bonus or {}).get("burn") or 0)
         field.damage += dmg
         events.append({"type": "burn_damage", "target": field.name, "dmg": dmg})
+        # 治愈判定（同一检查期内、伤害之后）：正面 → 移除灼伤。
+        # 场地可禁止这次治愈（Wela Volcano Park「Burned Pokémon can't be cured
+        # in this way」），由 `override["burn_no_cure"]` 表达。
+        if not (override or {}).get("burn_no_cure"):
+            if rng.random() < 0.5:
+                field.status.discard("burn")
+                events.append({"type": "burn_cure", "target": field.name})
     if "sleep" in field.status:
         if rng.random() < 0.5:
             field.status.discard("sleep")
@@ -131,3 +142,62 @@ def check_ko_then_prize() -> None:  # pragma: no cover
 
 # 便捷常量
 STATUSES = ("poison", "burn", "sleep", "paralyze", "confuse")
+
+# 特殊状态的**构成规则**（S6c；官方《玩法指引》+ SM7 规则书「Removing Special
+# Conditions」一节）：
+#   · 中毒 / 灼伤用**标记**记录 → 可以和任何状态共存，彼此也能共存
+#     （「An unfortunate Pokémon could be Burned, Paralyzed, and Poisoned」）；
+#   · 睡眠 / 混乱 / 麻痹靠**转动卡牌**表示 → 三者互斥，**后施加的取代先前的**。
+# 因此同时最多是「中毒 + 灼伤 + 三者之一」。
+STATUS_MARKER = ("poison", "burn")
+STATUS_ORIENT = ("sleep", "confuse", "paralyze")
+
+# 卡面/旧数据里的形容词拼写 → 引擎规范名
+STATUS_ALIASES = {"poisoned": "poison", "burned": "burn", "asleep": "sleep",
+                  "confused": "confuse", "paralyzed": "paralyze"}
+
+
+def apply_status_set(field: FieldPokemon, statuses) -> tuple:
+    """施加一组特殊状态（S6c）：按**构成规则**替换，不是无脑叠加
+
+    返回 ``(applied, removed)``，两者都已排序（便于日志与断言）。
+
+    ⚠ 三个容易写错的点，每一个都有对应测试：
+      1. **不是「只能有一个」**：中毒/灼伤是标记，能与其它状态共存。
+         写成「新状态清空全部」会顺带清掉**合法组合**（烧伤+中毒+麻痹）。
+      2. **不是「全部叠加」**：睡眠/混乱/麻痹三选一，后施加的取代先前的。
+         旧实现用 `status.add()`，于是「睡眠 + 混乱」能同时成立 —— 官方不允许
+         （两者都要转动卡牌，物理上只能有一种朝向）。
+      3. **同种状态重复施加既不叠加也不重置**：它本来就在，没有可重置的东西。
+      4. **一次效果里写两个转动卡牌类状态**（假设卡面「now Asleep and
+         Confused」）：按卡面**书写顺序**施加，所以只留**最后一个**。这也是本函数
+         收「整个集合」而不是单个状态的原因 —— 传进来就知道「后面还有没有」，
+         不必依赖调用方循环到最后一个才正确。
+    """
+    new: list = []
+    for s in statuses or ():
+        k = STATUS_ALIASES.get(str(s), str(s))
+        if k not in STATUSES:
+            # 静默丢弃 = 「施加了但没生效」永远查不出来（调用点已校验过状态词，
+            # 走到这里说明**新增的施加路径**漏了校验）→ 直接抛错。
+            raise ValueError(f"未知特殊状态：{s}")
+        if k not in new:
+            new.append(k)
+    # 一次效果里的多个转动卡牌类只留**最后一个**（卡面书写顺序即施加顺序）。
+    # 滤掉的是「被同组后来的顶掉」的那些 —— 与「移除旧状态」无关，别混在一起。
+    _last_orient = [k for k in new if k in STATUS_ORIENT][-1:]
+    new = [k for k in new if k not in STATUS_ORIENT] + _last_orient
+    if not new:
+        return [], []
+    removed: list = []
+    result: set = set()
+    for old in field.status:
+        k = STATUS_ALIASES.get(str(old), str(old))
+        if k in new:
+            continue                      # 已在结果里（新状态直接并进去）
+        if k in STATUS_ORIENT and any(n in STATUS_ORIENT for n in new):
+            removed.append(k)             # 转动卡牌类互斥：被新状态顶掉
+            continue
+        result.add(k)
+    field.status = result | set(new)
+    return sorted(new), sorted(removed)

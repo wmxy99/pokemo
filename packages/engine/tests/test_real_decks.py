@@ -247,7 +247,7 @@ class TestRealCardEffectWiring(unittest.TestCase):
         # 反面自伤时不清除混乱（与卡面一致：翻到反面则攻击失败且混乱不解除）
         self.assertIn("confuse", foe.status)
 
-        # 抛币正面（random() >= 0.5）→ 正常攻击并解除混乱
+        # 抛币正面（random() >= 0.5）→ 正常攻击，**混乱仍不解除**（S6c 官方）
         b2 = _arena()
         b2.current = 1
         b2.rng = _FixedRng(0.9)
@@ -258,7 +258,7 @@ class TestRealCardEffectWiring(unittest.TestCase):
         b2.players[1].active = hero
         r3 = b2.step({"verb": "attack", "attack": 0})
         self.assertTrue(r3["ok"], r3.get("error"))
-        self.assertNotIn("confuse", hero.status, "正面应解除混乱")
+        self.assertIn("confuse", hero.status, "正面只是攻击成立，混乱不解除")
         self.assertEqual(b2.players[0].active.damage, 10, "正面应正常造成伤害")
 
     def test_blaziken_blaze_dance_attaches_from_discard_on_evolve(self):

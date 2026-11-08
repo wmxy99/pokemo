@@ -23,7 +23,8 @@ from . import zones
 # S2（2026-11-08）事件总线 + 延迟队列
 from . import events
 from .rules import (compute_damage, status_checkup, confusion_self_damage,
-                    distribute_damage, apply_shield, STATUSES)
+                    distribute_damage, apply_shield, apply_status_set,
+                    STATUSES, STATUS_MARKER, STATUS_ORIENT)
 # 特殊能量子系统（2026-10-28）：提供量/附着限制/静态效果集中在一处
 from . import special_energy
 # 名称型字段的优先顺序（与 engine.commands 同源，避免两处漂移）
@@ -1785,7 +1786,7 @@ class Battle:
                          and self._stadium_meta()["kind"] == "keep_confuse")
         tgt.evolve_to(c.pdef)
         if _keep_confuse:
-            tgt.status.add("confuse")
+            self._set_status(tgt, ["confuse"])
             self._log("status_kept", {"target": tgt.name, "status": "confuse",
                                       "by": "stadium"})
         tgt.evolved_turn = self.turn_number
@@ -2019,7 +2020,7 @@ class Battle:
                                      "from": fp.name, "out": _old.name,
                                      "in": p.active.name, "side": "ability"})
                 if _then and not self._status_blocked(p.active, _then):
-                    p.active.status.add(_then)
+                    self._set_status(p.active, [_then])
                     self._log("status", {"player": self.current,
                                          "target": p.active.name,
                                          "status": _then,
@@ -2255,7 +2256,7 @@ class Battle:
                 st = tag.split(":", 1)[1]
                 if st not in STATUSES:
                     raise ValueError(f"未知状态：{st}")
-                fp.status.add(st)
+                self._set_status(fp, [st])
                 self._log("status", {"player": self.current, "name": name,
                                      "from": fp.name, "target": fp.name,
                                      "status": st, "side": "self"})
@@ -2278,7 +2279,7 @@ class Battle:
                                           "by": "status_immune",
                                           "effect": "status"})
                     return {"ok": True, "event": self.events[-1]}
-                opp.active.status.add(tag)
+                self._set_status(opp.active, [tag])
                 self._log("status", {"player": 1 - self.current, "name": name,
                                      "from": fp.name, "target": opp.active.name,
                                      "status": tag})
@@ -2718,7 +2719,7 @@ class Battle:
             opp = self.players[1 - self.current]
             if opp.active is None or opp.active.is_ko:
                 return
-            opp.active.status.add(t)
+            self._set_status(opp.active, [t])
             self._log("status", {"player": self.current,
                                  "target": opp.active.name, "status": t})
             return
@@ -3130,7 +3131,7 @@ class Battle:
                 self._log("blocked", {"target": tgt.name, "by": "status_immune",
                                       "effect": st})
                 return
-            tgt.status.add(st)
+            self._set_status(tgt, [st])
             self._log("status", {"player": owner, "target": tgt.name,
                                  "status": st, "by": name, "event": kind})
             return
@@ -3468,7 +3469,7 @@ class Battle:
             # 因此这里判的还是**原来那只**——它没被换下，也不该被混乱。
             if opp.active is not None \
                     and not self._trainer_poke_blocked(opp.active, kind):
-                opp.active.status.add("confuse")
+                self._set_status(opp.active, ["confuse"])
                 placed += " + confuse"
         elif tag.startswith("status_multi:"):
             placed = self._trainer_status_multi(opp, tag, kind)
@@ -5187,7 +5188,7 @@ class Battle:
             # 「If you attached Energy to your Active Pokémon in this way, it is
             # now Poisoned.」—— 前提是**真的附上了**，不是无条件挂状态。
             assert p.active is not None
-            p.active.status.add("poison")
+            self._set_status(p.active, ["poison"])
             self._log("status", {"player": self.current,
                                  "target": p.active.name, "status": "poison",
                                  "side": "self"})
@@ -5920,8 +5921,13 @@ class Battle:
                 self._log("blocked", {"target": opp.active.name,
                                       "by": "status_immune", "status": st})
                 continue
-            opp.active.status.add(st)
             applied.append(st)
+            applied.append(st)
+        # ⚠ 一次性施加：`apply_status_set` 会按卡面**书写顺序**把同组的转动卡牌类
+        # 折叠成**最后一个**。逐条调用时每次都不知道「后面还有没有」，规则就隐含地
+        # 落到循环顺序上（今天的实现恰好等价，但这层隐含前提不该存在 —— 将来
+        # 引入「按卡面顺序排队」就会分叉，而这类分叉在对局里看不出来）。
+        self._set_status(opp.active, applied)
         self._log("status", {"player": 1 - self.current,
                              "target": opp.active.name,
                              "status": "+".join(applied)})
@@ -6305,8 +6311,12 @@ class Battle:
             self._end_turn()
             return {"ok": True, "event": None}
         if confused:
-            attacker.status.discard("confuse")
-            self._log("confuse_heads", {"player": self.current})
+            # S6c（官方）：**混乱不会因为这次抛币而解除** —— 它只能靠进化、
+            # 换下战斗位、或另一个转动卡牌类状态顶掉来移除。旧实现正面即
+            # discard，等于「每次攻击有 50% 白送一次解状态」，比官方宽松得多
+            # （AI 学到的「混乱无所谓」是真规则下不成立的错觉）。
+            self._log("confuse_heads", {"player": self.current,
+                                        "target": attacker.name})
         defender = self.players[1 - self.current].active
         if defender is None:
             self._finish(self.current, "no_pokemon", {"loser": 1 - self.current})
@@ -6345,90 +6355,8 @@ class Battle:
         damage_dealt = 0
         try:
             if base > 0:
-                # 「This attack's damage isn't affected by any effects on your
-                # opponent's Active Pokémon.」（Koraidon「Shred」）—— 无视的是
-                # **效果**（护盾/减伤/道具/场地），不是弱点抗性（那印在卡上）
-                # 第六十五批：`ignore_effects:wr` 是**宽口径** —— 卡面多写了
-                # 「Weakness or Resistance」，连印在卡上的弱抗也一起无视。
-                # 两者不能混用：用窄口径接宽句式会静默漏掉弱抗那一半。
-                ignore_eff, ignore_wr = _ignore_effects_flags(atk.effects)
-                # 静态修正（S1）：`passive:no_weakness` 让弱点不生效；
-                # 带来源属性的减伤需要攻击方，才能按卡面限定结算
-                static = _static_mods(defender, attacker)
-                dmg = compute_damage(attacker, defender, base,
-                                     weakness_override=self._weakness_override(
-                                         attacker, defender),
-                                     ignore_weakness=(mods["ignore_weakness"]
-                                                      or static["no_weakness"]
-                                                      # S2b：**限时**无弱点
-                                                      # （`shield:no_weakness`）
-                                                      or defender.shield_no_weakness
-                                                      or ignore_wr),
-                                     ignore_resistance=(mods["ignore_resistance"]
-                                                        or ignore_wr))
-                # 「During your next turn, the Defending Pokémon takes N more
-                # damage from attacks (**after** applying Weakness and
-                # Resistance).」（Vibrava / Stunfisk）—— 在弱抗之后、其它减伤与
-                # 护盾之前叠加。只在**施加者自己的下个回合**内生效：
-                # 到期按施加者的 turn_counts 比较，且当前回合方必须是施加者。
-                if defender.dmg_taken_plus_next_n \
-                        and defender.dmg_taken_plus_next_owner == self.current \
-                        and defender.dmg_taken_plus_next_until > \
-                        self.turn_counts[self.current]:
-                    dmg += defender.dmg_taken_plus_next_n
-                    self._log("dmg_taken_plus_next_applied", {
-                        "target": defender.name,
-                        "n": defender.dmg_taken_plus_next_n})
-                # 静态免伤（2026-10-28 第八批）：卡面「Prevent all damage … by
-                # attacks from <来源>」是**常驻**被动，不是护盾；按弱抗后的伤害
-                # 判定门槛（`if that damage is N or more`）。「无视效果」的招式
-                # 同样无视这条（它是守方身上的效果）。
-                imm = (None if ignore_eff
-                       else _self_immune(defender, attacker, dmg))
-                # 场地免伤（Neutralization Zone）——同样是守方身上的效果
-                if imm is None and not ignore_eff \
-                        and self._stadium_immune(defender, attacker):
-                    imm = "stadium:dmg_immune"
-                # 卡面写「after applying Weakness and Resistance」→ 静态减伤在弱抗之后
-                if static["dmg_reduce"] and not ignore_eff:
-                    dmg = max(0, dmg - static["dmg_reduce"])
-                # 全队限时减伤（第四十六批，Iron Defender）：玩家级，同样在弱抗之后
-                if not ignore_eff:
-                    ts_red = self._team_shield_reduce(defender, attacker)
-                    if ts_red:
-                        dmg = max(0, dmg - ts_red)
-                        self._log("team_shield_reduce", {
-                            "target": defender.name, "n": ts_red})
-                # 全队常驻减伤（2026-10-29 第十九批）：效果源在**守方阵营**
-                # 任意一只身上（Curly Wall / Gear Coating / Stone Palace），
-                # 因此不能挂在受击者自己的 passive 上；同口径在弱抗之后。
-                if not ignore_eff:
-                    team_red = families.static_dmg_minus(self, defender, attacker)
-                    if team_red:
-                        dmg = max(0, dmg - team_red)
-                tool_red = 0 if ignore_eff else self._tool_reduce_vs(
-                    defender, attacker)
-                if tool_red:
-                    dmg = max(0, dmg - tool_red)
-                stad_red = 0 if ignore_eff else self._stadium_damage_reduce(
-                    defender)
-                if stad_red:
-                    dmg = max(0, dmg - stad_red)
-                shield_block = None
-                if not ignore_eff:
-                    shield_block = _shield_blocks(defender, attacker, dmg)
-                    dmg = apply_shield(defender, dmg,  # 护盾在弱抗之后
-                                       block=shield_block)
-                # 抛币免伤被动（第四十五批，Fezandipiti）：被招式伤害时抛一枚，
-                # 正面则本次伤害归零。必须在**伤害结算内**（事后无法撤销）。
-                if dmg > 0 and not ignore_eff and self._coin_prevent_of(defender):
-                    dmg = 0
-                    self._log("blocked", {"target": defender.name,
-                                          "by": "coin_prevent"})
-                if imm:
-                    dmg = 0
-                    self._log("blocked", {"target": defender.name,
-                                          "by": imm})
+                _pipe = self._damage_pipeline(attacker, defender, atk, mods, base)
+                dmg = _pipe["dmg"]
                 damage_dealt = dmg or 0
                 if dmg:
                     defender.damage += dmg
@@ -6441,7 +6369,9 @@ class Battle:
                                      "printed": atk.damage,
                                      "bonus": mods["plus"],
                                      "stadium_bonus": stad_bonus,
-                                     "static_reduce": static["dmg_reduce"],
+                                     "static_reduce": _pipe["static"]["dmg_reduce"],
+                                     # S6c：逐项顺序（「顺序矩阵」测试就靠它断言）
+                                     "steps": _pipe["steps"],
                                      "blocked": bool(eff_base and dmg == 0)})
             elif atk.damage > 0 or mods["set"] is not None:
                 self._log("damage", {"target": defender.name,
@@ -6909,6 +6839,22 @@ class Battle:
             return False
         return fp is not None and fp.total_energy() > 0
 
+    def _set_status(self, target: FieldPokemon, statuses) -> list:
+        """施加特殊状态的**唯一入口**（S6c）：按构成规则替换并记日志
+
+        ⚠ 不要再用 `fp.status.add(...)`：那会让「睡眠 + 混乱」同时成立（官方
+        不允许，两者都要转动卡牌）。全部施加点（招式 / 特性 / 道具 / 训练家 /
+        事件订阅 / 受击反应）都必须走这里，否则同一条规则在不同路径上行为
+        不一致 —— 而这类不一致在对局里**看不出来**（只表现为 AI 偶发少算一次
+        混乱判定）。
+        """
+        applied, removed = apply_status_set(target, statuses)
+        if removed:
+            self._log("status_replace", {"target": target.name,
+                                         "applied": list(applied),
+                                         "removed": list(removed)})
+        return applied
+
     def _status_blocked(self, fp: Optional[FieldPokemon],
                         status: Optional[str] = None) -> bool:
         """特殊状态是否**不能施加**到该宝可梦
@@ -7210,7 +7156,7 @@ class Battle:
                                       "by": "status_immune",
                                       "effect": "tool_status"})
             else:
-                attacker.status.add(_st)
+                self._set_status(attacker, [_st])
                 self._log("tool_trigger", {
                     "player": owner, "tool": defender.tool_name,
                     "kind": "status", "status": _st,
@@ -7260,7 +7206,7 @@ class Battle:
             kind = parts[1] if len(parts) > 1 else ""
             arg = parts[2] if len(parts) > 2 else ""
             if kind == "status" and arg in STATUSES:
-                attacker.status.add(arg)
+                self._set_status(attacker, [arg])
                 self._log("ability_trigger", {
                     "player": owner, "ability": ab.name, "kind": "status",
                     "status": arg, "target": attacker.name})
@@ -7362,6 +7308,119 @@ class Battle:
         return True
 
     # ---------- v1.4 伤害修正层（抛币 / 计数缩放 / 条件加伤） ----------
+    def _damage_pipeline(self, attacker: FieldPokemon,
+                         defender: FieldPokemon, atk, mods: dict,
+                         base: int) -> dict:
+        """**单点**伤害流水线（S6c）：弱点 → 抗性 → 减伤 → 护盾 → 免疫
+
+        顺序是**规则**，不是实现细节：卡面写「after applying Weakness and
+        Resistance」的减伤只有在弱抗**之后**才正确；顺序一换数值就静默错
+        （例：基础 100、弱点 ×2、抗性 −30、静态减伤 −30 —— 正确 140，
+        先减伤再 ×2 则是 80），而卡面、日志、覆盖率、对账**全都看不出来**。
+
+        返回 ``{"dmg", "steps", "static", "blocked_by", "shield_block"}``。
+        `steps` 逐项记录「哪一步改了多少」，写进 `damage` 事件 —— 它同时是
+        测试的断言对象（`tests/test_s6c_damage_order.py`）。
+
+        ⚠ 与 `_snipe_active_damage`（狙击/回归路径）**共用**这一条流水线：
+        两条路径的减伤顺序一旦分叉，就是同一类静默错。
+        """
+        steps: list = [{"step": "base", "value": int(base)}]
+
+        # 「This attack's damage isn't affected by any effects on your
+        # opponent's Active Pokémon.」（Koraidon「Shred」）—— 无视的是
+        # **效果**（护盾/减伤/道具/场地），不是弱点抗性（那印在卡上）
+        # 第六十五批：`ignore_effects:wr` 是**宽口径** —— 卡面多写了
+        # 「Weakness or Resistance」，连印在卡上的弱抗也一起无视。
+        # 两者不能混用：用窄口径接宽句式会静默漏掉弱抗那一半。
+        ignore_eff, ignore_wr = _ignore_effects_flags(atk.effects)
+        # 静态修正（S1）：`passive:no_weakness` 让弱点不生效；
+        # 带来源属性的减伤需要攻击方，才能按卡面限定结算
+        static = _static_mods(defender, attacker)
+        dmg = compute_damage(
+            attacker, defender, base,
+            weakness_override=self._weakness_override(attacker, defender),
+            ignore_weakness=(mods["ignore_weakness"]
+                             or static["no_weakness"]
+                             # S2b：**限时**无弱点（`shield:no_weakness`）
+                             or defender.shield_no_weakness
+                             or ignore_wr),
+            ignore_resistance=(mods["ignore_resistance"] or ignore_wr))
+        steps.append({"step": "weak_res", "value": int(dmg)})
+        # 「During your next turn, the Defending Pokémon takes N more damage
+        # from attacks (**after** applying Weakness and Resistance).」
+        # （Vibrava / Stunfisk）—— 在弱抗之后、其它减伤与护盾之前叠加。
+        # 只在**施加者自己的下个回合**内生效：到期按施加者的 turn_counts 比较，
+        # 且当前回合方必须是施加者。
+        if defender.dmg_taken_plus_next_n \
+                and defender.dmg_taken_plus_next_owner == self.current \
+                and defender.dmg_taken_plus_next_until > \
+                self.turn_counts[self.current]:
+            dmg += defender.dmg_taken_plus_next_n
+            steps.append({"step": "dmg_taken_plus_next",
+                          "value": int(defender.dmg_taken_plus_next_n)})
+            self._log("dmg_taken_plus_next_applied", {
+                "target": defender.name,
+                "n": defender.dmg_taken_plus_next_n})
+        # 静态免伤（2026-10-28 第八批）：卡面「Prevent all damage … by attacks
+        # from <来源>」是**常驻**被动，不是护盾；按弱抗后的伤害判定门槛
+        # （`if that damage is N or more`）。「无视效果」的招式同样无视这条。
+        imm = (None if ignore_eff
+               else _self_immune(defender, attacker, dmg))
+        # 场地免伤（Neutralization Zone）——同样是守方身上的效果
+        if imm is None and not ignore_eff \
+                and self._stadium_immune(defender, attacker):
+            imm = "stadium:dmg_immune"
+        # 卡面写「after applying Weakness and Resistance」→ 静态减伤在弱抗之后
+        if static["dmg_reduce"] and not ignore_eff:
+            dmg = max(0, dmg - static["dmg_reduce"])
+            steps.append({"step": "static_reduce",
+                          "value": -int(static["dmg_reduce"])})
+        # 全队限时减伤（第四十六批，Iron Defender）：玩家级，同样在弱抗之后
+        if not ignore_eff:
+            ts_red = self._team_shield_reduce(defender, attacker)
+            if ts_red:
+                dmg = max(0, dmg - ts_red)
+                steps.append({"step": "team_shield", "value": -int(ts_red)})
+                self._log("team_shield_reduce", {
+                    "target": defender.name, "n": ts_red})
+        # 全队常驻减伤（2026-10-29 第十九批）：效果源在**守方阵营**任意一只
+        # 身上（Curly Wall / Gear Coating / Stone Palace），因此不能挂在受击者
+        # 自己的 passive 上；同口径在弱抗之后。
+        if not ignore_eff:
+            team_red = families.static_dmg_minus(self, defender, attacker)
+            if team_red:
+                dmg = max(0, dmg - team_red)
+                steps.append({"step": "team_static", "value": -int(team_red)})
+        tool_red = 0 if ignore_eff else self._tool_reduce_vs(defender, attacker)
+        if tool_red:
+            dmg = max(0, dmg - tool_red)
+            steps.append({"step": "tool", "value": -int(tool_red)})
+        stad_red = 0 if ignore_eff else self._stadium_damage_reduce(defender)
+        if stad_red:
+            dmg = max(0, dmg - stad_red)
+            steps.append({"step": "stadium", "value": -int(stad_red)})
+        shield_block = None
+        if not ignore_eff:
+            shield_block = _shield_blocks(defender, attacker, dmg)
+            _before = dmg
+            dmg = apply_shield(defender, dmg, block=shield_block)  # 护盾在弱抗之后
+            if dmg != _before:
+                steps.append({"step": "shield", "value": int(dmg - _before)})
+        # 抛币免伤被动（第四十五批，Fezandipiti）：被招式伤害时抛一枚，正面则
+        # 本次伤害归零。必须在**伤害结算内**（事后无法撤销）。
+        if dmg > 0 and not ignore_eff and self._coin_prevent_of(defender):
+            dmg = 0
+            steps.append({"step": "coin_prevent", "value": "zero"})
+            self._log("blocked", {"target": defender.name, "by": "coin_prevent"})
+        if imm:
+            dmg = 0
+            steps.append({"step": "immune", "value": "zero"})
+            self._log("blocked", {"target": defender.name, "by": imm})
+        return {"dmg": dmg, "steps": steps, "static": static,
+                "blocked_by": imm, "shield_block": shield_block,
+                "ignore_eff": ignore_eff, "ignore_wr": ignore_wr}
+
     def _attack_mods(self, attacker: FieldPokemon, effects: tuple,
                      action: Optional[dict],
                      defender: Optional[FieldPokemon] = None,
@@ -8270,7 +8329,7 @@ class Battle:
                 st = tag.split(":", 1)[1]
                 if st not in STATUSES:
                     raise ValueError(f"未知状态：{st}")
-                attacker.status.add(st)
+                self._set_status(attacker, [st])
                 self._log("status", {"player": self.current,
                                      "target": attacker.name, "status": st,
                                      "side": "self"})
@@ -8295,8 +8354,10 @@ class Battle:
                             raise ValueError(f"未知状态：{_st0}")
                         if _st0 in _mb:
                             continue
-                        opp.active.status.add(_st0)
                         _ap.append(_st0)
+                        _ap.append(_st0)
+                    # 一次性施加（同训练家侧口径，见 `_set_status` 注释）
+                    self._set_status(opp.active, _ap)
                     self._log("status", {"player": 1 - self.current,
                                          "target": opp.active.name,
                                          "status": "+".join(_ap)})
@@ -8312,7 +8373,7 @@ class Battle:
                         self._log("blocked", {"target": opp.active.name,
                                               "by": "status_immune"})
                         continue
-                    opp.active.status.add(tag)
+                    self._set_status(opp.active, [tag])
                     self._log("status", {"player": 1 - self.current,
                                          "target": opp.active.name,
                                          "status": tag})
@@ -8463,7 +8524,7 @@ class Battle:
                                           "by": "status_immune",
                                           "status": _pick})
                     continue
-                opp.active.status.add(_pick)
+                self._set_status(opp.active, [_pick])
                 self._log("status", {"player": 1 - self.current,
                                      "target": opp.active.name,
                                      "status": _pick, "chosen_from": _opts})

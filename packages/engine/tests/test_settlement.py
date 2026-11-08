@@ -146,13 +146,16 @@ class TestDamage(unittest.TestCase):
 
 class TestSpecialConditions(unittest.TestCase):
     def test_status_checkup_poison_burn(self):
+        """检查期顺序（官方）：中毒 → 灼伤（先 2 个指示物，**再**抛币治愈）"""
         fp = make_pokemon(KO_T)
         fp.status.update({"poison", "burn"})
         evs = status_checkup(fp, random.Random(1))
-        self.assertEqual(fp.damage, 30)          # 10 + 20
-        self.assertEqual(len(evs), 2)
-        self.assertEqual(sorted(e["type"] for e in evs),
-                         ["burn_damage", "poison_damage"])
+        self.assertEqual(fp.damage, 30)          # 10 + 20（灼伤伤害是**固定的**）
+        kinds = [e["type"] for e in evs]
+        # ⚠ 灼伤**不是**「抛币反面才受伤」（那是日月之前的旧规则）：伤害恒定 20，
+        #   抛币只决定**是否治愈**。顺序也固定：先中毒、再灼伤。
+        self.assertEqual(kinds[:2], ["poison_damage", "burn_damage"], kinds)
+        self.assertIn(kinds[-1], ("burn_damage", "burn_cure"), kinds)
 
     def test_sleep_wake_coin(self):
         fp = make_pokemon(KO_T)
@@ -251,7 +254,12 @@ class TestSpecialConditions(unittest.TestCase):
         self.assertEqual(a.b.players[1].active.damage, 0)  # 攻击失败
         self.assertIn("confuse", atk.status)  # tails 后混乱保留
 
-    def test_confuse_heads_attack_and_remove(self):
+    def test_confuse_heads_attack_and_keep(self):
+        """混乱正面：攻击照常，**混乱不解除**（S6c 按官方改）
+
+        旧实现正面即 `discard("confuse")` = 每次攻击 50% 白送一次解状态，
+        比官方宽松得多。混乱只能靠进化 / 换下 / 别的转动卡牌类状态顶掉。
+        """
         a = Arena()
         atk = a.b.players[0].active
         addE(atk, 1)
@@ -259,7 +267,7 @@ class TestSpecialConditions(unittest.TestCase):
         a.b.rng.random = lambda: 0.9          # heads
         a.attack()
         self.assertEqual(a.b.players[1].active.damage, 30)
-        self.assertNotIn("confuse", atk.status)
+        self.assertIn("confuse", atk.status)
 
     def test_poison_apply_via_attack(self):
         a = Arena()

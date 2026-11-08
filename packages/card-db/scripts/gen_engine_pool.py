@@ -113,6 +113,10 @@ TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss", "research",
                 "draw_both:", "opp_shuffle_draw:",
                 # S6（2026-10-28）：弃道具 / 弃场地 / 回手族 / 能量移动 / S5 手牌
                 "discard_tool:", "discard_stadium", "bounce:", "energy_move:",
+                # F7（2026-11-08）：Megaton Blower —— 一句三动作（对手全场道具 +
+                # 全部特殊能量 + 可选的场上场地）合成**一条**卡级 tag。
+                # 前缀不被 `discard_tool:` 覆盖（第 13 位是 `_` 不是 `:`）。
+                "discard_tool_senergy_all:",
                 # 第七十批（2026-11-04）：弃牌堆基本能量洗回牌库（Energy Recycler）
                 # —— 复用招式侧 Kyogre「Riptide」的同一 helper `_energy_to_deck`。
                 "energy_to_deck:",
@@ -424,6 +428,21 @@ def _supported_ability_tags(tags, location: str) -> list:
     return out
 
 
+# 可以**复合**到一条 `fp.tool` 里的道具静态修正（`a|b`，F7 · 2026-11-08）
+#
+# 判据是「可累加、无触发时点」：多一段只会多生效一份修正。`on_event:` /
+# `on_damaged:` / `survive:` 这类带触发时点，混进复合会漏触发（引擎按首段读），
+# 因此**不在**白名单内 —— 出现即整卡拒收，绝不静默拼接。
+TOOL_COMPOUND_KINDS = ("cost_less", "dmg_plus", "hp_plus",
+                       "retreat_less", "retreat_plus")
+
+
+def _tool_compoundable(tag) -> bool:
+    parts = str(tag or "").split(":")
+    return len(parts) >= 3 and parts[0] == "tool" \
+        and parts[1] in TOOL_COMPOUND_KINDS and parts[2].lstrip("-").isdigit()
+
+
 def _cost_of(cost_list) -> dict:
     out: dict = {}
     for c in cost_list or []:
@@ -615,7 +634,18 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
                      # Heavy Baton / Powerglass）。引擎按 `fp.tool` 前缀在事件点
                      # 读取，与 `tool:` 一样是「附着后才生效」，不参与普通派发。
                      or str(t).startswith("on_event:")]
-        if len(tool_tags) != 1 or len(tags) != 1:
+        if len(tool_tags) == 1 and len(tags) == 1:
+            pass
+        elif len(tool_tags) == len(tags) > 1 \
+                and all(_tool_compoundable(t) for t in tags):
+            # F7（2026-11-08）：一句话里两个**可累加的静态修正** —— Hop's Choice
+            # Band「Attacks … cost {C} less **and** do 30 more damage」。
+            # 引擎用 `fp.tool` 单字符串承载，复合形态是 `a|b`（静态层逐段读取）。
+            # 只有白名单里的静态种类可以复合：混进 `on_damaged:` 之类的触发式
+            # 道具会漏触发，因此这里**拒收**而不是拼接。
+            tag = "|".join(tags)
+            tags = [tag]
+        else:
             return None
     # 多 tag 训练家（2026-10-28 第十二批）：引擎的 `TrainerDef.tag` 只有**一个**
     # tag，派发链也只执行一条。若解析产出多条可执行 tag（Carmine 的
@@ -665,7 +695,46 @@ def build_trainer(card: dict, items: dict) -> Optional[dict]:
     _pg = str((it or {}).get("play_gate") or "")
     if _pg:
         entry["play_gate"] = _pg
+    # 道具**提供招式**（F7 · 2026-11-08，Core Memory）：招式本体写在卡的
+    # `attacks[]` 上，与宝可梦招式同一套解析产物 → 按攻击侧白名单准入
+    # （任一条未建模/空效果就整卡不收，绝不静默丢掉招式效果）。
+    if str(tag).startswith("tool:provide_attack:"):
+        _t_atk = _tool_attack_of(card, items)
+        if _t_atk is None:
+            return None
+        _t_parts = str(tag).split(":")
+        entry["tool_attack"] = _t_atk
+        entry["tool_attack_holder"] = _t_parts[2] if len(_t_parts) > 2 else ""
     return entry
+
+
+def _tool_attack_of(card: dict, items: dict) -> Optional[dict]:
+    """道具卡自带的招式（`attacks[0]`）→ 卡池条目形态；不可执行时返回 None
+
+    Technical Machine 类道具卡面只有**一个**招式（「the attack on this card」），
+    多于一个属数据异常 → 拒收（宁可未建模，也不猜用哪一个）。
+    """
+    atks = card.get("attacks") or []
+    if len(atks) != 1:
+        return None
+    a = atks[0]
+    it = items.get(("attack", a.get("name"))) or {}
+    if it.get("unsupported"):
+        return None
+    tags = _supported_attack_tags(it.get("engine_tags"))
+    if a.get("effect") and not tags:
+        return None
+    if not tags and not int(a.get("damage") or 0):
+        return None                  # 无伤害、无效果 = 空招式，不收
+    return {
+        "name": a.get("name"),
+        "cost": _cost_of(a.get("cost")),
+        "damage": int(a.get("damage") or 0),
+        "effects": tags,
+        "desc": a.get("effect") or "",
+        "name_zh": a.get("name_zh") or "",
+        "desc_zh": a.get("effect_zh") or "",
+    }
 
 
 def _build_fossil(card: dict, items: dict, tag: str) -> Optional[dict]:

@@ -488,7 +488,7 @@ class Battle:
                     and p.active.total_energy() <= _eab:
                 blocked = True
             if not blocked:
-                for ai, atk in enumerate(p.active.pdef.attacks):
+                for ai, atk in enumerate(_attacks_of(p.active)):
                     # 跨回合攻击封锁（`attack_lock:*`）：即使能量足够也不得出手
                     if p.active.attack_locked(atk.name, turn_count):
                         continue
@@ -952,6 +952,19 @@ class Battle:
                 # 拉对手后备 + 混乱（Lisia's Appeal）：候选与 gust 相同
                 for bi in range(len(opp.bench)):
                     out.append({**base, "target": bi})
+            elif tag.startswith("discard_tool_senergy_all:"):
+                # F7（Megaton Blower）：三个目标段任一可做 → 可打出。
+                # 只按首段（道具）判会让「对手只有特殊能量」时这张卡选不到
+                # （池内死卡），而它此时本来是完全可用的。
+                _dts = tag.split(":")
+                _dsc = _dts[1] if len(_dts) > 1 else "opp"
+                _dpl = opp if _dsc != "own" else p
+                _any_hit = any(fp.tool or fp.senergy
+                               for fp in _dpl.all_field())
+                if "stadium" in _dts[2:]:
+                    _any_hit = _any_hit or bool(self.stadium)
+                if _any_hit:
+                    out.append(dict(base))
             elif tag.startswith("opp_hand:"):
                 # 对手手牌操作（2026-10-30 第三十二批）：对手手里**没有**符合
                 # 筛选条件的牌时，这张卡打出去只会「什么都不发生」——必须从
@@ -3598,6 +3611,12 @@ class Battle:
             # ⚠ 两个条件必须**落在同一只**身上（卡面「from 1 of …」）；拆成两次
             #   递归挑选会变成「可以分跨两只」—— 静默加强。
             placed = self._trainer_discard_tool_senergy(opp, kind)
+        elif tag.startswith("discard_tool_senergy_all:"):
+            # F7（Megaton Blower）：「Discard **all** Pokémon Tools and Special
+            # Energy from all of your opponent's Pokémon, and discard a Stadium
+            # in play.」—— 与 `discard_tool_senergy:`（同一只身上各 1 张）不同，
+            # 这里是**全场全弃**，不可合并。
+            placed = self._trainer_discard_tool_senergy_all(tag, kind)
         elif tag.startswith("recon:"):
             # 检视牌库顶（2026-10-30 第二十批）：Pokégear 3.0 / Bug Catching Set /
             # Drayton / Hassel / Grimsley's Move / Waitress
@@ -3979,6 +3998,12 @@ class Battle:
         _subs = ([x for x in tag.split("|") if x]
                  if "|" in tag and not tag.startswith(("coin:", "coin_flip:"))
                  else [tag])
+        # 道具的 `|` 是**静态修正的复合**（`tool:cost_less:1:…|tool:dmg_plus:30`，
+        # Hop's Choice Band），整条字符串要原样存进 `fp.tool` 供静态层读取。
+        # 拆开跑会让第二次 `_trainer_attach_tool` 撞上「已附着道具」而抛错，
+        # 且第一段之外的修正被静默丢掉。
+        if kind == "tool":
+            _subs = [tag]
         placed = ""
         for _t in _subs:
             _d = self._dispatch_trainer_tag(p, opp, c, _t, kind, action, hi)
@@ -5447,6 +5472,48 @@ class Battle:
                                           "owner": opp.name, "target": None})
         return "none"
 
+    def _trainer_discard_tool_senergy_all(self, tag: str,
+                                          kind: str = "") -> str:
+        """弃**全场**道具 + **全部**特殊能量（Megaton Blower，F7）
+
+        tag：``discard_tool_senergy_all:<scope>[:stadium]``
+          · ``scope``：``opp`` = 对手所有宝可梦（卡面原文）；``own`` 对称保留
+          · ``:stadium`` = 同一句还要求「and discard a Stadium in play」
+
+        为什么合成**一条** tag 而不是拆成 `discard_tool:all:opp` +
+        `discard_senergy:…` + `discard_stadium`：训练家卡只有一个卡级 tag，
+        拆开会被整卡拒收；而 `discard_stadium` 单独成卡时语义是「弃场地」，
+        与这里的「可选附带段」不同（无场地时本卡仍可打出）。
+        """
+        parts = str(tag).split(":")
+        scope = parts[1] if len(parts) > 1 else "opp"
+        with_stadium = "stadium" in parts[2:]
+        opp = self.players[1 - self.current]
+        owner = opp if scope != "own" else self.players[self.current]
+        # 道具段复用既有的 `_apply_discard_tool`：它已处理「效果免疫」与
+        # 「道具卡对象进弃牌堆」（漏了后者，弃掉的道具会在牌库里凭空多一张）。
+        tools = self._apply_discard_tool(
+            f"discard_tool:all:{'opp' if scope != 'own' else 'own'}",
+            "trainer", kind)
+        senergy = 0
+        for fp in list(owner.all_field()):
+            if not fp.senergy:
+                continue
+            if self._effect_blocked(fp, "trainer", self.current, kind):
+                self._log("blocked", {"target": fp.name, "by": "effect_immune",
+                                      "effect": "discard_senergy",
+                                      "source": "trainer"})
+                continue
+            senergy += _discard_special_energy(self, owner, fp, 999)
+        stadium = self._apply_discard_stadium() if with_stadium else None
+        self._log("discard_tool_senergy_all", {
+            "player": self.current, "owner": owner.name,
+            "tools": tools, "senergy": senergy, "stadium": stadium})
+        out = f"tools {tools}, special energy {senergy}"
+        if with_stadium:
+            out += f", stadium {stadium or 'none'}"
+        return out
+
     def _do_opp_hand(self, p: PlayerState, tag: str, action: dict) -> str:
         """对手手牌操作（``opp_hand:<op>:<sel>[:<n>|:all]``）—— **我方选**口径
 
@@ -6860,13 +6927,15 @@ class Battle:
     def _do_attack(self, p: PlayerState, action: dict) -> dict:
         if p.active is None:
             raise ValueError("无 active")
+        # 招式表必须与 `legal_actions` **同一口径**（含道具提供的招式），
+        # 否则动作里的 `attack` 下标会错位到另一招（F7 · Core Memory）。
+        _my_atks = _attacks_of(p.active)
         if self.cfg.first_turn_no_attack and self._opening_turn():
             # 例外卡（「If you go first, you can use this attack during your
             # first turn.」）不受限；其余整只拦下（官方）。
-            _ai0 = _attack_index_from_action(p.active.pdef.attacks, action)
-            if _ai0 is None or _ai0 >= len(p.active.pdef.attacks) \
-                    or not _first_turn_attack_ok(p.active,
-                                                 p.active.pdef.attacks[_ai0]):
+            _ai0 = _attack_index_from_action(_my_atks, action)
+            if _ai0 is None or _ai0 >= len(_my_atks) \
+                    or not _first_turn_attack_ok(p.active, _my_atks[_ai0]):
                 raise ValueError("先手第一回合不可攻击")
         if _NO_ATTACK_STATUS & p.active.status:
             raise ValueError("睡眠/麻痹中禁止攻击")
@@ -6874,15 +6943,14 @@ class Battle:
         # 额度用完后必须挡住 —— 否则「续攻」会变成「无限攻」。
         if p.attacks_this_turn >= self._attack_allowance(p.active):
             raise ValueError("本回合已用完攻击次数")
-        ai = _attack_index_from_action(p.active.pdef.attacks, action)
+        ai = _attack_index_from_action(_my_atks, action)
         if ai is None:
-            known = "、".join(
-                (a.name_zh or a.name) for a in p.active.pdef.attacks)
+            known = "、".join((a.name_zh or a.name) for a in _my_atks)
             raise ValueError(
                 f"无法识别招式「{_name_hint(action)}」（可用：{known}）")
-        if ai >= len(p.active.pdef.attacks):
+        if ai >= len(_my_atks):
             raise ValueError("招式越界")
-        atk = p.active.pdef.attacks[ai]
+        atk = _my_atks[ai]
         if p.active.attack_locked(atk.name, self.turn_counts[self.current]):
             raise ValueError("该宝可梦当前不能使用此招式")
         # 「if the Defending Pokémon tries to use an attack, … flips a coin. If
@@ -6928,7 +6996,7 @@ class Battle:
         # S5（2026-11-08）：`opp_deck_top:N` 借用 —— 先记「翻开了哪 N 张」
         # （卡面明文 Reveal，双方可见），**洗回**要等招式结算完再做（见下方），
         # 否则复制的招式看牌库时会看到「已经洗过」的另一副牌。
-        _base_scope = _borrow_scope(p.active.pdef.attacks[ai])
+        _base_scope = _borrow_scope(_my_atks[ai])
         _deck_top_n = _borrow_deck_top_n(_base_scope)
         _ropp = None
         if _deck_top_n:
@@ -6937,14 +7005,14 @@ class Battle:
             self._log("reveal", {"player": 1 - self.current, "from": "deck_top",
                                  "n": len(_rtop),
                                  "cards": [_card_label(x) for x in _rtop],
-                                 "via": p.active.pdef.attacks[ai].name})
+                                 "via": _my_atks[ai].name})
         if not self._can_pay_attack(p.active, pay_atk):
             raise ValueError("能量不足（无法支付招式费用）")
         attacker = p.active
         _log = {"player": self.current, "attack": atk.name,
                 "from": attacker.name, "cost": dict(pay_atk.cost)}
         if borrow:
-            _log["via"] = p.active.pdef.attacks[ai].name
+            _log["via"] = _my_atks[ai].name
             _log["borrow_src"] = borrow["src"]
         self._log("attack", _log)
         # 攻击额度记账（第六十一批）：放在「真的打出去了」之后 —— 前面的
@@ -7914,8 +7982,8 @@ class Battle:
         特定攻击方成立，静态层拿不到攻击方上下文，无条件累加会变成**全类型减伤**。
         `discard`（浆果类一次性道具）在**生效后**弃置。
         """
-        tag = _tool_tag(defender)
-        if not tag.startswith("tool:dmg_reduce:"):
+        tag = _tool_sub(defender, "tool:dmg_reduce:")
+        if not tag:
             return 0
         meta = _tool_meta(tag)
         if not meta["n"]:
@@ -7959,8 +8027,8 @@ class Battle:
 
         支持 kind：`draw`（抽 n 张，归属持有者）/ `counter`（攻击方受 n 点伤害）。
         """
-        tag = _tool_tag(defender)
-        if dmg <= 0 or not tag.startswith("tool:on_damaged:"):
+        tag = _tool_sub(defender, "tool:on_damaged:")
+        if dmg <= 0 or not tag:
             return
         meta = _tool_meta(tag)
         # 持有者限定（例：`the {D} Pokémon this card is attached to`）
@@ -8144,8 +8212,8 @@ class Battle:
         只在**伤害结算后 `is_ko` 成立**时调用（调用点已保证"受伤前满 HP"）。
         返回 True 表示已免击倒（调用方不应再走 `_resolve_ko`）。
         """
-        tag = _tool_tag(defender)
-        if not tag.startswith("tool:survive:"):
+        tag = _tool_sub(defender, "tool:survive:")
+        if not tag:
             return False
         try:
             m = int(tag.split(":")[2])
@@ -11369,7 +11437,7 @@ class Battle:
             d["name_zh"] = fp.pdef.name_zh
             d["display"] = fp.pdef.display
             d["abilities"] = [abil(a) for a in fp.pdef.abilities]
-            d["attacks"] = [atk(a) for a in fp.pdef.attacks]
+            d["attacks"] = [atk(a) for a in _attacks_of(fp)]
             return d
 
         hand = []
@@ -14231,10 +14299,9 @@ def _static_mods(fp: Optional[FieldPokemon],
             out["no_retreat"] = True
     # 道具的 `dmg_reduce` 需要**按攻击方**判定（可能带 from/holder 限定），
     # 不能在 `_static_mods` 里无条件累加 —— 见 `Battle._tool_reduce_vs`。
-    # 这里只处理与攻击方无关的两类。
-    tool = fp.tool
-    if tool:
-        tparts = str(tool).split(":")
+    # 这里只处理与攻击方无关的两类（复合道具逐段看）。
+    for seg in _tool_subs(fp):
+        tparts = str(seg).split(":")
         tkind = tparts[1] if len(tparts) > 1 else ""
         if tkind == "no_weakness":
             out["no_weakness"] = True
@@ -14375,20 +14442,25 @@ def _tool_dmg_plus(attacker: Optional[FieldPokemon],
 
     与 `families.static_dmg_plus` 同口径：只在招式**本身有基础伤害**时生效
     （调用点已判定），且加伤发生在弱点/抗性之前。
+
+    复合道具（`a|b`）逐段求和：Hop's Choice Band 的「+30」与「费用 −1」写在
+    同一张卡上，只认首段会静默丢掉加伤。
     """
-    tag = _tool_tag(attacker)
-    if not tag.startswith("tool:dmg_plus:"):
-        return 0
-    meta = _tool_meta(tag)
-    if not meta["n"]:
-        return 0
-    if not _qual_ok(meta["holder"], attacker):
-        return 0
-    if not _qual_ok(meta["from"], attacker):
-        return 0
-    if not _target_ok(meta["target"], defender):
-        return 0
-    return meta["n"]
+    total = 0
+    for tag in _tool_subs(attacker):
+        if not tag.startswith("tool:dmg_plus:"):
+            continue
+        meta = _tool_meta(tag)
+        if not meta["n"]:
+            continue
+        if not _qual_ok(meta["holder"], attacker):
+            continue
+        if not _qual_ok(meta["from"], attacker):
+            continue
+        if not _target_ok(meta["target"], defender):
+            continue
+        total += meta["n"]
+    return total
 
 
 def _cheaper_cost(cost, n: int):
@@ -14412,24 +14484,44 @@ def _cheaper_cost(cost, n: int):
 
 
 def _attack_cost_delta(battle, fp) -> int:
-    """道具提供的招式费用**减免**（S6 2026-10-28：Sparkling Crystal / Counter Gain）"""
-    tag = _tool_tag(fp)
-    if not tag.startswith("tool:cost_less:"):
-        return 0
-    parts = tag.split(":")
-    n = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
-    cond = parts[3] if len(parts) > 3 else ""
-    if cond == "tera":
-        # Tera 是数据集 `category`（形如 "Tera(Fire)"），引擎可精确判定
-        return n if str(fp.pdef.category).startswith("Tera") else 0
-    if cond == "behind" and battle is not None:
-        owner = next((i for i, pl in enumerate(battle.players)
-                      if any(x is fp for x in pl.all_field())), None)
-        if owner is None:
-            return 0
-        me, other = battle.players[owner], battle.players[1 - owner]
-        return n if me.prizes_left > other.prizes_left else 0
-    return 0
+    """道具提供的招式费用**减免**（S6 2026-10-28：Sparkling Crystal / Counter Gain）
+
+    形态：``tool:cost_less:<n>:<cond>[:<qual-kind>:<qual-val>]``
+
+      · ``tera``          持有者是 Tera（数据集 `category` 以 Tera 开头）
+      · ``behind``        我方剩余奖赏卡多于对手
+      · ``holder:…``      持有者限定（`holder:faction:hops` = Hop's 系列）
+      · ``any``           无条件
+
+    ⚠ 未知 cond **必须返回 0**（宁可不减费，也不静默给一张免费招式的卡）。
+    """
+    total = 0
+    for tag in _tool_subs(fp):
+        if not tag.startswith("tool:cost_less:"):
+            continue
+        meta = _tool_meta(tag)
+        n = meta["n"]
+        if not n:
+            continue
+        parts = tag.split(":")
+        cond = parts[3] if len(parts) > 3 else ""
+        if cond == "tera":
+            # Tera 是数据集 `category`（形如 "Tera(Fire)"），引擎可精确判定
+            if str(fp.pdef.category).startswith("Tera"):
+                total += n
+        elif cond == "behind" and battle is not None:
+            owner = next((i for i, pl in enumerate(battle.players)
+                          if any(x is fp for x in pl.all_field())), None)
+            if owner is not None:
+                me, other = battle.players[owner], battle.players[1 - owner]
+                if me.prizes_left > other.prizes_left:
+                    total += n
+        elif cond == "holder":
+            if _qual_ok(meta["holder"], fp):
+                total += n
+        elif cond in ("", "any"):
+            total += n
+    return total
 
 
 def _retreat_cost(fp: Optional[FieldPokemon], battle=None) -> int:
@@ -14441,9 +14533,9 @@ def _retreat_cost(fp: Optional[FieldPokemon], battle=None) -> int:
         return max(0, int(over))
     if _static_mods(fp)["no_retreat"]:
         return 0
-    tag = _tool_tag(fp)
     # 「剩余 HP ≤M 时它没有撤退费用」（Rescue Board）
-    m = re.match(r"^tool:retreat_less:\d+:lowhp:(\d+)$", tag)
+    m = re.match(r"^tool:retreat_less:\d+:lowhp:(\d+)$",
+                 _tool_sub(fp, "tool:retreat_less:"))
     if m and fp.hp_remaining <= int(m.group(1)):
         return 0
     base = int(fp.pdef.retreat) - _tool_value(_tool_tag(fp), "retreat_less")
@@ -14451,8 +14543,8 @@ def _retreat_cost(fp: Optional[FieldPokemon], battle=None) -> int:
     if battle is not None:
         for pl in battle.players:
             act_fp = pl.active
-            if act_fp is not None and _tool_tag(act_fp).startswith(
-                    "tool:retreat_plus:"):
+            if act_fp is not None and _tool_value(_tool_tag(act_fp),
+                                                  "retreat_plus"):
                 base += _tool_value(_tool_tag(act_fp), "retreat_plus")
     # N's Castle：阵营宝可梦无撤退费用（2026-10-28）
     if battle is not None:
@@ -14479,6 +14571,58 @@ def _tool_tag(fp: Optional[FieldPokemon]) -> str:
     if fp is None or bool(getattr(fp, "tool_disabled", False)):
         return ""
     return str(getattr(fp, "tool", "") or "")
+
+
+def _tool_subs(fp: Optional[FieldPokemon]) -> list:
+    """道具 tag 的**分段**列表（复合道具用 `|` 连接多段）
+
+    一张道具可以同时提供多个**可累加的静态修正** —— Hop's Choice Band：
+    「费用 −{C}」**且**「伤害 +30」。`FieldPokemon.tool` 只有一个字符串，因此
+    复合形态写成 `tool:cost_less:1:…|tool:dmg_plus:30:…`。
+
+    ⚠ 复合**只用于静态修正**（`cost_less` / `dmg_plus` / `hp_plus` /
+    `retreat_less` / `retreat_plus`），由 `gen_engine_pool.build_trainer` 的
+    白名单把关。触发式道具（`on_event:` / `on_damaged:` / `survive:`）保持
+    单段 —— 它们的读取点按「首段」语义写，混进复合会静默漏掉触发。
+    """
+    raw = _tool_tag(fp)
+    return [s for s in str(raw or "").split("|") if s]
+
+
+def _tool_sub(fp: Optional[FieldPokemon], prefix: str) -> str:
+    """首个以 ``prefix`` 开头的道具分段（没有则空串）"""
+    for seg in _tool_subs(fp):
+        if seg.startswith(prefix):
+            return seg
+    return ""
+
+
+def _attacks_of(fp: Optional[FieldPokemon]) -> tuple:
+    """场上宝可梦**当前可用招式** = 印刷招式 + 道具提供的招式
+
+    F7（2026-11-08）：Core Memory 这类 Technical Machine 把招式写在**道具卡**上
+    （``TrainerDef.tool_attack``），只有卡面指定的持有者能用 ——
+    「The **Mega Zygarde {ex}** this card is attached to can use the attack on
+    this card.」判定用卡名归一化前缀，与 `_qual_ok` 的 `holder:name:` 同口径。
+
+    ⚠ 凡是要**按下标**取招式的路径（合法动作枚举 / `_do_attack` / 前端 view）
+    必须统一走这里：谁直接用 `fp.pdef.attacks`，谁的索引就会和动作里的
+    `attack` 编号错开一位（借到对手招式 / 打错招式，且完全看不出来）。
+    """
+    if fp is None:
+        return ()
+    base = tuple(fp.pdef.attacks)
+    ref = getattr(fp, "tool_ref", None)
+    tdef = getattr(ref, "tdef", None) if ref is not None else None
+    atk = getattr(tdef, "tool_attack", None) if tdef is not None else None
+    if atk is None or bool(getattr(fp, "tool_disabled", False)):
+        return base
+    holder = str(getattr(tdef, "tool_attack_holder", "") or "")
+    if holder and not _name_key(fp.pdef.name).startswith(holder):
+        return base
+    if any(_name_key(a.name) == _name_key(atk.name) for a in base):
+        return base                     # 同名招式不重复列（避免同招两个下标）
+    return base + (atk,)
 
 
 def _status_immune(fp: Optional[FieldPokemon]) -> bool:

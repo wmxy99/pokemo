@@ -4151,6 +4151,89 @@ def audit_b4_interaction(card_name: str, item_name: str, desc: str,
     return errs
 
 
+def audit_f7_tools(card_name: str, item_name: str, desc: str,
+                   effects: list) -> list:
+    """F7 对账：**道具 / 特殊能量形态**（2026-11-08）
+
+    这一族的错法全部「看起来正常」：
+
+      · 一句两修正确只落一段（`cost_less` 有了、`dmg_plus` 没了）—— 静默少做，
+        卡面、日志、覆盖率都看不出来；
+      · **丢了持有者限定**（`holder:faction:hops`）—— 挂到任何宝可梦都生效，
+        属静默加强，且只在「非 Hop's 卡组」里才看得见差异；
+      · 道具提供招式只记「有招式」不记「谁能用」—— 全队都能借，强度爆表；
+      · Megaton Blower 拆成 `discard_tool:` + `discard_stadium` 两条 —— 训练家卡
+        只有一个卡级 tag，拆开会被整卡拒收（卡直接消失，比做错更隐蔽）；
+      · `:stadium` 凭空多写 —— 没场地的对局里白弃一次（静默多做）。
+    """
+    errs: list = []
+    d = _norm(desc or "").replace("\u2019", "'")
+    segs = [str(e) for e in _expand_compound(effects)]
+    joined = "|".join(segs)
+    low = d.lower()
+    # ① 一句两修正：两段都要在，且持有者限定要落在**每一段**上
+    m = re.search(r"attacks used by the (?P<holder>[a-z][a-z' ]{2,24}?) "
+                  r"pok[eé]mon this card is attached to cost (?:\{c\}\s*)+less "
+                  r"and do (?P<dmg>\d+) more damage", low)
+    if m:
+        if not any(s.startswith("tool:cost_less:") for s in segs):
+            errs.append(f"{card_name} · {item_name}：卡面「cost {{C}} less」缺 "
+                        f"`tool:cost_less:`（实际 {effects}）")
+        if not any(s.startswith("tool:dmg_plus:") for s in segs):
+            errs.append(f"{card_name} · {item_name}：卡面「do +N more damage」缺 "
+                        f"`tool:dmg_plus:`（实际 {effects}）")
+        holder = _norm(m.group("holder")).lower()
+        holder = "".join(ch for ch in holder if ch.isalnum())
+        if holder and holder != "poisoned":
+            for s in segs:
+                if s.startswith(("tool:cost_less:", "tool:dmg_plus:")) \
+                        and f"holder:faction:{holder}" not in s:
+                    errs.append(f"{card_name} · {item_name}：卡面限定持有者 "
+                                f"「{m.group('holder')}」，tag 缺 "
+                                f"`holder:faction:{holder}`（{s}）")
+    # ② 道具提供招式：必须带持有者键，且与卡面卡名一致
+    if "can use the attack on this card" in low:
+        pa = [s for s in segs if s.startswith("tool:provide_attack:")]
+        if not pa:
+            errs.append(f"{card_name} · {item_name}：卡面「can use the attack on "
+                        f"this card」缺 `tool:provide_attack:`（实际 {effects}）")
+        else:
+            key = pa[0].split(":")[2] if len(pa[0].split(":")) > 2 else ""
+            if not key:
+                errs.append(f"{card_name} · {item_name}：`tool:provide_attack` 没写"
+                            f"持有者 → 全队都能借（静默加强）")
+            else:
+                m2 = re.search(r"the (?P<name>[a-z][a-z' ]{1,28}?)(?: \{ex\})? this "
+                               r"card is attached to can use", low)
+                if m2:
+                    want = "".join(ch for ch in _norm(m2.group("name")).lower()
+                                   if ch.isalnum())
+                    if want and key != want:
+                        errs.append(f"{card_name} · {item_name}：持有者键应为 "
+                                    f"{want!r}，实际 {key!r}")
+    # ③ 全场道具 + 特殊能量（Megaton Blower）
+    if re.search(r"discard all pok[eé]mon tools and special energy from all of",
+                 low):
+        hit = [s for s in segs if s.startswith("discard_tool_senergy_all:")]
+        if not hit:
+            errs.append(f"{card_name} · {item_name}：卡面「all Tools **and Special "
+                        f"Energy** from all of」缺 `discard_tool_senergy_all:`"
+                        f"（实际 {effects}）")
+        else:
+            want_st = "discard a stadium" in low
+            has_st = hit[0].endswith(":stadium")
+            if want_st and not has_st:
+                errs.append(f"{card_name} · {item_name}：卡面还有「discard a "
+                            f"Stadium in play」，tag 缺 `:stadium`（{hit[0]}）")
+            if has_st and not want_st:
+                errs.append(f"{card_name} · {item_name}：卡面没有弃场地段，tag 却带 "
+                            f"`:stadium`（{hit[0]}）")
+            if "discard_stadium" in segs:
+                errs.append(f"{card_name} · {item_name}：场地段已并进复合 tag，"
+                            f"不得再单独产 `discard_stadium`（两个 tag → 整卡拒收）")
+    return errs
+
+
 def audit_devolve(card_name: str, item_name: str, desc: str,
                   effects: list) -> list:
     """D3 对账：退化 devolve
@@ -4430,6 +4513,8 @@ def main() -> int:
                                   [_ctag] if _ctag else [])
             errs += audit_b4_interaction(c["name"], c["name"], _cdesc,
                                          [_ctag] if _ctag else [])
+            errs += audit_f7_tools(c["name"], c["name"], _cdesc,
+                                   [_ctag] if _ctag else [])
             errs += audit_batch80_84(c["name"], c["name"], _cdesc,
                                      [_ctag] if _ctag else [])
             errs += audit_batch85(c["name"], c["name"], _cdesc,
@@ -4489,8 +4574,9 @@ def main() -> int:
           "抛币门借用/牌库顶借用/抛币分岔检索/放牌库底逐人抛币 · "
           "先手首回合例外许可（招式/训练家） · "
           "退化 devolve（方向/阶数/属性/战斗位） · "
-          "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） "
-          "五十三类对账全部一致")
+          "「任意数量」交互层（伤害前决策/分配/先手授权/本次计数） · "
+          "道具形态（一句两修正/持有者限定/提供招式/全场弃道具+特殊能量） "
+          "五十四类对账全部一致")
     return 0
 
 

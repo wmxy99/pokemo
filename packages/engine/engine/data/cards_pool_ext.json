@@ -11,13 +11,13 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1234,
+      "kept": 1237,
       "by_Energy": 20,
       "by_Pokemon": 1034,
-      "by_Trainer": 180,
+      "by_Trainer": 183,
       "skipped": {
         "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 18
+        "存在未建模项（整卡不收）": 15
       }
     }
   },
@@ -52257,6 +52257,23 @@
       "uid": "Meddling Memo@SSP 181"
     },
     {
+      "name": "Megaton Blower",
+      "name_zh": "百万吨吹风机",
+      "supertype": "Trainer",
+      "kind": "item",
+      "tag": "discard_tool_senergy_all:opp:stadium",
+      "desc": "Discard all Pokémon Tools and Special Energy from all of your opponent’s Pokémon, and discard a Stadium in play.",
+      "desc_zh": "从对手的所有宝可梦身上弃置所有宝可梦道具和特殊能量，并弃置场上的 1 张竞技场卡。",
+      "real": {
+        "set": "SSP",
+        "number": "182"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1104,
+      "uid": "Megaton Blower@SSP 182"
+    },
+    {
       "name": "Dragon Elixir",
       "name_zh": "龙之秘药",
       "supertype": "Trainer",
@@ -53394,6 +53411,23 @@
       "uid": "Haban Berry@PRE 111"
     },
     {
+      "name": "Hop’s Choice Band",
+      "name_zh": "赫普的讲究头带",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:cost_less:1:holder:faction:hops|tool:dmg_plus:30:holder:faction:hops",
+      "desc": "Attacks used by the Hop’s Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
+      "desc_zh": "此卡所附着的赫普的宝可梦使用的招式的能量费用减少 {C}，且对对手的战斗宝可梦造成的伤害 +30（在计算弱点与抗性之前）。",
+      "real": {
+        "set": "JTG",
+        "number": "148"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1171,
+      "uid": "Hop’s Choice Band@JTG 148"
+    },
+    {
       "name": "Lillie’s Pearl",
       "name_zh": "莉莉艾的珍珠",
       "supertype": "Trainer",
@@ -53528,6 +53562,37 @@
       "fidelity": "rule-parser-derived",
       "source_card_id": 1179,
       "uid": "Thick Scale@ASC 211"
+    },
+    {
+      "name": "Core Memory",
+      "name_zh": "核心记忆",
+      "supertype": "Trainer",
+      "kind": "tool",
+      "tag": "tool:provide_attack:megazygarde",
+      "desc": "The Mega Zygarde {ex} this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.)",
+      "desc_zh": "此卡所附着的超级基格尔德{ex}可以使用此卡上的招式。（你仍然需要支付使用该招式所需的能量。）",
+      "real": {
+        "set": "POR",
+        "number": "70"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 1180,
+      "tool_attack": {
+        "name": "Geobuster",
+        "cost": {
+          "fighting": 4
+        },
+        "damage": 350,
+        "effects": [
+          "discard_energy:all"
+        ],
+        "desc": "Discard all Energy from this Pokémon.",
+        "name_zh": "大地爆破",
+        "desc_zh": "弃置此宝可梦身上的所有能量。"
+      },
+      "tool_attack_holder": "megazygarde",
+      "uid": "Core Memory@POR 70"
     },
     {
       "name": "Billy & O'Nare",

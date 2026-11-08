@@ -202,6 +202,17 @@ class TrainerDef:
     # 形态见 `battle._play_gate_ok`；空串 = 无条件。不满足时该卡不进合法动作表。
     play_gate: str = ""
 
+    # 道具**提供的招式**（F7 · 2026-11-08，Core Memory「核心记忆」）
+    #
+    # 卡面：「The Mega Zygarde {ex} this card is attached to can use the attack on
+    # this card. (You still need the necessary Energy to use this attack.)」
+    # —— 招式写在**道具卡**上（Technical Machine），只有**指定持有者**能用。
+    # 存成 AttackDef 而不是 tag：招式需要名字/费用/伤害/效果四项，塞进 tag 会
+    # 把四个字段编码成字符串再解析一遍（脆弱且无法复用既有招式结算链）。
+    tool_attack: Optional[AttackDef] = None
+    # 能用该招式的持有者（卡名归一化前缀；空串 = 任何持有者都能用）
+    tool_attack_holder: str = ""
+
     @property
     def display(self) -> str:
         return self.name_zh or self.name
@@ -607,13 +618,19 @@ class FieldPokemon:
 
 
 def _tool_value(tag: Optional[str], kind: str) -> int:
-    """``tool:<kind>:<n>`` → n（不匹配返回 0，**不猜**）"""
+    """``tool:<kind>:<n>`` → n（不匹配返回 0，**不猜**）
+
+    复合道具（``a|b``，见 `battle._tool_subs`）逐段查找：Hop's Choice Band 的
+    「+30 伤害」与「费用 −1」写在同一条 `fp.tool` 里，只看首段会把第二段静默
+    丢掉。
+    """
     if not tag:
         return 0
-    parts = str(tag).split(":")
-    if len(parts) >= 3 and parts[0] == "tool" and parts[1] == kind \
-            and parts[2].isdigit():
-        return int(parts[2])
+    for seg in str(tag).split("|"):
+        parts = seg.split(":")
+        if len(parts) >= 3 and parts[0] == "tool" and parts[1] == kind \
+                and parts[2].isdigit():
+            return int(parts[2])
     return 0
 
 
@@ -671,7 +688,11 @@ def _tool_hp_plus(fp: "FieldPokemon") -> int:
     n = _tool_value(tag, "hp_plus")
     if not n:
         return 0
-    parts = str(tag).split(":")
+    # 复合道具（`a|b`）只解析 **hp_plus 那一段**，否则 `holder:name:<k>` 的键
+    # 会连上后面的 `|tool:…` 尾巴，比对永远失败（= 静默不加血）。
+    seg = next((s for s in str(tag).split("|")
+                if s.startswith("tool:hp_plus:")), "")
+    parts = seg.split(":")
     if "holder" in parts:
         i = parts.index("holder")
         if i + 2 >= len(parts) or parts[i + 1] != "name":

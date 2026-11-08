@@ -226,6 +226,16 @@ export const TRAINER_TAG_DESC = {
   choose: () => ({ zh: '打出后由你选择要弃掉哪些手牌（可随时结束选择），然后抽牌到指定张数。', en: 'Choose any number of cards to discard from your hand (you may stop at any time), then draw up to the stated number.' }),
   recon_bottom: (a) => ({ zh: `查看牌库底 ${argOf(a)} 张，可取其中 1 张宝可梦加入手牌，其余洗回牌库。`, en: `Look at the bottom ${argOf(a)} cards, take a Pokémon into your hand, then shuffle the rest back.` }),
   discard_tool_senergy: () => ({ zh: '弃掉对手 1 只宝可梦身上的 1 张道具与 1 张特殊能量。', en: 'Discard a Pokémon Tool and a Special Energy from 1 of your opponent’s Pokémon.' }),
+  // F7（2026-11-08）：Megaton Blower —— 全场道具 + 全部特殊能量（可选带弃场地）。
+  // 与上面的 `discard_tool_senergy`（同一只身上各 1 张）**不是**一回事，
+  // 文案必须分开，否则玩家会按「只弃 2 张」理解。
+  discard_tool_senergy_all: (_a, _b, parts) => {
+    const withStadium = (parts || []).includes('stadium')
+    return {
+      zh: '弃置对手所有宝可梦身上的全部道具与特殊能量' + (withStadium ? '，并弃置场上 1 张竞技场卡。' : '。'),
+      en: 'Discard all Pokémon Tools and Special Energy from all of your opponent’s Pokémon' + (withStadium ? ', and discard a Stadium in play.' : '.'),
+    }
+  },
   // S3（2026-11-08）区域对象化族：奖赏卡重发 / 翻面对手奖赏卡 / 亮出对手牌库顶
   prize: (a, _x, parts) => {
     if ((parts || []).includes('redeal')) {
@@ -279,11 +289,33 @@ export const TRAINER_TAG_DESC = {
   team_boost: (a) => ({ zh: `本回合己方宝可梦的攻击额外造成 ${argOf(a)} 点伤害。`, en: `During this turn, your Pokémon’s attacks do ${argOf(a)} more damage.` }),
   team_shield: (a) => ({ zh: `对手的下一个回合，己方宝可梦受到的攻击伤害减少 ${argOf(a)} 点。`, en: `During your opponent’s next turn, your Pokémon take ${argOf(a)} less damage from attacks.` }),
   shield_choose: { zh: '选择 1 只己方宝可梦，使其本回合不受对手宝可梦招式效果影响。', en: 'Choose 1 of your Pokémon; it is unaffected by your opponent’s attack effects this turn.' },
-  tool: (kind, num) => {
+  tool: (kind, num, parts) => {
     if (kind === 'hp_plus') return { zh: `附着的宝可梦获得 ${argOf(num)} 点最大 HP。`, en: `The Pokémon this card is attached to gains ${argOf(num)} max HP.` }
     if (kind === 'survive') return { zh: '附着的宝可梦满 HP 时，可承受一次本应将其击倒的攻击伤害。', en: 'If the attached Pokémon has full HP, it survives damage that would knock it out.' }
     if (kind === 'on_damaged') return { zh: `附着的宝可梦在战斗位受到对手招式伤害时，抽 ${argOf(num)} 张牌。`, en: `When the attached Pokémon is damaged in the Active Spot, draw ${argOf(num)} card(s).` }
     if (kind === 'retreat_less') return { zh: `附着的宝可梦撤退费用减少 ${argOf(num)}。`, en: `The attached Pokémon’s Retreat Cost is ${argOf(num)} less.` }
+    // F7（2026-11-08）：道具的两个**静态修正**（可同时存在，`a|b` 复合）
+    if (kind === 'cost_less') {
+      const holder = (parts || []).find((x) => x === 'holder')
+      return {
+        zh: `附着的宝可梦使用的招式费用减少 ${argOf(num)}${holder ? '（仅限卡面指定的持有者）' : ''}。`,
+        en: `Attacks used by the attached Pokémon cost ${argOf(num)} less${holder ? ' (specified holder only)' : ''}.`,
+      }
+    }
+    if (kind === 'dmg_plus') {
+      const holder = (parts || []).includes('holder')
+      return {
+        zh: `附着的宝可梦使用的招式对对手战斗宝可梦造成的伤害 +${argOf(num)}${holder ? '（仅限卡面指定的持有者）' : ''}（在计算弱点与抗性之前）。`,
+        en: `Attacks used by the attached Pokémon do ${argOf(num)} more damage to your opponent’s Active Pokémon${holder ? ' (specified holder only)' : ''} (before applying Weakness and Resistance).`,
+      }
+    }
+    // F7：Technical Machine 类（招式写在道具卡上，只有指定持有者能用）
+    if (kind === 'provide_attack') {
+      return {
+        zh: '附着的指定宝可梦可以使用此卡上的招式（仍需支付该招式的能量费用）。',
+        en: 'The specified Pokémon this card is attached to can use the attack on this card (the necessary Energy is still required).',
+      }
+    }
     return { zh: '宝可梦道具：附着于己方宝可梦，持续生效。', en: 'Pokémon Tool: attach to your Pokémon for a lasting effect.' }
   },
   stadium: (_a, _mode, parts) => {

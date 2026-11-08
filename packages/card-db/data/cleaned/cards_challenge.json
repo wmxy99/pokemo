@@ -12,7 +12,7 @@
    "parse.ai_notice"
   ],
   "parse_backend": "rule",
-  "reparsed_at": "2026-11-08 22:19:48",
+  "reparsed_at": "2026-11-08 23:05:52",
   "i18n": {
    "version": "1.0",
    "items": 3341,
@@ -93,7 +93,7 @@
   "attacks_total": 1559,
   "abilities_total": 223,
   "no_move_cards": 205,
-  "engine_ready": 1249,
+  "engine_ready": 1252,
   "engine_match_alias": 7,
   "with_zh": 1267,
   "with_image": 0,
@@ -118,9 +118,9 @@
    "metal": 123
   },
   "issues": {
-   "zh_backfill": 1249,
-   "engine_approximated": 1234,
-   "engine_unmatched": 18,
+   "zh_backfill": 1252,
+   "engine_approximated": 1237,
+   "engine_unmatched": 15,
    "engine_namekey_mismatch": 2
   },
   "parse": {
@@ -128,13 +128,13 @@
    "items": 1481,
    "specs": 1481,
    "errors": 118,
-   "engine_tags": 1563,
-   "unsupported": 18,
+   "engine_tags": 1566,
+   "unsupported": 15,
    "backend": "rule",
    "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
   },
   "engine_unsupported": 0,
-  "engine_approximated": 1234,
+  "engine_approximated": 1237,
   "with_zh_effects": 1481,
   "i18n": {
    "source": "packages/card-db/data/i18n/zh_card_translations.json",
@@ -144699,14 +144699,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Discard all Pokémon Tools and Special Energy from all of your opponent’s Pokémon, and discard a Stadium in play.",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "从对手的所有宝可梦身上弃置所有宝可梦道具和特殊能量，并弃置场上的 1 张竞技场卡。",
    "rule_zh": "ACE SPEC 卡",
+   "engine_match": "set:number",
+   "engine_uid": "Megaton Blower@SSP 182",
    "parse": {
     "items": [
      {
@@ -144724,15 +144726,10 @@
           "amount": null,
           "target": "any",
           "extra": {
-           "discard_stadium": true
-          }
-         },
-         {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
-          "extra": {
-           "note": "同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4）"
+           "discard_tool_senergy_all": {
+            "scope": "opp",
+            "stadium": true
+           }
           }
          }
         ],
@@ -144741,16 +144738,11 @@
       ],
       "errors": [],
       "engine_tags": [
-       "discard_stadium"
+       "discard_tool_senergy_all:opp:stadium"
       ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -144765,15 +144757,10 @@
         "amount": null,
         "target": "any",
         "extra": {
-         "discard_stadium": true
-        }
-       },
-       {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
-        "extra": {
-         "note": "同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4）"
+         "discard_tool_senergy_all": {
+          "scope": "opp",
+          "stadium": true
+         }
         }
        }
       ],
@@ -144782,14 +144769,9 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_stadium"
+     "discard_tool_senergy_all:opp:stadium"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -151413,14 +151395,16 @@
    "attacks": [],
    "abilities": [],
    "other_text": "Attacks used by the Hop’s Pokémon this card is attached to cost {C} less and do 30 more damage to your opponent’s Active Pokémon (before applying Weakness and Resistance).",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "此卡所附着的赫普的宝可梦使用的招式的能量费用减少 {C}，且对对手的战斗宝可梦造成的伤害 +30（在计算弱点与抗性之前）。",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Hop’s Choice Band@JTG 148",
    "parse": {
     "items": [
      {
@@ -151434,11 +151418,22 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
-          "amount": null,
-          "target": "any",
+          "type": "tool",
+          "amount": 1,
+          "target": "self",
           "extra": {
-           "note": "静态伤害增减（需引擎静态修正层，B4）"
+           "kind": "cost_less",
+           "cond": "holder",
+           "holder_faction": "hops"
+          }
+         },
+         {
+          "type": "tool",
+          "amount": 30,
+          "target": "self",
+          "extra": {
+           "kind": "dmg_plus",
+           "tail": ":holder:faction:hops"
           }
          }
         ],
@@ -151446,15 +151441,13 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "tool:cost_less:1:holder:faction:hops",
+       "tool:dmg_plus:30:holder:faction:hops"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态伤害增减（需引擎静态修正层，B4）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -151465,11 +151458,22 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
-        "amount": null,
-        "target": "any",
+        "type": "tool",
+        "amount": 1,
+        "target": "self",
         "extra": {
-         "note": "静态伤害增减（需引擎静态修正层，B4）"
+         "kind": "cost_less",
+         "cond": "holder",
+         "holder_faction": "hops"
+        }
+       },
+       {
+        "type": "tool",
+        "amount": 30,
+        "target": "self",
+        "extra": {
+         "kind": "dmg_plus",
+         "tail": ":holder:faction:hops"
         }
        }
       ],
@@ -151477,13 +151481,11 @@
      }
     ],
     "errors": [],
-    "engine_tags": [],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态伤害增减（需引擎静态修正层，B4）"
-     }
+    "engine_tags": [
+     "tool:cost_less:1:holder:faction:hops",
+     "tool:dmg_plus:30:holder:faction:hops"
     ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"
@@ -152309,14 +152311,16 @@
    ],
    "abilities": [],
    "other_text": "The Mega Zygarde {ex} this card is attached to can use the attack on this card. (You still need the necessary Energy to use this attack.)",
-   "engine_ready": false,
+   "engine_ready": true,
    "source": "M1 卡池补齐 · pokemon-tcg-ai-battle-challenge-strategy · 仅卡名/数值/规则文本（无官方图像，C2）",
    "image_url": null,
    "aliases": [],
-   "engine_status": "unmatched",
-   "engine_note": "引擎卡池未收录",
+   "engine_status": "approximated",
+   "engine_note": "由解析链自动生成（非人工逐卡校对）",
    "other_text_zh": "此卡所附着的超级基格尔德{ex}可以使用此卡上的招式。（你仍然需要支付使用该招式所需的能量。）",
    "rule_zh": "",
+   "engine_match": "set:number",
+   "engine_uid": "Core Memory@POR 70",
    "parse": {
     "items": [
      {
@@ -152359,11 +152363,12 @@
         "conditions": [],
         "actions": [
          {
-          "type": "rule",
+          "type": "tool",
           "amount": null,
-          "target": "any",
+          "target": "self",
           "extra": {
-           "note": "静态/未建模（英文）"
+           "kind": "provide_attack",
+           "holder": "megazygarde"
           }
          }
         ],
@@ -152371,15 +152376,12 @@
        }
       ],
       "errors": [],
-      "engine_tags": [],
+      "engine_tags": [
+       "tool:provide_attack:megazygarde"
+      ],
       "play_cost": "",
       "play_gate": "",
-      "unsupported": [
-       {
-        "type": "rule",
-        "reason": "静态/未建模（英文）"
-       }
-      ]
+      "unsupported": []
      }
     ],
     "specs": [
@@ -152408,11 +152410,12 @@
       "conditions": [],
       "actions": [
        {
-        "type": "rule",
+        "type": "tool",
         "amount": null,
-        "target": "any",
+        "target": "self",
         "extra": {
-         "note": "静态/未建模（英文）"
+         "kind": "provide_attack",
+         "holder": "megazygarde"
         }
        }
       ],
@@ -152421,14 +152424,10 @@
     ],
     "errors": [],
     "engine_tags": [
-     "discard_energy:all"
+     "discard_energy:all",
+     "tool:provide_attack:megazygarde"
     ],
-    "unsupported": [
-     {
-      "type": "rule",
-      "reason": "静态/未建模（英文）"
-     }
-    ],
+    "unsupported": [],
     "generated_by": "rule",
     "ai_generated": true,
     "ai_notice": "本解析结果由机器/AI 自动生成，仅供研究参考，可能不完全准确；请以官方规则与卡面原文为准。"

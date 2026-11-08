@@ -5127,10 +5127,17 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
                            {"from_deck": True, "side": side}))
 
     # ---- S6 弃道具 / 弃场地（2026-10-28）----
-    if _EN_DISCARD_STADIUM_RE.search(t):
-        actions.append(act("rule", None, "any", {"discard_stadium": True}))
+    # F7（2026-11-08）：Megaton Blower 把「弃全部道具 + 特殊能量」与「弃场地」
+    # 写在同一句里（`… , and discard a Stadium in play.`）→ 合成**一条**复合 tag
+    # 交给训练家卡（卡级 tag 单值）。这里先算清「是否属于该复合形态」，是的话
+    # 就**不再**单独产出 `discard_stadium`（否则两个 tag → 整卡拒收）。
     _mt = _EN_DISCARD_TOOLS_RE.search(t)
     _mc_tools = _EN_CHOOSE_TOOLS_RE.search(t)
+    _tool_senergy_all = bool(
+        _mt and "special energy" in _mt.group(0).lower()
+        and not _is_pre_damage(t, _mt.start()))
+    if _EN_DISCARD_STADIUM_RE.search(t) and not _tool_senergy_all:
+        actions.append(act("rule", None, "any", {"discard_stadium": True}))
     if _mt:
         _where = _norm_apostrophe(_mt.group("where")).lower()
         _sp_tools = "special energy" in _mt.group(0).lower()
@@ -5145,10 +5152,15 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
             actions.append(act("rule", None, "any", {
                 "pre_discard_tool": {"n": "all", "scope": "opp_active"}}))
         elif _sp_tools:
-            # 「…Tools **and Special Energy**…」但不在伤害前阶段 →
-            # 引擎的普通 `discard_energy` 不区分基本/特殊，无法精确表达
+            # 「…Tools **and Special Energy**…」但不在伤害前阶段 → Megaton Blower
+            # （F7）。引擎有 `senergy`（按卡）与 `_apply_discard_tool`，因此这
+            # 一段**可以**精确表达：一条复合 tag 同时弃「对手全场道具」「对手
+            # 全场特殊能量」，可选带 `:stadium`（同一句的弃场地段）。
+            _scope = "opp" if "opponent" in _where else "own"
             actions.append(act("rule", None, "any", {
-                "note": "同时弃道具与**特殊**能量（引擎不区分基本/特殊，B4）"}))
+                "discard_tool_senergy_all": {
+                    "scope": _scope,
+                    "stadium": bool(_EN_DISCARD_STADIUM_RE.search(t))}}))
         elif "opponent" in _where and "active" in _where:
             actions.append(act("rule", None, "any",
                                {"discard_tool": {"n": "all",
@@ -7756,6 +7768,43 @@ def _detect_tool_static(text: str) -> list:
     if not _TOOL_HOLDER_RE.search(low):
         return []
     out: list = []
+    # ---- F7（2026-11-08）：**一句两修正**（Hop's Choice Band）----
+    #   「Attacks used by the **Hop's** Pokémon this card is attached to cost
+    #    {C} less **and** do 30 more damage to your opponent's Active Pokémon
+    #    (before applying Weakness and Resistance).」
+    # 必须**先于**下面的 `_dp_tail` 家族识别：那些正则要求「… attached to **do**
+    # N more damage」，本句在 do 之前还夹着费用从句，匹配不上就会落到后面的
+    # 「有条件就整卡放弃」守卫（= 卡长期在池外）。
+    # 两段都是**可累加静态修正**，池侧会拼成 `a|b` 交给引擎静态层逐段读取。
+    _m = re.search(
+        r"^attacks used by the (?P<holder>[a-z][a-z' ]{2,24}?) pok[eé]mon this "
+        r"card is attached to cost (?:\{c\}\s*)+less and do (?P<dmg>\d+) more "
+        r"damage to your opponent'?s active pok[eé]mon\s*"
+        r"(?:\(before applying weakness and resistance\))?\.", low)
+    if _m:
+        fac = _k(_m.group("holder"))
+        if not fac:
+            return []
+        return [act("tool", 1, "self",
+                    {"kind": "cost_less", "cond": "holder",
+                     "holder_faction": fac}),
+                act("tool", int(_m.group("dmg")), "self",
+                    {"kind": "dmg_plus", "tail": f":holder:faction:{fac}"})]
+    # ---- F7（2026-11-08）：道具**提供招式**（Core Memory「核心记忆」）----
+    #   「The **Mega Zygarde {ex}** this card is attached to can use the attack
+    #    on this card. (You still need the necessary Energy to use this attack.)」
+    # 招式本身写在**道具卡**的 `attacks[]` 上（Technical Machine），由池生成侧
+    # 转成 `TrainerDef.tool_attack`；tag 只带**持有者**（谁能用）。
+    # ⚠ 括号里的「still need the necessary Energy」是**规则提醒**、不是新效果：
+    #   把它当成未建模会让整卡拒收（招式费用本来就由引擎校验）。
+    _m = re.search(
+        r"^the (?P<name>[a-z][a-z' ]{1,28}?)(?: \{ex\})? this card is attached to "
+        r"can use the attack on this card\.", low)
+    if _m:
+        holder = _k(_m.group("name"))
+        if holder:
+            return [act("tool", None, "self",
+                        {"kind": "provide_attack", "holder": holder})]
     # ---- 静态加伤（2026-10-28 第十三批）----
     #   · Maximum Belt「Attacks used by the Pokémon this card is attached to do
     #     50 more damage to your opponent's Active Pokémon {ex}」
@@ -11229,6 +11278,15 @@ def to_engine_tags(specs: list) -> dict:
                 if extra.get("discard_stadium"):
                     tags.append("discard_stadium")
                     continue
+                if extra.get("discard_tool_senergy_all"):
+                    # F7（Megaton Blower）：弃对手全场道具 + 全部特殊能量，
+                    # 可选带弃场地（同一句的后续段）
+                    _dts = extra["discard_tool_senergy_all"]
+                    _t0 = f"discard_tool_senergy_all:{_dts.get('scope') or 'opp'}"
+                    if _dts.get("stadium"):
+                        _t0 += ":stadium"
+                    tags.append(_t0)
+                    continue
                 if extra.get("use_only"):
                     tags.append(f"use_only:{extra['use_only']}")
                     continue
@@ -11358,6 +11416,14 @@ def to_engine_tags(specs: list) -> dict:
                 elif extra.get("discard_stadium"):
                     # S6 弃场地族
                     tags.append("discard_stadium")
+                elif extra.get("discard_tool_senergy_all"):
+                    # F7（Megaton Blower）：弃全场道具 + 全部特殊能量
+                    # （`:stadium` = 同一句还要求弃场上场地）
+                    _dts = extra["discard_tool_senergy_all"]
+                    _t0 = f"discard_tool_senergy_all:{_dts.get('scope') or 'opp'}"
+                    if _dts.get("stadium"):
+                        _t0 += ":stadium"
+                    tags.append(_t0)
                 elif extra.get("energy_to_deck"):
                     # 弃牌堆基本能量洗回牌库（第二十八批，Kyogre / Sinistcha ex）
                     _ed = extra["energy_to_deck"]
@@ -11684,8 +11750,13 @@ def to_engine_tags(specs: list) -> dict:
                     else:
                         tags.append(f"tool:{k}:{int(amt)}")
                 elif k == "cost_less" and amt is not None:
-                    tags.append(f"tool:cost_less:{int(amt)}"
-                                f":{extra.get('cond') or 'any'}")
+                    # `tool:cost_less:<n>:<cond>`；`holder:faction:<k>` 变体
+                    # 只对**该阵营**的持有者减费（Hop's Choice Band，F7）
+                    if extra.get("holder_faction"):
+                        _tail = f":holder:faction:{extra['holder_faction']}"
+                    else:
+                        _tail = f":{extra.get('cond') or 'any'}"
+                    tags.append(f"tool:cost_less:{int(amt)}{_tail}")
                 elif k == "retreat_plus" and amt is not None:
                     tags.append(f"tool:retreat_plus:{int(amt)}"
                                 f":{extra.get('scope') or 'both'}")
@@ -11712,6 +11783,10 @@ def to_engine_tags(specs: list) -> dict:
                     tags.append(f"tool:on_damaged:counter:{int(amt)}{tail}")
                 elif k == "survive" and amt is not None:
                     tags.append(f"tool:survive:{int(amt)}")
+                elif k == "provide_attack" and extra.get("holder"):
+                    # F7：道具提供招式（招式本体在卡的 `attacks[]` 上，池生成侧
+                    # 转 `TrainerDef.tool_attack`；tag 只记**谁能用**）
+                    tags.append(f"tool:provide_attack:{extra['holder']}")
                 else:
                     unsupported.append({"type": t,
                                         "reason": f"道具形态未建模（{k}）"})

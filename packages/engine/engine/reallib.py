@@ -170,6 +170,23 @@ def _cost(raw: Optional[dict]):
     return tuple((k, int(v)) for k, v in raw.items())
 
 
+def _tool_attack_def(entry: dict) -> Optional[AttackDef]:
+    """道具提供的招式（F7 · Core Memory 这类 Technical Machine）
+
+    条目形态与宝可梦 `attacks[]` 完全一致 → 复用同一套 `AttackDef`，
+    结算链（费用校验 / 伤害流水线 / 效果派发）不需要任何特判。
+    """
+    raw = entry.get("tool_attack")
+    if not raw:
+        return None
+    return AttackDef(raw["name"], cost=_cost(raw.get("cost")),
+                     damage=int(raw.get("damage", 0)),
+                     effects=tuple(raw.get("effects", ())),
+                     desc=raw.get("desc", ""),
+                     name_zh=raw.get("name_zh", ""),
+                     desc_zh=raw.get("desc_zh", ""))
+
+
 def _fossil_def(entry: dict) -> PokemonDef:
     """化石卡的「宝可梦形态」定义（卡池条目 `fossil: {hp, types, abilities}`）"""
     raw = entry.get("fossil") or {}
@@ -234,7 +251,12 @@ def _build_card(entry: dict):
                           # 打出前置条件（第五十九批）：「only if you have any
                           # Tera Pokémon in play」等。与 play_cost 相反 ——
                           # 纯条件检查、无状态变化。
-                          play_gate=entry.get("play_gate", ""))
+                          play_gate=entry.get("play_gate", ""),
+                          # F7（2026-11-08）：道具**提供的招式**（Core Memory）。
+                          # 招式本体在道具卡上，只有卡面指定的持有者能用 ——
+                          # 与宝可梦招式同一套 `AttackDef`，结算链完全复用。
+                          tool_attack=_tool_attack_def(entry),
+                          tool_attack_holder=entry.get("tool_attack_holder", ""))
     if st == "Energy":
         return EnergyDef(entry.get("type", "colorless"), name=entry["name"],
                          name_zh=entry.get("name_zh", ""),

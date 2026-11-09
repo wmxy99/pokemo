@@ -338,6 +338,23 @@ class TestPoolTagVocabulary(unittest.TestCase):
                 elif sp[0] == "all_energy" and len(sp) == 2 \
                         and sp[1] in ("to_hand", "to_deck"):
                     pass
+                elif sp[0] == "shuffle_energy":
+                    # F8c（2026-11-09）：`shuffle_energy:<n>:then:<spec>`
+                    # （Wellspring Mask Ogerpon ex「Torrential Pump」）——
+                    # 可选代价 + 「If you do」门控的附加狙击。
+                    # `then` 段目前只支持 `snipe:<scope>:<per>:<count>`，且
+                    # scope / 数量都要能解析 —— 写错 scope 会静默打空。
+                    _ti = sp.index("then") if "then" in sp else -1
+                    _then = sp[_ti + 1:] if _ti > 0 else []
+                    ok_n = _ti == 2 and sp[1].isdigit()
+                    ok_then = (len(_then) == 4 and _then[0] == "snipe"
+                               and _then[1] in ("opp", "opp_bench", "own_bench",
+                                                "both_bench")
+                               and _then[2].isdigit()
+                               and (_then[3] == "all" or _then[3].isdigit()))
+                    if not (ok_n and ok_then):
+                        bad.append(f"{name} · {item}：{tag}"
+                                   f"（伤害前洗回能量形态非法）")
                 else:
                     bad.append(f"{name} · {item}：{tag}（伤害前决策形态非法）")
             else:

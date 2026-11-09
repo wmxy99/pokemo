@@ -11,13 +11,12 @@
     "precedence": "人工卡池 cards_real.json 优先（**按印刷 set+number**：同名不同印刷可以共存放行）；条目带 `uid`（`<卡名>@<SET> <number>`）用于跨印刷寻址",
     "honesty": "本池条目为**规则解析链推导**（非人工逐卡校对），装载侧标记为 engine_status=approximated；卡面数值来自清洗数据集，效果保真度取决于解析链召回率，差异见未建模动作清单",
     "counts": {
-      "kept": 1250,
+      "kept": 1252,
       "by_Energy": 20,
-      "by_Pokemon": 1046,
+      "by_Pokemon": 1048,
       "by_Trainer": 184,
       "skipped": {
-        "人工卡池已有同一印刷（人工优先）": 15,
-        "存在未建模项（整卡不收）": 2
+        "人工卡池已有同一印刷（人工优先）": 15
       }
     }
   },
@@ -4700,6 +4699,62 @@
       "source_card_id": 107,
       "name_key": "palafinex",
       "uid": "Palafin ex@TWM 61"
+    },
+    {
+      "name": "Wellspring Mask Ogerpon ex",
+      "name_zh": "厄诡椪（井之面具）ex",
+      "supertype": "Pokemon",
+      "stage": 0,
+      "hp": 210,
+      "types": [
+        "water"
+      ],
+      "weakness": "lightning",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": true,
+      "is_mega": false,
+      "category": "Tera(Water)",
+      "evolves_from": null,
+      "attacks": [
+        {
+          "name": "Sob",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 20,
+          "effects": [
+            "retreat_lock:opp:turn"
+          ],
+          "desc": "During your opponent’s next turn, the Defending Pokémon can’t retreat.",
+          "name_zh": "哭泣",
+          "desc_zh": "在对手的下个回合中，战斗宝可梦无法撤退。"
+        },
+        {
+          "name": "Torrential Pump",
+          "cost": {
+            "water": 1,
+            "colorless": 2
+          },
+          "damage": 100,
+          "effects": [
+            "pre:b4:shuffle_energy:3:then:snipe:opp_bench:120:1"
+          ],
+          "desc": "You may shuffle 3 Energy attached to this Pokémon into your deck. If you do, this attack also does 120 damage to 1 of your opponent’s Benched Pokémon. (Don’t apply Weakness and Resistance for Benched Pokémon.)",
+          "name_zh": "激流喷射",
+          "desc_zh": "你可以将此宝可梦身上附着的 3 个能量洗回你的牌库。若如此做，此招式还对对手的 1 只后备宝可梦造成 120 点伤害。（后备宝可梦不计算弱点和抗性。）"
+        }
+      ],
+      "abilities": [],
+      "real": {
+        "set": "TWM",
+        "number": "64"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 108,
+      "name_key": "wellspringmaskogerponex",
+      "uid": "Wellspring Mask Ogerpon ex@TWM 64"
     },
     {
       "name": "Abra",
@@ -32393,6 +32448,58 @@
       "source_card_id": 665,
       "name_key": "raboot",
       "uid": "Raboot@MEG 27"
+    },
+    {
+      "name": "Cinderace",
+      "name_zh": "闪焰王牌",
+      "supertype": "Pokemon",
+      "stage": 2,
+      "hp": 160,
+      "types": [
+        "fire"
+      ],
+      "weakness": "water",
+      "resistance": null,
+      "retreat": 1,
+      "is_ex": false,
+      "is_mega": false,
+      "category": "",
+      "evolves_from": "Raboot",
+      "attacks": [
+        {
+          "name": "Turbo Flare",
+          "cost": {
+            "colorless": 1
+          },
+          "damage": 50,
+          "effects": [
+            "attach_spread:3:any:deck:target:bench"
+          ],
+          "desc": "Search your deck for up to 3 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.",
+          "name_zh": "涡轮喷焰",
+          "desc_zh": "从牌库中检索最多 3 张基本能量卡，并以任意方式附着于你的后备宝可梦。然后洗牌。"
+        }
+      ],
+      "abilities": [
+        {
+          "name": "Explosiveness",
+          "name_zh": "爆发力",
+          "tag": "passive:setup_active",
+          "location": "field",
+          "desc": "If this Pokémon is in your hand when you are setting up to play, you may put it face down in the Active Spot.",
+          "desc_zh": "对局准备时，若此宝可梦在你的手牌中，你可以将背面朝上放置于战斗区。",
+          "cost": ""
+        }
+      ],
+      "real": {
+        "set": "MEG",
+        "number": "28"
+      },
+      "provenance": "dataset-derived",
+      "fidelity": "rule-parser-derived",
+      "source_card_id": 666,
+      "name_key": "cinderace",
+      "uid": "Cinderace@MEG 28"
     },
     {
       "name": "Corphish",

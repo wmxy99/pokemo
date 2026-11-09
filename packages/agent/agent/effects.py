@@ -3561,6 +3561,12 @@ def _detect_f8(text: str, kind: str) -> list:
                 return [act("rule", None, "self",
                             {"static_passive": f"evolve_as:{_key}:ex"})]
             return []
+        # Cinderace「Explosiveness」：**开局**时若在手牌，可把它面朝下放到
+        # 战斗位。引擎侧是 `passive:setup_active`（`Battle._setup_candidates`
+        # 在 setup 阶段读，平时无任何作用）。
+        if _F8C_SETUP_ACTIVE_RE.match(low):
+            return [act("rule", None, "self",
+                        {"static_passive": "setup_active"})]
         # Klinklang「Emergency Rotation」：在**手牌**里、对手有 2 阶 → 直接铺后备
         if _F8_HAND_TO_BENCH_RE.match(low):
             return [act("rule", None, "self", {"hand_to_bench": "opp_stage2"})]
@@ -3642,6 +3648,10 @@ _F8_HAND_TO_BENCH_RE = re.compile(
     r"^once during your turn,? if this pok[eé]mon is in your hand and your "
     r"opponent has any stage 2 pok[eé]mon in play,? you may put this pok[eé]mon "
     r"onto your bench\.?$", re.I)
+# F8c（2026-11-09）：开局从手牌直接放到战斗位（Cinderace「Explosiveness」）
+_F8C_SETUP_ACTIVE_RE = re.compile(
+    r"^if this pok[eé]mon is in your hand when you are setting up to play,? "
+    r"you may put it face down in the active spot\.?$", re.I)
 
 
 def _detect_s2(text: str, kind: str) -> list:
@@ -4560,6 +4570,17 @@ def _parse_rule_en(text: str, kind: str = "attack", name: str = "",
             _dv_spans.append((_a, _b))
         t = _mask_spans(t, _dv_spans)
     conditions: list = []
+    # F8b（2026-11-09）：**可选代价 + 「If you do」才追加的后备狙击**
+    # （Wellspring Mask Ogerpon ex「Torrential Pump」）。
+    # 必须在通用扫描**之前**整句认领：否则后半句会被读成一条独立伤害
+    # （目标「1 of your opponent's Benched Pokémon」是子集限定 → 通用分支只能
+    # 登记未建模），前半句那 3 点能量代价则彻底丢失 —— 结果就是整卡拒收。
+    _gs = _detect_f8b_gated_snipe(t, kind)
+    if _gs:
+        actions.extend(_gs["actions"])
+        # 认领后等长抹掉：句中「shuffle … into your deck」会被「洗回牌库」类
+        # 检测器再读一次（变成 `energy_self_to_deck`），一句两 tag。
+        t = _mask_spans(t, [_gs["span"]])
     lower = t.lower()
     # 「自伤指示物 + 本回合自身加伤」复合特性（第九十五批，Feraligatr）：
     # 必须在 `_claimed_ability` **之前**认领 —— 否则它会把两半拆成
@@ -9309,6 +9330,38 @@ def _detect_value_rules(text: str, kind: str) -> list:
     return []
 
 
+_F8B_GATED_SNIPE_RE = re.compile(
+    r"you may shuffle (?P<n>\d+) energy attached to this pok[eé]mon into your "
+    r"deck\.?\s*if you do,? this attack also does (?P<dmg>\d+) damage to 1 of "
+    r"your opponent['’]s benched pok[eé]mon", re.I)
+
+
+def _detect_f8b_gated_snipe(text: str, kind: str):
+    """F8b（2026-11-09）：**可选代价 + 「If you do」门控的附加狙击**
+
+    卡面原型（全库仅 1 张，措辞完全相同）：
+      · Wellspring Mask Ogerpon ex「Torrential Pump」——「**You may** shuffle 3
+        Energy attached to this Pokémon into your deck. **If you do**, this attack
+        **also** does 120 damage to 1 of your opponent's Benched Pokémon.」
+
+    落成 ``pre:b4:shuffle_energy:<n>:then:snipe:<scope>:<per>:<count>``：
+    引擎在**算伤害之前**问「付不付 + 打哪只」，闭合后从伤害段续跑（见
+    `Battle._b4_open` 的 `shuffle_energy` 分支）。
+
+    ⚠ 这是「代价**门控**」不是「代价折算」：没付 → 后续段**整段不存在**；
+      写成「没付就改成打战斗位」或「没付也照样打后备」都是实质改胜负。
+    """
+    if kind != "attack":
+        return None
+    m = _F8B_GATED_SNIPE_RE.search(str(text or ""))
+    if not m:
+        return None
+    return {"actions": [act("rule", None, "self", {
+        "pre_b4": (f"shuffle_energy:{int(m.group('n'))}:then:"
+                   f"snipe:opp_bench:{int(m.group('dmg'))}:1")})],
+        "span": m.span()}
+
+
 def _detect_self_buff(text: str, kind: str) -> list:
     """自伤指示物 + 本回合自身加伤 → **单条**复合 tag（`a|b`，按卡面顺序）"""
     if kind != "ability":
@@ -11686,6 +11739,10 @@ def to_engine_tags(specs: list) -> dict:
                     # Sylveon「Benched」→ opp_bench；Shiftry（含战斗位）→ opp。
                     tags.append("coin:heads:shuffle_opp_pokemon:"
                                 f"{extra['shuffle_opp_pokemon']}")
+                elif extra.get("pre_b4"):
+                    # F8b（2026-11-09）：伤害前**可选代价**决策
+                    # （`pre:b4:shuffle_energy:<n>:then:<spec>`）
+                    tags.append("pre:b4:" + str(extra["pre_b4"]))
                 elif extra.get("pre_discard_energy_special"):
                     # 伤害前阶段弃对手战斗位**特殊能量**（第二十五批，Mow Rotom）
                     _pe = extra["pre_discard_energy_special"]

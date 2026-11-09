@@ -124,11 +124,22 @@ class TestSnipeScaleParse(unittest.TestCase):
 
 
 class TestSnipeNegativeGuards(unittest.TestCase):
-    def test_optional_cost_condition_unmodeled(self):
-        """「You may … If you do, …」是**可选代价**，条件不可直读 → 不猜"""
+    def test_optional_cost_is_gated_not_unconditional(self):
+        """「You may … If you do, …」是**可选代价** —— 已建模（F8b，2026-11-09）
+
+        原断言是「一律不认领」：当时引擎没有「代价门控」的形态，认领了就必然
+        落成**无条件** 120 点狙击（比卡面强得多）。现在有了
+        `pre:b4:shuffle_energy:…:then:snipe:…`，正确口径是**认领且必须带门控**；
+        原意（不得读成无条件狙击）改成断言「不得产出裸 `snipe:`」。
+        """
         r = _tags(OGERPON)
-        self.assertEqual(r["tags"], [])
-        self.assertTrue(r["unsupported"])
+        self.assertEqual(
+            r["tags"],
+            ["pre:b4:shuffle_energy:3:then:snipe:opp_bench:120:1"])
+        self.assertFalse(
+            any(t.startswith("snipe:") for t in r["tags"]),
+            f"可选代价被读成了**无条件**狙击（白送一段伤害）：{r['tags']}")
+        self.assertEqual(r["unsupported"], [])
 
     def test_target_has_damage_counters(self):
         """「… Benched Pokémon **that has any damage counters on it**」→ 目标筛选

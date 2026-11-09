@@ -1511,7 +1511,15 @@ class TestCardLibrary(unittest.TestCase):
         self.assertEqual(s["total"], sum(s["by_supertype"].values()))
         self.assertGreater(s["attacks_total"], 1000)
         self.assertGreater(s["abilities_total"], 100)
-        self.assertLess(s["engine_coverage"], 1.0)
+        # 2026-11-09：卡库**已 100% 进引擎池**（1267/1267）。
+        # 原断言 `engine_coverage < 1.0` 只是当时的快照，不是语义 —— 真正要守的
+        # 是「覆盖率是**可核对的比例**」：与 ready/pending 两个计数自洽。
+        self.assertGreater(s["engine_coverage"], 0.0)
+        self.assertLessEqual(s["engine_coverage"], 1.0)
+        self.assertEqual(s["engine_ready"] + s["engine_pending"], s["total"])
+        self.assertEqual(
+            round(s["engine_ready"] / s["total"], 4), s["engine_coverage"],
+            "engine_coverage 与 engine_ready/total 不自洽")
         self.assertIn("不可对战", s["note"])
 
     def test_deck_import_matches_library_only_card(self):
@@ -1527,7 +1535,21 @@ class TestCardLibrary(unittest.TestCase):
         h = user_headers()
         un = client.get("/cards", params={"engine_ready": False,
                                          "page_size": 1}, headers=h).json()
-        self.assertEqual(un["total"] > 0, True, "卡库应存在未建模卡（引擎未 100%）")
+        if un["total"] == 0:
+            # 2026-11-09：卡库已 100% 进池 → 没有「仅卡库收录」的样本可用。
+            # 语义不丢：改核对**同一套统计口径的另一侧** —— 整副牌全部可对战、
+            # 不产生灰名单警告（若哪天又出现未建模卡，上面的分支会自动恢复）。
+            j = client.post("/decks/import", headers=h, json={"text": "\n".join([
+                "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",
+                "4 Hyper Aroma", "8 Basic {P} Energy", "8 Basic {R} Energy",
+                "4 好朋友宝芬", "4 高级球", "4 破坏之锤", "2 老大的指令",
+                "3 博士的研究", "4 奇树", "2 神奇糖果", "4 Night Stretcher",
+                "4 Counter Catcher",
+            ])}).json()
+            self.assertEqual(j["summary"]["not_implemented"], 0, j["summary"])
+            self.assertFalse(any("引擎未实现卡" in w for w in j["warnings"]),
+                             j["warnings"])
+            return
         sample = un["items"][0]["name"]
         text = "\n".join([
             "4 多龙梅西亚", "4 多龙奇", "3 多龙巴鲁托ex",

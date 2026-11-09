@@ -42,6 +42,15 @@ class BaselineAI(Agent):
         legal = view.get("legal") or [{"verb": "pass"}]
         me = view["me_state"]
         opp = view["opp_state"]
+        # F8c（2026-11-09）：`phase=choice`（开局上场 / 伤害前决策 / 退化数量 …）
+        # 期间**只接受** `choose` / `stop`，返回 `pass` 会被引擎拒绝。
+        # 规则基线对这些决策没有偏好 → 取第一个选项（确定性）。
+        # ⚠ 对 K1 口径**无影响**：内置卡组不含会挂起选择的卡，这一支是死代码
+        #   （`decklib` 只有 Bolt/Claw 等合成卡；已用 `make_deck("lightning")`
+        #   核对过），保留它是为了让「全卡池随机对局」不再卡在选择阶段。
+        for a in legal:
+            if a.get("verb") == "choose":
+                return dict(a)
         act = me.get("active")
         # 1) 能攻击 → 优先攻击（按伤害+一击击杀加成排序）
         attacks = [a for a in legal if a["verb"] == "attack"]

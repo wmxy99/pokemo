@@ -491,6 +491,12 @@ def _check_clause(card_name: str, item_name: str, clause: str, per,
                and f":scope:{scope_want}" in str(t) for t in effects):
             return []
     hits = [str(t) for t in effects if str(t).startswith(want + ":")]
+    # F8b（2026-11-09）：**代价门控**的后备狙击（Ogerpon「Torrential Pump」）
+    # 把 snipe 嵌在 `pre:b4:…:then:<snipe>` 里 —— 这是**有意**的无条件不结算，
+    # 不是「缺 snipe」。判据：`:then:<want>:` 出现在某条 effect 内即满足；
+    # 门控的数字与目标由 `audit_f8dc_tail` 单独核对（这里不重复判）。
+    if not hits and want.startswith("snipe:"):
+        hits = [str(t) for t in effects if f":then:{want}:" in f"{t}:"]
     if not hits:
         return [f"{card_name} · {item_name}：`{raw[:60]}` 缺 `{want}:…` tag"]
     if scale and not any(":per:" in h for h in hits):
@@ -4247,6 +4253,56 @@ _SYMBOL_TO_TYPE = {"G": "grass", "R": "fire", "W": "water", "L": "lightning",
                    "M": "metal", "C": "colorless", "N": "dragon"}
 
 
+def audit_f8dc_tail(card_name: str, item_name: str, desc: str,
+                    effects: list) -> list:
+    """F8b/F8c 对账：**代价门控的附加狙击** + **开局上场**（2026-11-09）
+
+    这两条的错法都不报错：
+
+      · Ogerpon「Torrential Pump」：卡面是「**You may** shuffle 3 Energy …
+        **If you do**, this attack also does 120 damage to 1 of your opponent's
+        Benched Pokémon.」——写成一条裸 `snipe:opp_bench:120:1` 就是**无条件**
+        打 120（白送一整段伤害）；写成 `dmg_plus:120` 则变成打战斗位（目标全错）；
+        代价数字写错（3 → 2）则代价变便宜，静默加强。
+      · Cinderace「Explosiveness」：「setting up to play」= **开局**，落成
+        `hand_bench:` 就变成「每回合从手牌铺后备」（完全另一张牌）。
+    """
+    errs: list = []
+    d = _norm(desc or "")
+    low = d.lower()
+    segs = [str(e) for e in _expand_compound(effects)]
+    m = re.search(r"you may shuffle (\d+) energy attached to this pok[eé]mon "
+                  r"into your deck\.?\s*if you do,? this attack also does "
+                  r"(\d+) damage to 1 of your opponent'?s benched pok[eé]mon",
+                  low)
+    if m:
+        want = (f"pre:b4:shuffle_energy:{int(m.group(1))}:then:"
+                f"snipe:opp_bench:{int(m.group(2))}:1")
+        got = [x for x in segs if x.startswith("pre:b4:shuffle_energy:")]
+        if not got:
+            errs.append(f"{card_name} · {item_name}：卡面是「可选代价 + If you do "
+                        f"才追加后备狙击」，缺 `{want}`（实际 {effects}）")
+        elif got[0] != want:
+            errs.append(f"{card_name} · {item_name}：应为 `{want}`，"
+                        f"实际 `{got[0]}`")
+        # 反向：不得再有**无条件**的同一段伤害（会两次结算 / 白送）
+        for x in segs:
+            if x.startswith("snipe:opp_bench:"):
+                errs.append(f"{card_name} · {item_name}：`{x}` 是无条件狙击，"
+                            f"与本卡的代价门控重复（会两次结算）")
+            if x.startswith("dmg_plus:") and str(m.group(2)) in x:
+                errs.append(f"{card_name} · {item_name}：`{x}` 把「打后备」写成了"
+                            f"「本招加伤」（目标完全错）")
+    if re.search(r"in your hand when you are setting up to play", low):
+        if "passive:setup_active" not in segs:
+            errs.append(f"{card_name} · {item_name}：卡面是**开局**从手牌上场，"
+                        f"tag 必须是精确的 `passive:setup_active`（实际 {effects}）")
+        if any(x.startswith("hand_bench:") for x in segs):
+            errs.append(f"{card_name} · {item_name}：开局上场被写成了 `hand_bench:`"
+                        f"（那是「每回合从手牌铺后备」，完全另一张牌）")
+    return errs
+
+
 def audit_f5_statics(card_name: str, item_name: str, desc: str,
                      effects: list) -> list:
     """F5 对账：**静态属性改写**（2026-11-08）
@@ -4711,6 +4767,7 @@ def main() -> int:
                 errs += audit_b4_interaction(c["name"], it.get("name"), desc, eff)
                 errs += audit_f8_rules(c["name"], it.get("name"), desc, eff)
                 errs += audit_f5_statics(c["name"], it.get("name"), desc, eff)
+                errs += audit_f8dc_tail(c["name"], it.get("name"), desc, eff)
                 errs += audit_knockout(c["name"], it.get("name"), desc, eff)
         # 训练家卡级（2026-11-02 第三十六批）：
         # ⚠ 上面的循环只走 `attacks` / `abilities`，而训练家卡的效果文本挂在
@@ -4829,7 +4886,9 @@ def main() -> int:
           "对手手牌铺场/双段条件静态） · "
           "静态属性改写（改弱点方向/能量增值属性） · "
           "二选一模式/具名能量代价（模式不拆散/键与后续） · "
-          "进化链改写（改写名/{{ex}}限定） 五十六类对账全部一致")
+          "进化链改写（改写名/{{ex}}限定） · "
+          "代价门控附加狙击 / 开局上场（数字与目标/不得裸 snipe） "
+          "五十七类对账全部一致")
     return 0
 
 

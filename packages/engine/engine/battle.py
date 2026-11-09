@@ -173,14 +173,47 @@ class Battle:
         # 所需的全部现场（攻击者/守方/招式/action）。每次**声明招式**时清零。
         self._b4_count: int = 0
         self._b4_ctx: Optional[dict] = None
+        # F8b（2026-11-09）：B4 决策闭合后要追加的**后续段**（卡面
+        # 「If you do, this attack **also** does N damage to …」）。只有代价
+        # 真的付了才置位；`_attack_resolve` 会在主伤害与效果之后结算它。
+        self._b4_then: str = ""
         # S6b：挂起「取哪张奖赏卡」期间**不能再处理下一只被击倒的宝可梦**
         # （多只同时被击倒：先排队，等选择闭合后按序补做）。
         # 不入队就会在 `_open_choice` 处撞「不允许嵌套挂起」。
         self._ko_queue: list = []
+        # F8c（2026-11-09）：开局「从手牌面朝下上场」的决策队列（Cinderace
+        # 「Explosiveness」）。`_setup_openings` 先按常规铺好场（引擎永远有
+        # 合法局面），再逐个询问「要不要换成这张」。队列空 → 与旧行为**完全
+        # 相同**（不挂选择、不改变任何随机数消耗）。
+        self._setup_queue: list = []
+        self._setup_done_called: bool = False
+        # 开局日志里的 `seed` 字段沿用旧口径（`_finish_setup` 里打）；
+        # 决策挂起会让 `__init__` 提前返回，所以先存下来。
+        self._setup_seed = seed
         self._setup_openings()
+        # ⚠ 后续（硬币 / `_begin_turn` / `just_played`）已移进 `_finish_setup()`：
+        #   开局若有「从手牌面朝下上场」的决策（Cinderace），setup 会**挂起**，
+        #   必须等决策闭合后再开始第一回合，否则选择会落到回合中途。
+
+    def _finish_setup(self) -> None:
+        """开局收尾：发奖赏 → 硬币 → 开第一回合 → 置 `just_played`
+
+        F8c 之前这段直接写在 `__init__` 里；现在由 `_setup_openings` 决定是
+        立即调用（无开局决策）还是等决策闭合后调用。
+        """
+        if self._setup_done_called:
+            return
+        self._setup_done_called = True
+        # S3（2026-11-08）：奖赏卡**真发牌**。官方 setup：从牌库取 6 张面朝下
+        # 作为奖赏卡 —— 此前引擎「凭空计数」，牌库根本没少（那 6 张还能被抽到）。
+        # 顺序放在放完战斗位/后备、且开局决策闭合之后，与官方步骤一致。
+        if self.cfg.real_prizes:
+            for _pi in (0, 1):
+                zones.deal_prizes(self, _pi, self.cfg.prizes)
+        self.setup_done = True
         # 先手：硬币
         self.current = 0 if self.rng.random() < 0.5 else 1
-        self._log("setup", {"first": self.current, "seed": seed,
+        self._log("setup", {"first": self.current, "seed": self._setup_seed,
                             "mulligan": [p.mulligan_count for p in self.players]})
         self._begin_turn()
         # S6a（2026-11-08）：**setup 上场的宝可梦当回合不能进化**（官方
@@ -225,16 +258,81 @@ class Battle:
         if self.cfg.mulligan_compensation:
             self._safe_draw(1, self.players[0].mulligan_count, source="mulligan_comp")
             self._safe_draw(0, self.players[1].mulligan_count, source="mulligan_comp")
-        # S3（2026-11-08）：奖赏卡**真发牌**。官方 setup：从牌库取 6 张面朝下
-        # 作为奖赏卡 —— 此前引擎「凭空计数」，牌库根本没少（那 6 张还能被抽到）。
-        # 顺序放在放完战斗位/后备之后，与官方步骤一致，且不影响起手评估。
-        if self.cfg.real_prizes:
-            for _pi in (0, 1):
-                zones.deal_prizes(self, _pi, self.cfg.prizes)
-        self.setup_done = True
-        # ⚠ 「setup 上场的宝可梦当回合不能进化」的标记**不能**在这里置
-        # （见 `__init__` 里 `_begin_turn()` 之后那段）：`_begin_turn` 会把
-        # 当前玩家场上的 `just_played` 清零，在这里置位等于白置。
+        # F8c（2026-11-09）：开局「从手牌面朝下放到战斗位」（Cinderace
+        # 「Explosiveness」：「If this Pokémon is **in your hand** when you are
+        # setting up to play, **you may** put it face down in the Active Spot.」）
+        #
+        # 做法：常规铺场**先照旧做完**（引擎在任何时刻都有合法局面），再问
+        # 「要不要换成这张」。卡面是 you may → 必须问，不能替他换。
+        # 每方最多问一次（同一张卡不会重复触发）；两边都要问 → 排队逐个问，
+        # 不能嵌套挂起（见 `_open_choice`）。
+        self._setup_queue = [pi for pi in (0, 1) if self._setup_candidates(pi)]
+        if self._setup_queue:
+            self._setup_ask_next()
+            return
+        self._finish_setup()
+
+    def _setup_candidates(self, pi: int) -> list:
+        """该玩家手里所有「可在开局直接上场」的卡（手牌下标，升序）"""
+        p = self.players[pi]
+        if p.active is None:
+            return []
+        out = []
+        for i, c in enumerate(p.hand):
+            pdef = getattr(c, "pdef", None)
+            if pdef is None:
+                continue
+            if any(str(getattr(ab, "tag", "") or "") == "passive:setup_active"
+                   for ab in getattr(pdef, "abilities", ()) or ()):
+                out.append(i)
+        return out
+
+    def _setup_ask_next(self) -> None:
+        """问下一个玩家的开局上场决策；队列空则收尾"""
+        if not self._setup_queue:
+            self._finish_setup()
+            return
+        pi = int(self._setup_queue[0])
+        cands = self._setup_candidates(pi)
+        if not cands:
+            self._setup_queue.pop(0)
+            self._setup_ask_next()
+            return
+        p = self.players[pi]
+        opts = [{"display": f"保持常规铺场（{p.active.name} 在战斗位）",
+                 "yes": False}]
+        for k, i in enumerate(cands):
+            # 同名多张时必须可区分（S6a 的「指令清单同名 label 去歧义」同一条
+            # 纪律）：否则玩家看到两个一模一样的选择，只能靠下标猜。
+            name = p.hand[i].pdef.display
+            if len(cands) > 1:
+                name = f"{name}（手牌第 {k + 1} 张）"
+            opts.append({"display": f"把 {name} 面朝下放到战斗位",
+                         "yes": True, "hand": int(i)})
+        self._open_choice("setup_active", opts, min_pick=1, max_pick=1,
+                          tag="setup_active", owner=pi,
+                          ctx={"player": int(pi)})
+
+    def _setup_apply(self, pi: int, hand_i: int) -> None:
+        """把手里第 ``hand_i`` 张换成战斗位（原战斗位进后备／后备满则回手）
+
+        卡面只规定「面朝下放到战斗位」，没有规定原来的那只去哪 —— 官方流程是
+        双方各自摆好 Active + Bench，所以被顶掉的那只回**后备**（有位置时）。
+        """
+        p = self.players[pi]
+        if not (0 <= hand_i < len(p.hand)):
+            raise ValueError("开局上场：手牌下标越界")
+        ref = p.hand.pop(hand_i)
+        old = p.active
+        p.active = make_pokemon(ref.pdef)
+        if old is not None:
+            if len(p.bench) < self.cfg.max_bench:
+                p.bench.insert(0, old)
+            else:
+                p.hand.append(PokeRef(old.pdef))
+        self._log("setup_active", {"player": pi, "card": ref.pdef.name,
+                                   "was": (old.name if old is not None else None),
+                                   "to_bench": any(fp is old for fp in p.bench)})
 
     # ---------- 抽卡与通用 ----------
     @staticmethod
@@ -2585,8 +2683,13 @@ class Battle:
     def _open_choice(self, kind: str, options: list, *, min_pick: int = 0,
                      max_pick: int = -1, tag: str = "", then: str = "",
                      allow_repeat: bool = False,
-                     ctx: Optional[dict] = None) -> None:
+                     ctx: Optional[dict] = None,
+                     owner: Optional[int] = None) -> None:
         """挂起一次选择（把 phase 切到 choice）
+
+        ``owner``：决策归属方，默认当前回合方。只有**开局**决策（Cinderace 的
+        「从手牌面朝下上场」）需要显式指定 —— 那时硬币还没抛，`self.current`
+        不代表「该谁做决定」。
 
         ⚠ 不允许多项挂起：本引擎的效果是**串行**的，两层待决会让「谁的选优先」
           变成隐式规则（改对局结果）。真需要嵌套时（S1b）再引入栈，并把排序
@@ -2594,12 +2697,13 @@ class Battle:
         """
         if getattr(self, "_pending", None) is not None:
             raise ValueError("已有未完成的决策（不允许嵌套挂起）")
+        who = self.current if owner is None else int(owner)
         self._pending = PendingChoice(
-            kind=str(kind), owner=self.current, options=list(options),
+            kind=str(kind), owner=who, options=list(options),
             min=int(min_pick), max=int(max_pick), tag=str(tag), then=str(then),
             allow_repeat=bool(allow_repeat), ctx=dict(ctx or {}))
         self.phase = "choice"
-        self._log("choice_open", {"player": self.current, "kind": kind,
+        self._log("choice_open", {"player": who, "kind": kind,
                                   "n_options": len(self._pending.options),
                                   "min": int(min_pick), "max": int(max_pick),
                                   "tag": str(tag)})
@@ -2670,6 +2774,19 @@ class Battle:
         if ch.kind == "alloc":
             # B4-b：分配 / 多目标选择已闭合 → 落状态
             self._alloc_apply(ch)
+            return
+        if ch.kind == "setup_active":
+            # F8c（2026-11-09）：开局「从手牌面朝下放到战斗位」（Cinderace）。
+            # 闭合后继续问下一位玩家；队列空 → 收尾（发奖赏 / 硬币 / 开回合）。
+            opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+            if opt.get("yes"):
+                self._setup_apply(int(ch.owner), int(opt.get("hand", -1)))
+            else:
+                self._log("optional_declined", {"player": int(ch.owner),
+                                                "tag": "setup_active"})
+            if self._setup_queue:
+                self._setup_queue.pop(0)
+            self._setup_ask_next()
             return
         if ch.kind == "b4_pre":
             # B4：伤害前决策已闭合 → 应用到状态上，记下「按这个数量缩放」，
@@ -2753,6 +2870,34 @@ class Battle:
                 else:
                     self._log("optional_declined", {"player": ch.owner,
                                                     "tag": spec})
+            elif head == "shuffle_energy":
+                # F8b：可选代价（洗回 N 点能量）→ **付了才有**后续段
+                opt = ch.chosen()[0] if ch.chosen() else {"yes": False}
+                _sp = spec.split(":")
+                want = int(_sp[1]) if len(_sp) > 1 and _sp[1].isdigit() else 0
+                if not opt.get("yes"):
+                    self._log("optional_declined", {"player": ch.owner,
+                                                    "tag": spec})
+                    self._b4_then = ""
+                else:
+                    paid = self._shuffle_energy_to_deck(p, attacker, want)
+                    if paid < want:
+                        # 选项生成时已检查过「付得出」，走到这里说明状态被
+                        # 外部改过 —— 如实记录，且**不给**后续段（没付全就没有）。
+                        self._log("no_effect", {"tag": spec, "player": ch.owner,
+                                                "reason": f"能量不足（{paid}/{want}）"})
+                        self._b4_then = ""
+                    else:
+                        n = 1
+                        self._b4_then = ":".join(_sp[_sp.index("then") + 1:])
+                        # 目标由**同一次**选择给出（`snipe` 位置码），续跑时
+                        # 直接喂给 `_apply_snipe` —— 不能再问第二次。
+                        if isinstance(ctx.get("action"), dict):
+                            ctx["action"]["snipe"] = [int(opt.get("snipe", 0))]
+                        self._log("b4_shuffle_energy", {
+                            "player": ch.owner, "target": attacker.name,
+                            "n": paid, "then": self._b4_then,
+                            "snipe": int(opt.get("snipe", 0))})
             else:
                 raise ValueError(f"未知伤害前决策：{spec}")
             self._b4_count = int(n)
@@ -7275,6 +7420,7 @@ class Battle:
         # 同时记录本次真的弃掉几张道具（`:if_pre_tool` 条件要用）。
         self._pre_tools_discarded = 0
         self._b4_count = 0          # 本次攻击的「按数量缩放」计数，先归零
+        self._b4_then = ""          # 本次攻击的「代价门控后续段」，先归零
         # B4：`discarded_energy_this_attack` 的基准 —— 用**差分**得到「本招式
         # 弃掉了几张能量」，而不是本回合累计。
         self._atk_energy_disc0 = p.discarded_energy_this_turn
@@ -7422,7 +7568,89 @@ class Battle:
                 min_pick=1, max_pick=1, tag=B4_PREFIX + spec,
                 ctx={"spec": str(spec)})
             return
+        if head == "shuffle_energy":
+            # F8b（2026-11-09）：`shuffle_energy:<n>:then:<spec>`
+            #
+            # 卡面（Wellspring Mask Ogerpon ex「Torrential Pump」）：「**You may**
+            # shuffle 3 Energy attached to this Pokémon into your deck. **If you
+            # do**, this attack **also** does 120 damage to 1 of your opponent's
+            # Benched Pokémon.」
+            #
+            # 这是**两段式**：① 付不付（可选代价）；② 付了打哪只后备。两件事
+            # 必须在**同一次**决策里问完 —— 引擎不允许嵌套挂起（见 `_open_choice`），
+            # 分两次问就得引入栈、还得定义「先问哪个」的隐式顺序。
+            # 选项因此是「不支付」+「支付并对 X 造成 N（每个后备目标一条）」。
+            if len(parts) < 2 or not parts[1].isdigit() or "then" not in parts:
+                raise ValueError(f"未知伤害前决策：{spec}")
+            pay_n = int(parts[1])
+            then = ":".join(parts[parts.index("then") + 1:])
+            if not then.startswith("snipe:") or then.count(":") < 2:
+                raise ValueError(f"未知伤害前决策：{spec}")
+            scope = then.split(":")[1]
+            per = int(then.split(":")[2]) if then.split(":")[2].isdigit() else 0
+            cands = self._snipe_candidates(scope)
+            if attacker.total_energy() < pay_n or not cands:
+                # 付不出代价 / 没有可选目标 → 「may」按不付处理，**不挂空选择**
+                # （空选择会让 AI 看到一堆「结束选择」，等于噪声动作）。
+                self._log("b4_no_option", {
+                    "player": self.current, "spec": str(spec),
+                    "reason": ("能量不足" if attacker.total_energy() < pay_n
+                               else "没有可选目标")})
+                self._b4_count = 0
+                self._b4_then = ""
+                self._attack_resume()
+                return
+            opts = [{"display": "不支付（本招按原伤害结算）", "yes": False}]
+            for pos, fp in cands:
+                opts.append({"display": f"把 {pay_n} 点能量洗回牌库，"
+                                        f"对 {fp.name} 造成 {per} 伤害",
+                             "yes": True, "snipe": int(pos)})
+            self._open_choice("b4_pre", opts, min_pick=1, max_pick=1,
+                              tag=B4_PREFIX + spec, ctx={"spec": str(spec)})
+            return
         raise ValueError(f"未知伤害前决策：{spec}")
+
+    def _shuffle_energy_to_deck(self, pl: PlayerState, fp: FieldPokemon,
+                                n: int) -> int:
+        """把 ``fp`` 上的 ``n`` 点能量洗回**牌库** → 实际移走的张数（F8b）
+
+        顺序与 `_discard_energy_from` **同一口径**：无色 → 其它基本色 → 特殊
+        能量卡（特殊能量最后走）。为什么可以直接定这个顺序而不算替玩家决定：
+
+          · 本池所有特殊能量都是「同属性基本能量 + 额外效果」的**严格上位**
+            （`special_energy.py` 的 `_SPECS` 里没有任何负面条款）；
+          · 卡面说的是「shuffle 3 Energy **you** choose」，但在「洗回牌库」
+            这个代价下，留特殊、洗基本对玩家**单调更优**，不存在被放弃的更优解
+            —— 与 `pre:attach_all_basic`（全附是支配解）的论证同一套。
+
+        ⚠ 与 `remove_any` 的差别：那个按**支付点数**扣（一张可抵多点），这里按
+          **卡**（「3 Energy」是 3 张卡）。混用会让 Meganium 那类增值少洗。
+        """
+        if n <= 0:
+            return 0
+        if fp.total_energy() < n:
+            return 0
+        moved = 0
+        order = [COLORLESS] + [t for t in sorted(fp.energy) if t != COLORLESS]
+        for t in order:
+            if moved >= n:
+                break
+            have = fp.energy.get(t, 0)
+            if have <= 0:
+                continue
+            k = min(have, n - moved)
+            fp.energy[t] = have - k
+            if fp.energy[t] <= 0:
+                del fp.energy[t]
+            for _ in range(k):
+                pl.deck.append(EnergyRef(EnergyDef(t)))
+            moved += k
+        while moved < n and fp.senergy:
+            pl.deck.append(fp.senergy.pop())
+            moved += 1
+        if moved:
+            self.rng.shuffle(pl.deck)
+        return moved
 
     def _attack_resume(self) -> None:
         """从 `_b4_ctx` 续跑招式结算的**伤害段**（B4 挂起之后）"""
@@ -7532,6 +7760,17 @@ class Battle:
                 self._log("deck_shuffle", {"player": 1 - self.current,
                                            "n": len(_ropp.deck),
                                            "reason": "borrow_deck_top"})
+            # F8b（2026-11-09）：**代价门控的后续段**（Wellspring Mask Ogerpon ex
+            # 「Torrential Pump」——「You may shuffle 3 Energy … **If you do**,
+            # this attack **also** does 120 damage to 1 of your opponent's Benched
+            # Pokémon.」）。只有代价真的付了才由 `_apply_choice_result` 置位；
+            # 没付时这一段**整段不存在**（不是「改成打战斗位」）。
+            # 目标位置码来自同一次 B4 选择（`action["snipe"]`）。
+            _then = self._b4_then or ""
+            self._b4_then = ""
+            if _then and not mods.get("nullify_all"):
+                if self._apply_snipe(_then, action, atk.effects, mods):
+                    return {"ok": True, "event": None}
             # S2 第二阶段：道具触发钩子（卡面写 even if Knocked Out → 先于击倒结算）
             self._trigger_tool_on_damaged(defender, attacker, damage_dealt)
             # 2026-10-27：受击反应**特性**（`on_damaged:*`），同一时点

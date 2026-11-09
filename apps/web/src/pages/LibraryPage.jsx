@@ -4,6 +4,7 @@ import { t } from '../i18n.js'
 import { Pill, StatCard, Spinner, EmptyState, ErrBar } from '../components/ui.jsx'
 import { CardArt } from '../cardart.jsx'
 import { navigate } from '../router.jsx'
+import { abilityText, attackText, trainerText, cardKind } from '../cardtext.js'
 
 /** 能量/属性代码 → 中文展示（与引擎 energy 代码同源） */
 const ENERGY_LABEL = {
@@ -102,7 +103,7 @@ function CardDetail({ card, onClose }) {
                 <Pill tone="info">特性</Pill>
               </div>
               <p className="sm" style={{ margin: '4px 0 0' }}>
-                {a.effect_zh || a.effect || '—'}
+                {abilityText(a)}
               </p>
             </div>
           ))}
@@ -124,11 +125,11 @@ function CardDetail({ card, onClose }) {
                   </span>
                 )}
               </div>
-              {(a.effect_zh || a.effect) && (
-                <p className="sm" style={{ margin: '4px 0 0' }}>
-                  {a.effect_zh || a.effect}
-                </p>
-              )}
+              {/* 无条件渲染：`attackText` 对「纯伤害、无附加效果」的招式会生成
+                  「造成 N 点伤害」—— 此前条件渲染导致这类招式说明整段空白。 */}
+              <p className="sm" style={{ margin: '4px 0 0' }}>
+                {attackText(a)}
+              </p>
             </div>
           ))}
         </>
@@ -162,13 +163,20 @@ function CardDetail({ card, onClose }) {
         </>
       )}
 
-      {(card.rules_text_zh || card.library?.rules_text_zh || card.rules_text) && (
+      {/* 训练家 / 能量卡一律给说明：此前是「有文本才渲染」，于是 8 张基本能量
+          （本来就没有卡面文本）整段消失 —— 玩家看不到任何说明。 */}
+      {(cardKind(card) !== 'pokemon'
+        || card.rules_text_zh || card.library?.rules_text_zh || card.rules_text) && (
         <>
           <h4 style={{ margin: '12px 0 4px' }}>
-            {card.supertype === 'Pokemon' ? '其他文本 / 规则' : '卡牌效果'}
+            {cardKind(card) === 'pokemon' ? '其他文本 / 规则'
+              : cardKind(card) === 'energy' ? '能量说明' : '卡牌效果'}
           </h4>
           <p className="sm" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-            {card.rules_text_zh || card.library?.rules_text_zh || card.rules_text}
+            {trainerText({
+              ...card,
+              rules_text_zh: card.rules_text_zh || card.library?.rules_text_zh,
+            })}
           </p>
         </>
       )}

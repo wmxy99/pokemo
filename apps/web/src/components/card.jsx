@@ -1,7 +1,8 @@
 import React from 'react'
 import {
-  cc, typeColor, typeLabel, stageLabel, trainerKindLabel,
-  trainerDesc, abilityDesc, statusLabel, cardKind, isTrainerCard,
+  typeColor, typeLabel, stageLabel, trainerKindLabel,
+  statusLabel, cardKind, isTrainerCard,
+  abilityText, attackText, trainerText,
 } from '../cardtext.js'
 import { handUsable } from '../plays.js'
 import { cardArtUri } from '../cardart.jsx'
@@ -103,7 +104,7 @@ function PokemonFace({ c, size, dmg = 0, used = [] }) {
             <div key={`ab${i}`} className={`cf-ability ${used.includes(a.name) ? 'used' : ''}`}>
               <span className="cf-ab-tag">特性</span>
               <b>{a.display || a.name_zh || a.name}</b>
-              <p>{cc(abilityDesc(a.tag))}</p>
+              <p>{abilityText(a)}</p>
             </div>
           ))}
           {attacks.map((a, i) => (
@@ -114,9 +115,7 @@ function PokemonFace({ c, size, dmg = 0, used = [] }) {
                 <b className="cf-atk-name">{a.display || a.name_zh || a.name}</b>
                 {a.damage > 0 && <span className="cf-atk-dmg">{a.damage}</span>}
               </div>
-              {(a.display_desc || a.desc_zh || a.desc) && (
-                <p className="cf-atk-desc">{a.display_desc || a.desc_zh || a.desc}</p>
-              )}
+              <p className="cf-atk-desc">{attackText(a)}</p>
             </div>
           ))}
           {attacks.length === 0 && abilities.length === 0 && (
@@ -149,11 +148,9 @@ function EnergyFace({ c, size }) {
       </div>
       {(size === 'hand' || size === 'field' || size === 'zoom') && (
         <div className="cf-body">
-          <p className="cf-atk-desc">
-            {size === 'zoom'
-              ? `附着到宝可梦身上，为其提供 1 个${typeLabel(c.etype)}能量。`
-              : '提供 1 个能量'}
-          </p>
+          {/* 基本能量没有卡面文本，`trainerText` 会给出功能性说明；
+              特殊能量有 rules_text → 直接显示原文，不会说成「只提供 1 个能量」 */}
+          <p className="cf-atk-desc">{trainerText(c)}</p>
         </div>
       )}
     </>
@@ -176,7 +173,7 @@ function TrainerFace({ c, size }) {
         <div className="cf-body">
           <div className="cf-ability trainer">
             <span className="cf-ab-tag">{kind}</span>
-            <p>{trainerDesc(c.tag)}</p>
+            <p>{trainerText(c)}</p>
           </div>
         </div>
       )}
@@ -281,8 +278,7 @@ export function CardZoom({ card, onClose }) {
                     <b>{a.display || a.name_zh || a.name}</b>
                     {a.damage > 0 && <span className="cf-atk-dmg">{a.damage}</span>}
                   </div>
-                  {(a.display_desc || a.desc_zh || a.desc) &&
-                    <p>{a.display_desc || a.desc_zh || a.desc}</p>}
+                  <p>{attackText(a)}</p>
                 </div>
               ))}
             </>
@@ -293,7 +289,7 @@ export function CardZoom({ card, onClose }) {
               {(card.abilities || []).map((a, i) => (
                 <div key={i} className="zoom-move">
                   <div className="zoom-move-head"><b>{a.display || a.name_zh || a.name}</b></div>
-                  <p>{cc(abilityDesc(a.tag))}</p>
+                  <p>{abilityText(a)}</p>
                 </div>
               ))}
             </>
@@ -301,7 +297,13 @@ export function CardZoom({ card, onClose }) {
           {isTrainerCard(card) && (
             <>
               <h5>卡牌效果</h5>
-              <p>{trainerDesc(card.tag)}</p>
+              <p>{trainerText(card)}</p>
+            </>
+          )}
+          {cardKind(card) === 'energy' && (
+            <>
+              <h5>能量说明</h5>
+              <p>{trainerText(card)}</p>
             </>
           )}
           <p className="sm muted" style={{ marginTop: 10 }}>

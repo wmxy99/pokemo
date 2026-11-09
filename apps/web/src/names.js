@@ -4,6 +4,7 @@
  * 约定：**英文名是数据键**（引擎 view 的 `name`、API 字段、Limitless 文本匹配都用英文），
  * 展示层一律取 `display`（中文，引擎已下发）→ `name_zh` → `name` 回退。
  */
+import { attackText } from './cardtext.js'
 
 /** 单个对象（宝可梦/手牌/招式/特性）的展示名 */
 export function disp(o, fallback = '?') {
@@ -33,9 +34,9 @@ export function actionContext(view) {
   const field = [me.active, ...(me.bench || [])]
     .filter(Boolean).map((p) => disp(p))
   const attacks = (me.active?.attacks || []).map((a) => disp(a))
-  // 招式中文效果文本（desc_zh / display_desc），与 attacks 下标对齐（按钮提示用）
-  const attackDescs = (me.active?.attacks || []).map(
-    (a) => a.display_desc || a.desc_zh || '')
+  // 招式效果文本，与 attacks 下标对齐（按钮提示用）。走统一取值函数：
+  // 纯伤害招式没有 desc，直接读字段会得到空串 → 按钮 tooltip 一片空白。
+  const attackDescs = (me.active?.attacks || []).map((a) => attackText(a))
   // 引擎附能量时取**手牌中最后一张**能量（state.attach_energy_to 的实现口径），
   // 这里与之保持一致，避免手牌有多种能量时标签张冠李戴。
   const energies = (me.hand || []).filter((c) => c.type === 'energy')

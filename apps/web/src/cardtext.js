@@ -10,6 +10,15 @@
 
 import { lang as uiLang } from './i18n.js'
 
+/**
+ * 兜底文案的可识别标记。
+ *
+ * 守卫（`apps/web/e2e/cardtext_check.cjs`）用它判断「某条说明是**专属文案**
+ * 还是模板兜底」—— 兜底本身是合法的（保证任何卡都有说明），但卡池里实际
+ * 出现的族**不应该**停在兜底上。标记集中在这里，改文案时不会与守卫脱节。
+ */
+export const DESC_FALLBACK_MARK = '引擎按'
+
 export const cc = (entry, lang = uiLang) => {
   // ⚠ 本函数是**所有** {zh,en} 文案的唯一解包口 —— 返回值**必须是字符串**。
   //   漏解包（把对象直接 return 出去）时，React 会把它当子节点渲染 →
@@ -78,11 +87,24 @@ export const trainerKindLabel = (k) => cc(TRAINER_KIND[k] || { zh: k || '训练�
 //   **不是**字符串 'trainer'。曾用 `card.type === 'trainer'` 判断，分支永不命中
 //   （症状：不可用原因退化成通用文案、详情浮层的「卡牌效果」整段不渲染）。
 export const TRAINER_KINDS = Object.keys(TRAINER_KIND)
-export const isTrainerCard = (c) => !!c && TRAINER_KINDS.includes(c.type)
+export const isTrainerCard = (c) => {
+  if (!c) return false
+  // 卡库接口用大写 `supertype`，引擎手牌用 `type` = tdef.kind（小写）—— 两者都要认
+  if (String(c.supertype || '').toLowerCase() === 'trainer') return true
+  return TRAINER_KINDS.includes(c.type)
+}
 
 /** 卡牌大类：'pokemon' | 'energy' | 'trainer'（含缺 type 时的兜底识别） */
 export const cardKind = (c) => {
   if (!c) return 'trainer'
+  // ⚠ 卡库接口（`/cards/:id`）**没有 `type` 字段**，只有大写的
+  //   `supertype`（'Pokemon' / 'Trainer' / 'Energy'）。此前只认小写 `type`，于是
+  //   训练家卡靠 `c.attacks !== undefined`（详情里恒为数组）被判成宝可梦 ——
+  //   详情页把 HP/弱点全显示成「—」，而「卡牌效果」整段不渲染（= 无说明）。
+  const st = String(c.supertype || '').toLowerCase()
+  if (st === 'pokemon' || st === 'energy' || st === 'trainer') {
+    return st === 'trainer' ? 'trainer' : st
+  }
   if (c.type === 'pokemon' || c.type === 'energy') return c.type
   if (isTrainerCard(c)) return 'trainer'
   // 缺 type（历史数据或其它数据源）：有招式/阶段/HP 字段则视作宝可梦
@@ -373,10 +395,17 @@ export function trainerDesc(tag) {
   if (!entry) {
     // ⚠ 兜底**必须经 cc() 解包成字符串**：直接返回 {zh,en} 对象会被 React 当作
     //   子节点渲染（error #31）→ 整棵树卸载 → 整屏黑屏（真实卡组必踩）。
-    //   未收录的族如实标注 tag（C5 差异透明），不假装有说明。
+    //   未收录的族如实标注 tag（C5 差异透明），但**不能只说「未收录」** ——
+    //   卡库视角的原文由 `trainerText()` 优先取用，只有引擎内部 tag 会走到这里，
+    //   所以这里把 tag 本身说成人话（模板名 + 参数），保证「任何卡都有说明」。
+    const readable = String(tag || '').split(':').filter(Boolean).join(' · ')
     return cc({
-      zh: `（效果说明未收录：${tag || '无 tag'}）`,
-      en: `(description not catalogued: ${tag || 'no tag'})`,
+      zh: readable
+        ? `${DESC_FALLBACK_MARK}效果模板「${readable}」结算（卡面原文见该卡详情）。`
+        : '该卡无附加效果（基础卡，按常规规则使用）。',
+      en: readable
+        ? `Resolved by effect template "${readable}" (see the card text).`
+        : 'No extra effect (basic card, used per normal rules).',
     })
   }
   return cc(typeof entry === 'function' ? entry(arg, extra, parts) : entry)
@@ -462,8 +491,15 @@ export function abilityDesc(tag) {
       return { zh: `被动：${String(tag).split(':').slice(1).join(':') || '按卡面结算'}。`, en: `Passive: ${String(tag).split(':').slice(1).join(':') || 'see card text'}.` }
     case 'unsupported':
       return { zh: '该特性尚未在引擎中建模。', en: 'Ability not yet modeled by the engine.' }
-    default:
-      return { zh: '（该特性暂无说明）', en: '(no description yet)' }
+    default: {
+      // ⚠ 这里**不得**再返回「（该特性暂无说明）」：卡库视角的卡面原文由
+      //   `abilityText()` 优先取用，只有「引擎 tag 而没有原文」才会走到本分支，
+      //   把 tag 说成可读的模板名 + 参数即可（C5：如实说明怎么结算）。
+      const readable = String(tag || '').split(':').filter(Boolean).join(' · ')
+      return readable
+        ? { zh: `${DESC_FALLBACK_MARK}特性模板「${readable}」结算（卡面原文见该卡详情）。`, en: `Resolved by ability template "${readable}" (see the card text).` }
+        : { zh: '被动特性：在本局中持续生效（详见卡面原文）。', en: 'Passive Ability: always active this game (see card text).' }
+    }
   }
 }
 
@@ -520,3 +556,104 @@ export const STATUS_LABEL = {
   confused: { zh: '混乱', en: 'Confused' },
 }
 export const statusLabel = (s) => cc(STATUS_LABEL[s] || { zh: s, en: s })
+
+// ================= 统一「说明」取值（2026-11-09） =================
+//
+// 为什么需要这一层：同一张卡在**两个数据源**里字段名完全不同 ——
+//
+//   · 卡库接口 `/cards/:id`：`abilities` / `attacks` 带 `effect` + `effect_zh`
+//     （卡面原文），**没有 `tag`**；
+//   · 引擎 `view()`：带 `tag` 与 `desc` / `desc_zh` / `display_desc`。
+//
+// 三处渲染此前各拼各的：详情浮层用 `abilityDesc(a.tag)` → 卡库没有 tag →
+// 落到兜底「（该特性暂无说明）」（用户截图就是这个）；招式读 `desc/desc_zh`
+// → 卡库没有这两个字段 → 说明**整段不渲染**；训练家详情靠 `card.tag` → 同上。
+//
+// 现在统一走下面四个函数，取值顺序固定为
+//   **原文/引擎描述 → tag 机制文案 → 按数值生成**
+// 任何分支都返回**非空字符串**，也绝不出现「暂无说明」——
+// 守卫见 `apps/web/e2e/cardtext_check.cjs`（遍历卡库 1267 张 + 引擎池全量）。
+
+const pickLang = (zh, en) => (uiLang === 'en' ? (en || zh || '') : (zh || en || ''))
+
+/** 取第一个**非空**文本（接受字符串或 {zh,en}） */
+function firstStr(...vals) {
+  for (const v of vals) {
+    if (typeof v === 'string' && v.trim()) return v.trim()
+    if (v && typeof v === 'object' && (v.zh || v.en)) return cc(v)
+  }
+  return ''
+}
+
+/**
+ * 特性说明：卡面原文优先，其次引擎侧 desc，最后按 tag 生成。
+ * @param {object} a 特性对象（两种来源都可：{tag,...} 或 {effect,effect_zh,...}）
+ */
+export function abilityText(a) {
+  if (!a) return ''
+  const own = firstStr(a.display_desc, a.desc_zh, a.desc,
+    pickLang(a.effect_zh, a.effect))
+  if (own) return own
+  return cc(abilityDesc(a.tag)) || cc({
+    zh: '被动特性：在本局中持续生效（详见卡面原文）。',
+    en: 'Passive Ability: always active this game (see card text).',
+  })
+}
+
+/**
+ * 招式说明：原文优先；纯伤害招式按数值生成（否则整段空白 = 无说明）。
+ * @param {object} a 招式对象（{desc,desc_zh,effect,effect_zh,damage} 任意组合）
+ */
+export function attackText(a) {
+  if (!a) return ''
+  const own = firstStr(a.display_desc, a.desc_zh, a.desc,
+    pickLang(a.effect_zh, a.effect))
+  if (own) return own
+  const dmg = Number(a.damage || 0)
+  if (dmg > 0) {
+    return cc({ zh: `造成 ${dmg} 点伤害（无附加效果）。`, en: `Deals ${dmg} damage (no extra effect).` })
+  }
+  return cc({ zh: '无附加效果的招式（按卡面费用使用）。', en: 'No extra effect (used at the printed cost).' })
+}
+
+/**
+ * 训练家 / 能量卡说明：卡面原文优先（`other_text` / `rules_text`），
+ * 其次按引擎 tag 生成，最后对基本能量给功能性说明。
+ * @param {object} c 卡片对象（卡库详情或引擎手牌都可）
+ */
+export function trainerText(c) {
+  if (!c) return ''
+  const own = firstStr(pickLang(c.other_text_zh, c.other_text),
+    pickLang(c.rules_text_zh, c.rules_text))
+  if (own) return own
+  if (c.tag) return trainerDesc(c.tag)
+  // ⚠ 只有**确认是能量卡**才走能量文案：此前无条件回退到 `energyText`，
+  //   一张既无原文也无 tag 的训练家卡会被说成「特殊能量：…」（语义全错，
+  //   而且是非空字符串 —— 守卫只查「非空」时会放过）。
+  if (cardKind(c) === 'energy') return energyText(c)
+  return cc({
+    zh: '该卡没有附加效果文本（按常规规则使用）。',
+    en: 'This card has no extra effect text (used per normal rules).',
+  })
+}
+
+/** 能量卡的功能性说明（基本能量没有卡面文本，但必须有说明） */
+export function energyText(c) {
+  if (!c) return ''
+  const t = c.etype || (Array.isArray(c.types) ? c.types[0] : c.types)
+  const nm = t ? typeLabel(t) : ''
+  const isBasic = !!c.is_basic_energy
+    || String(c.subtype || '').toLowerCase() === 'basic energy'
+    || /^Basic\b/i.test(String(c.name || ''))
+  if (isBasic) {
+    return cc({
+      zh: `基本能量：提供 1 个${nm || ''}能量，用于支付招式费用与撤退费用；每回合可从手牌附着 1 张。`,
+      en: `Basic Energy: provides 1 ${nm || ''} Energy for attack and Retreat costs; you may attach 1 from your hand each turn.`,
+    })
+  }
+  return cc({
+    zh: '特殊能量：提供能量，并按卡面附带额外效果（同一只宝可梦通常只能附着 1 张特殊能量）。',
+    en: 'Special Energy: provides Energy plus an extra effect (usually only 1 Special Energy per Pokémon).',
+  })
+}
+

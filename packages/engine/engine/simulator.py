@@ -20,8 +20,9 @@ def run_match(deck_a: list, deck_b: list, agent_a: Agent, agent_b: Agent,
     guard = 0
     while not battle.finished and guard < max_steps:
         guard += 1
-        view = battle.view()
-        agent = agent_a if battle.current == 0 else agent_b
+        who = battle.acting_side()      # 开局决策期间按挂起归属，不用 current
+        view = battle.view(who)
+        agent = agent_a if who == 0 else agent_b
         action = agent.decide(view)
         res = battle.step(action)
         if not res["ok"]:

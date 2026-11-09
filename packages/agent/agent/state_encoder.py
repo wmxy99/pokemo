@@ -4,11 +4,16 @@
 把 engine.Battle.view() 的结构化观测编码为**定长特征向量**（供策略网络/MCTS 先验），
 并把 legal_actions 编码为**动作特征**（每候选一向量）。
 
-v1 编码设计（实测 STATE_DIM=51 / ACTION_DIM=14，以模块常量推断值为准）：
+v1 编码设计（实测 STATE_DIM=51 / ACTION_DIM=**16**，以模块常量推断值为准）：
   - 状态向量：双方 active（血量比/伤害/分色能量/状态/阶段）· 后备数量与前3槽血量 ·
     奖赏 · 资源计数（牌库/手牌/supporter/附能/回合）
-  - 动作向量：verb one-hot(7) + 参数数值归一(3) + 训练家 tag one-hot(4)
+  - 动作向量：verb one-hot(**9**，含 `choose`/`stop`) + 参数数值归一(3) +
+    训练家 tag one-hot(4)
     对「不可知细节」（对手手牌）一律不编码 → 保证仅用公开信息。
+
+⚠ 历史权重是 **7 动词（14/31 维）**：`choose`/`stop` 由 S1b（2026-11-09）补入，
+  旧权重靠 `EncoderConfig.verbs=LEGACY_VERBS` 继续可用（见
+  `infer_config_from_state_dict` —— 动作维度决定动词表）。
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -17,15 +22,20 @@ from typing import Optional
 ENGINE_TYPES = ("grass", "fire", "water", "lightning", "psychic", "fighting",
                 "darkness", "metal", "dragon", "colorless")
 
-# ⚠ 第一百三十五批（S1a）**故意没有**把 `choose` / `stop` 加进来：
-#   加进去就 +2 维 → action_dim 14→16 / 31→33 → 现有 `artifacts/k1_rich.pt`
-#   全部不兼容（6 个加载用例 + api 的最小训练用例当场红）。
-#   「加动词 + 重训 + 重测 K1」必须**同一个 PR** 完成（方案 §6.3 / S1b），
-#   否则要么权重报废、要么编码层静默把 choose 当 pass（两者都不可接受）。
-#   在此之前：动作字符串仍原样带 `verb="choose"/"stop"` 传给引擎（规则侧正确），
-#   只是策略特征里两者都落成「未知动词 → 全零 one-hot」—— 这是**策略特征缺口**，
-#   不是规则缺口；S1b 一并修。
-VERBS = ("play", "attach", "attack", "retreat", "evolve", "trainer", "pass")
+# S1b（2026-11-09）：`choose` / `stop` **补进**动词表。
+#
+# 为什么之前没有（S1a 的决定，保留记录）：加两个动词 = 动作特征 +2 维
+# （14→16 / 31→33），当时 `artifacts/k1_rich.pt` 是 14/31 训练的，加了就整批
+# 不兼容。所以 S1a 先让 `choose/stop` **原样透传给引擎**（规则侧正确），代价是
+# 策略特征里两者都落成「未知动词 → 全零 one-hot」—— 挂起选择时网络分不清
+# 「选第 1 个」和「结束选择」，这是**策略特征缺口**（不是规则缺口）。
+#
+# 补法（同一 PR 内完成 = 方案 §6.3 / S1b）：动词表带进 `EncoderConfig.verbs`，
+# 旧权重按 `infer_config_from_state_dict` 反推出 **7 动词**布局继续可用
+# （不报废历史产物），新训练的权重用默认的 9 动词。
+LEGACY_VERBS = ("play", "attach", "attack", "retreat", "evolve", "trainer",
+                "pass")
+VERBS = LEGACY_VERBS + ("choose", "stop")
 TRAINER_TAGS = ("poffin", "ultra_ball", "hammer", "boss")
 
 
@@ -135,10 +145,13 @@ def encode_action(view: dict, action: dict,
     + 招式自身的伤害与费用）。全部来自 `view` 公开信息，不使用隐藏信息。
     """
     cfg = cfg if cfg is not None else _ACTIVE_CFG
+    verbs = cfg.verb_table() if cfg is not None else VERBS
     verb = action.get("verb", "pass")
-    a: list[float] = [0.0] * len(VERBS)
-    if verb in VERBS:
-        a[VERBS.index(verb)] = 1.0
+    a: list[float] = [0.0] * len(verbs)
+    if verb in verbs:
+        a[verbs.index(verb)] = 1.0
+    # ⚠ 未知动词（旧 7 动词布局下的 `choose`/`stop`）→ 全零 one-hot。这是
+    #   **旧权重的既定语义**，不是「当成 pass」：pass 有自己的 one-hot 位。
     # 数值参数（归一化到 [0,1]）
     a += [min(1.0, action.get("index", 0) / 10.0),
           min(1.0, action.get("attack", 0) / 5.0),
@@ -230,9 +243,22 @@ def infer_config_from_state_dict(sd: dict) -> Optional["EncoderConfig"]:
     先 `set_active_encoder`。改为从权重自动推断，既少一类坑，也让评估脚本
     （k1_accept / calibrate_value）无需额外参数。
 
-    可推断的组合（当前工程实际使用的两种）：
-      · state 51 + action 14 → legacy/basic（返回 None，与历史行为一致）
-      · state 59 + action 31 → full(hand+meta) + rich
+    可推断的组合（``state`` × ``action`` 四象限 × 两代动词表）：
+
+      · state 51 / action 14 → legacy/basic（**7 动词**，返回 None）
+      · state 51 / action 31 → rich（7 动词）
+      · state 59 / action 14 → full(hand+meta)（7 动词）
+      · state 59 / action 31 → full + rich（7 动词）
+      · state 51 / action 16 → basic（**9 动词**，含 choose/stop）
+      · state 51 / action 33 → rich（9 动词）
+      · state 59 / action 16 → full（9 动词）
+      · state 59 / action 33 → full + rich（9 动词）
+
+    为什么连动词表一起反推（S1b，2026-11-09）：`choose`/`stop` 加进 `VERBS` 后
+    默认维度变成 16/33，而历史产物（`artifacts/k1_rich.pt` 等）是 14/31 训练的。
+    只按维度区分就能两者都支持：**动作维度决定动词表**（14/31 = 7 动词，
+    16/33 = 9 动词），因此旧权重不需要重训也能继续加载与评估。
+
     其它维度抛错要求显式配置 —— **不猜**（feature 顺序会影响向量布局）。
     """
     try:
@@ -241,18 +267,28 @@ def infer_config_from_state_dict(sd: dict) -> Optional["EncoderConfig"]:
     except Exception:                                    # noqa: BLE001
         return None
     base_state = STATE_DIM
-    if sdim == base_state and adim == 14:
-        return None
-    if sdim == base_state + 8 and adim == 31:
-        return EncoderConfig(features=("hand", "meta"), action_features="rich")
-    if sdim == base_state + 8 and adim == 14:
-        return EncoderConfig(features=("hand", "meta"))
-    if sdim == base_state and adim == 31:
-        return EncoderConfig(action_features="rich")
-    raise ValueError(
-        f"无法从权重推断编码配置（state_dim={sdim} / action_dim={adim}）—— "
-        f"请显式 set_active_encoder() 指定；**不要**用当前会话默认值硬套"
-        f"（维度不符会报错，语义不符会静默算错）。")
+    # 动作维度 → (是否 rich, 动词表)
+    _BY_ADIM = {14: (False, LEGACY_VERBS), 31: (True, LEGACY_VERBS),
+                16: (False, ()), 33: (True, ())}
+    if adim not in _BY_ADIM:
+        raise ValueError(
+            f"无法从权重推断编码配置（state_dim={sdim} / action_dim={adim}）—— "
+            f"请显式 set_active_encoder() 指定；**不要**用当前会话默认值硬套"
+            f"（维度不符会报错，语义不符会静默算错）。")
+    rich, verbs = _BY_ADIM[adim]
+    if sdim == base_state:
+        feats: tuple = ()
+    elif sdim == base_state + 8:
+        feats = ("hand", "meta")
+    else:
+        raise ValueError(
+            f"无法从权重推断编码配置（state_dim={sdim} / action_dim={adim}）—— "
+            f"state_dim 既不是 {base_state} 也不是 {base_state + 8}")
+    if not feats and not rich and not verbs:
+        return None                                      # 默认 legacy 口径
+    return EncoderConfig(features=feats,
+                         action_features="rich" if rich else "basic",
+                         verbs=verbs)
 
 
 def apply_config_from_state_dict(sd: dict) -> Optional["EncoderConfig"]:
@@ -276,12 +312,21 @@ class EncoderConfig:
     features 可选域：'hand'（我方手牌构成 +4）· 'meta'（回合/资源比例 +4）。
     组合维度 = 51 + 4·n，由 encoder_dim() 给出。
 
-    action_features：'basic'（14 维，历史行为）或 'rich'（+17 维，见 encode_action
+    action_features：'basic'（14/16 维）或 'rich'（+17 维，见 encode_action
     的说明 —— 把"被作用实体"的属性编码进动作特征）。**改动它必须重新训练**。
+
+    verbs：动词表。空/None = 用模块默认 `VERBS`（9 个，含 `choose`/`stop`）。
+    旧权重（7 动词布局）由 `infer_config_from_state_dict` 显式传入
+    `LEGACY_VERBS` —— 不这么做就只能报废历史产物，或让编码层静默把
+    `choose` 当 `pass`（两者都不可接受）。
     """
     features: tuple = ()
     device: str = "cpu"
     action_features: str = "basic"
+    verbs: tuple = ()
+
+    def verb_table(self) -> tuple:
+        return tuple(self.verbs) if self.verbs else VERBS
 
 
 # 会话级激活配置：set_active_encoder(cfg) 后，无参 encode_state/encoder_dim
@@ -317,7 +362,8 @@ def action_dim(cfg: Optional[EncoderConfig] = None) -> int:
     `ACTION_DIM` 仅作为 legacy 常量保留（历史脚本兼容）。
     """
     cfg = cfg if cfg is not None else _ACTIVE_CFG
-    base = len(VERBS) + 3 + len(TRAINER_TAGS)
+    verbs = cfg.verb_table() if cfg is not None else VERBS
+    base = len(verbs) + 3 + len(TRAINER_TAGS)
     if cfg is not None and getattr(cfg, "action_features", "basic") == "rich":
         return base + RICH_ACTION_EXTRA
     return base

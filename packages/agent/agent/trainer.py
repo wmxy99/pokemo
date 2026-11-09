@@ -38,7 +38,8 @@ def collect_episode(battle, net, device="cpu", temperature=1.0,
     guard = 0
     while not battle.finished and guard < max_steps:
         guard += 1
-        view = battle.view()
+        who = battle.acting_side()      # 开局决策期间按挂起归属（D1/F8c）
+        view = battle.view(who)
         legal = view.get("legal") or [{"verb": "pass"}]
         if not legal:
             break
@@ -61,7 +62,7 @@ def collect_episode(battle, net, device="cpu", temperature=1.0,
             "feats_all": feats_all,
             "chosen": idx,
             "logp": logp,
-            "actor": battle.current,
+            "actor": who,
             "action": copy.deepcopy(legal[idx]),
             "r": shaping * rw.state_reward(view),
         })
@@ -222,8 +223,8 @@ def train_ppo_vs_fixed(deck_a: list, deck_b: list, net,
         guard = 0
         while not battle.finished and guard < 500:
             guard += 1
-            if battle.current == me:
-                view = battle.view()
+            if battle.acting_side() == me:
+                view = battle.view(me)
                 legal = view.get("legal") or [{"verb": "pass"}]
                 if len(legal) == 1:
                     chosen, logp, act = 0, 0.0, dict(legal[0])

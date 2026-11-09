@@ -35,11 +35,12 @@ def collect_demonstration(deck_a: list, deck_b: list, agent_a, agent_b,
         guard = 0
         while not b.finished and guard < max_steps:
             guard += 1
-            view = b.view()
+            who = b.acting_side()       # 开局决策期间按挂起归属（D1/F8c）
+            view = b.view(who)
             legal = view.get("legal") or [{"verb": "pass"}]
             if not legal:
                 break
-            agent = agent_a if b.current == 0 else agent_b
+            agent = agent_a if who == 0 else agent_b
             act = agent.decide(view)
             # chosen 必须在 legal 中（基线 AI 应返回合法动作；异常回退 pass）
             try:

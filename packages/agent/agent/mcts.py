@@ -105,13 +105,16 @@ def _search(battle, iters: int = 40, c_puct: float = 1.4,
     直接以价值头估值回传 —— 更准（无 rollout 噪声）且更快（可用更多迭代）。
     children=None 表示无分支（<2 合法动作）；否则 children[i] 对应 legal[i]。
     """
-    legal = battle.legal_actions()
+    # ⚠ 用 `acting_side()`：开局决策（D1 补抽 / F8c 面朝下上场）期间
+    #   `current` 不代表任何人，`legal_actions()`（无参 → current）会返回空表，
+    #   MCTS 会以为「没有可选动作」而直接放弃。
+    root_player = battle.acting_side()
+    legal = battle.legal_actions(root_player)
     if not legal:
         return None, []
     if len(legal) == 1:
         return None, legal
     master = random.Random(seed if seed is not None else battle.seed)
-    root_player = battle.current
 
     # 策略先验（编码配置取自网络对象，避免同进程多配置互踩）
     priors = [1.0 / len(legal)] * len(legal)
@@ -262,7 +265,8 @@ def _expand(node: _TNode, policy, device: str, master: random.Random) -> None:
         res = b.step(dict(act))
         if not res["ok"]:
             b.step({"verb": "pass"})
-        node.children.append(_TNode(b, b.current, parent=node, prior=p))
+        node.children.append(_TNode(b, b.acting_side(), parent=node,
+                                    prior=p))
 
 
 def _search_tree(battle, iters: int = 40, c_puct: float = 1.4, policy=None,
@@ -284,7 +288,7 @@ def _search_tree(battle, iters: int = 40, c_puct: float = 1.4, policy=None,
     if not legal:
         return None, []
     master = random.Random(seed if seed is not None else battle.seed)
-    root = _TNode(copy.deepcopy(battle), battle.current)
+    root = _TNode(copy.deepcopy(battle), battle.acting_side())
     _expand(root, policy, device, master)
     t0 = time.time()
 

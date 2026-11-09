@@ -21,7 +21,7 @@
 | 规则 | 实现点 | 守卫测试 | tag 前缀 | 覆盖卡数 | 状态 |
 |---|---|---|---|---|---|
 | 开局：洗牌、起手 7 张、无基础则重抽（mulligan）、战斗位 + 后备铺场 | `packages/engine/engine/battle.py::_draw_with_mulligan`、`packages/engine/engine/battle.py::_setup_openings` | `packages/engine/tests/test_flow.py::TestFlow.test_opening_always_has_active` | — | — | ✅ |
-| mulligan 补偿：对手每有 1 次 mulligan 可抽 1 张 | `packages/engine/engine/battle.py::_setup_openings` | `packages/engine/tests/test_flow.py::TestFlow.test_opening_always_has_active` | — | — | ⚠️ 自动抽（官方为可选，见差异 D1） |
+| mulligan 补偿：对手每有 1 次 mulligan **可以**抽 1 张（you may，非自动） | `packages/engine/engine/battle.py::_setup_openings`、`packages/engine/engine/battle.py::_setup_ask_next` | `packages/engine/tests/test_d1_mulligan.py::TestMulliganChoice.test_choice_offered_to_opponent` | — | — | ✅ |
 | 先手第 1 回合**不能攻击** | `packages/engine/engine/battle.py::_opening_turn` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnNoAttack.test_legal_actions_have_no_attack` | — | — | ✅ |
 | 先手第 1 回合**不能使用 Supporter** | `packages/engine/engine/battle.py::_card_first_turn_ok` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnNoSupporter.test_legal_actions_hide_supporter` | — | — | ✅ |
 | 例外许可：卡面「If you go first, you can use this attack / may use this card during your first turn」 | `packages/engine/engine/battle.py::_first_turn_attack_ok` | `packages/engine/tests/test_s6a_rules.py::TestFirstTurnBypass.test_bypass_attack_is_legal_on_opening_turn` | `use_any:first_turn` | 5 | ✅ |
@@ -64,15 +64,26 @@
 
 ## 已知差异（`⚠️` 行的展开）
 
-**D1 · mulligan 补偿是自动的，官方是「可以抽」**
-官方（SM7 规则书「FULL DETAILS OF TAKING A MULLIGAN」）：对手**may draw 1
-card** for each mulligan。引擎直接按次数抽满。
+> 当前 **0 处 ⚠️**：D1（mulligan 可选）已于 **2026-11-09** 落地。
+> 处置方式记在这里，供以后遇到同类「官方是 may、引擎是自动」时照做。
 
-为什么暂时不改：这条差异要落在 `__init__` 的 setup 阶段（开局第一个选择），
-需要把 `_begin_turn()` 推迟到选择闭合之后 —— 那是回合流转最关键的一段，
-收益（极端局面下想拒抽）远小于风险。真要改，做法是把 `_setup_openings` 末尾
-改成「挂起 `mulligan_draw` 选择 + 置 `_setup_pending_begin`，由 `_close_choice`
-补做 `_begin_turn`」，并补 3 条真实对局用例（双方都 mulligan / 只有一方 / 开关关闭）。
+**D1 · mulligan 补偿（已关闭，保留记录）**
+官方（SM7 规则书「FULL DETAILS OF TAKING A MULLIGAN」）：对手 **may draw 1
+card** for each mulligan；引擎此前按次数直接抽满（简化偏差）。
+
+落地做法（F8c 的 setup 决策层 + D1 本体）：
+
+1. `_setup_openings` 把「要问的决策」排成队列 —— 先 `setup_active`
+   （摆场阶段，Cinderace），后 `mulligan_draw`（补抽阶段，官方顺序）；
+2. 每个 mulligan 由**对手**决定抽 0..N 张（官方逐张问；本引擎一次问完 ——
+   两次问之间没有新信息、抽牌单调有利，等价）；
+3. 全部闭合后才 `_finish_setup()`（发奖赏 / 硬币 / `_begin_turn` / `just_played`），
+   与 F8c 共用同一条收尾路径；
+4. 牌库不足 N 张 → 选项按实际牌库收缩；牌库为空 → 不挂空选择。
+
+守卫：`tests/test_d1_mulligan.py`（9 条：谁被问 · 抽满=旧行为 · 拒绝真的不抽 ·
+N 次 mulligan 的选项范围 · 牌库钳制 · 开关关闭 · 与 setup_active 的先后 ·
+规则基线 AI 能自己走完）。
 
 > D2（多条件门槛）与 D3（退化 devolve）已在 **2026-11-08** 落地：前者支持
 > `all_in_play:<名1>|<名2>|…` 的合取（Anthea & Concordia 进池），后者有完整

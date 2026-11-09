@@ -39,6 +39,17 @@ def _resolve_deck(spec: str) -> list:
         ) from e
 
 
+def _turn_owner(battle) -> int:
+    """「现在该谁动」= 挂起选择的归属方，否则当前回合方
+
+    ⚠ 开局决策（mulligan 补抽 / Cinderace 面朝下上场）发生在**硬币之前**，
+      此时 `battle.current` 恒为 0、不代表任何人的回合。只看 `current` 会把
+      一方的选择派给另一方（AI 替人类决定，或人类干等 AI）。
+    """
+    ch = battle.pending_owner()
+    return battle.current if ch is None else int(ch)
+
+
 def _deck_of(deck_id, name, p):
     """返回 (引擎卡组, 标签)：优先 F3 已导入卡组 id（owner 隔离 + 未收录卡拦截）"""
     if not deck_id:
@@ -91,7 +102,9 @@ def create_battle(req: schemas.BattleCreateReq,
     #   同时棋盘左右互换。这是信息泄露 + 显示错乱（有回归测试守着）。
     view = battle.view(req.player_side)
     opening = {"steps": [], "stopped": None}
-    if battle.current != req.player_side and not battle.finished:
+    # ⚠ 用 `_turn_owner` 而不是 `current`：建局时可能停在**开局决策**
+    #   （mulligan 补抽 / 面朝下上场），那时 `current` 恒为 0 不代表回合。
+    if _turn_owner(battle) != req.player_side and not battle.finished:
         opening = _run_ai_until_human(bid)      # 对手先手则自动走至人类回合
         view = battle.view(req.player_side)
     return {"id": bid, "seed": seed, "player_side": req.player_side,
@@ -146,9 +159,13 @@ def _run_ai_until_human(bid: str) -> dict:
     ai = _opp_agent(battle, s["ai_iters"], s["seed"])
     steps = []
     guard = 0
-    while not battle.finished and battle.current != player_side and guard < 500:
+    while (not battle.finished and _turn_owner(battle) != player_side
+           and guard < 500):
         guard += 1
-        act = ai.decide(battle.view())
+        # ⚠ 视角必须给**该出手的一方**：`view()` 默认取 `current`，而开局决策
+        #   （D1/F8c）期间 `current` 不代表任何人 —— 拿错视角会得到空 legal，
+        #   AI 只能回 pass，被引擎拒绝后这里会中止步进（对局卡死）。
+        act = ai.decide(battle.view(_turn_owner(battle)))
         res = battle.step(copy.deepcopy(act))
         if not res["ok"]:
             # AI 给出非法动作：改走 pass。若连 pass 都不被接受，则退出（避免死循环）
@@ -178,7 +195,7 @@ def act(bid: str, req: schemas.ActionReq,
     battle = s["battle"]
     if battle.finished:
         raise HTTPException(409, "对局已结束")
-    if battle.current != s["player_side"]:
+    if _turn_owner(battle) != s["player_side"]:
         raise HTTPException(409, "当前不是你的回合")
     side = s["player_side"]
     # 此处 current == side（上面已校验），但显式传 side 以免日后默认值含义变化时又出问题
@@ -244,7 +261,7 @@ def act(bid: str, req: schemas.ActionReq,
     view = battle.view(side)                      # 显式玩家视角（勿用默认=当前行动方）
     store.update_battle(bid, status="finished" if battle.finished else "open",
                         payload={"winner": battle.winner})
-    my_turn = (not battle.finished and battle.current == side)
+    my_turn = (not battle.finished and _turn_owner(battle) == side)
     from engine.commands import sequence_hint
     return {"ok": True, "winner": battle.winner,
             "matched": matched,
@@ -277,7 +294,7 @@ def list_commands(bid: str, p: Principal = Depends(current_user)):
     battle = s["battle"]
     if battle.finished:
         return {"id": bid, "finished": True, "commands": []}
-    if battle.current != s["player_side"]:
+    if _turn_owner(battle) != s["player_side"]:
         return {"id": bid, "waiting_ai": True, "commands": []}
     return {"id": bid, "finished": False,
             "commands": battle.command_catalog(),
@@ -293,7 +310,7 @@ def get_state(bid: str, p: Principal = Depends(current_user)):
     battle = s["battle"]
     view = battle.view(s["player_side"])          # 显式玩家视角（勿用默认=当前行动方）
     my_turn = (not battle.finished
-               and battle.current == s["player_side"])
+               and _turn_owner(battle) == s["player_side"])
     return {"id": bid, "seed": s["seed"], "turn": view["turn"],
             "phase": view["phase"], "winner": battle.winner,
             "finished": battle.finished,

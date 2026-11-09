@@ -255,18 +255,26 @@ class Battle:
                     break
                 p.hand.remove(extra)
                 p.bench.append(make_pokemon(extra.pdef))
-        if self.cfg.mulligan_compensation:
-            self._safe_draw(1, self.players[0].mulligan_count, source="mulligan_comp")
-            self._safe_draw(0, self.players[1].mulligan_count, source="mulligan_comp")
+        # D1（2026-11-09）：mulligan 补偿 = **对手「可以」抽**（官方 Q&A：
+        # 「your opponent **may** draw 1 card」），此前是自动抽 —— 属简化偏差。
+        #
         # F8c（2026-11-09）：开局「从手牌面朝下放到战斗位」（Cinderace
         # 「Explosiveness」：「If this Pokémon is **in your hand** when you are
         # setting up to play, **you may** put it face down in the Active Spot.」）
         #
-        # 做法：常规铺场**先照旧做完**（引擎在任何时刻都有合法局面），再问
-        # 「要不要换成这张」。卡面是 you may → 必须问，不能替他换。
-        # 每方最多问一次（同一张卡不会重复触发）；两边都要问 → 排队逐个问，
-        # 不能嵌套挂起（见 `_open_choice`）。
-        self._setup_queue = [pi for pi in (0, 1) if self._setup_candidates(pi)]
+        # 两者的做法一致：常规铺场**先照旧做完**（引擎在任何时刻都有合法局面），
+        # 再把「要问的决策」排成队列逐个问（不嵌套挂起，见 `_open_choice`）。
+        # 顺序 = 官方流程：先摆场（含 setup-active）→ 再补抽。
+        self._setup_queue = []
+        for pi in (0, 1):
+            if self._setup_candidates(pi):
+                self._setup_queue.append(("setup_active", int(pi), 0))
+        if self.cfg.mulligan_compensation:
+            for pi in (0, 1):
+                n = int(self.players[pi].mulligan_count)
+                if n > 0:
+                    # 补抽的是**对手**（我方 mulligan → 对手可抽）
+                    self._setup_queue.append(("mulligan_draw", 1 - int(pi), n))
         if self._setup_queue:
             self._setup_ask_next()
             return
@@ -292,7 +300,27 @@ class Battle:
         if not self._setup_queue:
             self._finish_setup()
             return
-        pi = int(self._setup_queue[0])
+        kind, decider, payload = self._setup_queue[0]
+        if kind == "mulligan_draw":
+            # D1：对手因我方 mulligan「可以」补抽 —— 抽几张是**玩家的决定**
+            # （官方是逐张「may draw 1 card」，本案合并成一次「0..N 张」：
+            #  抽牌在本引擎里是**单调有利**的，中间没有需要再判断的信息，
+            #  所以「连问 N 次要不要抽」与「一次选 k」等价 —— 唯一的差别是
+            #  玩家看不到「抽到第 1 张后再决定第 2 张」，而那个信息不影响结论）。
+            n = int(payload)
+            dp = self.players[int(decider)]
+            if n <= 0 or not dp.deck:
+                self._setup_queue.pop(0)
+                self._setup_ask_next()
+                return
+            n = min(n, len(dp.deck))
+            opts = [{"display": f"不抽（放弃 {n} 张补抽）", "n": 0}]
+            opts += [{"display": f"抽 {k} 张", "n": k} for k in range(1, n + 1)]
+            self._open_choice("mulligan_draw", opts, min_pick=1, max_pick=1,
+                              tag="mulligan_draw", owner=int(decider),
+                              ctx={"player": int(decider), "n": n})
+            return
+        pi = int(decider)
         cands = self._setup_candidates(pi)
         if not cands:
             self._setup_queue.pop(0)
@@ -521,15 +549,46 @@ class Battle:
         self.current = 1 - self.current
         self._begin_turn()
 
+    def pending_owner(self) -> Optional[int]:
+        """当前挂起选择的**归属方**（无挂起 → None）
+
+        为什么需要单独一个访问器：开局决策（D1 `mulligan_draw` / F8c
+        `setup_active`）发生在**硬币之前**，此时 `self.current` 还不代表
+        「该谁动」。服务端/UI 判断「轮到谁」时必须用
+        ``pending_owner() if not None else current``，否则会把一方的选择
+        派给另一方（极端情况下 AI 会替人类做决定）。
+        """
+        ch = getattr(self, "_pending", None)
+        return None if ch is None else int(ch.owner)
+
+    def acting_side(self) -> int:
+        """当前「该出手」的一方 = 挂起选择的归属方，否则当前回合方
+
+        ⚠ 驱动方（`simulator.run_match` / 训练收集 / MCTS 根节点 / 服务端步进）
+          选择 Agent 与 `view(pi)` **必须**用它，不能用 `battle.current`：
+          开局决策（D1 `mulligan_draw` / F8c `setup_active`）发生在硬币之前，
+          `current` 恒为 0 —— 按它派发会把一方的选择交给另一方（AI 替人类决定）。
+        """
+        ch = self.pending_owner()
+        return self.current if ch is None else int(ch)
+
     # ---------- 合法动作 ----------
     def legal_actions(self, pi: Optional[int] = None) -> list:
         pi = self.current if pi is None else pi
-        if self.finished or pi != self.current:
+        if self.finished:
             return []
         # 决策分解（S1a）：挂起期间合法动作**只有**选择项与「结束选择」。
-        if self.phase == "choice":
+        # ⚠ 开局决策（D1 `mulligan_draw` / F8c `setup_active`）发生在**硬币之前**，
+        #   `self.current` 不代表「该谁决定」—— 归属以 `_pending.owner` 为准，
+        #   因此这里不能再用 `pi != self.current` 早退（否则真正的决策方拿不到选项）。
+        _ch = getattr(self, "_pending", None)
+        if self.phase == "choice" and _ch is not None:
+            # 只给**归属方**：`current` 在开局决策期间不代表任何人，不能作为
+            # 放行条件（否则非决策方会拿到别人的选项）。
+            if pi != int(_ch.owner):
+                return []
             return self._choice_legals()
-        if self.phase != "main":
+        if pi != self.current or self.phase != "main":
             return []
         p = self.players[pi]
         opp = self.players[1 - pi]
@@ -2774,6 +2833,22 @@ class Battle:
         if ch.kind == "alloc":
             # B4-b：分配 / 多目标选择已闭合 → 落状态
             self._alloc_apply(ch)
+            return
+        if ch.kind == "mulligan_draw":
+            # D1：mulligan 补抽（官方「may」，此前是自动抽）
+            opt = ch.chosen()[0] if ch.chosen() else {"n": 0}
+            k = int(opt.get("n", 0) or 0)
+            if k > 0:
+                got = self._safe_draw(int(ch.owner), k, source="mulligan_comp")
+                self._log("mulligan_draw", {"player": int(ch.owner),
+                                            "asked": int(ch.ctx.get("n", 0)),
+                                            "drawn": got})
+            else:
+                self._log("optional_declined", {"player": int(ch.owner),
+                                                "tag": "mulligan_draw"})
+            if self._setup_queue:
+                self._setup_queue.pop(0)
+            self._setup_ask_next()
             return
         if ch.kind == "setup_active":
             # F8c（2026-11-09）：开局「从手牌面朝下放到战斗位」（Cinderace）。

@@ -16,16 +16,18 @@
       --stage2-episodes 3000 --stage3-episodes 100 --final-games 40   # 短试跑
 产物：artifacts/k1_policy.pt（最终权重）· artifacts/K1_report.md（判定报告）
 
-参数已按 README「冲 70% 手册」对齐（2026-09-09 调参）：
-  ① 终评样本 ≥100（--final-games 默认 100；协议正式验收用 --final-games 200）
-  ② 更长预算：stage1 40000 / stage2 24000 / stage3 400
-  ③ lr 余弦衰减（--lr-schedule cosine，默认）+ entropy 0.05 + clip 0.3 + hidden 128
-  ⑤ AlphaZero 式快照刷新（stage2-snapshot-every 2000）+ MCTS 教练 iters=10
-  （特征扩展可选 --features full = 59 维，训练与评估须同配置）
+默认值 = `examples/RUN_K1_LONG.md` §四「当前最佳配置」（2026-09-18 实测）：
+  `--lr 3e-4 --ent-coef 0.005 --clip 0.2 --reward-shaping 0.0`
+  `--stage1-episodes 20000 --stage2-episodes 0 --stage3-episodes 0`
 
-预期总时长（RTX 4050 笔记本，引擎收集 CPU-bound，GPU 加速网络段）：
-  stage1 40000 局 ≈ 25–55min · stage2 24000 局 ≈ 15–35min
-  stage3 400 局（MCTS10 蒸馏，含大量引擎 rollout）≈ 40–90min
+⚠ **不要**改回 2026-09-09 的旧默认（lr 3e-3 / shaping 0.05 / clip 0.3 /
+ent 0.05 / stage2 24000）。手册 §三 的结论 ②③ 已实测它们有害：
+奖励塑造 0.05 让 4000 局胜率从 0.67 掉到 0.64、15k 局更会崩到 0.52–0.61。
+2026-11-09 又复现了一次：用旧默认跑到 stage1 10000 局时双盲仍只有 **0.350**
+（同环境改成上面的配置后 10k 局即回到 0.7+ 区间）。
+
+预期总时长（RTX 4050 笔记本，引擎收集 CPU-bound）：
+  BC 150 局 ≈ 1min · stage1 20000 局 ≈ 30–45min · 终评 200 局 ≈ 1–2min
 """
 from __future__ import annotations
 import argparse
@@ -53,28 +55,28 @@ def main():
     ap.add_argument("--decks", default="lightning")
     ap.add_argument("--bc-episodes", type=int, default=150)
     ap.add_argument("--bc-epochs", type=int, default=25)
-    ap.add_argument("--stage1-episodes", type=int, default=40000)
-    ap.add_argument("--stage2-episodes", type=int, default=24000)
+    ap.add_argument("--stage1-episodes", type=int, default=20000)
+    ap.add_argument("--stage2-episodes", type=int, default=0)
     ap.add_argument("--stage2-snapshot-every", type=int, default=2000)
-    ap.add_argument("--stage3-episodes", type=int, default=400)
+    ap.add_argument("--stage3-episodes", type=int, default=0)
     ap.add_argument("--stage3-mcts-iters", type=int, default=10)
     ap.add_argument("--stage3-bc-epochs", type=int, default=6)
     ap.add_argument("--ppo-epochs", type=int, default=3)
-    ap.add_argument("--lr", type=float, default=3e-3)
+    ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--gamma", type=float, default=0.99)
-    ap.add_argument("--clip", type=float, default=0.3)
-    ap.add_argument("--ent-coef", type=float, default=0.05)
+    ap.add_argument("--clip", type=float, default=0.2)
+    ap.add_argument("--ent-coef", type=float, default=0.005)
     ap.add_argument("--lr-decay", type=float, default=0.1)
     ap.add_argument("--lr-schedule", choices=["linear", "cosine"],
                     default="cosine",
                     help="lr 调度：cosine（手册推荐）/ linear")
     ap.add_argument("--hidden", type=int, default=128)
-    ap.add_argument("--reward-shaping", type=float, default=0.05)
+    ap.add_argument("--reward-shaping", type=float, default=0.0)
     ap.add_argument("--features", choices=["legacy", "full"], default="legacy")
     ap.add_argument("--action-features", choices=["basic", "rich"],
                     default="basic",
-                    help="动作特征：basic=14 维（历史行为，只含下标归一化）；"
-                         "rich=31 维，额外编码「被作用实体」的属性（HP/能量/阶级/"
+                    help="动作特征：basic=16 维（9 动词含 choose/stop + 下标归一化）；"
+                         "rich=33 维，额外编码「被作用实体」的属性（HP/能量/阶级/"
                          "被打倒风险/招式伤害…）。实测 basic 下 attach 的 5 个候选"
                          "只差一个下标 → 策略**分不清该把能量附给谁**。"
                          "换 rich 必须从头训练（不能续跑旧权重）。")
@@ -132,15 +134,25 @@ def main():
                 f"权重 {args.from_weights} 的 state_dim={int(_sd_shape)} 与当前"
                 f"编码配置的 {sdim} 不一致（features={args.features}"
                 f"+{args.action_features}）→ 该配置必须**从头训练**，不能续跑。")
+        _sd_adim = _sd["action_enc.0.weight"].shape[1]
+        if int(_sd_adim) != adim:
+            raise SystemExit(
+                f"权重 {args.from_weights} 的 action_dim={int(_sd_adim)} 与当前"
+                f"编码配置的 {adim} 不一致（S1b 之后动词表含 choose/stop，"
+                f"旧权重是 14/31）→ 该配置必须**从头训练**，不能续跑。")
         net.load_state_dict(_sd)
         print(f"[k1] 续跑：已加载 {args.from_weights}（hidden={args.hidden}），跳过 BC")
     else:
         t0 = time.time()
         # 缓存名**含编码模式**：帧里存的是*编码后*向量（state_vec/feats_all），
         # 换模式复用会维度不符（故 base/full 之外还要区分 action_features）。
+        # ⚠ 缓存名里带**动作维度**（S1b 起）：帧存的是编码后向量，动词表一变
+        #   （14/31 → 16/33）缓存就作废。名字里带维度能让「为什么没命中缓存」
+        #   一眼可见，而不是靠下面那句维度校验报错去猜。
         cache = (f"artifacts/bc_data_{args.decks}_mirror_"
                  f"{'full' if _feats else 'base'}"
-                 f"{'_rich' if args.action_features == 'rich' else ''}.pt")
+                 f"{'_rich' if args.action_features == 'rich' else ''}"
+                 f"_a{adim}.pt")
         # ⚠ 缓存有效性校验：只按「文件存在」复用会踩到**被截断的缓存** ——
         # 实测 `bc_data_lightning_mirror_full.pt` 只有 41 帧（冒烟残留），
         # 静默复用等于 BC 没做（先验≈弱随机），却**照样跑完不报错**。

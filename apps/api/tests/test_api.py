@@ -2117,5 +2117,72 @@ class TestDataDirProbe(unittest.TestCase):
                          f"{store.DATA_DIR} 里仍有 _wprobe.db 残留")
 
 
+class TestTurnOwnerWithSetupChoice(unittest.TestCase):
+    """开局决策的**归属**判定（D1 / F8c）
+
+    引擎在 setup 阶段可能停在 `phase="choice"`（mulligan 补抽 / 面朝下上场），
+    此时 `battle.current` 恒为 0、不代表任何人的回合。服务端若只看 `current`：
+
+      · 人类是 0 而决策属于 AI → 人类看到 AI 的选项（信息泄露 + 抢决策）；
+      · 人类是 1 而决策属于 AI 0 → 循环条件先成立，AI 走完；但若决策属于人类 1，
+        AI 会**替人类决定**（静默，无报错）。
+    """
+
+    def _mulligan_battle(self):
+        from engine.battle import Battle
+        from engine.cards import PokeRef, PokemonDef
+        from engine.state import GameConfig
+        basic = PokemonDef("Bunny", hp=60, ptype="fire", stage=0)
+        evo = PokemonDef("Filler", hp=100, ptype="colorless", stage=1,
+                         evolves_from="Filler")
+        deck_a = ([PokeRef(basic)]
+                  + [PokeRef(evo) for _ in range(25)])
+        deck_b = [PokeRef(PokemonDef("Plain", hp=100, ptype="colorless"))
+                  for _ in range(26)]
+        for seed in range(400):
+            b = Battle(deck_a, deck_b, seed=seed,
+                       cfg=GameConfig(first_turn_no_attack=False,
+                                      first_turn_no_supporter=False))
+            if b.pending_owner() is not None:
+                return b
+        return None
+
+    def test_turn_owner_follows_pending_choice(self):
+        from apps.api.app.battles import _turn_owner
+        b = self._mulligan_battle()
+        if b is None:
+            self.skipTest("未能构造出开局决策局面")
+        self.assertEqual(_turn_owner(b), b.pending_owner(),
+                         "开局决策期间「该谁动」必须按挂起归属，而不是 current")
+        self.assertNotEqual(_turn_owner(b), b.current,
+                            "构造的局面里两者恰好相同 → 断言无意义")
+
+    def test_human_view_hides_ai_choice(self):
+        """人类不是决策方时，`view(人类)` 的 legal 必须为空（否则会抢 AI 的决策）"""
+        b = self._mulligan_battle()
+        if b is None:
+            self.skipTest("未能构造出开局决策局面")
+        owner = b.pending_owner()
+        self.assertEqual(b.view(owner)["legal"] != [], True, "决策方看不到选项")
+        self.assertEqual(b.view(1 - owner)["legal"], [],
+                         "非决策方拿到了选项")
+
+    def test_ai_choice_closes_and_battle_can_start(self):
+        """AI 替自己走完开局决策后，对局能正常进入第一回合"""
+        from engine.agents import BaselineAI
+        b = self._mulligan_battle()
+        if b is None:
+            self.skipTest("未能构造出开局决策局面")
+        ai = BaselineAI("ai")
+        for _ in range(6):
+            if b.finished or b.phase == "main":
+                break
+            who = b.acting_side()      # 开局决策期间按挂起归属取视角
+            r = b.step(ai.decide(b.view(who)))
+            self.assertTrue(r["ok"], r.get("error"))
+        self.assertTrue(b.setup_done, "开局决策没走完")
+        self.assertEqual(b.pending_owner(), None)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

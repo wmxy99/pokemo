@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 import sys
+import re
 import unittest
 from pathlib import Path
 
@@ -232,9 +233,16 @@ class TestRichActionFeatures(unittest.TestCase):
     def test_action_dim_follows_config(self):
         from agent.state_encoder import (EncoderConfig, action_dim,
                                          encode_action)
-        self.assertEqual(action_dim(None), 14, "legacy 动作维度必须保持 14")
+        # S1b（2026-11-09）：动词表加了 `choose`/`stop` → basic 14 → 16。
+        # 旧权重（7 动词布局）由 `EncoderConfig(verbs=LEGACY_VERBS)` 复现，
+        # 维度仍是 14 —— 见 `TestEncoderConfigBinding` 与 infer 用例。
+        from agent.state_encoder import LEGACY_VERBS
+        self.assertEqual(action_dim(None), 16,
+                         "basic 应为 9 动词 + 3 参数 + 4 tag = 16")
         rich = EncoderConfig(action_features="rich")
-        self.assertEqual(action_dim(rich), 31, "rich 应为 14 + 17")
+        self.assertEqual(action_dim(rich), 33, "rich 应为 16 + 17")
+        legacy = EncoderConfig(verbs=LEGACY_VERBS)
+        self.assertEqual(action_dim(legacy), 14, "旧权重的 7 动词布局必须仍可复现")
         b = self._battle()
         v = b.view()
         from agent.state_encoder import set_active_encoder
@@ -332,6 +340,35 @@ class TestRichActionFeatures(unittest.TestCase):
         self.assertIn("与当前", src)
         self.assertRegex(src, r"不能续跑",
                          "续训路径必须显式拦截编码维度不一致的权重")
+        # S1b：动作维度也会因动词表变化而不兼容（14/31 → 16/33）
+        self.assertRegex(src, r"action_dim=\{int\(_sd_adim\)\}",
+                         "续训必须也校验 action_dim（只看 state 会在 "
+                         "load_state_dict 处给出难读的 shapes 报错）")
+
+    def test_train_defaults_are_the_documented_best_config(self):
+        """训练脚本的**默认值**必须等于 RUN_K1_LONG.md §四 的最佳配置
+
+        为什么设守卫：2026-09-09 的旧默认（lr 3e-3 / shaping 0.05 / clip 0.3 /
+        ent 0.05 / stage2 24000）后来被实测证明有害（手册 §三 结论 ②③），
+        2026-11-09 又复现一次：按旧默认跑到 10k 局，双盲只有 0.350。
+        默认值一旦回退，下一个人会直接踩同一个坑，而且**不会报错**。
+        """
+        src = (Path(__file__).resolve().parents[1] / "examples"
+               / "run_k1_longtrain.py").read_text(encoding="utf-8")
+        want = {
+            "--lr": "3e-4",
+            "--clip": "0.2",
+            "--ent-coef": "0.005",
+            "--reward-shaping": "0.0",
+            "--stage1-episodes": "20000",
+            "--stage2-episodes": "0",
+            "--stage3-episodes": "0",
+        }
+        for flag, val in want.items():
+            self.assertIn(f'"{flag}", ', src, f"训练脚本缺少 {flag}")
+            pat = (re.escape(f'"{flag}"') + r"[^\n]*default=" + re.escape(val))
+            self.assertRegex(src, pat,
+                             f"{flag} 的默认值不是最佳配置里的 {val}")
 
     def test_load_net_infers_encoder_config(self):
         """`load_net` 必须**从权重形状反推编码配置**
@@ -376,6 +413,78 @@ class TestRichActionFeatures(unittest.TestCase):
               "action_enc.0.weight": torch.zeros(16, 20)}
         with self.assertRaises(ValueError):
             infer_config_from_state_dict(sd)
+
+
+class TestChooseStopVerbs(unittest.TestCase):
+    """S1b（2026-11-09）：`choose` / `stop` 必须有**自己的** one-hot 位
+
+    S1a 时刻意没加（+2 维会让旧权重整批不兼容），代价是挂起选择时网络看到的
+    动作向量里「选第 1 个」和「结束选择」都是**全零动词**——分不清，等于没有
+    决策输入。S1b 把动词表带进 `EncoderConfig`：新训练用 9 动词，旧权重按
+    维度反推回 7 动词（历史产物不报废）。
+    """
+
+    def tearDown(self):
+        from agent.state_encoder import set_active_encoder
+        set_active_encoder(None)
+
+    def test_verbs_include_choice_verbs(self):
+        from agent.state_encoder import VERBS
+        self.assertIn("choose", VERBS)
+        self.assertIn("stop", VERBS)
+        self.assertEqual(len(VERBS), len(set(VERBS)), "动词表不能有重复位")
+
+    def test_choice_verbs_are_distinguishable(self):
+        from agent.state_encoder import encode_action
+        choose = encode_action({}, {"verb": "choose", "pick": 0, "index": 0})
+        stop = encode_action({}, {"verb": "stop", "picked": 1})
+        pas = encode_action({}, {"verb": "pass"})
+        self.assertNotEqual(choose, stop)
+        self.assertNotEqual(choose, pas)
+        self.assertNotEqual(stop, pas)
+        self.assertEqual(sum(choose[:len(choose) - 7]), 1.0,
+                         "choose 必须恰好点亮一位动词 one-hot")
+
+    def test_option_index_is_encoded(self):
+        """选项下标进 `index` 槽（否则「选第 1 个/第 2 个」在特征上完全相同）"""
+        from agent.state_encoder import encode_action
+        a0 = encode_action({}, {"verb": "choose", "pick": 0, "index": 0})
+        a1 = encode_action({}, {"verb": "choose", "pick": 1, "index": 1})
+        self.assertNotEqual(a0, a1, "不同选项的下标没有进特征")
+
+    def test_legacy_layout_keeps_zero_for_choice_verbs(self):
+        """旧权重（7 动词）下 choose 落成全零 —— 这是**既定语义**，不是当 pass"""
+        from agent.state_encoder import (EncoderConfig, LEGACY_VERBS,
+                                         action_dim, encode_action)
+        cfg = EncoderConfig(verbs=LEGACY_VERBS)
+        v = encode_action({}, {"verb": "choose", "index": 0}, cfg)
+        self.assertEqual(len(v), action_dim(cfg))
+        self.assertEqual(sum(v[:len(LEGACY_VERBS)]), 0.0,
+                         "旧布局里 choose 不应点亮任何动词位（更不能点 pass）")
+
+    def test_old_weights_still_load_with_legacy_verbs(self):
+        """14/31 维的历史权重必须反推出 **7 动词** 布局（不报废产物）"""
+        import tempfile
+        import torch
+        from agent.policy_net import make_net
+        from agent.state_encoder import (EncoderConfig, LEGACY_VERBS,
+                                         action_dim, active_encoder,
+                                         encoder_dim, set_active_encoder)
+        from agent.trainer import load_net
+        cfg = EncoderConfig(verbs=LEGACY_VERBS, action_features="rich")
+        with tempfile.TemporaryDirectory() as d:
+            set_active_encoder(cfg)
+            net = make_net(encoder_dim(cfg), action_dim(cfg), hidden=32)
+            p = Path(d) / "legacy_rich.pt"
+            torch.save(net.state_dict(), p)
+            set_active_encoder(None)              # 故意设成新默认（9 动词）
+            load_net(str(p), device="cpu")
+            got = active_encoder()
+            self.assertIsNotNone(got)
+            self.assertEqual(tuple(got.verbs), LEGACY_VERBS,
+                             "旧权重的动词表没被反推出来（会静默错位）")
+            self.assertEqual(action_dim(), action_dim(cfg))
+        set_active_encoder(None)
 
 
 class TestEncoderConfigBinding(unittest.TestCase):

@@ -13,8 +13,8 @@
 | 引擎卡池条目 | **1252 条** | `packages/engine/engine/data/cards_pool_ext.json` |
 | 未进池 | **0 张** | F1–F8 全部清零（累计 45 张从不进池转为可对战） |
 | 解析对账 | **57 类全绿** | `scripts/audit_pool_alignment.py` |
-| 规则一致性矩阵 | **41 行（40 ✅ / 1 ⚠️）** | `docs/RULE_CONFORMANCE.md`（CI 机械核对） |
-| 测试 | **2906**（engine 1629 / agent 1123 / api 142 / gym 12） | |
+| 规则一致性矩阵 | **41 行（41 ✅ / 0 ⚠️）** | `docs/RULE_CONFORMANCE.md`（CI 机械核对） |
+| 测试 | **2927**（engine 1641 / agent 1129 / api 145 / gym 12） | |
 
 复现：
 
@@ -123,7 +123,7 @@ it face down in the Active Spot.`
 
 | 编号 | 缺口 | 现状 | 处置 |
 |---|---|---|---|
-| **D1** | mulligan 补偿是**自动抽**，官方为「可以抽」 | 矩阵 ⚠️ 行 | 基础设施**已就绪**：F8c 把 setup 拆成「铺场 → 可选决策 → `_finish_setup()`（奖赏/硬币/开回合）」，加一次 `mulligan_draw` 选择即可。当前仍自动抽（如实标注为简化） |
+| **D1** | mulligan 补偿是**自动抽**，官方为「可以抽」 | ✅ `mulligan_draw` 选择（对手决定抽 0..N 张） | **已完成（2026-11-09）**：复用 F8c 的 setup 决策队列，官方顺序「先摆场、后补抽」；矩阵 0 ⚠️ |
 | **D2** | 多条件组合门槛 | ✅ `play_gate` 支持合取 + `all_in_play:` | 已完成 |
 | **D3** | 退化 devolve | ✅ `FieldPokemon.under` + `devolve:<scope>:<n\|any>` | 已完成 |
 | — | 任意数量交互层（F3） | ✅ `phase="choice"` + `pre:b4:` / `choose:alloc:` | 已完成（B4） |

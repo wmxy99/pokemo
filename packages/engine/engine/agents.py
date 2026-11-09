@@ -42,15 +42,29 @@ class BaselineAI(Agent):
         legal = view.get("legal") or [{"verb": "pass"}]
         me = view["me_state"]
         opp = view["opp_state"]
-        # F8c（2026-11-09）：`phase=choice`（开局上场 / 伤害前决策 / 退化数量 …）
-        # 期间**只接受** `choose` / `stop`，返回 `pass` 会被引擎拒绝。
-        # 规则基线对这些决策没有偏好 → 取第一个选项（确定性）。
-        # ⚠ 对 K1 口径**无影响**：内置卡组不含会挂起选择的卡，这一支是死代码
-        #   （`decklib` 只有 Bolt/Claw 等合成卡；已用 `make_deck("lightning")`
-        #   核对过），保留它是为了让「全卡池随机对局」不再卡在选择阶段。
-        for a in legal:
-            if a.get("verb") == "choose":
-                return dict(a)
+        # F8c/D1（2026-11-09）：`phase=choice`（开局上场 / mulligan 补抽 /
+        # 伤害前决策 / 退化数量 …）期间**只接受** `choose` / `stop`，
+        # 返回 `pass` 会被引擎拒绝（对局卡死）。
+        #
+        # 取法（规则基线只有启发式，不做搜索）：
+        #   1. 多选（`min<max`，任意数量）已经选过东西 → 直接结束，避免无限选；
+        #   2. 有 `n`（mulligan 补抽张数）→ 取**最多**：抽牌单调有利，等价于
+        #      官方「每次都抽」。⚠ 这一点很重要 —— 旧实现是自动抽 N 张，
+        #      取最大才让它与历史口径**逐局等价**（K1 可比）。
+        #   3. 有 `yes`/`hand`（开局上场 / 支付代价）→ 取 `yes=True`；
+        #   4. 其余（目标选择）→ 第一个（确定性）。
+        if any(a.get("verb") == "choose" for a in legal):
+            _stop = [a for a in legal if a.get("verb") == "stop"]
+            if _stop and int(_stop[0].get("picked") or 0) > 0:
+                return dict(_stop[0])
+            _ch = [a for a in legal if a.get("verb") == "choose"]
+
+            def _choice_score(a):
+                opt = a.get("option") or {}
+                return (1 if opt.get("n") is not None else 0,
+                        int(opt.get("n") or 0),
+                        1 if opt.get("yes") else 0)
+            return dict(max(_ch, key=_choice_score))
         act = me.get("active")
         # 1) 能攻击 → 优先攻击（按伤害+一击击杀加成排序）
         attacks = [a for a in legal if a["verb"] == "attack"]

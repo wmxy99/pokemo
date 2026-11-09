@@ -23,8 +23,26 @@ from engine.agents import BaselineAI
 from engine.state import GameConfig
 
 
+def _resolve_setup(b):
+    """把**开局**挂起的决策按「收益最大」结算（D1 补抽 / F8c 面朝下上场）
+
+    为什么要夹具处理：D1（2026-11-09）把 mulligan 补抽从「自动抽」改成
+    「对手可选」—— 只要起手有 mulligan，`Battle(...)` 就会停在 `phase=choice`，
+    此后第一次 `step` 会被引擎拒绝（phase=choice 只接受 choose/stop）。
+    真实玩家/Agent 会先把这个选择做完，夹具照做即可（抽满 = 旧行为）。
+    """
+    guard = 0
+    while getattr(b, "_pending", None) is not None and guard < 20:
+        guard += 1
+        opts = list(enumerate(b._pending.options))
+        idx, _ = max(opts, key=lambda kv: (int(kv[1].get("n") or 0),
+                                          1 if kv[1].get("yes") else 0))
+        b.step({"verb": "choose", "pick": idx})
+    return b
+
+
 def _play(da, db, seed=1, max_steps=900):
-    b = Battle(da, db, seed=seed)
+    b = _resolve_setup(Battle(da, db, seed=seed))
     ags = [BaselineAI("a"), BaselineAI("b")]
     steps = 0
     while not b.finished and steps < max_steps:
@@ -45,9 +63,10 @@ def _find_hand_card(deck_name: str, tag_prefix: str, need_hand: int = 1,
                     seeds=range(1, 120)):
     """扫描种子，找到起手含指定 tag 训练家的局面（避免用例依赖运气）"""
     for s in seeds:
-        b = Battle(dl.make_deck(deck_name), dl.make_deck(deck_name), seed=s,
-                   cfg=GameConfig(first_turn_no_attack=False,
-                                  first_turn_no_supporter=False))
+        b = _resolve_setup(Battle(
+            dl.make_deck(deck_name), dl.make_deck(deck_name), seed=s,
+            cfg=GameConfig(first_turn_no_attack=False,
+                           first_turn_no_supporter=False)))
         p = b.players[b.current]
         if len(p.hand) < need_hand:
             continue

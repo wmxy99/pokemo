@@ -23,9 +23,28 @@ from agent.pipeline import decide, build_langgraph_pipeline, decide_langgraph
 from agent import prompts
 
 
+def _resolve_setup(b: Battle) -> Battle:
+    """走完**开局决策**（D1 mulligan 补抽 / F8c 面朝下上场）
+
+    ⚠ D1（2026-11-09）之后，只要起手有 mulligan，`Battle(...)` 会停在
+      `phase="choice"`，此后 `legal_actions()`（默认 current）可能是**空表**
+      （严格归属：只给决策方）。夹具要么先走完决策，要么所有断言都会变成
+      「没有合法动作」这种与用例本意无关的失败。
+    """
+    guard = 0
+    while b.pending_owner() is not None and guard < 20:
+        guard += 1
+        who = b.acting_side()
+        opts = list(enumerate(b._pending.options))
+        idx, _ = max(opts, key=lambda kv: (int(kv[1].get("n") or 0),
+                                          1 if kv[1].get("yes") else 0))
+        b.step({"verb": "choose", "pick": idx})
+    return b
+
+
 def _battle(seed: int = 1) -> Battle:
-    return Battle(decklib.deck_lightning_demo(), decklib.deck_fire_demo(),
-                  seed=seed)
+    return _resolve_setup(Battle(decklib.deck_lightning_demo(),
+                                 decklib.deck_fire_demo(), seed=seed))
 
 
 class TestStateEncoder(unittest.TestCase):
@@ -38,8 +57,10 @@ class TestStateEncoder(unittest.TestCase):
         self.assertTrue(all(isinstance(x, float) for x in s))
 
     def test_action_dim_stable(self):
-        for verb in ("play", "attach", "attack", "retreat", "evolve",
-                     "trainer", "pass"):
+        # 逐个**全部**动词（S1b 起含 choose/stop）：任何一个漏进表里都是
+        # 「编码长度与构网维度不一致」，会在训练时才炸。
+        from agent.state_encoder import VERBS
+        for verb in VERBS:
             a = encode_action({}, {"verb": verb})
             self.assertEqual(len(a), ACTION_DIM)
 

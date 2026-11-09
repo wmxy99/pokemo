@@ -1,0 +1,22 @@
+{
+ "rows": [
+  {
+   "n": 200,
+   "wins": 156,
+   "losses": 44,
+   "draws": 0,
+   "win_rate": 0.78,
+   "blind": true,
+   "ref_first_winrate": 0.64,
+   "ref_n": 50,
+   "as_first": 100,
+   "as_second": 100,
+   "one_sided": 0.83,
+   "secs": 4.2,
+   "weights": "packages/agent/artifacts/k1_s1b.pt"
+  }
+ ],
+ "ref_first_winrate": 0.64,
+ "target": 0.7,
+ "passed": true
+}

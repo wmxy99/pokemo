@@ -81,8 +81,8 @@ def train_dqn_vs_fixed(deck_a: list, deck_b: list, net: SmallPolicyValueNet,
         guard = 0
         while not battle.finished and guard < 500:
             guard += 1
-            if battle.current == 0:
-                view = battle.view()
+            if battle.acting_side() == 0:
+                view = battle.view(0)
                 legal = view.get("legal") or [{"verb": "pass"}]
                 idx, act = _choose(net, view, legal, device, e, rng)
                 frames.append({

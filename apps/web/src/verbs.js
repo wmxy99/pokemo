@@ -9,6 +9,11 @@ export const VERBS = {
   ability: { zh: '使用特性', en: 'Ability', icon: 'm12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z' },
   trainer: { zh: '训练家', en: 'Trainer', icon: 'M3 7h18v12H3zM7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2' },
   pass: { zh: '结束回合', en: 'End turn', icon: 'M5 4v16M19 4l-11 8 11 8V4Z' },
+  // 决策阶段（`phase="choice"`）的两个动词：引擎在挂起时**只**接受这两个
+  // （B4 任意数量 / 退化数量 / mulligan 补抽 / 开局上场 …）。缺这两项时按钮会
+  // 直接显示英文原词（`choose`/`stop`），玩家看不懂该点哪个。
+  choose: { zh: '选择', en: 'Choose', icon: 'M20 6 9 17l-5-5' },
+  stop: { zh: '结束选择', en: 'Stop', icon: 'M6 6h12v12H6z' },
 }
 
 /** 动词按钮文案（中文）。ctx 可选：{hand[], field[], attacks[], energy} 展示名数组
@@ -47,5 +52,12 @@ export function verbLabel(a, ctx) {
     return to ? `${zh} → ${to}` : zh
   }
   if (a.verb === 'ability') return `${zh}：${a.name_zh || a.name || ''}`
+  // 选择项：引擎已经给了**可读文案**（「抽 2 张」/「把 3 点能量洗回牌库，对 B1
+  // 造成 120 伤害」/「保持常规铺场（Bunny 在战斗位）」）→ 直接用它；
+  // 否则回退到「选择 #k」，绝不让玩家对着 "choose" 猜。
+  if (a.verb === 'choose') {
+    return a.display || `${zh} #${(a.pick ?? a.index ?? 0) + 1}`
+  }
+  if (a.verb === 'stop') return a.display || zh
   return zh
 }

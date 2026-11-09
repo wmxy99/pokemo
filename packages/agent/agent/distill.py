@@ -35,8 +35,8 @@ def collect_mcts_expert(deck_a: list, deck_b: list, opponent,
         guard = 0
         while not b.finished and guard < max_steps:
             guard += 1
-            if b.current == 0:
-                view = b.view()
+            if b.acting_side() == 0:
+                view = b.view(0)
                 legal = view.get("legal") or [{"verb": "pass"}]
                 if not legal:
                     break

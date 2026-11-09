@@ -16,7 +16,7 @@ from engine import decklib  # noqa: E402
 from engine.battle import Battle  # noqa: E402
 
 from agent.state_encoder import (encode_state, STATE_DIM,  # noqa: E402
-                                 EncoderConfig, encoder_dim,
+                                 EncoderConfig, encoder_dim, action_dim,
                                  set_active_encoder, active_encoder)
 from agent.policy_net import SmallPolicyValueNet  # noqa: E402
 from agent import reward as rw  # noqa: E402
@@ -147,10 +147,10 @@ class TestEncoderConfig(unittest.TestCase):
         s = encode_state(b.view(), cfg)
         self.assertEqual(len(s), encoder_dim(cfg))
         self.assertEqual(encoder_dim(cfg), STATE_DIM + 8)
-        # full-dim 网络可前向
-        net = SmallPolicyValueNet(encoder_dim(cfg), 14)
+        # full-dim 网络可前向（动作维度**取实际值**：S1b 之后是 16，不是 14）
+        net = SmallPolicyValueNet(encoder_dim(cfg), action_dim(cfg))
         st = torch.randn(1, encoder_dim(cfg))
-        fa = torch.randn(1, 4, 14)
+        fa = torch.randn(1, 4, action_dim(cfg))
         logits, _ = net(st, fa)
         self.assertEqual(logits.shape, (1, 4))
 
@@ -166,7 +166,7 @@ class TestDqnSmoke(unittest.TestCase):
         import tempfile
         from engine.agents import BaselineAI
         da, db = decklib.deck_lightning_demo(), decklib.deck_lightning_demo()
-        net = SmallPolicyValueNet(STATE_DIM, 14)
+        net = SmallPolicyValueNet(STATE_DIM, action_dim())
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "dqn.pt"
             st = dqn.train_dqn_vs_fixed(da, db, net,

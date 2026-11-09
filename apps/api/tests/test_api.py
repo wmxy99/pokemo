@@ -2184,5 +2184,91 @@ class TestTurnOwnerWithSetupChoice(unittest.TestCase):
         self.assertEqual(b.pending_owner(), None)
 
 
+class TestAIOpponentStrength(unittest.TestCase):
+    """AI 强度（ai_iters）必须真正生效，而且**接口统一**
+
+    背景（2026-11-09 用户反馈）：选「12 · MCTS 中」后点开始/结束回合没反应。
+    根因是 `_opp_agent` 在 iters>0 时返回**裸函数**，而调用方写 `ai.decide(...)`
+    → AttributeError → 500。iters=0 返回 BaselineAI 实例（有 .decide），所以
+    只有「选了 MCTS」才会炸 —— 肉眼看起来就是「高强度无反应」。
+    """
+
+    def _battle(self):
+        from engine import decklib
+        from engine.battle import Battle
+        return Battle(decklib.make_deck("A1"), decklib.make_deck("A2"), seed=3)
+
+    def test_every_strength_returns_object_with_decide(self):
+        """0 / 5 / 12 都必须返回**带 `.decide` 的对象**（不能是裸函数）"""
+        from apps.api.app.battles import _opp_agent
+        for iters in (0, 5, 12):
+            b = self._battle()
+            ai = _opp_agent(b, iters, 3)
+            self.assertTrue(hasattr(ai, "decide"),
+                            f"iters={iters} 返回了 {type(ai).__name__}，没有 .decide")
+            self.assertTrue(callable(ai.decide))
+
+    def test_mcts_decide_returns_engine_action(self):
+        """MCTS 决策必须返回**动作 dict**（引擎能直接 step 的那种）"""
+        from apps.api.app.battles import _opp_agent
+        b = self._battle()
+        self.assertIsNotNone(b.acting_side())
+        ai = _opp_agent(b, 5, 3)
+        act = ai.decide(b.view(b.acting_side()))
+        self.assertIsInstance(act, dict, f"MCTS 返回了 {type(act).__name__}")
+        self.assertIn("verb", act)
+
+    def test_mcts_failure_degrades_instead_of_raising(self):
+        """MCTS 抛异常时必须**降级为基线动作**，不能把 500 抛给前端
+
+        一局中途 500 = 页面卡死（请求失败后玩家无法继续）。降级原因要能读出来，
+        以便前端如实提示「AI 已降级」。
+        """
+        from apps.api.app import battles as B
+        b = self._battle()
+        ai = B._opp_agent(b, 5, 3)
+        import agent.mcts as M
+        orig = M.mcts_select_action
+        M.mcts_select_action = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+        try:
+            act = ai.decide(b.view(b.acting_side()))
+        finally:
+            M.mcts_select_action = orig
+        self.assertIsInstance(act, dict, "降级后仍必须是动作 dict")
+        self.assertIn("boom", ai.degraded or "")
+
+    def test_create_battle_with_mcts_when_ai_goes_first(self):
+        """AI 先手的种子 + 选 MCTS：建局必须成功（不再 500）"""
+        h = user_headers()
+        r = client.post("/battles", headers=h, json={
+            "deck_a": "A1", "deck_b": "A2", "ai_iters": 5, "seed": 3})
+        self.assertEqual(r.status_code, 201, r.text[:300])
+        d = r.json()
+        self.assertTrue(d.get("ai_steps"), "AI 先手却没走子")
+        self.assertIsNone(d.get("ai_degraded"), d.get("ai_degraded"))
+
+    def test_player_pass_then_ai_replies(self):
+        """玩家结束回合后 AI 要能走完（这正是「无反应」的现场）"""
+        h = user_headers()
+        r = client.post("/battles", headers=h, json={
+            "deck_a": "A1", "deck_b": "A2", "ai_iters": 5, "seed": 424242})
+        self.assertEqual(r.status_code, 201, r.text[:200])
+        bid = r.json()["id"]
+        # 走完开局选择
+        for _ in range(6):
+            st = client.get(f"/battles/{bid}", headers=h).json()
+            if st.get("phase") != "choice":
+                break
+            cmd = next((c for c in (st.get("commands") or [])
+                        if c.get("verb") == "choose"), None)
+            if not cmd:
+                break
+            client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"action": cmd["action"]})
+        r = client.post(f"/battles/{bid}/actions", headers=h,
+                        json={"action": {"verb": "pass"}})
+        self.assertEqual(r.status_code, 200, r.text[:300])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

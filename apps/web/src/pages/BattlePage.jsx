@@ -130,6 +130,11 @@ export default function BattlePage({ onMsg, onGoDecks, battleId }) {
 
   async function create(deckAVal = deckA, deckBVal = deckB) {
     setBusy(true); setErr(null)
+    // 建局也可能很慢：AI 先手且选 MCTS 时，服务端要先把它的回合走完
+    // （30 强度实测 3s+）。此前这里**没有** slow 定时器 → 页面只有转圈，
+    // 玩家看到的就是「点了没反应」。
+    setSlow(false)
+    slowTimer.current = setTimeout(() => setSlow(true), K3_MS)
     try {
       // F3 打通：下拉项若为已导入卡组 id（deck_ 前缀）→ 走 deck_a_id/deck_b_id
       const payload = { ai_iters: Number(aiIters) }
@@ -156,7 +161,11 @@ export default function BattlePage({ onMsg, onGoDecks, battleId }) {
         setState((s) => ({ ...s, view: r.view }))   // 收口到最终完整局面
       }
     } catch (e) { setErr({ code: e.status || 'ERR', message: e.message }) }
-    finally { setBusy(false) }
+    finally {
+      clearTimeout(slowTimer.current)
+      setSlow(false)
+      setBusy(false)
+    }
   }
 
   /**
@@ -366,10 +375,10 @@ export default function BattlePage({ onMsg, onGoDecks, battleId }) {
         </select>
         <label htmlFor="di">AI 强度</label>
         <select id="di" value={aiIters} onChange={(e) => setAiIters(e.target.value)}>
-          <option value={0}>0 · 规则基线 AI（白盒）</option>
-          <option value={5}>5 · MCTS 轻</option>
-          <option value={12}>12 · MCTS 中</option>
-          <option value={30}>30 · MCTS 重（较慢）</option>
+          <option value={0}>0 · 规则基线 AI（最弱、最快）</option>
+          <option value={5}>5 · MCTS 轻（明显强于基线）</option>
+          <option value={12}>12 · MCTS 中（更强，每步约 0.4s）</option>
+          <option value={30}>30 · MCTS 重（最强，每步约 1s）</option>
         </select>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary" disabled={busy} onClick={() => create()}>
@@ -396,7 +405,11 @@ export default function BattlePage({ onMsg, onGoDecks, battleId }) {
             </button>
           </div>
         )}
-        {slow && <div className="alert warn" role="alert">决策超过 {K3_MS / 1000}s，仍在计算</div>}
+        {slow && (
+          <div className="alert warn" role="alert">
+            AI 正在计算（已超过 {K3_MS / 1000}s）—— 强度越高越慢，请稍候
+          </div>
+        )}
 
         {!view && !busy && (
           <EmptyState text={t('empty.battle')} cta="去编排卡组" onCta={onGoDecks} />

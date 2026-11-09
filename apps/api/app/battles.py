@@ -9,6 +9,7 @@
 from __future__ import annotations
 import copy
 import random
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 
@@ -66,14 +67,61 @@ def _deck_of(deck_id, name, p):
 
 
 def _opp_agent(battle, iters: int, seed: int):
-    """AI 对手：MCTS(引擎 rollout) 或规则基线 AI"""
+    """AI 对手：**统一返回带 `.decide(view)` 的对象**
+
+    ⚠ 这里曾经在 ``iters > 0`` 时返回一个**裸函数**，而两个调用点都写
+      ``ai.decide(...)`` → ``AttributeError: 'function' object has no attribute
+      'decide'`` → 500。因为 ``iters = 0`` 返回的是 ``BaselineAI`` 实例（有
+      ``.decide``），所以**只有选了 MCTS 强度**才会炸，表现为「选高强度后
+      点开始/结束回合没反应」。接口必须一致，不能靠调用方记得分支。
+
+    另外两处「强度名不副实」的修正：
+
+      · **rollout 策略用规则基线**：``mcts_select_action`` 默认 rollout 是
+        ``random.choice(legal)`` —— 12 次迭代下估值噪声压过信号，实测强度
+        不如白盒基线（用户反馈「高强度不强」）。用 ``BaselineAI`` 做 rollout
+        后，搜索是在「基线水平」之上做的，迭代才有意义。
+      · **种子按步递增**：固定 ``seed`` 会让每一步的探索序列完全相同（行为
+        呆板、可预测），一局里换多少步都一样。
+    """
     from engine.agents import BaselineAI
-    if iters > 0:
-        def decide(view):
+    if iters <= 0:
+        return BaselineAI("baseline")
+
+    class MctsAgent:
+        """MCTS 对手：每次决策重新搜索当前局面
+
+        ``degraded`` 记录降级原因（None = 正常）。**MCTS 抛异常时降级为基线动作**
+        而不是把 500 抛给前端 —— 一局中途 500 等于页面卡死，玩家无法继续。
+        """
+
+        name = "mcts"
+
+        def __init__(self, b, n: int, s: int):
+            self.battle = b
+            self.iters = int(n)
+            self.seed = int(s)
+            self.step_index = 0
+            self.degraded: Optional[str] = None
+            self._base = BaselineAI("mcts-rollout")
+
+        def _rollout(self, view, _legal):
+            # rollout_policy 签名是 (view, legal)；BaselineAI 从 view["legal"] 取
+            return self._base.decide(view)
+
+        def decide(self, view):
             from agent.mcts import mcts_select_action
-            return mcts_select_action(battle, iters=iters, seed=seed)
-        return decide
-    return BaselineAI("baseline")
+            self.step_index += 1
+            try:
+                return mcts_select_action(
+                    self.battle, iters=self.iters,
+                    rollout_policy=self._rollout,
+                    seed=self.seed + self.step_index)
+            except Exception as e:                       # noqa: BLE001
+                self.degraded = f"{type(e).__name__}: {e}"
+                return self._base.decide(view)
+
+    return MctsAgent(battle, iters, seed)
 
 
 @router.post("", status_code=201)
@@ -96,6 +144,10 @@ def create_battle(req: schemas.BattleCreateReq,
             "seed": seed,
             "ai_iters": req.ai_iters,
             "player_side": req.player_side, "owner": p.name,
+            # AI 对手**每局创建一次**并缓存：MCTS 的探索种子按决策步递增（见
+            # `_opp_agent`），若每次 `_run_ai_until_human` 都新建，步数会归零 →
+            # 每个回合都重复同一串随机探索（行为可预测、强度打折）。
+            "agent": _opp_agent(battle, req.ai_iters, seed),
         }
     # ⚠ 视角必须显式指定为**玩家侧**：battle.view() 默认取 `battle.current`，
     #   而对局可能在 AI 回合结束（此时 current 仍是 AI）→ 会把 AI 的手牌当"我方手牌"返回，
@@ -156,7 +208,8 @@ def _run_ai_until_human(bid: str) -> dict:
         raise HTTPException(404, "对局不存在或已过期（服务重启后需重开）")
     battle = s["battle"]
     player_side = s["player_side"]
-    ai = _opp_agent(battle, s["ai_iters"], s["seed"])
+    # 复用建局时缓存的对手（MCTS 的步进种子要跨回合连续递增）；老会话没有则现建
+    ai = s.get("agent") or _opp_agent(battle, s["ai_iters"], s["seed"])
     steps = []
     guard = 0
     while (not battle.finished and _turn_owner(battle) != player_side
@@ -182,7 +235,13 @@ def _run_ai_until_human(bid: str) -> dict:
         stopped = "guard"
         steps.append({"action": None, "view": None,
                       "note": "自动步进达到 500 步上限，已中止"})
-    return {"steps": steps, "stopped": stopped}
+    # MCTS 中途抛异常时会降级为基线动作（见 `_opp_agent`）。这里把原因带回前端，
+    # 否则玩家会以为「我选的是 MCTS，怎么下得像基线」—— 差异必须可见（C5）。
+    degraded = getattr(ai, "degraded", None)
+    if degraded:
+        steps.append({"action": None, "view": None,
+                      "note": f"AI 已降级为规则基线（MCTS 异常：{degraded}）"})
+    return {"steps": steps, "stopped": stopped, "ai_degraded": degraded}
 
 
 @router.post("/{bid}/actions")

@@ -375,8 +375,8 @@ export default function BattlePage({ onMsg, onGoDecks, battleId }) {
         </select>
         <label htmlFor="di">AI 强度</label>
         <select id="di" value={aiIters} onChange={(e) => setAiIters(e.target.value)}>
-          <option value={0}>0 · 规则基线 AI（最弱、最快）</option>
-          <option value={5}>5 · MCTS 轻（明显强于基线）</option>
+          <option value={0}>0 · 规则 AI（会进化 / 用训练家，最快）</option>
+          <option value={5}>5 · MCTS 轻（明显强于规则 AI）</option>
           <option value={12}>12 · MCTS 中（更强，每步约 0.4s）</option>
           <option value={30}>30 · MCTS 重（最强，每步约 1s）</option>
         </select>

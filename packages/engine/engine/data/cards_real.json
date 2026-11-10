@@ -1,8 +1,8 @@
 {
   "meta": {
-    "version": "1.3",
-    "date": "2026-09-14",
-    "milestone": "v1.3 效果 tag 家族扩展 + B1 预设卡组关键卡建模（覆盖率批次 1）",
+    "version": "1.4",
+    "date": "2026-11-10",
+    "milestone": "v1.4 特殊能量 12 张进人工池（10 套预设卡组的特殊能量不再是「解析链近似卡」）",
     "source": "curated-offline",
     "provenance": "PRD §10 预设对手池 + P0 首批卡组复核清单 §2 核心构成（已核实卡名/构成要素）；卡面数值为引擎映射值（fidelity=approx），精确数值与完整 60 卡由 Limitless 收录 loader 覆盖（P1）",
     "fidelity": "engine-mapped",
@@ -104,27 +104,48 @@
         "shield_choose:prevent_all[:from:<src>][:effects][:gate:<cond>] (单体限时护盾 + 打出前置条件)"
       ],
       "counters": [
-        "own_bench", "opp_bench", "both_bench",
-        "own_active_energy[_<color>]", "opp_active_energy[_<color>]",
-        "both_active_energy[_<color>]", "own_all_energy[_<color>]",
+        "own_bench",
+        "opp_bench",
+        "both_bench",
+        "own_active_energy[_<color>]",
+        "opp_active_energy[_<color>]",
+        "both_active_energy[_<color>]",
+        "own_all_energy[_<color>]",
         "opp_all_energy[_<color>]",
-        "own_bench_counters", "opp_bench_counters",
-        "own_active_counters", "opp_active_counters",
-        "own_discard_energy", "own_discard_count",
-        "own_discarded_this_turn", "own_discarded_energy_this_turn",
-        "own_hand", "own_field", "opp_field", "own_bench_stage2",
-        "own_basic", "own_evolution", "opp_hand",
-        "opp_field_counters", "opp_active_status_count", "own_field_tools",
-        "own_prizes_left", "opp_prizes_left"
+        "own_bench_counters",
+        "opp_bench_counters",
+        "own_active_counters",
+        "opp_active_counters",
+        "own_discard_energy",
+        "own_discard_count",
+        "own_discarded_this_turn",
+        "own_discarded_energy_this_turn",
+        "own_hand",
+        "own_field",
+        "opp_field",
+        "own_bench_stage2",
+        "own_basic",
+        "own_evolution",
+        "opp_hand",
+        "opp_field_counters",
+        "opp_active_status_count",
+        "own_field_tools",
+        "own_prizes_left",
+        "opp_prizes_left"
       ],
       "conditions": [
-        "opp_ko_last_turn", "own_ko_last_turn", "own_behind_prizes",
-        "own_prizes_full", "opp_has_bench", "own_has_bench",
+        "opp_ko_last_turn",
+        "own_ko_last_turn",
+        "own_behind_prizes",
+        "own_prizes_full",
+        "opp_has_bench",
+        "own_has_bench",
         "opp_prizes_le:<n> (对手剩余奖赏 ≤ n；打出前置条件用)"
       ]
     },
     "ip_note": "仅收录卡名与规则数值，不含官方图像/插画（C2）；数据与代码分离，再分发红线见 PRD C1/C5",
-    "k2_note": "desc_zh 同时作为 K2「卡牌效果解析」语料：由 agent.effects 解析为结构化 spec 并映射到引擎 tag；无法映射的部分在解析报告中显式列出（诚实标注）"
+    "k2_note": "desc_zh 同时作为 K2「卡牌效果解析」语料：由 agent.effects 解析为结构化 spec 并映射到引擎 tag；无法映射的部分在解析报告中显式列出（诚实标注）",
+    "special_energy_note": "12 张特殊能量从扩展池**升格**为人工条目（2026-11-10）：引擎侧 `special_energy.py` 对每个 kind 的 provides / 条件 / 附加规则逐字段建模，本文件只是把它们登记为「已人工校对」，使 `reallib.coverage()` 的 approximated 归零（INV-A 要求预设卡组零占位零近似）。tag 与印刷 uid 必须与扩展池逐字一致，否则卡表按 uid 找不到卡。"
   },
   "cards": [
     {
@@ -1012,6 +1033,174 @@
       "supertype": "Energy",
       "type": "fighting",
       "desc_zh": "提供 1 点斗能量。"
+    },
+    {
+      "name": "Boomerang Energy",
+      "name_zh": "回旋镖能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:boomerang",
+      "type": "colorless",
+      "real": {
+        "set": "TWM",
+        "number": "166"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is discarded by an effect of an attack used by the Pokémon this card is attached to, attach this card from your discard pile to that Pokémon after attacking.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡因附着此卡的宝可梦所使用招式的效果而被弃置，则在攻击后从弃牌堆将此卡附着于该宝可梦。"
+    },
+    {
+      "name": "Neo Upper Energy",
+      "name_zh": "新上能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:neo_upper",
+      "type": "any",
+      "real": {
+        "set": "TEF",
+        "number": "162"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to a Stage 2 Pokémon, this card provides every type of Energy but provides only 2 Energy at a time.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡附着于 2 阶进化宝可梦，则此卡提供所有属性的能量，但一次只提供 2 个能量。"
+    },
+    {
+      "name": "Mist Energy",
+      "name_zh": "迷雾能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:mist",
+      "type": "colorless",
+      "real": {
+        "set": "TEF",
+        "number": "161"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nPrevent all effects of attacks used by your opponent’s Pokémon done to the Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n防止对手的宝可梦所使用招式对此卡附着的宝可梦造成的所有效果。（已有的效果不会被移除。伤害不是效果。）"
+    },
+    {
+      "name": "Legacy Energy",
+      "name_zh": "遗产能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:legacy",
+      "type": "any",
+      "real": {
+        "set": "TWM",
+        "number": "167"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides every type of Energy but provides only 1 Energy at a time.\n\nIf the Pokémon this card is attached to is Knocked Out by damage from an attack from your opponent’s Pokémon, that player takes 1 fewer Prize card. This effect of your Legacy Energy only works once per game.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供所有属性的能量，但一次只提供 1 个能量。\n\n若此卡附着的宝可梦因对手的宝可梦所用招式的伤害而被击倒，则该玩家少拿 1 张奖赏卡。你的「遗产能量」的这个效果每局只能生效 1 次。"
+    },
+    {
+      "name": "Enriching Energy",
+      "name_zh": "富饶能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:enriching",
+      "type": "colorless",
+      "real": {
+        "set": "SSP",
+        "number": "191"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nWhen you attach this card from your hand to a Pokémon, draw 4 cards.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n当你从手牌将此卡附着于宝可梦时，抽 4 张牌。"
+    },
+    {
+      "name": "Spiky Energy",
+      "name_zh": "尖刺能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:spiky",
+      "type": "colorless",
+      "real": {
+        "set": "JTG",
+        "number": "159"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf the Pokémon this card is attached to is in the Active Spot and is damaged by an attack from your opponent’s Pokémon (even if this Pokémon is Knocked Out), put 2 damage counters on the Attacking Pokémon.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡附着的宝可梦位于战斗区，且受到对手的宝可梦所用招式的伤害（即使此宝可梦被击倒），则在攻击的宝可梦上放置 2 个伤害指示物。"
+    },
+    {
+      "name": "Team Rocket's Energy",
+      "name_zh": "火箭队的能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:team_rocket",
+      "type": "team_rocket",
+      "real": {
+        "set": "DRI",
+        "number": "182"
+      },
+      "desc": "This card can only be attached to a Team Rocket’s Pokémon. If this card is attached to anything other than a Team Rocket’s Pokémon, discard this card.\n\nAs long as this card is attached to a Pokémon, it provides 2 in any combination of {P} Energy and {D} Energy.",
+      "desc_zh": "此卡只能附着于火箭队的宝可梦。若此卡附着于火箭队的宝可梦以外的对象，则弃置此卡。\n\n只要此卡附着于宝可梦，就提供 2 个能量，其属性为 {P} 能量与 {D} 能量的任意组合。"
+    },
+    {
+      "name": "Prism Energy",
+      "name_zh": "棱镜能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:prism",
+      "type": "any",
+      "real": {
+        "set": "BLK",
+        "number": "86"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to a Basic Pokémon, this card provides every type of Energy but provides only 1 Energy at a time.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡附着于基础宝可梦，则此卡提供所有属性的能量，但一次只提供 1 个能量。"
+    },
+    {
+      "name": "Ignition Energy",
+      "name_zh": "点火能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:ignition",
+      "type": "colorless",
+      "real": {
+        "set": "WHT",
+        "number": "86"
+      },
+      "desc": "If this card is attached to 1 of your Pokémon, discard it at the end of your turn.\n\nAs long as this card is attached to a Pokémon, it provides {C} Energy.\n\nIf this card is attached to an Evolution Pokémon, it provides {C}{C}{C} Energy instead.",
+      "desc_zh": "若此卡附着于你的 1 只宝可梦，则在你回合结束时弃置此卡。\n\n只要此卡附着于宝可梦，就提供 {C} 能量。\n\n若此卡附着于进化宝可梦，则改为提供 {C}{C}{C} 能量。"
+    },
+    {
+      "name": "Grow Grass Energy",
+      "name_zh": "生长草能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:grow_grass",
+      "type": "grass",
+      "real": {
+        "set": "POR",
+        "number": "86"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {G} Energy.\nThe {G} Pokémon this card is attached to gets +20 HP.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {G} 能量。\n此卡附着的 {G} 宝可梦的 HP +20。"
+    },
+    {
+      "name": "Telepath Psychic Energy",
+      "name_zh": "感应超能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:telepath",
+      "type": "psychic",
+      "real": {
+        "set": "POR",
+        "number": "87"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {P} Energy.\nWhen you attach this card from your hand to a {P} Pokémon, search your deck for up to 2 Basic {P} Pokémon and put them onto your Bench. Then, shuffle your deck.",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {P} 能量。\n当你从手牌将此卡附着于 {P} 宝可梦时，从牌库中检索至多 2 只基础 {P} 宝可梦并放置于后备。然后洗牌。"
+    },
+    {
+      "name": "Rock Fighting Energy",
+      "name_zh": "岩石斗能量",
+      "supertype": "Energy",
+      "kind": "special",
+      "tag": "senergy:rock_fighting",
+      "type": "fighting",
+      "real": {
+        "set": "POR",
+        "number": "88"
+      },
+      "desc": "As long as this card is attached to a Pokémon, it provides {F} Energy.\nPrevent all effects of attacks used by your opponent’s Pokémon done to the {F} Pokémon this card is attached to. (Existing effects are not removed. Damage is not an effect.)",
+      "desc_zh": "只要此卡附着于宝可梦，就提供 {F} 能量。\n防止对手的宝可梦所使用招式对此卡附着的 {F} 宝可梦造成的所有效果。（已有的效果不会被移除。伤害不是效果。）"
     }
   ]
 }

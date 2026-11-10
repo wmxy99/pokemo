@@ -166,6 +166,96 @@ class SupportAI(BaselineAI):
         return super().decide(view)
 
 
+class RuleAI(SupportAI):
+    """规则 AI · 会**进化**的版本（2026-11-10）
+
+    为什么另开一个类而不是改 ``SupportAI``：``SupportAI`` 是 K1 训练的**可选
+    对手口径**（``--opponent support``），行为一改，历史训练分布就不可比。
+    而「AI 从不进化」对 Stage 2 卡组是致命的：10 套预设里 7 套主力在二阶，
+    40 局实测中有 26 局以 ``no_pokemon`` 收场 —— 卡组再怎么按官方模板优化，
+    玩家体感都等于零。
+
+    与 ``SupportAI`` 的两点差别：
+
+      1. **进化最先做**（在攻击之前）：进化不消耗攻击机会，晚进化等于白丢
+         一回合伤害；目标位置优先战斗位（先让主力能打）。
+      2. ``SupportAI`` 放弃回合（返回 pass）时，再试**道具 / 场地**：它们的
+         收益是常驻的（HP +100 / 减伤 / 增伤），不抢关键检索的时机。
+
+    ⚠ 这个类**不进 K1 评测口径**：``k1_accept.py`` 仍用 ``BaselineAI`` 双盲。
+    """
+
+    name = "rule_ai"
+
+    # 牌库见底保护：抽牌类动作用到只剩这么几张时停手
+    LOW_DECK = 15
+    # 会**减少牌库**的动作前缀（抽牌 / 弃牌重抽 / 洗回重抽）。
+    # 检索类（search_*）不在此列：它只改变牌的**位置**，不消耗牌库总量。
+    _DRAW_TAGS = ("recon:", "draw:", "draw_to:", "draw_cond:", "draw_to_branch:",
+                  "research:", "shuffle_draw:", "shuffle_draw_split:",
+                  "opp_shuffle_draw:", "discard_to_both:")
+
+    @classmethod
+    def _is_draw(cls, action: dict) -> bool:
+        tag = str(action.get("tag") or "")
+        return tag.startswith(cls._DRAW_TAGS)
+
+    def decide(self, view: dict) -> dict:
+        legal = view.get("legal") or [{"verb": "pass"}]
+        me = view.get("me_state") or {}
+
+        # 0) 进化：先把主力推到最终形态（战斗位优先）
+        evo = [a for a in legal if a.get("verb") == "evolve"]
+        if evo:
+            return dict(next((a for a in evo if a.get("target") == 0), evo[0]))
+
+        # 0.5) 空招防护：可付的招式**全是 0 伤害** → 那不是攻击，是空转
+        #
+        # A1 自战实测：Duskull 的「Come and Get You」（0 伤害，从弃牌堆铺后备）
+        # 被当成攻击用了 70 次 —— 每用一次就少一次换人/附能的机会，两只 330 HP
+        # 的 ex 谁也打不死，平均 37 回合后靠牌库抽空分胜负。
+        # 正确做法是先把主力换上来（switch / 撤退），而不是拿辅助宝可梦空转。
+        act_fp = me.get("active") or {}
+        atts = act_fp.get("attacks") or []
+        atk_acts = [a for a in legal if a.get("verb") == "attack"]
+
+        def _dmg(a):
+            i = a.get("attack")
+            if isinstance(i, int) and 0 <= i < len(atts):
+                return int(atts[i].get("damage") or 0)
+            return 0
+
+        if atk_acts and max(_dmg(a) for a in atk_acts) == 0:
+            for a in legal:
+                tag = str(a.get("tag") or "")
+                if a.get("verb") == "retreat" or (
+                        a.get("verb") == "trainer" and tag.startswith("switch_self")):
+                    return dict(a)
+
+        # 0.7) 牌库见底 → 抽牌类一律不碰
+        #
+        # 为什么必要：Drakloak 的 Recon 每回合抽 2、Iono / Research 再抽 5–7，
+        # SupportAI 会一直用（对它是"白拿牌"）。60 张牌 20 回合就被抽空 ——
+        # 实测 40 局里 28 局以 `deckout` 收场，玩家看到的是"卡组还没打就输了"。
+        # 真实玩家会留 10 张以上缓冲，这里按 15 张划线。
+        deck_n = int(me.get("deck_count") or 99)
+        if deck_n <= self.LOW_DECK:
+            kept = [a for a in legal if not self._is_draw(a)]
+            if len(kept) != len(legal):
+                view = dict(view)
+                view["legal"] = kept or [{"verb": "pass"}]
+
+        act = super().decide(view)
+
+        # 1) 没别的事可做 → 附道具 / 打场地（常驻收益）
+        if act.get("verb") == "pass":
+            for a in view["legal"]:
+                tag = str(a.get("tag") or "")
+                if a.get("verb") == "trainer" and tag.startswith(("tool:", "stadium:")):
+                    return dict(a)
+        return act
+
+
 class HumanAgent(Agent):
     """交互式 Agent：由上层（CLI/Web）提供动作回调"""
     def __init__(self, name: str = "human", chooser=None):

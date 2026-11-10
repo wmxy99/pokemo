@@ -404,11 +404,112 @@ def decklist(arch_id: str) -> list:
     return a["cards"]
 
 
+# ---------------- 官方构筑规则核对（2026-11-10） ----------------
+# 为什么单独成段：`decklist()` 只校验「60 张」，可它只是三条官方硬约束之一。
+#   · **同名卡最多 4 张**（基本能量除外 —— 卡面写明 "You may have any number"）；
+#   · **一副牌最多 1 张 ACE SPEC**（不论同名与否，2013 起至今未变）；
+#   · 60 张整。
+# 这三条**不在引擎对局规则里**（引擎只关心场上/手牌/牌库），所以必须独立成
+# 可被测试直接调用的函数；`build_deck()` 在构建前强制它，违规即抛错。
+#
+# ACE SPEC 清单来源：数据集 `rule == "ACE SPEC"`（29 张）。扩展池生成链
+# （gen_engine_pool.py）不带 `rule` 字段，故单列 `data/ace_spec.json`，
+# 并由 `tests/test_deck_legality.py::test_ace_spec_list_matches_dataset`
+# 逐名比对数据集 —— 数据集漂移会让测试变红，而不是让这份清单悄悄过期。
+ACE_SPEC_FILE = _DATA_DIR / "ace_spec.json"
+MAX_COPIES = 4          # 同名卡上限（基本能量不受限）
+
+
+@lru_cache(maxsize=1)
+def _ace_spec_raw() -> frozenset:
+    if not ACE_SPEC_FILE.exists():
+        return frozenset()
+    try:
+        return frozenset(_read(ACE_SPEC_FILE).get("names") or [])
+    except Exception:                                  # noqa: BLE001
+        return frozenset()
+
+
+def ace_spec_names() -> frozenset:
+    """ACE SPEC 卡名集合（rules: 一副牌最多 1 张）"""
+    return _ace_spec_raw()
+
+
+def is_ace_spec(name: str) -> bool:
+    return (name or "") in _ace_spec_raw()
+
+
+def deck_legality(arch_id: str) -> dict:
+    """按官方构筑规则核对预设卡组
+
+    返回::
+
+        {"id": "A1", "ok": True, "total": 60,
+         "violations": [{"rule": ..., ...}, ...],
+         "ace_spec": ["Legacy Energy"],
+         "copies": {"Dragapult ex": 3, ...}}   # 只含**受限**卡（基本能量不计）
+
+    违规 `rule` 取值：``deck_size`` / ``copy_limit`` / ``ace_spec`` / ``unmapped``。
+    """
+    a = _arch_raw(arch_id)
+    out = legality_from_entries(a["cards"])
+    return {"id": a["id"], **out}
+
+
+def legality_from_entries(entries: list) -> dict:
+    """逐卡清单 → 合规报告（**纯函数**，供注入式自测直接喂数据）
+
+    与 `deck_legality()` 分离的原因：卡表违规必须能「不靠改 JSON 就复现」。
+    否则守卫只能证明「当前文件恰好合法」，无法证明「规则真的在生效」
+    （本项目栽过这种坑：把对账写进死代码，注入错误后照样全绿）。
+    """
+    total = 0
+    copies: dict = {}
+    ace: list = []
+    violations: list = []
+    for entry in entries:
+        n = int(entry["count"])
+        total += n
+        item = item_for(entry.get("uid") or entry["name"])
+        if item is None:
+            violations.append({"rule": "unmapped", "name": entry["name"],
+                               "count": n, "reason": "卡池未收录"})
+            continue
+        cdef = item["def"]
+        # 基本能量：卡面无张数上限（"You may have any number of this card"）
+        if isinstance(cdef, EnergyDef) and not cdef.is_special:
+            continue
+        name = getattr(cdef, "name", "") or entry["name"]
+        copies[name] = copies.get(name, 0) + n
+        if name in _ace_spec_raw():
+            ace.append(name)
+    for name, n in sorted(copies.items()):
+        if n > MAX_COPIES:
+            violations.append({"rule": "copy_limit", "name": name,
+                               "count": n, "max": MAX_COPIES})
+    if len(ace) > 1:
+        violations.append({"rule": "ace_spec", "cards": ace, "max": 1,
+                           "note": "一副牌最多 1 张 ACE SPEC（不论同名与否）"})
+    if total != 60:
+        violations.append({"rule": "deck_size", "total": total, "expected": 60})
+    return {"ok": not violations, "total": total,
+            "violations": violations, "ace_spec": ace, "copies": copies}
+
+
 def build_deck(arch_id: str) -> list:
     """预设卡组 → 可直接进 Battle 的 60 张 ref 列表
 
     引擎不支持的卡以 `fallback_energy` 占位（逐卡记录于 coverage）。
+
+    ⚠ 构建前**强制**核对官方构筑规则（`deck_legality`）：预设卡组是「真实卡表」
+    的对外承诺，60 张只是其中一条。此前 10 套每套塞了 8 张 ACE SPEC
+    （Master Ball ×2 + Prime Catcher ×2 + Neo Upper ×4）—— 真实规则里一副牌
+    最多 1 张 ACE SPEC，这种卡表在官方赛场上立不起来。
     """
+    leg = deck_legality(arch_id)
+    if not leg["ok"]:
+        raise ValueError(f"预设 {leg['id']} 违反官方构筑规则："
+                         f"{json.dumps(leg['violations'], ensure_ascii=False)}")
     a = _arch_raw(arch_id)
     fb_type = a.get("fallback_energy", "colorless")
     # 占位能量同样带中文展示名（否则前端/日志会回退显示英文名）

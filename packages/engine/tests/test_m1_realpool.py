@@ -253,7 +253,11 @@ class TestI18nZhNames(unittest.TestCase):
 
     def test_demo_deck_zh_labels(self):
         self.assertEqual(dl.deck_label_zh("draco"), "龙系进化演示卡组")
-        self.assertEqual(dl.deck_label_zh("A3"), "A3 · N的索罗亚克ex")
+        # 2026-11-10：10 套预设标签都追加了特殊能量说明（每套 1–3 种），
+        # 所以不再逐字比对整串 —— 但「id · 中文原型名开头」与「标明能量」必须保留。
+        a3 = dl.deck_label_zh("A3")
+        self.assertTrue(a3.startswith("A3 · N的索罗亚克ex"), a3)
+        self.assertIn("能量", a3, f"A3 标签应写明特殊能量：{a3}")
         self.assertEqual(dl.deck_label_zh("unknown-x"), "unknown-x")
         b = Battle(dl.make_deck("draco"), dl.make_deck("lightning"), seed=3)
         names = [c.get("display") for c in b.view()["me_state"]["hand"]]

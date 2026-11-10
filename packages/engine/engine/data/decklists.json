@@ -1,12 +1,13 @@
 {
   "meta": {
-    "version": "1.1",
-    "date": "2026-09-10",
+    "version": "1.2",
+    "date": "2026-11-10",
     "milestone": "M1 · 预设对手池 A1–A4 真实卡表 · v1.1 中文展示层",
     "provenance": "PRD §10 预设对手池（Worlds 2026 使用率/胜率，Limitless 口径）+ P0 复核清单 §2 核心构成；60 卡完整列表为**引擎映射重构版**（fidelity=reconstructed），待 Limitless 收录 loader 覆盖为逐卡精确版",
     "fidelity_note": "引擎不支持的卡（tag=unsupported）在 build 时以基础能量占位，逐卡清单见 reallib.coverage() 报告",
     "i18n": "label 为英文原型名（数据键）；label_zh 为**中文展示名**（前端/报告一律优先展示中文）",
-    "ip_note": "C2：不含官方图像；C1：非商用社区数据（Unofficial community data）"
+    "ip_note": "C2：不含官方图像；C1：非商用社区数据（Unofficial community data）",
+    "construction_note": "v1.2（2026-11-10）：按官方构筑模板重排（宝可梦 12–21 / 训练家 26–30 / 能量 12–16），并加入特殊能量与场地/道具；每套严格 1 张 ACE SPEC、同名 ≤4（`reallib.deck_legality` 强制，违规构建直接抛错）。"
   },
   "archetypes": [
     {
@@ -15,33 +16,129 @@
       "label_zh": "多龙巴鲁托ex / 黑夜魔灵",
       "role": "主锚点 Agent（必做）",
       "style": "控制-干扰（铺伤 + 奖赏节奏）",
-      "meta_note": "Worlds 使用率 43.0% · 赛期 Meta 份额 49.2%（Limitless）· 胜率 45.9%",
+      "meta_note": "Worlds 使用率 43.0% · 赛期 Meta 份额 49.2%（Limitless）· 胜率 45.9% · 特殊能量：Legacy Energy ×1（ACE SPEC，任意 1 点 + 被击倒少拿 1 奖赏，给双色攻击的容错）；按官方模板补 2 Switch / 2 Rare Candy",
       "fallback_energy": "psychic",
       "cards": [
-        { "name": "Dreepy", "count": 4, "uid": "Dreepy@TWM 128" },
-        { "name": "Drakloak", "count": 4, "uid": "Drakloak@TWM 129" },
-        { "name": "Dragapult ex", "count": 3, "uid": "Dragapult ex@TWM 130" },
-        { "name": "Duskull", "count": 2, "uid": "Duskull@SIT 68" },
-        { "name": "Dusclops", "count": 1, "uid": "Dusclops@SIT 69" },
-        { "name": "Dusknoir", "count": 1, "uid": "Dusknoir@SIT 70" },
-        { "name": "Munkidori", "count": 2, "uid": "Munkidori@TWM 95" },
-        { "name": "Budew", "count": 1, "uid": "Budew@SVI 9" },
-        { "name": "Dunsparce", "count": 1, "uid": "Dunsparce@TEF 128" },
-        { "name": "Dudunsparce", "count": 1, "uid": "Dudunsparce@TEF 129" },
-        { "name": "Meowth ex", "count": 1, "uid": "Meowth ex@-" },
-        { "name": "Fezandipiti ex", "count": 1, "uid": "Fezandipiti ex@SFA 38" },
-        { "name": "Buddy-Buddy Poffin", "count": 4, "uid": "Buddy-Buddy Poffin@TEF 144" },
-        { "name": "Ultra Ball", "count": 4, "uid": "Ultra Ball@SVI 196" },
-        { "name": "Crushing Hammer", "count": 3, "uid": "Crushing Hammer@SVI 168" },
-        { "name": "Boss's Orders", "count": 2, "uid": "Boss's Orders@PAL 172" },
-        { "name": "Counter Catcher", "count": 2, "uid": "Counter Catcher@PAR 160" },
-        { "name": "Professor's Research", "count": 3, "uid": "Professor's Research@SVI 189" },
-        { "name": "Iono", "count": 2, "uid": "Iono@PAL 185" },
-        { "name": "Night Stretcher", "count": 1, "uid": "Night Stretcher@SFA 61" },
-        { "name": "Earthen Vessel", "count": 2, "uid": "Earthen Vessel@PAR 163" },
-        { "name": "Rare Candy", "count": 2, "uid": "Rare Candy@SVI 191" },
-        { "name": "Basic Psychic Energy", "count": 8, "uid": "Basic Psychic Energy@-" },
-        { "name": "Basic Fire Energy", "count": 5, "uid": "Basic Fire Energy@-" }
+        {
+          "name": "Dreepy",
+          "count": 4,
+          "uid": "Dreepy@TWM 128"
+        },
+        {
+          "name": "Drakloak",
+          "count": 4,
+          "uid": "Drakloak@TWM 129"
+        },
+        {
+          "name": "Dragapult ex",
+          "count": 3,
+          "uid": "Dragapult ex@TWM 130"
+        },
+        {
+          "name": "Duskull",
+          "count": 2,
+          "uid": "Duskull@SIT 68"
+        },
+        {
+          "name": "Dusclops",
+          "count": 1,
+          "uid": "Dusclops@SIT 69"
+        },
+        {
+          "name": "Dusknoir",
+          "count": 1,
+          "uid": "Dusknoir@SIT 70"
+        },
+        {
+          "name": "Munkidori",
+          "count": 2,
+          "uid": "Munkidori@TWM 95"
+        },
+        {
+          "name": "Budew",
+          "count": 1,
+          "uid": "Budew@SVI 9"
+        },
+        {
+          "name": "Fezandipiti ex",
+          "count": 1,
+          "uid": "Fezandipiti ex@SFA 38"
+        },
+        {
+          "name": "Meowth ex",
+          "count": 1,
+          "uid": "Meowth ex@-"
+        },
+        {
+          "name": "Buddy-Buddy Poffin",
+          "count": 4,
+          "uid": "Buddy-Buddy Poffin@TEF 144"
+        },
+        {
+          "name": "Ultra Ball",
+          "count": 4,
+          "uid": "Ultra Ball@SVI 196"
+        },
+        {
+          "name": "Night Stretcher",
+          "count": 2,
+          "uid": "Night Stretcher@SFA 61"
+        },
+        {
+          "name": "Earthen Vessel",
+          "count": 2,
+          "uid": "Earthen Vessel@PAR 163"
+        },
+        {
+          "name": "Rare Candy",
+          "count": 2,
+          "uid": "Rare Candy@SVI 191"
+        },
+        {
+          "name": "Professor's Research",
+          "count": 3,
+          "uid": "Professor's Research@SVI 189"
+        },
+        {
+          "name": "Iono",
+          "count": 3,
+          "uid": "Iono@PAL 185"
+        },
+        {
+          "name": "Boss's Orders",
+          "count": 2,
+          "uid": "Boss's Orders@PAL 172"
+        },
+        {
+          "name": "Counter Catcher",
+          "count": 2,
+          "uid": "Counter Catcher@PAR 160"
+        },
+        {
+          "name": "Switch",
+          "count": 2,
+          "uid": "Switch@SVI 194"
+        },
+        {
+          "name": "Crushing Hammer",
+          "count": 2,
+          "uid": "Crushing Hammer@SVI 168"
+        },
+        {
+          "name": "Basic Psychic Energy",
+          "count": 7,
+          "uid": "Basic Psychic Energy@-"
+        },
+        {
+          "name": "Basic Fire Energy",
+          "count": 4,
+          "uid": "Basic Fire Energy@-"
+        },
+        {
+          "name": "Legacy Energy",
+          "count": 1,
+          "uid": "Legacy Energy@TWM 167"
+        }
       ]
     },
     {
@@ -50,30 +147,124 @@
       "label_zh": "多龙巴鲁托ex / 火焰鸡ex",
       "role": "主锚点变体",
       "style": "加速-压制（弃牌堆附能加速）",
-      "meta_note": "tcgcontender Tier1 #1（2026-09-01，Expert 68）· 火弱克制巨型钻角犀兽",
+      "meta_note": "tcgcontender Tier1 #1（2026-09-01，Expert 68）· 火弱克制巨型钻角犀兽 · 特殊能量：Ignition Energy ×3（进化宝可梦给 {C}×3，回合末弃置，喂 Blaziken 加速线）+ Legacy Energy ×1（ACE SPEC，任意 1 点 + 被击倒少拿 1 奖赏）",
       "fallback_energy": "fire",
       "cards": [
-        { "name": "Dreepy", "count": 4, "uid": "Dreepy@TWM 128" },
-        { "name": "Drakloak", "count": 4, "uid": "Drakloak@TWM 129" },
-        { "name": "Dragapult ex", "count": 3, "uid": "Dragapult ex@TWM 130" },
-        { "name": "Torchic", "count": 2, "uid": "Torchic@-" },
-        { "name": "Combusken", "count": 2, "uid": "Combusken@SSP 34" },
-        { "name": "Blaziken ex", "count": 2, "uid": "Blaziken ex@SSP 35" },
-        { "name": "Fezandipiti ex", "count": 1, "uid": "Fezandipiti ex@SFA 38" },
-        { "name": "Dunsparce", "count": 1, "uid": "Dunsparce@TEF 128" },
-        { "name": "Dudunsparce", "count": 1, "uid": "Dudunsparce@TEF 129" },
-        { "name": "Buddy-Buddy Poffin", "count": 4, "uid": "Buddy-Buddy Poffin@TEF 144" },
-        { "name": "Ultra Ball", "count": 4, "uid": "Ultra Ball@SVI 196" },
-        { "name": "Crispin", "count": 2, "uid": "Crispin@SCR 133" },
-        { "name": "Boss's Orders", "count": 2, "uid": "Boss's Orders@PAL 172" },
-        { "name": "Counter Catcher", "count": 2, "uid": "Counter Catcher@PAR 160" },
-        { "name": "Professor's Research", "count": 3, "uid": "Professor's Research@SVI 189" },
-        { "name": "Iono", "count": 2, "uid": "Iono@PAL 185" },
-        { "name": "Night Stretcher", "count": 1, "uid": "Night Stretcher@SFA 61" },
-        { "name": "Earthen Vessel", "count": 2, "uid": "Earthen Vessel@PAR 163" },
-        { "name": "Crushing Hammer", "count": 2, "uid": "Crushing Hammer@SVI 168" },
-        { "name": "Basic Psychic Energy", "count": 8, "uid": "Basic Psychic Energy@-" },
-        { "name": "Basic Fire Energy", "count": 8, "uid": "Basic Fire Energy@-" }
+        {
+          "name": "Dreepy",
+          "count": 4,
+          "uid": "Dreepy@TWM 128"
+        },
+        {
+          "name": "Drakloak",
+          "count": 4,
+          "uid": "Drakloak@TWM 129"
+        },
+        {
+          "name": "Dragapult ex",
+          "count": 3,
+          "uid": "Dragapult ex@TWM 130"
+        },
+        {
+          "name": "Torchic",
+          "count": 3,
+          "uid": "Torchic@-"
+        },
+        {
+          "name": "Combusken",
+          "count": 2,
+          "uid": "Combusken@SSP 34"
+        },
+        {
+          "name": "Blaziken ex",
+          "count": 2,
+          "uid": "Blaziken ex@SSP 35"
+        },
+        {
+          "name": "Fezandipiti ex",
+          "count": 1,
+          "uid": "Fezandipiti ex@SFA 38"
+        },
+        {
+          "name": "Dunsparce",
+          "count": 1,
+          "uid": "Dunsparce@TEF 128"
+        },
+        {
+          "name": "Dudunsparce",
+          "count": 1,
+          "uid": "Dudunsparce@TEF 129"
+        },
+        {
+          "name": "Buddy-Buddy Poffin",
+          "count": 4,
+          "uid": "Buddy-Buddy Poffin@TEF 144"
+        },
+        {
+          "name": "Ultra Ball",
+          "count": 4,
+          "uid": "Ultra Ball@SVI 196"
+        },
+        {
+          "name": "Night Stretcher",
+          "count": 2,
+          "uid": "Night Stretcher@SFA 61"
+        },
+        {
+          "name": "Earthen Vessel",
+          "count": 2,
+          "uid": "Earthen Vessel@PAR 163"
+        },
+        {
+          "name": "Professor's Research",
+          "count": 3,
+          "uid": "Professor's Research@SVI 189"
+        },
+        {
+          "name": "Iono",
+          "count": 3,
+          "uid": "Iono@PAL 185"
+        },
+        {
+          "name": "Boss's Orders",
+          "count": 2,
+          "uid": "Boss's Orders@PAL 172"
+        },
+        {
+          "name": "Counter Catcher",
+          "count": 2,
+          "uid": "Counter Catcher@PAR 160"
+        },
+        {
+          "name": "Switch",
+          "count": 1,
+          "uid": "Switch@SVI 194"
+        },
+        {
+          "name": "Crispin",
+          "count": 2,
+          "uid": "Crispin@SCR 133"
+        },
+        {
+          "name": "Basic Psychic Energy",
+          "count": 5,
+          "uid": "Basic Psychic Energy@-"
+        },
+        {
+          "name": "Basic Fire Energy",
+          "count": 5,
+          "uid": "Basic Fire Energy@-"
+        },
+        {
+          "name": "Ignition Energy",
+          "count": 3,
+          "uid": "Ignition Energy@WHT 86"
+        },
+        {
+          "name": "Legacy Energy",
+          "count": 1,
+          "uid": "Legacy Energy@TWM 167"
+        }
       ]
     },
     {
@@ -82,29 +273,119 @@
       "label_zh": "N的索罗亚克ex",
       "role": "对手池（检验石）",
       "style": "变速-Combo（奖赏节奏破坏）",
-      "meta_note": "Worlds 使用率 7.49% · 胜率 48.41%；主流中少数优开多龙巴鲁托",
+      "meta_note": "Worlds 使用率 7.49% · 胜率 48.41%；主流中少数优开多龙巴鲁托 · 特殊能量：Legacy Energy ×1（ACE SPEC）+ Spiky Energy ×2（{C}，战斗位受伤反弹 20）；恶系单色，基本恶能量 9 张",
       "fallback_energy": "darkness",
       "cards": [
-        { "name": "N's Zorua", "count": 4, "uid": "N's Zorua@JTG 97" },
-        { "name": "N's Zoroark ex", "count": 3, "uid": "N's Zoroark ex@JTG 98" },
-        { "name": "Munkidori", "count": 2, "uid": "Munkidori@TWM 95" },
-        { "name": "Budew", "count": 3, "uid": "Budew@SVI 9" },
-        { "name": "Dunsparce", "count": 2, "uid": "Dunsparce@TEF 128" },
-        { "name": "Dudunsparce", "count": 1, "uid": "Dudunsparce@TEF 129" },
-        { "name": "Fezandipiti ex", "count": 1, "uid": "Fezandipiti ex@SFA 38" },
-        { "name": "Meowth ex", "count": 1, "uid": "Meowth ex@-" },
-        { "name": "Buddy-Buddy Poffin", "count": 4, "uid": "Buddy-Buddy Poffin@TEF 144" },
-        { "name": "Nest Ball", "count": 4, "uid": "Nest Ball@SVI 181" },
-        { "name": "Ultra Ball", "count": 3, "uid": "Ultra Ball@SVI 196" },
-        { "name": "Boss's Orders", "count": 3, "uid": "Boss's Orders@PAL 172" },
-        { "name": "Crushing Hammer", "count": 2, "uid": "Crushing Hammer@SVI 168" },
-        { "name": "Professor's Research", "count": 3, "uid": "Professor's Research@SVI 189" },
-        { "name": "Iono", "count": 2, "uid": "Iono@PAL 185" },
-        { "name": "Counter Catcher", "count": 2, "uid": "Counter Catcher@PAR 160" },
-        { "name": "Night Stretcher", "count": 1, "uid": "Night Stretcher@SFA 61" },
-        { "name": "Earthen Vessel", "count": 1, "uid": "Earthen Vessel@PAR 163" },
-        { "name": "Basic Darkness Energy", "count": 12, "uid": "Basic Darkness Energy@-" },
-        { "name": "Basic Psychic Energy", "count": 6, "uid": "Basic Psychic Energy@-" }
+        {
+          "name": "N's Zorua",
+          "count": 4,
+          "uid": "N's Zorua@JTG 97"
+        },
+        {
+          "name": "N's Zoroark ex",
+          "count": 3,
+          "uid": "N's Zoroark ex@JTG 98"
+        },
+        {
+          "name": "Munkidori",
+          "count": 2,
+          "uid": "Munkidori@TWM 95"
+        },
+        {
+          "name": "Budew",
+          "count": 2,
+          "uid": "Budew@SVI 9"
+        },
+        {
+          "name": "Dunsparce",
+          "count": 2,
+          "uid": "Dunsparce@TEF 128"
+        },
+        {
+          "name": "Dudunsparce",
+          "count": 1,
+          "uid": "Dudunsparce@TEF 129"
+        },
+        {
+          "name": "Fezandipiti ex",
+          "count": 1,
+          "uid": "Fezandipiti ex@SFA 38"
+        },
+        {
+          "name": "Buddy-Buddy Poffin",
+          "count": 4,
+          "uid": "Buddy-Buddy Poffin@TEF 144"
+        },
+        {
+          "name": "Nest Ball",
+          "count": 4,
+          "uid": "Nest Ball@SVI 181"
+        },
+        {
+          "name": "Ultra Ball",
+          "count": 3,
+          "uid": "Ultra Ball@SVI 196"
+        },
+        {
+          "name": "Boss's Orders",
+          "count": 3,
+          "uid": "Boss's Orders@PAL 172"
+        },
+        {
+          "name": "Professor's Research",
+          "count": 3,
+          "uid": "Professor's Research@SVI 189"
+        },
+        {
+          "name": "Iono",
+          "count": 3,
+          "uid": "Iono@PAL 185"
+        },
+        {
+          "name": "Counter Catcher",
+          "count": 2,
+          "uid": "Counter Catcher@PAR 160"
+        },
+        {
+          "name": "Night Stretcher",
+          "count": 2,
+          "uid": "Night Stretcher@SFA 61"
+        },
+        {
+          "name": "Switch",
+          "count": 2,
+          "uid": "Switch@SVI 194"
+        },
+        {
+          "name": "Earthen Vessel",
+          "count": 2,
+          "uid": "Earthen Vessel@PAR 163"
+        },
+        {
+          "name": "Crushing Hammer",
+          "count": 2,
+          "uid": "Crushing Hammer@SVI 168"
+        },
+        {
+          "name": "Basic Darkness Energy",
+          "count": 9,
+          "uid": "Basic Darkness Energy@-"
+        },
+        {
+          "name": "Basic Psychic Energy",
+          "count": 3,
+          "uid": "Basic Psychic Energy@-"
+        },
+        {
+          "name": "Legacy Energy",
+          "count": 1,
+          "uid": "Legacy Energy@TWM 167"
+        },
+        {
+          "name": "Spiky Energy",
+          "count": 2,
+          "uid": "Spiky Energy@JTG 159"
+        }
       ]
     },
     {
@@ -113,30 +394,124 @@
       "label_zh": "基础盒（厄诡椪ex / 皮皮ex）",
       "role": "对手池",
       "style": "混合 ex 工具型（多目标打手拼盘）",
-      "meta_note": "Worlds 使用率 9.43% · 胜率 49.86%",
+      "meta_note": "Worlds 使用率 9.43% · 胜率 49.86% · 特殊能量三件套：Prism Energy ×3（基础宝可梦给任意 1 点，全卡组 16 只基础宝可梦全额受益）+ Grow Grass Energy ×3（{G} 持有者 +20 HP）+ Enriching Energy ×1（ACE SPEC，手牌附着抽 4）；训练家补 2 Nest Ball 铺基础",
       "fallback_energy": "grass",
       "cards": [
-        { "name": "Ogerpon ex", "count": 4, "uid": "Ogerpon ex@TWM 25" },
-        { "name": "Clefairy ex", "count": 3, "uid": "Clefairy ex@PRE 56" },
-        { "name": "Meowth ex", "count": 2, "uid": "Meowth ex@-" },
-        { "name": "Fezandipiti ex", "count": 2, "uid": "Fezandipiti ex@SFA 38" },
-        { "name": "Munkidori", "count": 2, "uid": "Munkidori@TWM 95" },
-        { "name": "Bloodmoon Ursaluna ex", "count": 1, "uid": "Bloodmoon Ursaluna ex@TWM 141" },
-        { "name": "Budew", "count": 3, "uid": "Budew@SVI 9" },
-        { "name": "Dunsparce", "count": 3, "uid": "Dunsparce@TEF 128" },
-        { "name": "Dudunsparce", "count": 1, "uid": "Dudunsparce@TEF 129" },
-        { "name": "Buddy-Buddy Poffin", "count": 4, "uid": "Buddy-Buddy Poffin@TEF 144" },
-        { "name": "Ultra Ball", "count": 4, "uid": "Ultra Ball@SVI 196" },
-        { "name": "Boss's Orders", "count": 3, "uid": "Boss's Orders@PAL 172" },
-        { "name": "Professor's Research", "count": 3, "uid": "Professor's Research@SVI 189" },
-        { "name": "Iono", "count": 2, "uid": "Iono@PAL 185" },
-        { "name": "Crushing Hammer", "count": 3, "uid": "Crushing Hammer@SVI 168" },
-        { "name": "Counter Catcher", "count": 2, "uid": "Counter Catcher@PAR 160" },
-        { "name": "Earthen Vessel", "count": 2, "uid": "Earthen Vessel@PAR 163" },
-        { "name": "Switch", "count": 3, "uid": "Switch@SVI 194" },
-        { "name": "Basic Grass Energy", "count": 5, "uid": "Basic Grass Energy@-" },
-        { "name": "Basic Psychic Energy", "count": 4, "uid": "Basic Psychic Energy@-" },
-        { "name": "Basic Darkness Energy", "count": 4, "uid": "Basic Darkness Energy@-" }
+        {
+          "name": "Ogerpon ex",
+          "count": 4,
+          "uid": "Ogerpon ex@TWM 25"
+        },
+        {
+          "name": "Clefairy ex",
+          "count": 3,
+          "uid": "Clefairy ex@PRE 56"
+        },
+        {
+          "name": "Meowth ex",
+          "count": 2,
+          "uid": "Meowth ex@-"
+        },
+        {
+          "name": "Fezandipiti ex",
+          "count": 2,
+          "uid": "Fezandipiti ex@SFA 38"
+        },
+        {
+          "name": "Munkidori",
+          "count": 2,
+          "uid": "Munkidori@TWM 95"
+        },
+        {
+          "name": "Bloodmoon Ursaluna ex",
+          "count": 1,
+          "uid": "Bloodmoon Ursaluna ex@TWM 141"
+        },
+        {
+          "name": "Budew",
+          "count": 2,
+          "uid": "Budew@SVI 9"
+        },
+        {
+          "name": "Buddy-Buddy Poffin",
+          "count": 4,
+          "uid": "Buddy-Buddy Poffin@TEF 144"
+        },
+        {
+          "name": "Ultra Ball",
+          "count": 4,
+          "uid": "Ultra Ball@SVI 196"
+        },
+        {
+          "name": "Boss's Orders",
+          "count": 3,
+          "uid": "Boss's Orders@PAL 172"
+        },
+        {
+          "name": "Professor's Research",
+          "count": 3,
+          "uid": "Professor's Research@SVI 189"
+        },
+        {
+          "name": "Iono",
+          "count": 3,
+          "uid": "Iono@PAL 185"
+        },
+        {
+          "name": "Counter Catcher",
+          "count": 2,
+          "uid": "Counter Catcher@PAR 160"
+        },
+        {
+          "name": "Switch",
+          "count": 2,
+          "uid": "Switch@SVI 194"
+        },
+        {
+          "name": "Earthen Vessel",
+          "count": 3,
+          "uid": "Earthen Vessel@PAR 163"
+        },
+        {
+          "name": "Nest Ball",
+          "count": 2,
+          "uid": "Nest Ball@SVI 181"
+        },
+        {
+          "name": "Crushing Hammer",
+          "count": 2,
+          "uid": "Crushing Hammer@SVI 168"
+        },
+        {
+          "name": "Basic Grass Energy",
+          "count": 3,
+          "uid": "Basic Grass Energy@-"
+        },
+        {
+          "name": "Basic Psychic Energy",
+          "count": 3,
+          "uid": "Basic Psychic Energy@-"
+        },
+        {
+          "name": "Basic Darkness Energy",
+          "count": 3,
+          "uid": "Basic Darkness Energy@-"
+        },
+        {
+          "name": "Prism Energy",
+          "count": 3,
+          "uid": "Prism Energy@BLK 86"
+        },
+        {
+          "name": "Grow Grass Energy",
+          "count": 3,
+          "uid": "Grow Grass Energy@POR 86"
+        },
+        {
+          "name": "Enriching Energy",
+          "count": 1,
+          "uid": "Enriching Energy@SSP 191"
+        }
       ]
     }
   ]

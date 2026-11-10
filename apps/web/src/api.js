@@ -119,18 +119,18 @@ export const api = {
 // 引擎侧仍保留这些函数（K1 训练/验收脚本用 `make_deck("lightning")` 做固定基准，
 // 删掉会让历史曲线无法复现），只是不再出现在对战下拉里。
 export const DECKS = [
-  { id: 'A1', label: 'A1 · 多龙巴鲁托ex / 黑夜魔灵（真实卡表）' },
-  { id: 'A2', label: 'A2 · 多龙巴鲁托ex / 火焰鸡ex（真实卡表）' },
-  { id: 'A3', label: 'A3 · N的索罗亚克ex（真实卡表）' },
-  { id: 'A4', label: 'A4 · 基础盒 · 厄诡椪ex / 皮皮ex（真实卡表）' },
-  // 实例测试卡组（B1–B5）：全部由 engine_ready 卡池组建，60 张可对战
-  { id: 'B1', label: 'B1 · 实例测试 · 火：炽焰咆哮虎ex / Mega 喷火龙Yex' },
-  { id: 'B2', label: 'B2 · 实例测试 · 水：Mega 大力鳄ex / 狂欢浪舞鸭' },
-  { id: 'B3', label: 'B3 · 实例测试 · 雷：皮卡丘ex / 自爆磁怪' },
-  { id: 'B4', label: 'B4 · 实例测试 · 恶：三首恶龙ex / Mega 耿鬼ex' },
-  { id: 'B5', label: 'B5 · 实例测试 · 超：Mega 沙奈朵ex / 黑夜魔灵' },
-  // C1：唯一带**特殊能量**的卡组（Neo Upper Energy 给 Stage 2 提供任意 2 点）
-  { id: 'C1', label: 'C1 · 实例测试 · 钢：大吾的巨金怪ex + 新上能量（特殊能量）' },
+  { id: 'A1', label: 'A1 · 多龙巴鲁托ex / 黑夜魔灵 · 遗产能量' },
+  { id: 'A2', label: 'A2 · 多龙巴鲁托ex / 火焰鸡ex · 点火能量 + 遗产能量' },
+  { id: 'A3', label: 'A3 · N的索罗亚克ex · 遗产能量 + 尖刺能量' },
+  { id: 'A4', label: 'A4 · 基础盒 · 厄诡椪ex / 皮皮ex · 棱镜能量 + 生长草能量' },
+  // 实例卡组（B1–B5）：全部由 engine_ready 卡池组建，60 张可对战，各带 2–3 种特殊能量
+  { id: 'B1', label: 'B1 · 火：炽焰咆哮虎ex / Mega 喷火龙Yex · 新上能量 + 点火能量' },
+  { id: 'B2', label: 'B2 · 水：Mega 大力鳄ex / 狂欢浪舞鸭 · 新上能量 + 点火能量' },
+  { id: 'B3', label: 'B3 · 雷：皮卡丘ex / 自爆磁怪 · 新上能量 + 棱镜能量' },
+  { id: 'B4', label: 'B4 · 恶：三首恶龙ex / Mega 耿鬼ex · 遗产能量 + 尖刺能量' },
+  { id: 'B5', label: 'B5 · 超：Mega 沙奈朵ex / 黑夜魔灵 · 心灵感应能量 + 新上能量' },
+  // C1：钢系 + 三件套特殊能量（新上能量 / 棱镜能量 / 薄雾能量）
+  { id: 'C1', label: 'C1 · 钢：大吾的巨金怪ex / 超级盔甲鸟ex · 新上能量 + 薄雾能量' },
 ]
 
 export function shortDeck(id) {
@@ -139,7 +139,7 @@ export function shortDeck(id) {
     A3: 'N的索罗亚克ex', A4: '基础盒',
     B1: '火·炽焰咆哮虎ex', B2: '水·大力鳄ex', B3: '雷·皮卡丘ex',
     B4: '恶·三首恶龙ex', B5: '超·沙奈朵ex',
-    C1: '钢·巨金怪ex+特殊能量',
+    C1: '钢·巨金怪ex',
   }
   return m[id] || id
 }

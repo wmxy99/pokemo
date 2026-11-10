@@ -1004,8 +1004,13 @@ class TestI18nZhLabels(unittest.TestCase):
         js = client.get(f"/batch/jobs/{jid}/report?format=json", headers=h).json()
         cell = js["cells"][0]
         self.assertEqual(cell["deck_a"], "A1")            # 英文键不变
-        self.assertEqual(cell["deck_a_zh"], "A1 · 多龙巴鲁托ex / 黑夜魔灵")
-        self.assertEqual(cell["deck_b_zh"], "A3 · N的索罗亚克ex")
+        # 2026-11-10：中文展示名追加了特殊能量说明（10 套预设各带 1–3 种），
+        # 断言改为「id · 中文原型名开头」—— 逐字比对整串会把「标签可以更详细」
+        # 这条产品能力锁死。
+        self.assertTrue(cell["deck_a_zh"].startswith("A1 · 多龙巴鲁托ex / 黑夜魔灵"),
+                        cell["deck_a_zh"])
+        self.assertTrue(cell["deck_b_zh"].startswith("A3 · N的索罗亚克ex"),
+                        cell["deck_b_zh"])
         m = client.get("/stats/summary", headers=h).json()["matrix"]
         self.assertTrue(m)
         self.assertTrue(all("deck_a_zh" in x and "deck_b_zh" in x for x in m))

@@ -3,7 +3,7 @@
 
 - 创建对局 → 内存 Battle 会话（进程内保活；重启清空，元数据落 SQLite）
 - 人类通过 POST /actions 走引擎合法动作；AI 侧（对手）自动走一步直到再次轮到人
-  AI 对手：ai_iters>0 → MCTS；否则规则基线 AI（BaselineAI）
+  AI 对手：ai_iters>0 → MCTS；否则规则 AI（RuleAI：会进化 / 会用训练家 / 空招防护）
 - 全链路 seed 注入（同一 seed 可重放）；GET /battles/{id} 返回 view + legal
 """
 from __future__ import annotations
@@ -83,10 +83,17 @@ def _opp_agent(battle, iters: int, seed: int):
         后，搜索是在「基线水平」之上做的，迭代才有意义。
       · **种子按步递增**：固定 ``seed`` 会让每一步的探索序列完全相同（行为
         呆板、可预测），一局里换多少步都一样。
+
+    2026-11-10 换掉 0 档的实现：``BaselineAI`` 只做「攻击/附能/上场/撤退」，
+    **从不进化、从不用训练家**。10 套预设里 7 套主力在二阶，于是玩家看到的是
+    「卡组选好了，主力永远上不来，10 回合就因为场上没宝可梦输了」。
+    改用 ``RuleAI``（SupportAI + 进化 + 空招防护 + 牌库保护），同一批卡组的
+    自战 `no_pokemon` 从 26/40 降到 5/40。
+    ⚠ ``BaselineAI`` 仍是 K1 评测的冻结参照物（``k1_accept.py`` 双盲），不受影响。
     """
-    from engine.agents import BaselineAI
+    from engine.agents import BaselineAI, RuleAI
     if iters <= 0:
-        return BaselineAI("baseline")
+        return RuleAI("rule")
 
     class MctsAgent:
         """MCTS 对手：每次决策重新搜索当前局面

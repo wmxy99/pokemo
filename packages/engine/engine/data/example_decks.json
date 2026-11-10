@@ -1,8 +1,8 @@
 {
  "meta": {
-  "version": "1.0",
-  "date": "2026-11-04",
-  "purpose": "实例测试卡组 B1–B5：全部由 engine_ready 卡池组建，60 张可对战",
+  "version": "1.2",
+  "date": "2026-11-10",
+  "purpose": "实例卡组 B1–B5 + C1：全部由 engine_ready 卡池组建，60 张可对战，按官方构筑模板补齐训练家/场地/道具，并每套带 1–3 种特殊能量",
   "note": "与 decklists.json（A1–A4 Meta 对手池）分离：本文件不进 /decks/presets 的 Meta 语义，仅供前端对战下拉/实例对局"
  },
  "archetypes": [
@@ -12,7 +12,7 @@
    "label_zh": "火：炽焰咆哮虎ex / Mega 喷火龙Yex",
    "role": "实例测试卡组",
    "style": "火系双进化线（stage2 高 HP 打手 + 能量加速）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量三件套：Neo Upper Energy ×1（ACE SPEC，二阶给任意 2 点）+ Ignition Energy ×2（进化给 {C}×3）+ Boomerang Energy ×2（被自身招式效果弃掉后回附，配合 Mega 喷火龙Y 的 Explosion Y 弃 3 能） · 供实例对战",
    "fallback_energy": "fire",
    "cards": [
     {
@@ -33,12 +33,12 @@
     {
      "name": "Charmander",
      "count": 4,
-     "uid": "Charmander@PFL 11"
+     "uid": "Charmander@ASC 20"
     },
     {
      "name": "Charmeleon",
      "count": 2,
-     "uid": "Charmeleon@PFL 12"
+     "uid": "Charmeleon@ASC 21"
     },
     {
      "name": "Mega Charizard Y ex",
@@ -47,68 +47,83 @@
     },
     {
      "name": "Victini",
-     "count": 2,
-     "uid": "Victini@SSP 21"
+     "count": 1,
+     "uid": "Victini@BLK 12"
     },
     {
-     "name": "Love Ball",
+     "name": "Buddy-Buddy Poffin",
      "count": 4,
-     "uid": "Love Ball@UNKNOWN 156"
+     "uid": "Buddy-Buddy Poffin@TEF 144"
     },
     {
-     "name": "Master Ball",
-     "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
     },
     {
-     "name": "Tera Orb",
+     "name": "Rare Candy",
      "count": 2,
-     "uid": "Tera Orb@SSP 189"
+     "uid": "Rare Candy@SVI 191"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Boss’s Orders",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Lillie’s Determination",
-     "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Energy Search",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Energy Search@SVI 172"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
-     "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "name": "Switch",
+     "count": 1,
+     "uid": "Switch@SVI 194"
     },
     {
-     "name": "Potion",
-     "count": 2,
-     "uid": "Potion@SVI 188"
+     "name": "Firebreather",
+     "count": 3,
+     "uid": "Firebreather@PFL 89"
     },
     {
      "name": "Basic Fire Energy",
-     "count": 16,
+     "count": 8,
      "uid": "Basic {R} Energy@SVE 2"
+    },
+    {
+     "name": "Ignition Energy",
+     "count": 2,
+     "uid": "Ignition Energy@WHT 86"
+    },
+    {
+     "name": "Neo Upper Energy",
+     "count": 1,
+     "uid": "Neo Upper Energy@TEF 162"
+    },
+    {
+     "name": "Boomerang Energy",
+     "count": 2,
+     "uid": "Boomerang Energy@TWM 166"
     }
    ]
   },
@@ -118,18 +133,18 @@
    "label_zh": "水：Mega 大力鳄ex / 狂欢浪舞鸭",
    "role": "实例测试卡组",
    "style": "水系双进化线（高 HP 体力压制 + 抽牌）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量：Neo Upper Energy ×1（ACE SPEC，Mega 大力鳄是二阶，吃满任意 2 点）+ Ignition Energy ×2 + Prism Energy ×1 · 供实例对战",
    "fallback_energy": "water",
    "cards": [
     {
      "name": "Totodile",
      "count": 4,
-     "uid": "Totodile@TEF 39"
+     "uid": "Totodile@ASC 41"
     },
     {
      "name": "Croconaw",
      "count": 3,
-     "uid": "Croconaw@TEF 40"
+     "uid": "Croconaw@ASC 42"
     },
     {
      "name": "Mega Feraligatr ex",
@@ -152,69 +167,79 @@
      "uid": "Quaquaval@SSP 52"
     },
     {
-     "name": "Jynx",
-     "count": 2,
-     "uid": "Jynx@TWM 46"
-    },
-    {
-     "name": "Love Ball",
+     "name": "Buddy-Buddy Poffin",
      "count": 4,
-     "uid": "Love Ball@UNKNOWN 156"
+     "uid": "Buddy-Buddy Poffin@TEF 144"
     },
     {
-     "name": "Master Ball",
-     "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
     },
     {
-     "name": "Tera Orb",
+     "name": "Rare Candy",
      "count": 2,
-     "uid": "Tera Orb@SSP 189"
+     "uid": "Rare Candy@SVI 191"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Boss’s Orders",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Lillie’s Determination",
-     "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Energy Search",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Energy Search@SVI 172"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
+     "name": "Switch",
      "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "uid": "Switch@SVI 194"
     },
     {
-     "name": "Potion",
-     "count": 2,
-     "uid": "Potion@SVI 188"
+     "name": "Surfing Beach",
+     "count": 3,
+     "uid": "Surfing Beach@MEG 129"
     },
     {
      "name": "Basic Water Energy",
-     "count": 16,
+     "count": 9,
      "uid": "Basic {W} Energy@SVE 3"
+    },
+    {
+     "name": "Ignition Energy",
+     "count": 2,
+     "uid": "Ignition Energy@WHT 86"
+    },
+    {
+     "name": "Neo Upper Energy",
+     "count": 1,
+     "uid": "Neo Upper Energy@TEF 162"
+    },
+    {
+     "name": "Prism Energy",
+     "count": 1,
+     "uid": "Prism Energy@BLK 86"
     }
    ]
   },
@@ -224,7 +249,7 @@
    "label_zh": "雷：皮卡丘ex / 自爆磁怪",
    "role": "实例测试卡组",
    "style": "雷系 ex 打手 + 双进化线（速攻 + 检索）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量：Neo Upper Energy ×1（ACE SPEC，自爆磁怪二阶）+ Prism Energy ×2（皮卡丘ex 是基础，任意 1 点）+ Ignition Energy ×2 · 供实例对战",
    "fallback_energy": "lightning",
    "cards": [
     {
@@ -240,7 +265,7 @@
     {
      "name": "Magneton",
      "count": 2,
-     "uid": "Magneton@SSP 59"
+     "uid": "Magneton@MEG 46"
     },
     {
      "name": "Magnezone",
@@ -249,17 +274,17 @@
     },
     {
      "name": "Tynamo",
-     "count": 3,
+     "count": 2,
      "uid": "Tynamo@BLK 30"
     },
     {
      "name": "Eelektrik",
-     "count": 2,
+     "count": 1,
      "uid": "Eelektrik@BLK 31"
     },
     {
      "name": "Eelektross",
-     "count": 2,
+     "count": 1,
      "uid": "Eelektross@BLK 32"
     },
     {
@@ -268,64 +293,79 @@
      "uid": "Morpeko@TWM 72"
     },
     {
-     "name": "Love Ball",
+     "name": "Buddy-Buddy Poffin",
      "count": 4,
-     "uid": "Love Ball@UNKNOWN 156"
+     "uid": "Buddy-Buddy Poffin@TEF 144"
     },
     {
-     "name": "Master Ball",
-     "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
     },
     {
-     "name": "Tera Orb",
+     "name": "Rare Candy",
      "count": 2,
-     "uid": "Tera Orb@SSP 189"
+     "uid": "Rare Candy@SVI 191"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Boss’s Orders",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Lillie’s Determination",
-     "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Energy Search",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Energy Search@SVI 172"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
+     "name": "Switch",
      "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "uid": "Switch@SVI 194"
     },
     {
-     "name": "Potion",
-     "count": 2,
-     "uid": "Potion@SVI 188"
+     "name": "Levincia",
+     "count": 4,
+     "uid": "Levincia@JTG 150"
     },
     {
      "name": "Basic Lightning Energy",
-     "count": 16,
+     "count": 8,
      "uid": "Basic {L} Energy@SVE 4"
+    },
+    {
+     "name": "Prism Energy",
+     "count": 2,
+     "uid": "Prism Energy@BLK 86"
+    },
+    {
+     "name": "Neo Upper Energy",
+     "count": 1,
+     "uid": "Neo Upper Energy@TEF 162"
+    },
+    {
+     "name": "Ignition Energy",
+     "count": 2,
+     "uid": "Ignition Energy@WHT 86"
     }
    ]
   },
@@ -335,33 +375,33 @@
    "label_zh": "恶：三首恶龙ex / Mega 耿鬼ex",
    "role": "实例测试卡组",
    "style": "恶系双进化线（高 HP 打手 + 铺伤）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量：Legacy Energy ×1（ACE SPEC）+ Spiky Energy ×2 + Prism Energy ×2 · 供实例对战",
    "fallback_energy": "darkness",
    "cards": [
     {
      "name": "Deino",
      "count": 4,
-     "uid": "Deino@SSP 117"
+     "uid": "Deino@WHT 65"
     },
     {
      "name": "Zweilous",
      "count": 3,
-     "uid": "Zweilous@SSP 118"
+     "uid": "Zweilous@WHT 66"
     },
     {
      "name": "Hydreigon ex",
      "count": 3,
-     "uid": "Hydreigon ex@SSP 119"
+     "uid": "Hydreigon ex@WHT 67"
     },
     {
      "name": "Gastly",
      "count": 4,
-     "uid": "Gastly@TEF 102"
+     "uid": "Gastly@POR 48"
     },
     {
      "name": "Haunter",
      "count": 2,
-     "uid": "Haunter@TEF 103"
+     "uid": "Haunter@POR 49"
     },
     {
      "name": "Mega Gengar ex",
@@ -369,69 +409,79 @@
      "uid": "Mega Gengar ex@PFL 56"
     },
     {
-     "name": "Zorua",
-     "count": 2,
-     "uid": "Zorua@SFA 31"
-    },
-    {
-     "name": "Love Ball",
+     "name": "Buddy-Buddy Poffin",
      "count": 4,
-     "uid": "Love Ball@UNKNOWN 156"
+     "uid": "Buddy-Buddy Poffin@TEF 144"
     },
     {
-     "name": "Master Ball",
-     "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
     },
     {
-     "name": "Tera Orb",
+     "name": "Rare Candy",
      "count": 2,
-     "uid": "Tera Orb@SSP 189"
+     "uid": "Rare Candy@SVI 191"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Boss’s Orders",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Lillie’s Determination",
-     "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Energy Search",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Energy Search@SVI 172"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
+     "name": "Switch",
      "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "uid": "Switch@SVI 194"
     },
     {
-     "name": "Potion",
+     "name": "Risky Ruins",
      "count": 2,
-     "uid": "Potion@SVI 188"
+     "uid": "Risky Ruins@MEG 127"
     },
     {
      "name": "Basic Darkness Energy",
-     "count": 16,
+     "count": 9,
      "uid": "Basic {D} Energy@SVE 7"
+    },
+    {
+     "name": "Spiky Energy",
+     "count": 2,
+     "uid": "Spiky Energy@JTG 159"
+    },
+    {
+     "name": "Legacy Energy",
+     "count": 1,
+     "uid": "Legacy Energy@TWM 167"
+    },
+    {
+     "name": "Prism Energy",
+     "count": 2,
+     "uid": "Prism Energy@BLK 86"
     }
    ]
   },
@@ -441,7 +491,7 @@
    "label_zh": "超：Mega 沙奈朵ex / 黑夜魔灵",
    "role": "实例测试卡组",
    "style": "超能双进化线（高 HP 打手 + 指示物）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量：Telepath Psychic Energy ×3（{P}，附着于超能宝可梦时检索 2 张基础超能铺后备 —— 沙奈朵每张超能 +50 伤害，铺得越多打得越狠）+ Neo Upper Energy ×1（ACE SPEC）+ Prism Energy ×1 · 供实例对战",
    "fallback_energy": "psychic",
    "cards": [
     {
@@ -475,69 +525,79 @@
      "uid": "Dusknoir@SFA 20"
     },
     {
-     "name": "Abra",
-     "count": 3,
-     "uid": "Abra@TWM 80"
-    },
-    {
-     "name": "Love Ball",
+     "name": "Buddy-Buddy Poffin",
      "count": 4,
-     "uid": "Love Ball@UNKNOWN 156"
+     "uid": "Buddy-Buddy Poffin@TEF 144"
     },
     {
-     "name": "Master Ball",
-     "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
     },
     {
-     "name": "Tera Orb",
+     "name": "Rare Candy",
      "count": 2,
-     "uid": "Tera Orb@SSP 189"
+     "uid": "Rare Candy@SVI 191"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Boss’s Orders",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Lillie’s Determination",
-     "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Energy Search",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Energy Search@SVI 172"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
+     "name": "Switch",
      "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "uid": "Switch@SVI 194"
     },
     {
-     "name": "Potion",
-     "count": 2,
-     "uid": "Potion@SVI 188"
+     "name": "Mystery Garden",
+     "count": 4,
+     "uid": "Mystery Garden@MEG 122"
     },
     {
      "name": "Basic Psychic Energy",
-     "count": 16,
+     "count": 8,
      "uid": "Basic {P} Energy@SVE 5"
+    },
+    {
+     "name": "Telepath Psychic Energy",
+     "count": 3,
+     "uid": "Telepath Psychic Energy@POR 87"
+    },
+    {
+     "name": "Neo Upper Energy",
+     "count": 1,
+     "uid": "Neo Upper Energy@TEF 162"
+    },
+    {
+     "name": "Prism Energy",
+     "count": 1,
+     "uid": "Prism Energy@BLK 86"
     }
    ]
   },
@@ -547,7 +607,7 @@
    "label_zh": "钢：大吾的巨金怪ex / 超级盔甲鸟ex + 新上能量",
    "role": "实例测试卡组",
    "style": "钢系 Stage 2 打手 + 特殊能量（Neo Upper 给 2 阶提供任意 2 点）",
-   "meta_note": "全 engine_ready 卡池组建 · 60 张 · **含特殊能量** （Neo Upper Energy，senergy:neo_upper）· 供实例对战",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · 特殊能量三件套：Neo Upper Energy ×1（ACE SPEC，巨金怪ex 二阶给任意 2 点）+ Prism Energy ×2（超级盔甲鸟ex / 盖诺赛克特ex 都是基础）+ Mist Energy ×2（{C}，免疫对手招式效果） · 供实例对战",
    "fallback_energy": "metal",
    "cards": [
     {
@@ -567,7 +627,7 @@
     },
     {
      "name": "Mega Skarmory ex",
-     "count": 3,
+     "count": 2,
      "uid": "Mega Skarmory ex@POR 55"
     },
     {
@@ -596,49 +656,59 @@
      "uid": "Love Ball@UNKNOWN 156"
     },
     {
-     "name": "Master Ball",
+     "name": "Night Stretcher",
      "count": 2,
-     "uid": "Master Ball@TEF 153"
+     "uid": "Night Stretcher@SFA 61"
     },
     {
-     "name": "Prime Catcher",
+     "name": "Earthen Vessel",
      "count": 2,
-     "uid": "Prime Catcher@TEF 157"
+     "uid": "Earthen Vessel@PAR 163"
     },
     {
-     "name": "Boss’s Orders",
-     "count": 2,
-     "uid": "Boss’s Orders@PAL 172"
+     "name": "Professor's Research",
+     "count": 3,
+     "uid": "Professor's Research@SVI 189"
     },
     {
-     "name": "Judge",
-     "count": 2,
-     "uid": "Judge@SVI 176"
+     "name": "Iono",
+     "count": 3,
+     "uid": "Iono@PAL 185"
     },
     {
-     "name": "Lillie's Determination",
+     "name": "Boss's Orders",
      "count": 2,
-     "uid": "Lillie's Determination@MEG 119"
+     "uid": "Boss's Orders@PAL 172"
     },
     {
-     "name": "Pokégear 3.0",
+     "name": "Counter Catcher",
      "count": 2,
-     "uid": "Pokégear 3.0@SVI 186"
+     "uid": "Counter Catcher@PAR 160"
     },
     {
-     "name": "Energy Retrieval",
-     "count": 2,
-     "uid": "Energy Retrieval@SVI 171"
+     "name": "Full Metal Lab",
+     "count": 4,
+     "uid": "Full Metal Lab@TEF 148"
     },
     {
      "name": "Basic Metal Energy",
-     "count": 13,
+     "count": 9,
      "uid": "Basic {M} Energy@SVE 8"
     },
     {
+     "name": "Prism Energy",
+     "count": 2,
+     "uid": "Prism Energy@BLK 86"
+    },
+    {
      "name": "Neo Upper Energy",
-     "count": 4,
+     "count": 1,
      "uid": "Neo Upper Energy@TEF 162"
+    },
+    {
+     "name": "Mist Energy",
+     "count": 2,
+     "uid": "Mist Energy@TEF 161"
     }
    ]
   }

@@ -1,0 +1,40 @@
+{
+ "meta": {
+  "date": "2026-11-10",
+  "purpose": "ACE SPEC 卡名清单（官方规则：一副牌最多 1 张 ACE SPEC，不论同名与否）",
+  "provenance": "packages/card-db/data/cleaned/cards_challenge.json 中 rule == 'ACE SPEC' 的 29 张，逐字复制卡名",
+  "guard": "packages/engine/tests/test_deck_legality.py::test_ace_spec_list_matches_dataset 逐名比对，数据集漂移会变红",
+  "count": 29
+ },
+ "names": [
+  "Amulet of Hope",
+  "Awakening Drum",
+  "Brilliant Blender",
+  "Dangerous Laser",
+  "Deluxe Bomb",
+  "Energy Search Pro",
+  "Enriching Energy",
+  "Grand Tree",
+  "Hero’s Cape",
+  "Hyper Aroma",
+  "Legacy Energy",
+  "Master Ball",
+  "Max Rod",
+  "Maximum Belt",
+  "Megaton Blower",
+  "Miracle Headset",
+  "Neo Upper Energy",
+  "Neutralization Zone",
+  "Poké Vital A",
+  "Precious Trolley",
+  "Prime Catcher",
+  "Reboot Pod",
+  "Scoop Up Cyclone",
+  "Scramble Switch",
+  "Secret Box",
+  "Sparkling Crystal",
+  "Survival Brace",
+  "Treasure Tracker",
+  "Unfair Stamp"
+ ]
+}

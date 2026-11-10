@@ -6,6 +6,7 @@ import {
 } from '../cardtext.js'
 import { handUsable } from '../plays.js'
 import { cardArtUri } from '../cardart.jsx'
+import { CardText } from '../richtext.jsx'
 
 /**
  * 卡牌可视化组件（自绘卡面 · 不使用任何官方卡图 —— 合规 C1/C5）
@@ -104,7 +105,7 @@ function PokemonFace({ c, size, dmg = 0, used = [] }) {
             <div key={`ab${i}`} className={`cf-ability ${used.includes(a.name) ? 'used' : ''}`}>
               <span className="cf-ab-tag">特性</span>
               <b>{a.display || a.name_zh || a.name}</b>
-              <p>{abilityText(a)}</p>
+              <p><CardText text={abilityText(a)} /></p>
             </div>
           ))}
           {attacks.map((a, i) => (
@@ -115,7 +116,7 @@ function PokemonFace({ c, size, dmg = 0, used = [] }) {
                 <b className="cf-atk-name">{a.display || a.name_zh || a.name}</b>
                 {a.damage > 0 && <span className="cf-atk-dmg">{a.damage}</span>}
               </div>
-              <p className="cf-atk-desc">{attackText(a)}</p>
+              <p className="cf-atk-desc"><CardText text={attackText(a)} /></p>
             </div>
           ))}
           {attacks.length === 0 && abilities.length === 0 && (
@@ -150,7 +151,7 @@ function EnergyFace({ c, size }) {
         <div className="cf-body">
           {/* 基本能量没有卡面文本，`trainerText` 会给出功能性说明；
               特殊能量有 rules_text → 直接显示原文，不会说成「只提供 1 个能量」 */}
-          <p className="cf-atk-desc">{trainerText(c)}</p>
+          <p className="cf-atk-desc"><CardText text={trainerText(c)} /></p>
         </div>
       )}
     </>
@@ -173,7 +174,7 @@ function TrainerFace({ c, size }) {
         <div className="cf-body">
           <div className="cf-ability trainer">
             <span className="cf-ab-tag">{kind}</span>
-            <p>{trainerText(c)}</p>
+            <p><CardText text={trainerText(c)} /></p>
           </div>
         </div>
       )}
@@ -278,7 +279,7 @@ export function CardZoom({ card, onClose }) {
                     <b>{a.display || a.name_zh || a.name}</b>
                     {a.damage > 0 && <span className="cf-atk-dmg">{a.damage}</span>}
                   </div>
-                  <p>{attackText(a)}</p>
+                  <p><CardText text={attackText(a)} /></p>
                 </div>
               ))}
             </>
@@ -289,7 +290,7 @@ export function CardZoom({ card, onClose }) {
               {(card.abilities || []).map((a, i) => (
                 <div key={i} className="zoom-move">
                   <div className="zoom-move-head"><b>{a.display || a.name_zh || a.name}</b></div>
-                  <p>{abilityText(a)}</p>
+                  <p><CardText text={abilityText(a)} /></p>
                 </div>
               ))}
             </>
@@ -297,13 +298,13 @@ export function CardZoom({ card, onClose }) {
           {isTrainerCard(card) && (
             <>
               <h5>卡牌效果</h5>
-              <p>{trainerText(card)}</p>
+              <p><CardText text={trainerText(card)} /></p>
             </>
           )}
           {cardKind(card) === 'energy' && (
             <>
               <h5>能量说明</h5>
-              <p>{trainerText(card)}</p>
+              <p><CardText text={trainerText(card)} /></p>
             </>
           )}
           <p className="sm muted" style={{ marginTop: 10 }}>

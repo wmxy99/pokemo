@@ -586,6 +586,16 @@ function firstStr(...vals) {
 }
 
 /**
+ * 「这不是效果文本，只是把伤害数字写进了 desc」。
+ *
+ * 演示卡组（`decklib` 的合成卡）里 `AttackDef(..., damage=40, desc="40")` ——
+ * desc 只是伤害值的回声，不是效果。按效果文本显示会得到「叶刃 … 40」这种一行
+ * 孤零零的数字（用户截图里就是）。纯数字 / 数字+符号 一律视为「无效果文本」，
+ * 交给按数值生成的分支。带文字的（如 "30+烧伤"）仍然照显示。
+ */
+const isJustNumber = (s) => typeof s === 'string' && /^\d+\s*[+\-×x]?\s*$/.test(s)
+
+/**
  * 特性说明：卡面原文优先，其次引擎侧 desc，最后按 tag 生成。
  * @param {object} a 特性对象（两种来源都可：{tag,...} 或 {effect,effect_zh,...}）
  */
@@ -606,8 +616,9 @@ export function abilityText(a) {
  */
 export function attackText(a) {
   if (!a) return ''
-  const own = firstStr(a.display_desc, a.desc_zh, a.desc,
-    pickLang(a.effect_zh, a.effect))
+  const cand = [a.display_desc, a.desc_zh, a.desc,
+    pickLang(a.effect_zh, a.effect)].filter((x) => !isJustNumber(x))
+  const own = firstStr(...cand)
   if (own) return own
   const dmg = Number(a.damage || 0)
   if (dmg > 0) {
@@ -642,18 +653,29 @@ export function energyText(c) {
   if (!c) return ''
   const t = c.etype || (Array.isArray(c.types) ? c.types[0] : c.types)
   const nm = t ? typeLabel(t) : ''
-  const isBasic = !!c.is_basic_energy
-    || String(c.subtype || '').toLowerCase() === 'basic energy'
-    || /^Basic\b/i.test(String(c.name || ''))
+  // 判「基本」不能只看名字：**引擎手牌里的能量卡**是
+  //   {type:'energy', name:'Colorless Energy', name_zh:'基本能量', etype:'colorless'}
+  // —— name 里没有 "Basic"、也没有 subtype，只按名字判会把它说成「特殊能量」
+  // （实测：手牌 5 张基本草能量全显示「特殊能量：提供能量并按卡面附带额外效果」）。
+  // 可靠的判据是 **tag**：特殊能量带 `senergy:*`，基本能量没有 tag。
+  const isSpecial = /^senergy:/.test(String(c.tag || ''))
+  const isBasic = !isSpecial && (
+    !!c.is_basic_energy
+    || /basic/i.test(String(c.name || ''))
+    || /基本/.test(String(c.name_zh || c.display || ''))
+    || (String(c.type || '') === 'energy' && !c.tag)   // 引擎手牌形态
+  )
   if (isBasic) {
     return cc({
-      zh: `基本能量：提供 1 个${nm || ''}能量，用于支付招式费用与撤退费用；每回合可从手牌附着 1 张。`,
-      en: `Basic Energy: provides 1 ${nm || ''} Energy for attack and Retreat costs; you may attach 1 from your hand each turn.`,
+      // 卡面只有 116px 宽、且卡名本身就是「基本能量」—— 前缀与用途说明都是
+      // 重复信息，卡面只留最短的功能句（详情页会给出完整解释）。
+      zh: `提供 1 个${nm || ''}能量。`,
+      en: `Provides 1 ${nm || ''} Energy.`,
     })
   }
   return cc({
-    zh: '特殊能量：提供能量，并按卡面附带额外效果（同一只宝可梦通常只能附着 1 张特殊能量）。',
-    en: 'Special Energy: provides Energy plus an extra effect (usually only 1 Special Energy per Pokémon).',
+    zh: '特殊能量：提供能量，并按卡面附带额外效果（同一只宝可梦通常只能附着 1 张）。',
+    en: 'Special Energy: provides Energy plus an extra effect (usually only 1 per Pokémon).',
   })
 }
 

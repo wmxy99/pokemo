@@ -84,7 +84,7 @@
 .cf-ability.trainer { border-left-color: #0F766E; background: #F0FDFA; }
 .cf-ability.used { opacity: .5; }
 .cf-ability b { font-size: 10px; }
-.cf-ability p { margin: 1px 0 0; font-size: 9.5px; color: var(--ink-2); }
+.cf-ability p { margin: 1px 0 0; font-size: 9.5px; line-height: 1.4; color: var(--ink-2); }
 .cf-ab-tag { display: inline-block; font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
   background: #7C3AED; color: #fff; border-radius: 3px; padding: 0 3px; margin-right: 3px; }
 .cf-ability.trainer .cf-ab-tag { background: #0F766E; }
@@ -93,8 +93,44 @@
 .cf-atk-name { flex: 1; min-width: 0; font-size: 10.5px; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
 .cf-atk-dmg { font-family: var(--mono); font-weight: 800; font-size: 13px; color: var(--ink); }
-.cf-atk-desc { margin: 1px 0 0; font-size: 9.5px; color: var(--ink-2); }
+.cf-atk-desc { margin: 1px 0 0; font-size: 9.5px; line-height: 1.4; color: var(--ink-2); }
 .cf-empty { margin: 2px 0; font-size: 9.5px; color: var(--muted); }
+
+/* ---- 卡面文本：保留段落 + 符号徽章（对齐官方卡牌的信息密度，全部自绘） ---- */
+.card-text { white-space: pre-line; }           /* 卡面规则文本用空行分段，别压成一行 */
+/* `{G}` 这类能量符号 → 属性色圆形徽章（字母 + 颜色，hover 有中文属性名）。
+   尺寸用 em 跟随所在容器字号：卡面小、详情大，同一套规则自适应。 */
+.en-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.16em; height: 1.16em; padding: 0 1px; margin: 0 .06em;
+  border-radius: 50%; font-size: .78em; font-weight: 800; line-height: 1;
+  color: #fff; vertical-align: -.09em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55),
+              0 0 0 1px rgba(15, 23, 42, .18);
+}
+/* `{ex}` / `{V}` 是规则框标记，不是能量 —— 用圆角矩形区分 */
+.en-chip.rule {
+  min-width: auto; padding: 0 .32em; border-radius: 3px;
+  background: #B91C1C; letter-spacing: .02em;
+}
+/* 不认识的标记：灰底照显示（不吞信息，也不让它看起来像没渲染的模板） */
+.en-chip.plain {
+  min-width: auto; padding: 0 .3em; border-radius: 3px;
+  background: var(--line-2); color: var(--ink-2); box-shadow: none;
+}
+
+/* 手牌 / 场上卡面空间有限：超出的行用省略号收尾，而不是在字中间被硬裁
+   （此前 cf-body 只是 overflow:hidden，长说明会露出半行字，看着像渲染坏了）。 */
+.cf.hand .cf-atk-desc, .cf.hand .cf-ability p,
+.cf.field .cf-atk-desc, .cf.field .cf-ability p {
+  display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cf.hand .cf-atk-desc, .cf.hand .cf-ability p { -webkit-line-clamp: 4; }
+.cf.field .cf-atk-desc, .cf.field .cf-ability p { -webkit-line-clamp: 5; }
+/* flex 子项默认 min-width:auto —— 长说明会把行宽撑到卡面之外，被 overflow
+   横向裁掉（实测「基本能量：提供 1」后面直接从字中间断掉）。必须显式归零。 */
+.cf-body > * { min-width: 0; }
+.cf-atk-desc, .cf-ability p, .card-text { overflow-wrap: anywhere; word-break: break-word; }
 
 /* ---- 卡脚：弱点 / 抗性 / 撤退 ---- */
 .cf-foot { display: flex; gap: 6px; padding: 2px 5px; border-top: 1px solid var(--line-2);
@@ -130,8 +166,8 @@
 .cf.zoom .cf-art-glyph { font-size: 46px; }
 .cf.zoom .cf-attack { padding-top: 5px; }
 .cf.zoom .cf-atk-name { font-size: 12.5px; }
-.cf.zoom .cf-atk-desc { font-size: 11px; }
-.cf.zoom .cf-ability p { font-size: 11px; }
+.cf.zoom .cf-atk-desc { font-size: 12px; line-height: 1.6; }
+.cf.zoom .cf-ability p { font-size: 12px; line-height: 1.6; }
 .cf.zoom .cf-ab-tag { font-size: 10px; }
 .cf.zoom .cf-foot { font-size: 10.5px; }
 

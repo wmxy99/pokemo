@@ -5,6 +5,7 @@ import { Pill, StatCard, Spinner, EmptyState, ErrBar } from '../components/ui.js
 import { CardArt } from '../cardart.jsx'
 import { navigate } from '../router.jsx'
 import { abilityText, attackText, trainerText, cardKind } from '../cardtext.js'
+import { CardText } from '../richtext.jsx'
 
 /** 能量/属性代码 → 中文展示（与引擎 energy 代码同源） */
 const ENERGY_LABEL = {
@@ -57,6 +58,21 @@ function TypeChips({ types }) {
 /** 卡详情（招式/特性/效果文本） */
 function CardDetail({ card, onClose }) {
   if (!card) return null
+  // 宝可梦卡的 `rules_text` 在数据里往往就是「各招式效果拼起来」—— 与上面已经
+  // 展示的说明**逐字重复**（实测同一段话出现两次，读起来像 bug）。这里按段落
+  // 比对：只显示没被展示过的段落（通常是 ex / Tera 规则框这类），全重复则整块省略。
+  const _shown = [
+    ...(card.attacks || []).map((a) => attackText(a)),
+    ...(card.abilities || []).map((a) => abilityText(a)),
+  ].join(' ')
+  const _norm = (x) => String(x || '').replace(/\s+/g, '')
+  const _rulesRaw = trainerText({
+    ...card,
+    rules_text_zh: card.rules_text_zh || card.library?.rules_text_zh,
+  })
+  const extraParas = String(_rulesRaw || '')
+    .split(/\n{2,}/).map((x) => x.trim()).filter(Boolean)
+    .filter((x) => !_norm(_shown).includes(_norm(x)))
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
@@ -102,8 +118,8 @@ function CardDetail({ card, onClose }) {
                 <b title={a.name}>{a.name_zh || a.name || '（未命名）'}</b>
                 <Pill tone="info">特性</Pill>
               </div>
-              <p className="sm" style={{ margin: '4px 0 0' }}>
-                {abilityText(a)}
+              <p className="sm" style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.75 }}>
+                <CardText text={abilityText(a)} />
               </p>
             </div>
           ))}
@@ -127,8 +143,8 @@ function CardDetail({ card, onClose }) {
               </div>
               {/* 无条件渲染：`attackText` 对「纯伤害、无附加效果」的招式会生成
                   「造成 N 点伤害」—— 此前条件渲染导致这类招式说明整段空白。 */}
-              <p className="sm" style={{ margin: '4px 0 0' }}>
-                {attackText(a)}
+              <p className="sm" style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.75 }}>
+                <CardText text={attackText(a)} />
               </p>
             </div>
           ))}
@@ -144,13 +160,32 @@ function CardDetail({ card, onClose }) {
         </div>
       )}
 
-      {card.effects_parsed && (
+      {/* 训练家 / 能量卡一律给说明：此前是「有文本才渲染」，于是 8 张基本能量
+          （本来就没有卡面文本）整段消失 —— 玩家看不到任何说明。
+          宝可梦卡只在「rules_text 里有未展示过的段落」时显示（ex / Tera 规则框），
+          避免与上面的招式说明逐字重复。 */}
+      {extraParas.length > 0 && (
         <>
           <h4 style={{ margin: '12px 0 4px' }}>
-            效果解析 <Pill tone="info" title="本内容由机器/AI 自动生成，仅供研究参考">AI 生成</Pill>
-            <span className="sm muted"> · 后端 {card.effects_parsed.generated_by}</span>
+            {cardKind(card) === 'pokemon' ? '规则框 / 其他文本'
+              : cardKind(card) === 'energy' ? '能量说明' : '卡牌效果'}
           </h4>
-          <p className="sm muted" style={{ margin: '2px 0 4px' }}>
+          <p className="sm" style={{ margin: 0, fontSize: 13, lineHeight: 1.75 }}>
+            <CardText text={extraParas.join('\n\n')} />
+          </p>
+        </>
+      )}
+      {/* 效果解析是**机器解析的中间产物**（研究/对账用），不是卡牌说明。
+          此前它排在说明前面、把 20 多行 JSON 摊开，正文被挤到屏幕外 ——
+          改成默认折叠的 <details>，需要时再展开。 */}
+      {card.effects_parsed && (
+        <details className="spec-details">
+          <summary className="sm">
+            效果解析（机器生成）{' '}
+            <Pill tone="info" title="本内容由机器/AI 自动生成，仅供研究参考">AI 生成</Pill>
+            <span className="muted"> · 后端 {card.effects_parsed.generated_by} · 点击展开</span>
+          </summary>
+          <p className="sm muted" style={{ margin: '6px 0 4px' }}>
             {card.effects_parsed.ai_notice}
           </p>
           <pre className="spec-pre sm">{JSON.stringify(card.effects_parsed.specs, null, 1)}</pre>
@@ -160,26 +195,9 @@ function CardDetail({ card, onClose }) {
               {card.effects_parsed.unsupported.slice(0, 6).join('、')}
             </p>
           )}
-        </>
+        </details>
       )}
 
-      {/* 训练家 / 能量卡一律给说明：此前是「有文本才渲染」，于是 8 张基本能量
-          （本来就没有卡面文本）整段消失 —— 玩家看不到任何说明。 */}
-      {(cardKind(card) !== 'pokemon'
-        || card.rules_text_zh || card.library?.rules_text_zh || card.rules_text) && (
-        <>
-          <h4 style={{ margin: '12px 0 4px' }}>
-            {cardKind(card) === 'pokemon' ? '其他文本 / 规则'
-              : cardKind(card) === 'energy' ? '能量说明' : '卡牌效果'}
-          </h4>
-          <p className="sm" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-            {trainerText({
-              ...card,
-              rules_text_zh: card.rules_text_zh || card.library?.rules_text_zh,
-            })}
-          </p>
-        </>
-      )}
       <p className="sm muted" style={{ marginTop: 10 }}>
         数据来源：{card.source}
       </p>

@@ -303,6 +303,15 @@ footer.site{border-top:1px solid var(--line-2);margin-top:32px;padding:26px 24px
 .move-block{border:1px solid var(--line-2);border-left:3px solid var(--brand);border-radius:10px;
   padding:9px 12px;margin:6px 0;background:#FCFCFD}
 .move-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* 招式行：伤害数字右对齐（官方卡面就是「费用 + 招式名 …… 伤害」的分栏感），
+   否则「日光束 70」会像名字的一部分。 */
+.move-head > .mono{margin-left:auto;font-weight:800;font-size:15px;color:var(--ink)}
+.move-head > b{font-size:14px}
+/* 效果解析（机器中间产物）默认折叠 —— 正文优先 */
+.spec-details{margin-top:12px;border-top:1px dashed var(--line-2);padding-top:8px}
+.spec-details > summary{cursor:pointer;color:var(--ink-2);user-select:none}
+.spec-details > summary:hover{color:var(--ink)}
+.spec-details[open] > summary{margin-bottom:4px}
 .filter-row{gap:8px;align-items:center;flex-wrap:wrap}
 .filter-row select{max-width:170px}
 

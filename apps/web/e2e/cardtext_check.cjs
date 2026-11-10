@@ -243,6 +243,43 @@ function fail(msg) {
     fail(`这些文件仍含无说明占位：${hits.join(' / ')}`)
   }
 
+  // ---------- 性质 6：**引擎手牌形态**与合成卡（不在卡库/池的第三种数据形态） ----------
+  // 卡库 JSON 与 engine pool 都覆盖不到两种真实形态：
+  //   · 引擎手牌里的能量卡：`{type:'energy', name:'Colorless Energy',
+  //     name_zh:'基本能量', etype:'colorless'}` —— name 里没有 "Basic"、没有
+  //     subtype，按名字判会把它说成「特殊能量」（实测手牌 5 张基本能量全中招）；
+  //   · decklib 的合成招式：`AttackDef(damage=40, desc="40")` —— desc 只是伤害
+  //     值的回声，当效果显示就是卡面上一行孤零零的「40」。
+  const { energyText } = await import(pathToFileURL(CARDTEXT).href)
+  const handEnergy = { type: 'energy', name: 'Colorless Energy',
+    name_zh: '基本能量', display: '基本能量', etype: 'colorless' }
+  const handTxt = energyText(handEnergy)
+  if (/特殊能量/.test(handTxt)) {
+    fail(`引擎手牌的基本能量被说成「特殊能量」：${handTxt}`)
+  } else if (!/提供 1 个/.test(handTxt)) {
+    fail(`基本能量说明缺少「提供 1 个…能量」：${handTxt}`)
+  } else {
+    console.log(`✓ 引擎手牌形态的基本能量 → ${handTxt}`)
+  }
+  const spTxt = energyText({ supertype: 'Energy', name: 'Boomerang Energy',
+    tag: 'senergy:boomerang' })
+  if (!/特殊能量/.test(spTxt)) {
+    fail(`带 senergy: tag 的特殊能量被说成基本能量：${spTxt}`)
+  } else {
+    console.log(`✓ 特殊能量（senergy: tag）→ ${spTxt.slice(0, 18)}…`)
+  }
+  // 合成招式的 desc 纯数字 → 必须是「造成 N 点伤害」，不能原样吐数字
+  const synth = attackText({ name: 'Leaf Cutter', damage: 40, desc: '40' })
+  if (!/造成 40 点伤害/.test(synth)) {
+    fail(`desc 只是伤害数字的合成招式应生成数值说明，实际：${synth}`)
+  }
+  // 但带文字的 desc（"30+烧伤"）必须保留原文
+  const keep = attackText({ name: 'Ember', damage: 30, desc: '30+烧伤' })
+  if (keep !== '30+烧伤') {
+    fail(`带文字的 desc 被误判为纯数字并丢弃：${keep}`)
+  }
+  console.log('✓ 合成招式：纯数字 desc 生成数值说明，带文字 desc 保留原文')
+
   if (process.exitCode) {
     console.error('卡面文案守卫失败')
   } else {

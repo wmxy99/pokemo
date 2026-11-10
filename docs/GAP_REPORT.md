@@ -14,7 +14,7 @@
 | 未进池 | **0 张** | F1–F8 全部清零（累计 45 张从不进池转为可对战） |
 | 解析对账 | **57 类全绿** | `scripts/audit_pool_alignment.py` |
 | 规则一致性矩阵 | **41 行（41 ✅ / 0 ⚠️）** | `docs/RULE_CONFORMANCE.md`（CI 机械核对） |
-| 测试 | **2932**（engine 1641 / agent 1129 / api 150 / gym 12） | |
+| 测试 | **2939**（engine 1648 / agent 1129 / api 150 / gym 12） | |
 
 复现：
 

@@ -540,6 +540,107 @@
      "uid": "Basic {P} Energy@SVE 5"
     }
    ]
+  },
+  {
+   "id": "C1",
+   "label": "Metal · Steven's Metagross ex / Mega Skarmory ex + Neo Upper Energy",
+   "label_zh": "钢：大吾的巨金怪ex / 超级盔甲鸟ex + 新上能量",
+   "role": "实例测试卡组",
+   "style": "钢系 Stage 2 打手 + 特殊能量（Neo Upper 给 2 阶提供任意 2 点）",
+   "meta_note": "全 engine_ready 卡池组建 · 60 张 · **含特殊能量** （Neo Upper Energy，senergy:neo_upper）· 供实例对战",
+   "fallback_energy": "metal",
+   "cards": [
+    {
+     "name": "Steven's Beldum",
+     "count": 4,
+     "uid": "Steven's Beldum@DRI 143"
+    },
+    {
+     "name": "Steven's Metang",
+     "count": 3,
+     "uid": "Steven's Metang@DRI 144"
+    },
+    {
+     "name": "Steven's Metagross ex",
+     "count": 3,
+     "uid": "Steven's Metagross ex@DRI 145"
+    },
+    {
+     "name": "Mega Skarmory ex",
+     "count": 3,
+     "uid": "Mega Skarmory ex@POR 55"
+    },
+    {
+     "name": "Genesect ex",
+     "count": 2,
+     "uid": "Genesect ex@BLK 67"
+    },
+    {
+     "name": "Steven's Skarmory",
+     "count": 2,
+     "uid": "Steven's Skarmory@DRI 142"
+    },
+    {
+     "name": "Ultra Ball",
+     "count": 4,
+     "uid": "Ultra Ball@SVI 196"
+    },
+    {
+     "name": "Buddy-Buddy Poffin",
+     "count": 4,
+     "uid": "Buddy-Buddy Poffin@TEF 144"
+    },
+    {
+     "name": "Love Ball",
+     "count": 4,
+     "uid": "Love Ball@UNKNOWN 156"
+    },
+    {
+     "name": "Master Ball",
+     "count": 2,
+     "uid": "Master Ball@TEF 153"
+    },
+    {
+     "name": "Prime Catcher",
+     "count": 2,
+     "uid": "Prime Catcher@TEF 157"
+    },
+    {
+     "name": "Boss’s Orders",
+     "count": 2,
+     "uid": "Boss’s Orders@PAL 172"
+    },
+    {
+     "name": "Judge",
+     "count": 2,
+     "uid": "Judge@SVI 176"
+    },
+    {
+     "name": "Lillie's Determination",
+     "count": 2,
+     "uid": "Lillie's Determination@MEG 119"
+    },
+    {
+     "name": "Pokégear 3.0",
+     "count": 2,
+     "uid": "Pokégear 3.0@SVI 186"
+    },
+    {
+     "name": "Energy Retrieval",
+     "count": 2,
+     "uid": "Energy Retrieval@SVI 171"
+    },
+    {
+     "name": "Basic Metal Energy",
+     "count": 13,
+     "uid": "Basic {M} Energy@SVE 8"
+    },
+    {
+     "name": "Neo Upper Energy",
+     "count": 4,
+     "uid": "Neo Upper Energy@TEF 162"
+    }
+   ]
   }
  ]
 }

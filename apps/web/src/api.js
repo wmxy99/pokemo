@@ -111,6 +111,13 @@ export const api = {
 }
 
 // 卡组字典（中文展示；id 为数据键，保持英文）
+//
+// **只有真实卡池组建的 10 套**（A1–A4 Meta 锚点 + B1–B5 五属性实例 + C1 钢系特殊能量）。
+// 演示卡组（draco / lightning / fire / psychic / ability / grass / status）已从下拉移除：
+// 它们是 `decklib` 的**合成卡**（自造卡名 + 数值，如 Seedling「幼芽」/ Leaf Cutter「叶刃」），
+// 卡面看起来像真卡、实际在卡库里查不到 —— 玩家点开会以为数据错误。
+// 引擎侧仍保留这些函数（K1 训练/验收脚本用 `make_deck("lightning")` 做固定基准，
+// 删掉会让历史曲线无法复现），只是不再出现在对战下拉里。
 export const DECKS = [
   { id: 'A1', label: 'A1 · 多龙巴鲁托ex / 黑夜魔灵（真实卡表）' },
   { id: 'A2', label: 'A2 · 多龙巴鲁托ex / 火焰鸡ex（真实卡表）' },
@@ -122,22 +129,17 @@ export const DECKS = [
   { id: 'B3', label: 'B3 · 实例测试 · 雷：皮卡丘ex / 自爆磁怪' },
   { id: 'B4', label: 'B4 · 实例测试 · 恶：三首恶龙ex / Mega 耿鬼ex' },
   { id: 'B5', label: 'B5 · 实例测试 · 超：Mega 沙奈朵ex / 黑夜魔灵' },
-  { id: 'draco', label: '龙系进化演示卡组' },
-  { id: 'lightning', label: '雷电演示卡组' },
-  { id: 'fire', label: '火系演示卡组' },
-  { id: 'psychic', label: '超能演示卡组' },
-  { id: 'ability', label: '特性演示卡组' },
-  { id: 'grass', label: '草系演示卡组' },
-  { id: 'status', label: '状态流演示卡组' },
+  // C1：唯一带**特殊能量**的卡组（Neo Upper Energy 给 Stage 2 提供任意 2 点）
+  { id: 'C1', label: 'C1 · 实例测试 · 钢：大吾的巨金怪ex + 新上能量（特殊能量）' },
 ]
 
 export function shortDeck(id) {
   const m = {
     A1: '多龙巴鲁托ex/黑夜魔灵', A2: '多龙巴鲁托ex/火焰鸡ex',
     A3: 'N的索罗亚克ex', A4: '基础盒',
-    draco: '龙系进化演示', lightning: '雷电演示', fire: '火系演示',
-    psychic: '超能演示', ability: '特性演示', grass: '草系演示',
-    status: '状态流演示',
+    B1: '火·炽焰咆哮虎ex', B2: '水·大力鳄ex', B3: '雷·皮卡丘ex',
+    B4: '恶·三首恶龙ex', B5: '超·沙奈朵ex',
+    C1: '钢·巨金怪ex+特殊能量',
   }
   return m[id] || id
 }
